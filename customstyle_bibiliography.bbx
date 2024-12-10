@@ -1,0 +1,36 @@
+\ProvidesFile{customstyle.bbx}
+\RequireBibliographyStyle{standard}
+
+% Ensure title is in italics and journal title is not italicized
+\DeclareFieldFormat[article]{title}{\mkbibemph{#1}} % Title in italics without quotes
+\DeclareFieldFormat[article]{journaltitle}{#1}      % Journal title not italicized
+
+\DeclareBibliographyDriver{article}{%
+  \setunit{\addspace}% Space after the label
+  \printnames{author}% Print the author names
+  \setunit{\space}% Add space before title
+  \printfield{title}% Print the title (italicized)
+  \setunit{\space}% Add space after title
+  \iffieldundef{url}
+    {%
+      \printfield{journaltitle}% Print journal title (not italicized)
+      \setunit{\space}% Add space before volume
+      \textbf{\printfield{volume}}% Print volume in bold
+      \setunit{\space}% Add comma and space before pages
+      \printfield{pages}% Print starting page
+      \setunit{\addspace}% Add space before year
+      \printtext[parens]{\printfield{year}}% Print year in parentheses
+    }
+    {%
+      \href{\thefield{url}}% If URL is available, make the whole block clickable
+        {%
+          \printfield{journaltitle}% Print journal title (not italicized)
+          \setunit{\space}% Add space before volume
+          \textbf{\printfield{volume}}% Print volume in bold
+          \setunit{\space}% Add comma and space before pages
+          \printfield{pages}% Print starting page
+          \setunit{\addspace}% Add space before year
+          \printtext[parens]{\printfield{year}}% Print year in parentheses
+        }%
+    }%
+}

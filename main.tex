@@ -1,0 +1,130 @@
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[
+11pt, english, singlespacing,
+draft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
+%nolistspacing, % If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
+%liststotoc, % Uncomment to add the list of figures/tables/etc to the table of contents
+toctotoc, % Uncomment to add the main table of contents to the table of contents
+%parskip, % Uncomment to add space between paragraphs
+%nohyperref, % Uncomment to not load the hyperref package
+%headsepline, % Uncomment to get a line under the header
+%chapterinoneline, % Uncomment to place the chapter title next to the number on one line
+%consistentlayout, % Uncomment to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
+]{MastersDoctoralThesis}
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES
+%----------------------------------------------------------------------------------------
+\usepackage[utf8]{inputenc} % Required for inputting international characters
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo} % Use the Palatino font by default
+
+
+%-------------------------------- Define the LIBRARY ------------------------------------
+
+\usepackage[backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp]{biblatex}
+\AtBeginBibliography{\renewcommand*{\finalnamedelim}{\addspace\bibstring{and}\space}}
+\renewcommand*{\bibnamedash}{\ifnumgreater{\value{liststop}}{1}{\space et al.}{}} % Et al. bei mehreren Autoren
+%\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
+\addbibresource{Chapters/My_bibliography.bib}
+\RequireBibliographyStyle{customstyle_bibiliography} % Load the custom style
+%----------------------------------------------------------------------------------------
+
+
+\usepackage[autostyle=true]{csquotes}
+
+\usepackage{hyperref}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{bm}       % For bold Greek letters
+\usepackage{caption}
+\captionsetup{width=1.0\textwidth, font=normal, labelfont=bf}
+
+%----------------------------------------------------------------------------------------
+%	MARGIN SETTINGS
+%----------------------------------------------------------------------------------------
+
+\geometry{
+	paper=a4paper,
+	inner=2cm, % Inner margin
+	outer=3cm, % Outer margin
+	bindingoffset=.5cm, % Binding offset
+	top=1.5cm, % Top margin
+	bottom=1.5cm, % Bottom margin
+	%showframe, % Uncomment to show how the type block is set on the page
+}
+
+%----------------------------------------------------------------------------------------
+%	THESIS INFORMATION
+%----------------------------------------------------------------------------------------
+
+\thesistitle{Subradiant routing on a Y-shaped atomic tree in free space}
+\supervisor{Prof. Dr. Beatriz \textsc{Olmos Sanchez	}}
+\examiner{Prof. Dr. Igor Lesanovsky}
+\degree{Bachelor of Science}
+\author{Leopold \textsc{Bodamer}}
+\addresses{Taubenstraße 7, 72138 Kirchentellinsfurt}
+\subject{Theoretical Atomic Physics and Synthetic Quantum Systems}
+\university{\href{https://uni-tuebingen.de\\}{Eberhard Karls Universität Tübingen}}
+\department{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/physik/institute/institut-fuer-theoretische-physik/arbeitsgruppen/}{Institut für Theoretische Physik}}
+\group{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/physik/institute/institut-fuer-theoretische-physik/arbeitsgruppen/ag-lesanovsky/}{Theoretical Atomic Physics and Synthetic Quantum Systems}}
+\faculty{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fakultaet/}{Mathematisch-Naturwissenschaftliche Fakultät}}
+
+\AtBeginDocument{
+\hypersetup{pdftitle=\ttitle}
+\hypersetup{pdfauthor=\authorname}
+}
+
+\begin{document}
+
+\frontmatter
+\pagestyle{plain}
+
+\input{Chapters/C0_titlepage}
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT PAGE
+%----------------------------------------------------------------------------------------
+
+%\begin{abstract}
+%\addchaptertocentry{\abstractname}
+%This thesis investigates the directional routing of excitations in atomic systems using subradiant states.
+%Building on Bottarelli's quantum router \cite{Startingpoint}, this thesis adapts the model to atomic systems,
+%addressing the challenges of controlling interactions in fully connected systems.
+%Atom light interactions have been heavily studied for atomic lattices \cite{Masson2022, Asenjo-Garcia2017, Needham2019, Cech2023, Jen2016}.
+%In this theis three chains, that are connected by an equilateral triangle and an isosceles triangle are studied.
+%By allowing different dipole orientations on each chain, three distinct topologies are considered.
+%The results show that controlling the topology and the initial state enables directional routing,
+%where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
+
+	
+%\end{abstract}
+%----------------------------------------------------------------------------------------
+%	CONTENTS
+%----------------------------------------------------------------------------------------
+\mainmatter
+\pagestyle{thesis}
+
+%\include{Chapters/Acknow_Lists_Abbrs_Consts_Symbls_Dedication_}
+%\include{Chapters/C1_Introduction}
+\include{Chapters/C2_Theoretical_Background}
+%\include{Chapters/C3_Presenting_Basis}
+%\include{Chapters/C4_Adaptation_to_atoms}
+%\include{Chapters/C5_Conclusion}
+
+%----------------------------------------------------------------------------------------
+%	APPENDICES
+%----------------------------------------------------------------------------------------
+
+\appendix
+%\include{Chapters/AppendixA}
+
+%----------------------------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%----------------------------------------------------------------------------------------
+
+\printbibliography
+
+\end{document}

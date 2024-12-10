@@ -1,0 +1,32 @@
+\babel@toc {english}{}\relax 
+\contentsline {chapter}{Declaration of Authorship}{iii}{section*.1}%
+\contentsline {chapter}{Abstract}{v}{section*.2}%
+\contentsline {chapter}{Acknowledgements}{1}{section*.3}%
+\contentsline {chapter}{Contents}{3}{chapter*.4}%
+\contentsline {chapter}{\numberline {1}Introduction}{5}{chapter.5}%
+\contentsline {section}{\numberline {1.1}Motivation}{5}{section.6}%
+\contentsline {section}{\numberline {1.2}Outline}{5}{section.7}%
+\contentsline {chapter}{\numberline {2}Theoretical background}{7}{chapter.8}%
+\contentsline {section}{\numberline {2.1}\textbf {O}pen \textbf {Q}uantum \textbf {S}ystems}{7}{section.9}%
+\contentsline {section}{\numberline {2.2}Collective dissipation}{8}{section.14}%
+\contentsline {section}{\numberline {2.3}Green's tensor}{9}{section.17}%
+\contentsline {section}{\numberline {2.4}Atomic system}{9}{section.20}%
+\contentsline {subsection}{\numberline {2.4.1}Effective Hamiltonian}{11}{subsection.26}%
+\contentsline {subsection}{\numberline {2.4.2}Dynamics in the single excitation subspace}{11}{subsection.31}%
+\contentsline {subsection}{\numberline {2.4.3}Survival probability}{12}{subsection.37}%
+\contentsline {section}{\numberline {2.5}Reciprocal space}{13}{section.40}%
+\contentsline {subsection}{\numberline {2.5.1}Group velocity}{13}{subsection.43}%
+\contentsline {chapter}{\numberline {3}Presentation of the basis of this work}{15}{chapter.46}%
+\contentsline {chapter}{\numberline {4}Adaptation of Botarellis work to atoms}{17}{chapter.52}%
+\contentsline {section}{\numberline {4.1}Challenges}{17}{section.53}%
+\contentsline {subsection}{\numberline {4.1.1}Phase control}{17}{subsection.54}%
+\contentsline {section}{\numberline {4.2}Conditions for directional routing}{18}{section.58}%
+\contentsline {section}{\numberline {4.3}Implementation of Botarelli's system with six atoms}{19}{section.61}%
+\contentsline {section}{\numberline {4.4}System definition with $N > 6$}{19}{section.63}%
+\contentsline {subsection}{\numberline {4.4.1}Transport}{20}{subsection.68}%
+\contentsline {section}{\numberline {4.5}Routing in systems with $N = 60$ atoms}{23}{section.72}%
+\contentsline {section}{\numberline {4.6}Routing in systems with $N = 300$ atoms}{23}{section.75}%
+\contentsline {chapter}{\numberline {5}Conclusion}{27}{chapter.80}%
+\contentsline {chapter}{\numberline {A}Extra material}{29}{appendix.81}%
+\contentsline {section}{\numberline {A.1}Phase Problem}{29}{section.82}%
+\contentsline {section}{\numberline {A.2}Diagonalization}{30}{section.84}%
