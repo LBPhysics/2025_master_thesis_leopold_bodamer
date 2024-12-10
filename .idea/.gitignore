@@ -8,6 +8,5 @@
 /dataSources.local.xml
 
 # My ignored files
-/auxil
-/Figures_From_Python
-/Literature
+auxil/
+Figures_From_Python/
