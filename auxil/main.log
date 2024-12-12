@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.26 (MiKTeX 24.4) (preloaded format=pdflatex 2024.10.10)  4 NOV 2024 15:42
+This is pdfTeX, Version 3.141592653-2.6-1.40.26 (MiKTeX 24.4) (preloaded format=pdflatex 2024.10.10)  11 DEC 2024 17:28
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1027,238 +1027,7 @@ LaTeX Font Info:    Font shape `U/msb/m/n' will be
 1: section
 \openout2 = `Chapters/C2_Theoretical_Background.aux'.
 
-(Chapters/C2_Theoretical_Background.tex
-Chapter 1.
-
-LaTeX Warning: Reference `Chapter4' on page 1 undefined on input line 16.
-
-
-LaTeX Warning: Citation 'Breuer2002' on page 1 undefined on input line 27.
-
-
-LaTeX Warning: Citation 'Manzano_2020' on page 1 undefined on input line 27.
-
-
-LaTeX Warning: Citation 'Manzano_2020' on page 1 undefined on input line 45.
-
-
-LaTeX Warning: Citation 'Breuer2002' on page 1 undefined on input line 61.
-
-
-Overfull \hbox (14.92378pt too wide) in paragraph at lines 60--70
-\T1/ppl/m/n/10.95 The idea is to in-te-grate Equa-tion 1.2[] and then ap-ply th
-e fol-low-ing ap-prox-i-ma-tions [[]].|
- []
-
-
-
-1: section
-[1
-
-
-]
-
-LaTeX Warning: Citation 'Campaioli2024' on page 2 undefined on input line 80.
-
-
-LaTeX Warning: Citation 'Manzano_2020' on page 2 undefined on input line 97.
-
-LaTeX Font Info:    Font shape `U/msa/m/n' will be
-(Font)              scaled to size 9.37807pt on input line 109.
-LaTeX Font Info:    Font shape `U/msa/m/n' will be
-(Font)              scaled to size 7.29405pt on input line 109.
-LaTeX Font Info:    Font shape `U/msa/m/n' will be
-(Font)              scaled to size 5.21004pt on input line 109.
-LaTeX Font Info:    Font shape `U/msb/m/n' will be
-(Font)              scaled to size 9.37807pt on input line 109.
-LaTeX Font Info:    Font shape `U/msb/m/n' will be
-(Font)              scaled to size 7.29405pt on input line 109.
-LaTeX Font Info:    Font shape `U/msb/m/n' will be
-(Font)              scaled to size 5.21004pt on input line 109.
-
-LaTeX Warning: Citation 'Dicke1954' on page 2 undefined on input line 109.
-
-
-LaTeX Warning: Citation 'Benedict1996' on page 2 undefined on input line 115.
-
-
-LaTeX Warning: Citation 'Masson2022' on page 2 undefined on input line 117.
-
-
-LaTeX Warning: Citation 'GROSS1982301' on page 2 undefined on input line 122.
-
-
-LaTeX Warning: Citation 'Lodahl2004' on page 2 undefined on input line 122.
-
-
-LaTeX Warning: Citation 'RubiesBigorda2022' on page 2 undefined on input line 1
-22.
-
-
-LaTeX Warning: Citation 'Longo2016' on page 2 undefined on input line 125.
-
-
-LaTeX Warning: Citation 'Bohnet2012' on page 2 undefined on input line 126.
-
-
-LaTeX Warning: Citation 'AsenjoGarcia2017' on page 2 undefined on input line 13
-1.
-
-
-LaTeX Warning: Citation 'Jen2016' on page 2 undefined on input line 131.
-
-
-LaTeX Warning: Citation 'AsenjoGarcia2017' on page 2 undefined on input line 13
-2.
-
-
-LaTeX Warning: Citation 'Facchinetti2018' on page 2 undefined on input line 134
-.
-
-
-LaTeX Warning: Citation 'Ostermann2013' on page 2 undefined on input line 134.
-
-
-LaTeX Warning: Citation 'Plankensteiner2015' on page 2 undefined on input line 
-134.
-
-
-LaTeX Warning: Citation 'Takasu2012' on page 2 undefined on input line 136.
-
-
-LaTeX Warning: Citation 'McGuyer2015' on page 2 undefined on input line 136.
-
-
-LaTeX Warning: Citation 'DeVoe1996' on page 2 undefined on input line 136.
-
-
-LaTeX Warning: Citation 'Guerin2016' on page 2 undefined on input line 136.
-
-
-LaTeX Warning: Citation 'Das2020' on page 2 undefined on input line 136.
-
-
-LaTeX Warning: Reference `sec:Sys_def_N_bigger_6' on page 2 undefined on input 
-line 138.
-
-
-
-[2]
-
-LaTeX Warning: Citation 'Asenjo-Garcia2017' on page 3 undefined on input line 1
-50.
-
-LaTeX Font Info:    Trying to load font information for U+fplmbb on input line 
-154.
-(C:\Users\leopo\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ufplmbb.fd
-File: ufplmbb.fd 2003/10/30 Fontinst v1.914 font definitions for U/fplmbb.
-)
-
-LaTeX Warning: Citation 'GRIMM200095' on page 3 undefined on input line 193.
-
-
-
-[3]
-
-Chapters/C2_Theoretical_Background.tex:198: LaTeX Error: File `N_atoms_w_dipole
-s' not found.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.198 ...s[width=0.6\textwidth]{N_atoms_w_dipoles}
-                                                  
-I could not locate the file with any of these extensions:
-.pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2,.PDF,.PNG,.JPG,.JPEG,.JBIG2,.JB2,.eps
-Try typing  <return>  to proceed.
-If that doesn't work, type  X <return>  to quit.
-
-
-LaTeX Warning: Citation 'Asenjo-Garcia2017' on page 4 undefined on input line 2
-34.
-
-
-LaTeX Warning: Citation 'Ma2024' on page 4 undefined on input line 234.
-
-
-LaTeX Warning: Citation 'Masson2022' on page 4 undefined on input line 250.
-
-
-Overfull \hbox (28.2041pt too wide) in paragraph at lines 249--251
-\T1/ppl/m/n/10.95 where $\OML/zplm/m/it/10.95 ^^N[]$ \T1/ppl/m/n/10.95 is the K
-ro-necker delta and $\OML/zplm/m/it/10.95 c[]$ \T1/ppl/m/n/10.95 the spa-tial p
-ro-file of the $\OML/zplm/m/it/10.95 k$\T1/ppl/m/n/10.95 -th jump op-er-a-tor [
-[]]. |
- []
-
-
-LaTeX Warning: Citation 'Clemens2003' on page 4 undefined on input line 257.
-
-
-
-[4]
-
-LaTeX Warning: Citation 'Bienaime2012' on page 5 undefined on input line 329.
-
-
-LaTeX Warning: Citation 'Needham2019' on page 5 undefined on input line 330.
-
-
-
-[5]
-
-LaTeX Warning: Citation 'AsenjoGarcia2017' on page 6 undefined on input line 36
-6.
-
-
-Overfull \hbox (18.47147pt too wide) in paragraph at lines 365--370
-\T1/ppl/m/n/10.95 In this sub-space, the atoms can equiv-a-lently be treated li
-ke clas-si-cal dipoles [[]],|
- []
-
-
-LaTeX Warning: Citation 'Asenjo-Garcia2017' on page 6 undefined on input line 3
-74.
-
-
-
-[6]
-
-LaTeX Warning: Reference `Chapter4' on page 7 undefined on input line 442.
-
-
-LaTeX Warning: Reference `Chapter4' on page 7 undefined on input line 452.
-
-
-LaTeX Warning: Citation 'Bloch1929' on page 7 undefined on input line 461.
-
-
-LaTeX Warning: Citation 'AsenjoGarcia2017' on page 7 undefined on input line 49
-0.
-
-
-LaTeX Warning: Reference `Chapter4' on page 7 undefined on input line 492.
-
-
-LaTeX Warning: Citation 'Cech2023' on page 7 undefined on input line 495.
-
-
-
-[7]
-
-LaTeX Warning: Reference `sec:Diagonalization' on page 8 undefined on input lin
-e 530.
-
-
-LaTeX Warning: Citation 'Cech2023' on page 8 undefined on input line 533.
-
-
-LaTeX Warning: Citation 'Needham2019' on page 8 undefined on input line 535.
-
-)
-
-[8]
+No file Chapters/C2_Theoretical_Background.tex.
 
 LaTeX Warning: Empty bibliography on input line 128.
 
@@ -1276,9 +1045,6 @@ L3 programming layer <2020/03/25>
 LaTeX Warning: There were undefined references.
 
 
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
-
 Package biblatex Warning: Please (re)run Biber on the file:
 (biblatex)                main
 (biblatex)                and rerun LaTeX afterwards.
@@ -1288,31 +1054,21 @@ Package logreq Info: Writing requests to 'main.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 29968 strings out of 473899
- 652043 string characters out of 5726499
- 1642449 words of memory out of 5000000
- 52479 multiletter control sequences out of 15000+600000
- 627436 words of font info for 174 fonts, out of 8000000 for 9000
+ 29616 strings out of 473899
+ 644979 string characters out of 5726499
+ 1628420 words of memory out of 5000000
+ 52166 multiletter control sequences out of 15000+600000
+ 589755 words of font info for 93 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 96i,22n,94p,695b,1792s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/
-cmex10.pfb><C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/public/ams
-fonts/cm/cmmi10.pfb><C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/p
-ublic/amsfonts/cm/cmr10.pfb><C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts
-/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/leopo/AppData/Local/Programs/MiK
-TeX/fonts/type1/public/mathpazo/fplmbb.pfb><C:/Users/leopo/AppData/Local/Progra
-ms/MiKTeX/fonts/type1/public/mathpazo/fplmbi.pfb><C:/Users/leopo/AppData/Local/
-Programs/MiKTeX/fonts/type1/public/mathpazo/fplmr.pfb><C:/Users/leopo/AppData/L
-ocal/Programs/MiKTeX/fonts/type1/public/mathpazo/fplmri.pfb><C:/Users/leopo/App
-Data/Local/Programs/MiKTeX/fonts/type1/urw/palatino/uplb8a.pfb><C:/Users/leopo/
-AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/uplbi8a.pfb><C:/Users/le
-opo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/uplr8a.pfb><C:/Users
-/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/uplr8a.pfb><C:/Us
-ers/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/uplri8a.pfb>
+ 96i,21n,94p,695b,1788s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/uplb8a
+.pfb><C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/upl
+r8a.pfb><C:/Users/leopo/AppData/Local/Programs/MiKTeX/fonts/type1/urw/palatino/
+uplri8a.pfb>
 Output written on "C:/Users\leopo\OneDrive - UT Cloud\Uni\Semester_9\Master_the
-sis\out\main.pdf" (12 pages, 273622 bytes).
+sis\out\main.pdf" (4 pages, 65893 bytes).
 PDF statistics:
- 107 PDF objects out of 1000 (max. 8388607)
+ 31 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 

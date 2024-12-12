@@ -2375,46 +2375,6 @@
     <bcf:datasource type="file" datatype="bibtex" glob="false">Chapters/My_bibliography.bib</bcf:datasource>
   </bcf:bibdata>
   <bcf:section number="0">
-    <bcf:citekey order="1" intorder="1">Breuer2002</bcf:citekey>
-    <bcf:citekey order="1" intorder="2">Manzano_2020</bcf:citekey>
-    <bcf:citekey order="2" intorder="1">Manzano_2020</bcf:citekey>
-    <bcf:citekey order="3" intorder="1">Breuer2002</bcf:citekey>
-    <bcf:citekey order="4" intorder="1">Campaioli2024</bcf:citekey>
-    <bcf:citekey order="5" intorder="1">Manzano_2020</bcf:citekey>
-    <bcf:citekey order="6" intorder="1">Dicke1954</bcf:citekey>
-    <bcf:citekey order="7" intorder="1">Benedict1996</bcf:citekey>
-    <bcf:citekey order="8" intorder="1">Masson2022</bcf:citekey>
-    <bcf:citekey order="9" intorder="1">GROSS1982301</bcf:citekey>
-    <bcf:citekey order="10" intorder="1">Lodahl2004</bcf:citekey>
-    <bcf:citekey order="11" intorder="1">RubiesBigorda2022</bcf:citekey>
-    <bcf:citekey order="12" intorder="1">Longo2016</bcf:citekey>
-    <bcf:citekey order="13" intorder="1">Bohnet2012</bcf:citekey>
-    <bcf:citekey order="14" intorder="1">AsenjoGarcia2017</bcf:citekey>
-    <bcf:citekey order="14" intorder="2">Jen2016</bcf:citekey>
-    <bcf:citekey order="15" intorder="1">AsenjoGarcia2017</bcf:citekey>
-    <bcf:citekey order="16" intorder="1">Facchinetti2018</bcf:citekey>
-    <bcf:citekey order="16" intorder="2">Ostermann2013</bcf:citekey>
-    <bcf:citekey order="16" intorder="3">Plankensteiner2015</bcf:citekey>
-    <bcf:citekey order="17" intorder="1">Takasu2012</bcf:citekey>
-    <bcf:citekey order="17" intorder="2">McGuyer2015</bcf:citekey>
-    <bcf:citekey order="18" intorder="1">DeVoe1996</bcf:citekey>
-    <bcf:citekey order="19" intorder="1">Guerin2016</bcf:citekey>
-    <bcf:citekey order="19" intorder="2">Das2020</bcf:citekey>
-    <bcf:citekey order="20" intorder="1">Asenjo-Garcia2017</bcf:citekey>
-    <bcf:citekey order="21" intorder="1">GRIMM200095</bcf:citekey>
-    <bcf:citekey order="22" intorder="1">Asenjo-Garcia2017</bcf:citekey>
-    <bcf:citekey order="22" intorder="2">Ma2024</bcf:citekey>
-    <bcf:citekey order="23" intorder="1">Masson2022</bcf:citekey>
-    <bcf:citekey order="24" intorder="1">Clemens2003</bcf:citekey>
-    <bcf:citekey order="25" intorder="1">Bienaime2012</bcf:citekey>
-    <bcf:citekey order="26" intorder="1">Needham2019</bcf:citekey>
-    <bcf:citekey order="27" intorder="1">AsenjoGarcia2017</bcf:citekey>
-    <bcf:citekey order="28" intorder="1">Asenjo-Garcia2017</bcf:citekey>
-    <bcf:citekey order="29" intorder="1">Bloch1929</bcf:citekey>
-    <bcf:citekey order="30" intorder="1">AsenjoGarcia2017</bcf:citekey>
-    <bcf:citekey order="31" intorder="1">Cech2023</bcf:citekey>
-    <bcf:citekey order="32" intorder="1">Cech2023</bcf:citekey>
-    <bcf:citekey order="33" intorder="1">Needham2019</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="none">
