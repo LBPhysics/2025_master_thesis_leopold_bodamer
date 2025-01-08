@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="MasterTex" type="LATEX_RUN_CONFIGURATION" factoryName="LaTeX configuration factory" activateToolWindowBeforeRun="false" singleton="false">
+  <configuration default="false" name="MasterTex" type="LATEX_RUN_CONFIGURATION" factoryName="LaTeX configuration factory" singleton="false">
     <texify>
       <compiler>PDFLATEX</compiler>
       <compiler-path />
