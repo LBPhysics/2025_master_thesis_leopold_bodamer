@@ -9,14 +9,14 @@
       <compiler-arguments />
       <envs />
       <before-run-command />
-      <main-file>$PROJECT_DIR$/main.tex</main-file>
+      <main-file>$PROJECT_DIR$/src/main.tex</main-file>
       <output-path>$PROJECT_DIR$/out</output-path>
       <auxil-path>{projectDir}/auxil</auxil-path>
       <compile-twice>true</compile-twice>
       <output-format>PDF</output-format>
       <latex-distribution>TEXLIVE</latex-distribution>
       <has-been-run>true</has-been-run>
-      <bib-run-config>[BibTeX.Master_bib]</bib-run-config>
+      <bib-run-config>[BibTeX.MasterBib]</bib-run-config>
       <makeindex-run-config>[]</makeindex-run-config>
     </texify>
     <method v="2" />
