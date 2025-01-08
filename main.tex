@@ -4,9 +4,9 @@
 
 \documentclass[
 11pt, english, singlespacing,
-draft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
+%raft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
 %nolistspacing, % If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
-%liststotoc, % Uncomment to add the list of figures/tables/etc to the table of contents
+liststotoc, % Uncomment to add the list of figures/tables/etc to the table of contents
 toctotoc, % Uncomment to add the main table of contents to the table of contents
 %parskip, % Uncomment to add space between paragraphs
 %nohyperref, % Uncomment to not load the hyperref package
@@ -29,7 +29,7 @@ toctotoc, % Uncomment to add the main table of contents to the table of contents
 \AtBeginBibliography{\renewcommand*{\finalnamedelim}{\addspace\bibstring{and}\space}}
 \renewcommand*{\bibnamedash}{\ifnumgreater{\value{liststop}}{1}{\space et al.}{}} % Et al. bei mehreren Autoren
 %\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
-\addbibresource{Chapters/My_bibliography.bib}
+\addbibresource{Chapters/My_bibliography.bib }
 \RequireBibliographyStyle{customstyle_bibiliography} % Load the custom style
 %----------------------------------------------------------------------------------------
 
@@ -60,14 +60,16 @@ toctotoc, % Uncomment to add the main table of contents to the table of contents
 %	THESIS INFORMATION
 %----------------------------------------------------------------------------------------
 
-\thesistitle{Subradiant routing on a Y-shaped atomic tree in free space}
-\supervisor{Prof. Dr. Beatriz \textsc{Olmos Sanchez	}}
-\examiner{Prof. Dr. Igor Lesanovsky}
-\degree{Bachelor of Science}
+\thesistitle{Master thesis}
+\supervisor{\href{https://ic1.ugr.es/members/dmanzano/home/}{Prof. Dr. Daniel Manzano Diosdado}}
+\examiner{Prof. Dr. Beatriz \textsc{Olmos Sanchez}}
+\degree{Master of Science}
 \author{Leopold \textsc{Bodamer}}
-\addresses{Taubenstraße 7, 72138 Kirchentellinsfurt}
+\addresses{Wolfsbergallee 17b, 75177 Pforzheim}
 \subject{Theoretical Atomic Physics and Synthetic Quantum Systems}
-\university{\href{https://uni-tuebingen.de\\}{Eberhard Karls Universität Tübingen}}
+\universityone{\href{https://uni-tuebingen.de\\}{Eberhard Karls Universität Tübingen}}
+\universitytwo{\href{https://www.ugr.es\\}{Universidad de Granada}}
+
 \department{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/physik/institute/institut-fuer-theoretische-physik/arbeitsgruppen/}{Institut für Theoretische Physik}}
 \group{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/physik/institute/institut-fuer-theoretische-physik/arbeitsgruppen/ag-lesanovsky/}{Theoretical Atomic Physics and Synthetic Quantum Systems}}
 \faculty{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fakultaet/}{Mathematisch-Naturwissenschaftliche Fakultät}}
@@ -109,7 +111,7 @@ toctotoc, % Uncomment to add the main table of contents to the table of contents
 
 %\include{Chapters/Acknow_Lists_Abbrs_Consts_Symbls_Dedication_}
 %\include{Chapters/C1_Introduction}
-\include{Chapters/C2_Theoretical_Background}
+%\include{Chapters/C2_Theoretical_Background}
 %\include{Chapters/C3_Presenting_Basis}
 %\include{Chapters/C4_Adaptation_to_atoms}
 %\include{Chapters/C5_Conclusion}
