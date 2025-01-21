@@ -2368,7 +2368,10 @@
     <bcf:citekey order="2" intorder="1">Ramakrishnan2023</bcf:citekey>
     <bcf:citekey order="3" intorder="1">AsenjoGarcia2017</bcf:citekey>
     <bcf:citekey order="4" intorder="1">Scully2015</bcf:citekey>
-    <bcf:citekey order="5" intorder="1">Startingpoint</bcf:citekey>
+    <bcf:citekey order="5" intorder="1">Rivas_2010</bcf:citekey>
+    <bcf:citekey order="6" intorder="1">krumland2023twodimensional</bcf:citekey>
+    <bcf:citekey order="7" intorder="1">Segarra-Martí2018</bcf:citekey>
+    <bcf:citekey order="8" intorder="1">Sun2024</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="none">
