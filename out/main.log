@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2024.12.16)  21 JAN 2025 12:04
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2024.12.16)  13 FEB 2025 12:58
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1074,6 +1074,12 @@ LaTeX Font Info:    Trying to load font information for T1+cmtt on input line 1
 (/usr/share/texlive/texmf-dist/tex/latex/base/t1cmtt.fd
 File: t1cmtt.fd 2023/04/13 v2.5m Standard LaTeX font definitions
 )
+Overfull \hbox (10.17482pt too wide) in paragraph at lines 131--131
+[]\T1/ppl/m/n/10.95 Peter Hamm. \T1/ppl/m/it/10.95 Prin-ci-ples of Non-lin-ear 
+Op-ti-cal Spec-troscopy: A Prac-ti-cal Ap-proach\T1/ppl/m/n/10.95 . or: Mukamel
+
+ []
+
 1: section
 [3
 
@@ -1092,10 +1098,10 @@ Package logreq Info: Writing requests to 'main.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 29779 strings out of 476106
- 643440 string characters out of 5793932
+ 29789 strings out of 476106
+ 643756 string characters out of 5793932
  1936975 words of memory out of 5000000
- 51424 multiletter control sequences out of 15000+600000
+ 51432 multiletter control sequences out of 15000+600000
  606730 words of font info for 121 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
  96i,20n,94p,2129b,1793s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1108,10 +1114,10 @@ t/fonts/type1/urw/palatino/uplr8a.pfb></usr/share/texlive/texmf-dist/fonts/type
 1/urw/palatino/uplr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palati
 no/uplri8a.pfb>
 Output written on /home/leopold/PycharmProjects/Master_thesis/out/main.pdf (7 p
-ages, 106520 bytes).
+ages, 107923 bytes).
 PDF statistics:
- 143 PDF objects out of 1000 (max. 8388607)
- 103 compressed objects within 2 object streams
- 21 named destinations out of 1000 (max. 500000)
+ 147 PDF objects out of 1000 (max. 8388607)
+ 107 compressed objects within 2 object streams
+ 23 named destinations out of 1000 (max. 500000)
  33 words of extra memory for PDF output out of 10000 (max. 10000000)
 

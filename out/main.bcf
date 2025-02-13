@@ -2372,6 +2372,8 @@
     <bcf:citekey order="6" intorder="1">krumland2023twodimensional</bcf:citekey>
     <bcf:citekey order="7" intorder="1">Segarra-Martí2018</bcf:citekey>
     <bcf:citekey order="8" intorder="1">Sun2024</bcf:citekey>
+    <bcf:citekey order="9" intorder="1">Hamm2005</bcf:citekey>
+    <bcf:citekey order="10" intorder="1">Mukamel1995</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="none">

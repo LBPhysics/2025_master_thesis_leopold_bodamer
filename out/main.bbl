@@ -83,11 +83,11 @@
            familyi={G\bibinitperiod},
            given={Michele},
            giveni={M\bibinitperiod}}}%
-        {{hash=b977209106313deb2c35aefdab1a591f}{%
-           family={Sio},
-           familyi={S\bibinitperiod},
-           given={Antonietta\bibnamedelima De},
-           giveni={A\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+        {{hash=7c9e024557e51f9280853620fb9fd4e7}{%
+           family={De\bibnamedelima Sio},
+           familyi={D\bibinitperiod\bibinitdelim S\bibinitperiod},
+           given={Antonietta},
+           giveni={A\bibinitperiod}}}%
         {{hash=7cfbe0b52fdd695a318e9071932beda1}{%
            family={Lienau},
            familyi={L\bibinitperiod},
@@ -99,37 +99,37 @@
            given={Caterina},
            giveni={C\bibinitperiod}}}%
       }
-      \list{institution}{3}{%
-        {Carl von Ossietzky Universität Oldenburg, Physics Department}%
-        {Center for Nanoscale Dynamics (CeNaD), D-26129 Oldenburg, Germany; Humboldt-Universität zu Berlin, Physics Department}%
-        {IRIS Adlershof, D-12489 Berlin, Germany}%
-      }
       \strng{namehash}{464606955ad49a55d9fae7e345c88640}
-      \strng{fullhash}{0a28f3007cbfabc1de8089361d445ddc}
+      \strng{fullhash}{c99a5fa102814c5c88e74f35afc8abfa}
       \strng{bibnamehash}{464606955ad49a55d9fae7e345c88640}
       \strng{authorbibnamehash}{464606955ad49a55d9fae7e345c88640}
       \strng{authornamehash}{464606955ad49a55d9fae7e345c88640}
-      \strng{authorfullhash}{0a28f3007cbfabc1de8089361d445ddc}
+      \strng{authorfullhash}{c99a5fa102814c5c88e74f35afc8abfa}
       \field{sortinit}{6}
       \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
       \field{labelnamesource}{author}
       \field{labeltitlesource}{title}
-      \field{day}{30}
-      \field{howpublished}{arXiv preprint}
-      \field{journaltitle}{arXiv preprint arXiv:2308.09062v2 [cond-mat.mes-hall]}
-      \field{month}{10}
-      \field{note}{Electronic mail: caterina.cocchi@uni-oldenburg.de, jannis.krumland@physik.hu-berlin.de}
+      \field{abstract}{The recent development of multidimensional ultrafast spectroscopy techniques calls for the introduction of computational schemes that allow for the simulation of such experiments and the interpretation of the corresponding results from a microscopic point of view. In this work, we present a general and efficient first-principles scheme to compute two-dimensional electronic spectroscopy maps based on real-time time-dependent density-functional theory. The interface of this approach with the Ehrenfest scheme for molecular dynamics enables the inclusion of vibronic effects in the calculations based on a classical treatment of the nuclei. The computational complexity of the simulations is reduced by the application of numerical advances such as branching techniques, undersampling, and a novel reduced phase cycling scheme, applicable for systems with inversion symmetry. We demonstrate the effectiveness of this method by applying it to prototypical molecules such as benzene, pyridine, and pyrene. We discuss the role of the approximations that inevitably enter the adopted theoretical framework and set the stage for further extensions of the proposed method to more realistic systems.}
+      \field{issn}{1931-9401}
+      \field{journaltitle}{Applied Physics Reviews}
+      \field{month}{01}
+      \field{number}{1}
       \field{title}{Two-dimensional electronic spectroscopy from first principles}
-      \field{year}{2023}
-      \field{dateera}{ce}
+      \field{volume}{11}
+      \field{year}{2024}
+      \field{pages}{011305}
+      \range{pages}{1}
       \verb{doi}
-      \verb insert DOI if available
+      \verb 10.1063/5.0172621
+      \endverb
+      \verb{eprint}
+      \verb https://pubs.aip.org/aip/apr/article-pdf/doi/10.1063/5.0172621/18847826/011305\_1\_5.0172621.pdf
       \endverb
       \verb{urlraw}
-      \verb https://arxiv.org/abs/2308.09062v2
+      \verb https://doi.org/10.1063/5.0172621
       \endverb
       \verb{url}
-      \verb https://arxiv.org/abs/2308.09062v2
+      \verb https://doi.org/10.1063/5.0172621
       \endverb
     \endentry
     \entry{Segarra-Martí2018}{article}{}
@@ -228,6 +228,65 @@
       \verb{doi}
       \verb 10.48550/arXiv.2412.10931
       \endverb
+    \endentry
+    \entry{Hamm2005}{book}{}
+      \name{author}{1}{}{%
+        {{hash=ed90f62d8a0220b204f27d5edd610819}{%
+           family={Hamm},
+           familyi={H\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Zurich, Switzerland}%
+      }
+      \list{publisher}{1}{%
+        {University of Zurich}%
+      }
+      \strng{namehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{fullhash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{bibnamehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{authorbibnamehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{authornamehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{authorfullhash}{ed90f62d8a0220b204f27d5edd610819}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{8}
+      \field{note}{or: Mukamel for Dummies}
+      \field{title}{Principles of Nonlinear Optical Spectroscopy: A Practical Approach}
+      \field{year}{2005}
+    \endentry
+    \entry{Mukamel1995}{book}{}
+      \name{author}{1}{}{%
+        {{hash=5ac21333b8262447c0185f30fa0db4c3}{%
+           family={Mukamel},
+           familyi={M\bibinitperiod},
+           given={Shaul},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {New York}%
+      }
+      \list{publisher}{1}{%
+        {Oxford University Press}%
+      }
+      \strng{namehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{fullhash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{bibnamehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{authorbibnamehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{authornamehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{authorfullhash}{5ac21333b8262447c0185f30fa0db4c3}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{0-19-509278-3}
+      \field{title}{Principles of Nonlinear Optical Spectroscopy}
+      \field{year}{1995}
+      \field{pages}{543}
+      \range{pages}{1}
     \endentry
   \enddatalist
   \missing{AsenjoGarcia2017}
