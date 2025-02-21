@@ -1,0 +1,263 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      9132,        253]
+NotebookOptionsPosition[      8299,        231]
+NotebookOutlinePosition[      8634,        246]
+CellTagsIndexPosition[      8591,        243]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+   "Define", " ", "the", " ", "creation", " ", "and", " ", "annihilation", 
+    " ", "operators"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"ClearAll", "[", 
+    RowBox[{"ClearAll", "[", 
+     RowBox[{
+     "b", ",", "bDagger", ",", "omega", ",", "H_B", ",", "rho_B", ",", "B", 
+      ",", "B_tau", ",", "g"}], "]"}], "]"}], "\n", "\n", 
+   RowBox[{
+    RowBox[{"b", "[", "k_", "]"}], ":=", 
+    RowBox[{"Symbol", "[", 
+     RowBox[{"\"\<b\>\"", "<>", 
+      RowBox[{"ToString", "[", "k", "]"}]}], "]"}]}], "  ", 
+   RowBox[{"(*", 
+    RowBox[{"Annihilation", " ", "operator", " ", "b_k"}], "*)"}], "\n", 
+   RowBox[{
+    RowBox[{"bDagger", "[", "k_", "]"}], ":=", 
+    RowBox[{"Symbol", "[", 
+     RowBox[{"\"\<b\>\"", "<>", 
+      RowBox[{"ToString", "[", "k", "]"}], "<>", "\"\<\[Dagger]\>\""}], "]"}],
+     "  ", 
+    RowBox[{"(*", 
+     RowBox[{"Creation", " ", "operator", " ", "b_k\[Dagger]", "*"}], 
+     "\[IndentingNewLine]"}]}]}]}]], "Input",
+ CellChangeTimes->{{3.949136500536232*^9, 3.949136507067395*^9}, {
+   3.949136641884742*^9, 3.949136642764196*^9}, 3.94913674390261*^9, {
+   3.949136785094006*^9, 3.9491368031735*^9}},
+ EmphasizeSyntaxErrors->True,
+ CellLabel->"In[39]:=",ExpressionUUID->"9f849095-6534-41da-bd48-89c3aeb09940"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "ClearAll","ssym",
+   "\"\\!\\(\\*RowBox[{\\\"ClearAll\\\", \\\"[\\\", RowBox[{\\\"b\\\", \
+\\\",\\\", \\\"bDagger\\\", \\\",\\\", \\\"omega\\\", \\\",\\\", \\\"H_B\\\", \
+\\\",\\\", \\\"rho_B\\\", \\\",\\\", \\\"B\\\", \\\",\\\", \\\"B_tau\\\", \
+\\\",\\\", \\\"g\\\"}], \\\"]\\\"}]\\) is not a symbol or a string.\"",2,39,
+   15,32122882554138290213,"Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{
+  3.9491368896447697`*^9, {3.9491370279551783`*^9, 3.9491370362124987`*^9}},
+ CellLabel->
+  "During evaluation of \
+In[39]:=",ExpressionUUID->"1701578d-17ad-4e4d-a51c-f7b8f1a8f0f9"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{"Define", " ", "the", " ", "Hamiltonian", " ", "H_B"}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"omega", "[", "k_", "]"}], ":=", "omega_k"}], " ", 
+   RowBox[{"(*", 
+    RowBox[{
+     RowBox[{"omega_k", " ", "is", " ", "a", " ", "placeholder"}], ";", 
+     RowBox[{
+     "replace", " ", "with", " ", "the", " ", "desired", " ", "form"}]}], 
+    "*)"}], "\[IndentingNewLine]", " ", "\[IndentingNewLine]", "\n", 
+   RowBox[{
+    RowBox[{"H_B", "=", 
+     RowBox[{"Sum", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"omega", "[", "k", "]"}], " ", 
+        RowBox[{"bDagger", "[", "k", "]"}], " ", 
+        RowBox[{"b", "[", "k", "]"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{"k", ",", "1", ",", "N"}], "}"}]}], "]"}]}], ";"}], "\n", 
+   "\[IndentingNewLine]", "\n", 
+   RowBox[{"(*", 
+    RowBox[{"Thermal", " ", "density", " ", "matrix", " ", 
+     RowBox[{"(", 
+      RowBox[{"Gibbs", " ", "state"}], ")"}]}], "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"beta", "=", 
+     RowBox[{"1", "/", 
+      RowBox[{"(", 
+       RowBox[{"kB", "*", "T"}], ")"}]}]}], ";", 
+    RowBox[{"(*", 
+     RowBox[{"Define", " ", "inverse", " ", "temperature"}], "*)"}], 
+    "\[IndentingNewLine]", 
+    RowBox[{"rho_B", "=", 
+     RowBox[{
+      RowBox[{"Exp", "[", 
+       RowBox[{
+        RowBox[{"-", "beta"}], " ", "H_B"}], "]"}], "/", 
+      RowBox[{"Tr", "[", 
+       RowBox[{"Exp", "[", 
+        RowBox[{
+         RowBox[{"-", "beta"}], " ", "H_B"}], "]"}], "]"}]}]}]}], 
+   RowBox[{"(*", 
+    RowBox[{"Thermal", " ", "density", " ", "matrix"}], "*)"}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{"(*", 
+    RowBox[{"Define", " ", "the", " ", "operator", " ", "B"}], "*)"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"B", "=", 
+     RowBox[{"Sum", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"bDagger", "[", "k", "]"}], "+", 
+        RowBox[{"b", "[", "k", "]"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{"k", ",", "1", ",", "N"}], "}"}]}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", "\n", 
+   RowBox[{"(*", 
+    RowBox[{"Time", " ", "evolution", " ", "of", " ", "B"}], "*)"}], "\n", 
+   RowBox[{
+    RowBox[{"B_tau", "=", 
+     RowBox[{
+      RowBox[{"Exp", "[", 
+       RowBox[{"I", " ", "H_B", " ", "tau"}], "]"}], ".", "B", ".", 
+      RowBox[{"Exp", "[", 
+       RowBox[{
+        RowBox[{"-", "I"}], " ", "H_B", " ", "tau"}], "]"}]}]}], ";"}], 
+   "\[IndentingNewLine]", "\n", "\n", 
+   RowBox[{"(*", 
+    RowBox[{
+     RowBox[{
+     "Calculate", " ", "the", " ", "correlation", " ", "function", " ", "g", 
+      RowBox[{"(", "tau", ")"}]}], "=", " ", 
+     RowBox[{"<", 
+      RowBox[{"B", 
+       RowBox[{"(", "tau", ")"}], " ", "B", 
+       RowBox[{"(", "0", ")"}]}], ">"}]}], "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"g", "[", "tau_", "]"}], ":=", 
+     RowBox[{"Trace", "[", 
+      RowBox[{"rho_B", ".", "B_tau", ".", "B"}], "]"}]}], ";"}]}]}]], "Input",\
+
+ CellChangeTimes->{
+  3.9491365337881317`*^9, {3.949136572587935*^9, 3.9491365940122347`*^9}, {
+   3.949136808169196*^9, 3.949136883295754*^9}},
+ CellLabel->"In[41]:=",ExpressionUUID->"4d9fd121-543c-4661-8a4f-c7efd68ee6d6"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "Set","write",
+   "\"Tag \\!\\(\\*RowBox[{\\\"Sum\\\"}]\\) in \\!\\(\\*RowBox[{\\\"H\\\", \\\
+\":\\\", RowBox[{\\\"Blank\\\", \\\"[\\\", RowBox[{UnderoverscriptBox[\\\"\
+\[Sum]\\\", RowBox[{\\\"k\\\", \\\"=\\\", \\\"1\\\"}], \\\"N\\\"], RowBox[{\\\
+\"(\\\", RowBox[{\\\"bk\\\", \\\"+\\\", SubsuperscriptBox[\\\"b\\\", \
+\\\"k\\\", \\\"\[Dagger]\\\"]}], \\\")\\\"}]}], \\\"]\\\"}]}]\\) is \
+Protected.\"",2,42,17,32122882554138290213,"Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{3.949136776715513*^9, 3.949136896441189*^9, 
+  3.949137038958027*^9},
+ CellLabel->
+  "During evaluation of \
+In[41]:=",ExpressionUUID->"db3f5c62-779b-4c04-89d8-704ebe9aba24"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "Set","write",
+   "\"Tag \\!\\(\\*RowBox[{\\\"Sum\\\"}]\\) in \\!\\(\\*RowBox[{\\\"rho\\\", \
+\\\":\\\", RowBox[{\\\"Blank\\\", \\\"[\\\", RowBox[{UnderoverscriptBox[\\\"\
+\[Sum]\\\", RowBox[{\\\"k\\\", \\\"=\\\", \\\"1\\\"}], \\\"N\\\"], RowBox[{\\\
+\"(\\\", RowBox[{\\\"bk\\\", \\\"+\\\", SubsuperscriptBox[\\\"b\\\", \
+\\\"k\\\", \\\"\[Dagger]\\\"]}], \\\")\\\"}]}], \\\"]\\\"}]}]\\) is \
+Protected.\"",2,43,18,32122882554138290213,"Local"},
+  "MessageTemplate"]], "Message", "MSG",
+ CellChangeTimes->{3.949136776715513*^9, 3.949136896441189*^9, 
+  3.949137039014351*^9},
+ CellLabel->
+  "During evaluation of \
+In[41]:=",ExpressionUUID->"7a6676db-8051-4389-a5d2-150ba7bc5097"],
+
+Cell[BoxData[
+ FractionBox[
+  SuperscriptBox["\[ExponentialE]", 
+   RowBox[{"-", 
+    FractionBox[
+     RowBox[{"H", ":", 
+      RowBox[{"Blank", "[", 
+       RowBox[{
+        UnderoverscriptBox["\[Sum]", 
+         RowBox[{"k", "=", "1"}], "N"], 
+        RowBox[{"(", 
+         RowBox[{"bk", "+", 
+          SubsuperscriptBox["b", "k", "\[Dagger]"]}], ")"}]}], "]"}]}], 
+     RowBox[{"kB", " ", "T"}]]}]], 
+  RowBox[{"Tr", "[", 
+   SuperscriptBox["\[ExponentialE]", 
+    RowBox[{"-", 
+     FractionBox[
+      RowBox[{"H", ":", 
+       RowBox[{"Blank", "[", 
+        RowBox[{
+         UnderoverscriptBox["\[Sum]", 
+          RowBox[{"k", "=", "1"}], "N"], 
+         RowBox[{"(", 
+          RowBox[{"bk", "+", 
+           SubsuperscriptBox["b", "k", "\[Dagger]"]}], ")"}]}], "]"}]}], 
+      RowBox[{"kB", " ", "T"}]]}]], "]"}]]], "Output",
+ CellChangeTimes->{3.949136776744652*^9, 3.9491368965012703`*^9, 
+  3.9491370390185833`*^9},
+ CellLabel->"Out[43]=",ExpressionUUID->"e4f5e781-03e4-4adf-ad20-1add03463d53"]
+}, Open  ]]
+},
+WindowSize->{808, 911},
+WindowMargins->{{556, Automatic}, {57, Automatic}},
+FrontEndVersion->"12.0 for Linux x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 1314, 32, 147, "Input",ExpressionUUID->"9f849095-6534-41da-bd48-89c3aeb09940"],
+Cell[1897, 56, 635, 13, 25, "Message",ExpressionUUID->"1701578d-17ad-4e4d-a51c-f7b8f1a8f0f9"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2569, 74, 3278, 91, 515, "Input",ExpressionUUID->"4d9fd121-543c-4661-8a4f-c7efd68ee6d6"],
+Cell[5850, 167, 708, 14, 56, "Message",ExpressionUUID->"db3f5c62-779b-4c04-89d8-704ebe9aba24"],
+Cell[6561, 183, 710, 14, 56, "Message",ExpressionUUID->"7a6676db-8051-4389-a5d2-150ba7bc5097"],
+Cell[7274, 199, 1009, 29, 100, "Output",ExpressionUUID->"e4f5e781-03e4-4adf-ad20-1add03463d53"]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
+
