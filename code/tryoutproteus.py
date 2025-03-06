@@ -10,25 +10,19 @@ output_dir = os.getcwd()  # Gets the current working directory
 os.makedirs(output_dir, exist_ok=True)
 
 # Phase Cycling for Averaging
-phases = [-i * np.pi / 2 for i in range(4)] # GIVES WEIRD RESULTS
+phases = [np.pi / 2 for i in range(4)] # GIVES WEIRD RESULTS
 hbar        = 1#* const.hbar
 Boltzmann   = 1#* const.Boltzmann
 c           = 1# * const.c
 
-wc      = np.inf
-mu_a    = wc
-mu_b    = mu_a
-omega_a = mu_b
-omega_b = omega_a
-fine_spacing = omega_b
 times   = [0]
-
+fac_twopi = 1#* 2*np.pi
 # =============================
 # SYSTEM PARAMETERS
 # =============================
 N_atoms = 1
 Coupled = False
-omega_L = 0.47973       # reciprocal fs
+omega_L = 0.47973       # reciprocal fs            #fac_twopi*c*16000        # for N_atoms=2  excitation in the center of one-exciton manifold
 E_freqs = [omega_L] * 3 # Laser frequencies
 
 # Define Atomic States
@@ -37,7 +31,7 @@ atom_g, atom_e = basis(2, 0), basis(2, 1)      # Ground, Excited states
 # =============================
 # MORE FUNCTIONS
 # =============================
-def plot_positive_color_map(x, y, data, T = np.inf, space="real", type="real", positive=False, safe=False):
+def plot_positive_color_map(x, y, data, T = np.inf, space="real", type="real", positive=False, safe=True):
     """
     Create a color plot of 2D functional data for positive x and y values only.
 
@@ -122,14 +116,32 @@ def plot_positive_color_map(x, y, data, T = np.inf, space="real", type="real", p
 
     # Save the plot if safe is True
     if safe and output_dir is not None:
-        file_name_combined = (
-            f"Classical_J{J:.1f}_w_a={omega_a:.2f}_w_b={omega_b:.2f}_g_0{gamma_0:.2f}_g_phi{gamma_phi:.2f}_positive={positive}_space={space}"
-        )
+        filename_parts = [
+            f"N={N_atoms}",
+            f"mua={mu_a:.0f}",
+            f"E0={E0:.2e}",  # Use scientific notation for E0
+            f"wa={omega_a:.2f}",
+            f"wL={omega_L/omega_a:.1f}wa",
+            f"g={g_value:.2e}", #use scientific notation
+            f"rabi0={rabi_0:.2f}",
+            f"delta={delta:.2f}",
+            f"rabigen={rabi_gen:.2f}",
+            f"g0={gamma_0:.3f}",
+            f"gphi={gamma_phi:.3f}",
+            f"pos={positive}",
+            f"space={space}"
+        ]
+
+        if N_atoms == 2:
+            filename_parts.insert(1, f"J_{J:.1f}")  # Insert J after N_atoms if it exists
+
         if space == "freq":
-            file_name_combined += f"_type={type}"
-        file_name_combined += ".svg"
+            filename_parts.append(f"type_{type}")
+
+        file_name_combined = "_".join(filename_parts) + ".svg"
         save_path_combined = os.path.join(output_dir, file_name_combined)
         plt.savefig(save_path_combined)
+
 
     plt.show()
 def Plot_example_evo(T_val, tau, phi_1, phi_2, times_0, times_1, times_2, data_1, data_2, data_f, i, j, k):
@@ -225,7 +237,7 @@ def Plot_example_evo_with_DipOp(T_val, tau, phi_1, phi_2, times_0, times_1, time
     fig.suptitle(f"tau = {tau:.2f}, T = {T_val:.2f}")
     axs[-1].set_xlabel('t [fs]')
     plt.show()
-def get_times_for_T(T, spacing=fine_spacing):
+def get_times_for_T(T, spacing):
     # Adjust the first and last entries of times_tau
     first_tau = (Delta_ts[0] + Delta_ts[1])
     last_tau = np.floor((t_max - Delta_ts[2] - T - Delta_ts[0]) / spacing) * spacing
@@ -256,66 +268,6 @@ def get_args(t = times[0], i = 0, phi = 0):
         'Delta': Delta_ts[i],
         'E_amp': E_amps[i]
     }
-
-def compute_pulse(psi_ini, times, phi, i):
-    ### Compute Pulse
-    progress_bar = ""
-    if i == 2 and times[0] >= times[len(times)//2]:
-        progress_bar='enhanced'    
-    options = Options(store_states=True, progress_bar=progress_bar,)
-    args = get_args(times[0], i, phi)
-    #result = brmesolve(H_sys, psi_ini, times, e_ops=e_op_list, a_ops=a_ops(), options=options)
-    result = mesolve(H_sys(args), psi_ini, times, e_ops=e_op_list, c_ops=c_ops(), options=options)
-    return result
-def compute_two_dimensional_polarization(T_val, phi_1, phi_2):
-    ### Compute Two-Dimensional Polarization
-    # get the symmetric times, t / tau
-    tau_values, t_values = get_times_for_T(T_val)
-
-    # initialize the time domain Spectroscopy
-    data = np.zeros((len(tau_values), len(t_values)))
-
-    # only make the necessary steps (don't calculate too many states that we don't need)
-    index_0 = np.abs(times - (tau_values[-1] - Delta_ts[1] + Delta_ts[0])).argmin()  # Find the closest index to reduce computation time
-    # select range  ->  to reduce computation time
-    times_0 = times[:index_0+1]
-
-    # calculate the evolution of the first pulse in the desired range for tau
-    data_1  = compute_pulse(psi_ini, times_0, phi_1, 0)
-
-    # for every tau value -> calculate the next pulses
-    for tau_idx, tau in enumerate(tau_values):
-        # find the position in times, which corresponds to the current tau
-        i       = np.abs((times_0 + Delta_ts[1] - Delta_ts[0]) - tau_values[tau_idx]).argmin()
-
-        # take this state and evolve it with the second pulse, but only as far as desired
-        psi_1   = data_1.states[i]
-
-        # select range  ->  to reduce computation time
-        j = np.abs((times - times_0[i] - Delta_ts[1] + Delta_ts[2]) - T_val).argmin()
-        times_1 = times[i:j+1]
-
-        # compute second pulse for waiting time T
-        data_2  = compute_pulse(psi_1, times_1, phi_2, 1)
-        psi_2   = data_2.states[j-i]
-
-        # compute the last pulse with times t
-        times_2 = times[j:]
-        data_f  = compute_pulse(psi_2, times_2, 0, 2)
-
-        for t_idx, t in enumerate(t_values):
-            # store the data for the case
-            if t_idx + tau_idx < len(tau_values):
-
-                k = np.abs(t_values[t_idx] - (times_2 - times_2[0] - Delta_ts[2])).argmin()
-                psi_f = data_f.states[k]
-                data[tau_idx, t_idx] = expect(Dip_op, psi_f)
-
-                # make one plot for this case
-                #if t == t_values[len(t_values)//2] and tau == tau_values[len(tau_values)//3]:
-                #    Plot_example_evo_with_DipOp(T_val, tau, phi_1, phi_2, times_0, times_1, times_2, data_1, data_2, data_f, i, j, k)
-                #    Plot_example_evo(T_val, tau, phi_1, phi_2, times_0, times_1, times_2, data_1, data_2, data_f, i, j, k)
-    return tau_values, t_values, data
 
 def process_phi_combination(phi_1, phi_2, times_T):
     # Function to handle parallel processing for each phi1, phi2 combination
@@ -376,13 +328,18 @@ def extend_and_transform_averaged_results(averaged_results):
         global_data_time += data_extended_time
         global_data_freq += data_extended_freq
         plot_positive_color_map(ts, taus, data_time, times_T[i])
-        plot_positive_color_map(global_t_freqs, global_tau_freqs, data_extended_freq, times_T[i], space="freq", positive=True, type="abs")
+        plot_positive_color_map(global_t_freqs, global_tau_freqs, data_extended_freq, times_T[i], space="freq", positive=True, type="real")
 
     global_data_time /= len(averaged_results)
     global_data_freq /= len(averaged_results)
-    plot_positive_color_map(global_ts, global_taus, global_data_time, safe=False)
-    plot_positive_color_map(global_t_freqs, global_tau_freqs, global_data_freq, space="freq", type="abs", positive=True, safe=False)
+    plot_positive_color_map(global_ts, global_taus, global_data_time, safe=True)
+    plot_positive_color_map(global_t_freqs, global_tau_freqs, global_data_freq, space="freq", type="real", positive=True, safe=True)
     return global_data_time, global_data_freq
+def main(phases, times_T):
+    all_results = parallel_process_all_combinations(phases, times_T)
+    sorted_results = {k: sorted(v, key=lambda data_item: len(data_item[0]), reverse=True)[:-1] for k, v in all_results.items()}
+    averaged_results = average_and_plot_results(sorted_results, times_T)
+    return averaged_results
 
 def H_int(t, args):
     E0 = args['E_amp']
@@ -414,146 +371,257 @@ def a_ops():
 
     def ohmic_spectrum_at(w):
         if w == 0: # DEPHASING
-            return 10*      2*np.pi * gamma_phi
+            return 70 * gamma_phi
         else:      # DECAY
-            return 10*      2*np.pi * gamma_0 * w/wc * np.exp(-w / wc) * ( w > 0.0) #  gamma_0 * (w > 0.0 )#
+            return 70 * gamma_0 * w/wc * np.exp(-w / wc) * ( w > 0.0) #  gamma_0 * (w > 0.0 )#
     a_op_list = []
     a_op_list.append([Dip_op, ohmic_spectrum_at])
     return a_op_list
 
-def setup_system(N_atoms, Coupled = False):
+def test(test_args, times, e_op_list, g_value):
+    progress_bar = 'enhanced'
+    options = Options(
+        store_states=True,
+        progress_bar=progress_bar)
+
+    result_me = mesolve(H_sys(test_args), psi_ini, times, c_ops=c_ops(), e_ops=e_op_list, args=test_args, options=options)
+    result_br = brmesolve(H_sys(test_args), psi_ini, times, a_ops=a_ops(), e_ops=e_op_list, args=test_args, options=options)
+
+    fig, ax1 = plt.subplots()
+    ax1.plot(times, expect(Dip_op, result_me.states), label=r"ME $\langle \mu \rangle$")
+    ax1.plot(times, expect(Dip_op, result_br.states), label=r"BR $\langle \mu \rangle$")
+    ax1.set_xlabel('t [fs]')
+    ax1.set_ylabel(r'$\langle \mu \rangle$')
+    ax2 = ax1.twinx()
+    ax2.plot(times, [H_int(t, test_args).norm() / g_value for t in times], label=r"$|H_I(t)|/g$", color='green')
+    ax2.set_ylabel(r'$E(t)$')
+    ax1.legend(loc="center right")
+    ax2.legend(loc="upper right")
+
+    fig, axes = plot_expectation_values([result_me, result_br])
+    for ax in axes:
+        ax.legend(labels=["ME", "BR"])
+    plt.xlabel('t [fs]')
+    plt.show()
+
+def setup_system(N_atoms, Coupled=False):
     if N_atoms == 1:
-        psi_ini = atom_g                            # Initial state = atom in ground state
-        omega_a = 0.47973                           # reciprocal fs
-        pulse_duration  = 15                        # fs
-        Delta_ts        = [pulse_duration/2] * 3    # Pulse widths
-        fine_spacing    = 2                         # fs high resolution for evolution
-        J       = 0
-        mu_a    = 1       # Dipole matrix element of each atom actually has SI units C * m but is set dimensionless and E0 accounts for that
-        E0      = 1e-19 * 1.509*10**18      # reciprocal fs       # V / m (* mu) -> conversion factor to make H_I eV
-        E_amps  = [E0, E0, 1e-2*E0]         # Rabi_0 = (mu_a * E0) / hbar (energysplitting of the field  Rabi freq coupling to laser field  -> E_field_0 dot dot Dip_op, parallel
-        g_value = (mu_a * E0)
-        rabi_0  = g_value / hbar 
-
-        H0      = hbar * omega_a * ket2dm(atom_e)
-
-        sm      = mu_a * (atom_g *  atom_e.dag()).unit()
+        psi_ini = atom_g
+        omega_a = 0.47973
+        omega_b = omega_a  # Define omega_b for consistency
+        omega_L = 0.47973  # Define omega_L for consistency
+        J = 0
+        mu_a = 1
+        E0 = 1e-19 * 1.509 * 10**18
+        E_amps = [E0, E0, 1e-2 * E0]
+        g_value = mu_a * E0
+        rabi_0 = g_value / hbar
+        H0 = hbar * omega_a * ket2dm(atom_e)
+        sm = mu_a * (atom_g * atom_e.dag()).unit()
         sm_list = [sm]
-        Dip_op  = sm + sm.dag()               # single dipole operators
+        Dip_op = sm + sm.dag()
         Deph_op = -atom_g * atom_g.dag() + atom_e * atom_e.dag()
-        delta   = omega_a - omega_L
-        rabi_gen= np.sqrt(rabi_0**2 + delta**2)
-        t_max_L = 6 * 2*np.pi / omega_L # 6 cycles of the laser rotation
-        t_prd   = 2*np.pi / rabi_gen    # this should be the time for 1 Rabi-oscillation
-        t_max_r = max(600, 5 * t_prd)   # either 600 fs or 5 Rabi oscillations
-        t_max = t_max_r # t_max_L # 6 * the laser
+        delta = omega_a - omega_L
+        rabi_gen = np.sqrt(rabi_0**2 + delta**2)
+        t_max_L = 6 * 2 * np.pi / omega_L
+        t_prd = 2 * np.pi / rabi_gen
+        t_max_r = max(600, 5 * t_prd)
+        pulse_duration = 15
+        Delta_ts = [pulse_duration / 2] * 3
+        fine_spacing = 1
+        t_max = t_max_r
+        gamma_0, gamma_phi = 300**-1, 100**-1
     elif N_atoms == 2:
-        E0      = 1e-19 * 1.509*10**18      # reciprocal fs       # V / m (* mu) -> conversion factor to make H_I eV
-        E_amps  = [E0, E0, 1e-2*E0]         # Rabi_0 = (mu_a * E0) / hbar (energysplitting of the field  Rabi freq coupling to laser field  -> E_field_0 dot dot Dip_op, parallel
-        def Hamilton_dimer_sys():
-            """ Construct the system Hamiltonian including dipole interactions. """
-            H = hbar * (omega_a * ket2dm(tensor(atom_e, atom_g))
-                + omega_b * ket2dm(tensor(atom_g, atom_e))
-                + J * (tensor(atom_e, atom_g) * tensor(atom_g, atom_e).dag() + tensor(atom_g, atom_e) * tensor(atom_e, atom_g).dag())
-                + (omega_a + omega_b) * ket2dm(tensor(atom_e, atom_e)))
-            return H
-        pulse_duration  = 5                        # fs
-        Delta_ts        = [pulse_duration/2] * 3    # Pulse widths
-        fine_spacing    = 1                         # fs high resolution for evolution
-        # =============================
-        # BATH COUPLING
-        # =============================
+        E0 = 1e-19 * 1.509 * 10**18
+        E_amps = [E0, E0, 1e-2 * E0]
 
-        T  = 1e-2   # temperature of the Bath
-        g  = 1      # coupling strength of bath to system
+        def Hamilton_dimer_sys():
+            H = hbar * (omega_a * ket2dm(tensor(atom_e, atom_g))
+                        + omega_b * ket2dm(tensor(atom_g, atom_e))
+                        + J * (tensor(atom_e, atom_g) * tensor(atom_g, atom_e).dag() + tensor(atom_g, atom_e) * tensor(atom_e, atom_g).dag())
+                        + (omega_a + omega_b) * ket2dm(tensor(atom_e, atom_e)))
+            return H
+
+        pulse_duration = 5
+        Delta_ts = [pulse_duration / 2] * 3
+        fine_spacing = 1
+        T = 1e-2
+        g = 1
+
         def n(w):
             return 1 / (np.exp(w * (Boltzmann * T)**-1) - 1)
-        def ohmic_spectrum(w): # spectral density (noise) function
-            return g**2 * w / wc * np.exp(- w / wc)
-        def Corr_fct(w): # bath correlation function; independant for the two dimer parts
+
+        def ohmic_spectrum(w):
+            return g**2 * w / wc * np.exp(-w / wc)
+
+        def Corr_fct(w):
             if w > 0:
-                return n(w) *  ohmic_spectrum(w)
+                return n(w) * ohmic_spectrum(w)
             elif w < 0:
                 return (1 + n(-w)) * ohmic_spectrum(-w)
             else:
                 return g**2 / (wc * (Boltzmann * T)**-1)
 
-        psi_ini = (tensor(atom_g, atom_g))            # Initial state = both atoms in ground state
+        psi_ini = tensor(atom_g, atom_g)
+
         def calc_mu(H):
             eigenvecs = H.eigenstates()[1]
-            mu_10 = - mu_a*np.sin(theta) + mu_b*np.cos(theta)
-            sigma_m_10 = mu_10 * (eigenvecs[0] *  eigenvecs[1].dag()).unit()
+            mu_10 = -mu_a * np.sin(theta) + mu_b * np.cos(theta)
+            sigma_m_10 = mu_10 * (eigenvecs[0] * eigenvecs[1].dag()).unit()
             if N_atoms == 1:
-                return [(sigma_m_10 + (sigma_m_10).dag())], [sigma_m_10]
+                return [(sigma_m_10 + sigma_m_10.dag())], [sigma_m_10]
 
-            mu_20 =   mu_a*np.cos(theta) + mu_b*np.sin(theta)
-            mu_31 = - mu_b*np.sin(theta) + mu_a*np.cos(theta)
-            mu_32 =   mu_b*np.cos(theta) + mu_a*np.sin(theta)
+            mu_20 = mu_a * np.cos(theta) + mu_b * np.sin(theta)
+            mu_31 = -mu_b * np.sin(theta) + mu_a * np.cos(theta)
+            mu_32 = mu_b * np.cos(theta) + mu_a * np.sin(theta)
 
-            sigma_m_20 = mu_20 * (eigenvecs[0] *  eigenvecs[2].dag()).unit()
+            sigma_m_20 = mu_20 * (eigenvecs[0] * eigenvecs[2].dag()).unit()
             sigma_m_32 = mu_31 * (eigenvecs[1] * eigenvecs[3].dag()).unit()
             sigma_m_31 = mu_32 * (eigenvecs[2] * eigenvecs[3].dag()).unit()
 
-            mu_list  = [(sigma_m_10 + (sigma_m_10).dag()),
-                        (sigma_m_20 + (sigma_m_20).dag()),
-                        (sigma_m_31 + (sigma_m_31).dag()),
-                        (sigma_m_32 + (sigma_m_32).dag())]
+            mu_list = [(sigma_m_10 + sigma_m_10.dag()),
+                       (sigma_m_20 + sigma_m_20.dag()),
+                       (sigma_m_31 + sigma_m_31.dag()),
+                       (sigma_m_32 + sigma_m_32.dag())]
             sm_list = [sigma_m_10, sigma_m_20, sigma_m_31, sigma_m_32]
             return mu_list, sm_list
 
-        if Coupled: # TODO CHANGE TO fs⁻¹
-            J = 300.0  # Coupling strength of dipoles for the dimer system (cm⁻¹, actually also s⁻1, when c = 1)
-            # Atomic Parameters
-            omega_a = 0.49037          
-            omega_b = fac_twopi*c*15800  # Energy splitting of atom B (cm⁻¹, actually also s⁻1, when c = 1)
-            mu_a     = 1       # Dipole matrix element of each atom
-            mu_b     = -0.23   # Dipole matrix element of each atom
-
+        if Coupled:
+            J = 300.0
+            omega_a = 0.49037
+            omega_b = fac_twopi * c * 15800
+            mu_a = 1
+            mu_b = -0.23
         else:
-            J = 0.0  # Coupling strength of dipoles for the dimer system (cm⁻¹, actually also s⁻1, when c = 1)
-            # Atomic Parameters
-            omega_a = fac_twopi*c*16360  # Energy splitting of atom A (cm⁻¹, actually also s⁻1, when c = 1)
-            omega_b = fac_twopi*c*15640  # Energy splitting of atom B (cm⁻¹, actually also s⁻1, when c = 1)
-            mu_a     = 1       # Dipole matrix element of each atom
-            mu_b     = mu_a     # Dipole matrix element of each atom
+            J = 0.0
+            omega_a = fac_twopi * c * 16360
+            omega_b = fac_twopi * c * 15640
+            mu_a = 1
+            mu_b = mu_a
             theta = np.arctan(2 * J / (omega_a - omega_b)) / 2
-
             w_ab = np.abs(omega_a - omega_b)
-            gamma_ab = np.sin(2* theta)**2 *Corr_fct(w_ab)
-            Gamma_ab = 2 * np.cos(2*Corr_fct(0))**2
+            gamma_ab = np.sin(2 * theta)**2 * Corr_fct(w_ab)
+            Gamma_ab = 2 * np.cos(2 * Corr_fct(0))**2
 
-        H0    = Hamilton_dimer_sys()
-
+        H0 = Hamilton_dimer_sys()
         x = calc_mu(H0)
-        dip_op_list = x[0]               # single dipole operators
-        sm_list     = x[1]
+        dip_op_list = x[0]
+        sm_list = x[1]
+        Dip_op = sum([op for op in dip_op_list])
+        Deph_op = sum([-H0.eigenstates()[1][0] * H0.eigenstates()[1][0].dag() + state * state.dag() for state in H0.eigenstates()[1][1:]])
+        t_max = min(600, 5 * 2 * np.pi * hbar / (mu_a * E0))
+        t_max = t_max_r
+    else:
+        raise ValueError("can only handle 1 or 2 atoms")
+    return psi_ini, H0, sm_list, Dip_op, Deph_op, t_max, E_amps, Delta_ts, fine_spacing, gamma_0, gamma_phi, E0, mu_a, omega_a, omega_b, omega_L, g_value, rabi_0, delta, rabi_gen
 
-        Dip_op  = sum([op for op in dip_op_list])
-        Deph_op = sum([-H0.eigenstates()[1][0] * H0.eigenstates()[1][0].dag() +state * state.dag() for state in H0.eigenstates()[1][1:]])#sum([commutator(op.dag(), op) for op in sm_list])
 
-        t_max = min(600, 5 * 2*np.pi * hbar/ (mu_a * E0))  # either 600 fs or 5 "NORMAL" Rabi oscillations
-        t_max = t_max_r # t_max_L # 6 * the laser
-    else: raise ValueError("can only handle 1 or 2 atoms")
+# Example usage
+system_params = setup_system(N_atoms)
 
-# =============================
-# COLLAPSE AND EXPECT OPERATORS
-# =============================
-# Lindblad Operators (Decay and Dephasing Rates)
-gamma_0, gamma_phi   = .01, .1
+psi_ini, H0, sm_list, Dip_op, Deph_op, t_max, E_amps, Delta_ts, fine_spacing, gamma_0, gamma_phi, E0, mu_a, omega_a, omega_b, omega_L, g_value, rabi_0, delta, rabi_gen = system_params
 
-setup_system(N_atoms)
-
-e_op_list = [ket2dm(v) for v in H0.eigenstates()[1]]                 # Expectation operators  |g> and |e>
+# Now you can use H0 to define e_op_list
+e_op_list = [ket2dm(v) for v in H0.eigenstates()[1]]
 e_op_labels = [f"state{i}" for i in range(len(H0.eigenstates()[1]))]
 
-# =============================
-# SYSTEM EVOLUTION
-# =============================
+# Print the values
+print(f"""
+System Parameters:
+------------------
+N_atoms: {N_atoms}
+mu_a: {mu_a}
+E0: {E0}
+omega_a: {omega_a}
+omega_b: {omega_b}
+omega_L: {omega_L}
+g_value: {g_value}
+rabi_0: {rabi_0}
+delta: {delta}
+rabi_gen: {rabi_gen}
+t_max: {t_max}
+fine_spacing: {fine_spacing}
+gamma_0: {gamma_0}
+gamma_phi: {gamma_phi}
+
+Operators:
+----------
+Dip_op: {Dip_op}
+Deph_op: {Deph_op}
+
+E_amps: {E_amps}
+Delta_ts: {Delta_ts}
+""")
 test_args = get_args()
 times     = np.arange(0, t_max, fine_spacing)       # High-resolution times array to do the evolutions
+
+
 first_entry = (Delta_ts[1] + Delta_ts[2])
 times_T =  np.array([0,16,30,46,62,108,140, 310]) + first_entry # np.arange(first_entry, last_entry, sparse_spacing)
 
+## Calculations
+def compute_pulse(psi_ini, times, phi, i):
+    ### Compute Pulse
+    progress_bar = ""
+    if i == 2 and times[0] >= times[len(times)//2]:
+        progress_bar='enhanced'    
+    options = Options(store_states=True, progress_bar=progress_bar,)
+    args = get_args(times[0], i, phi)
+    result = brmesolve(H_sys(args), psi_ini, times, e_ops=e_op_list, a_ops=a_ops(), options=options)
+    #result = mesolve(H_sys(args), psi_ini, times, e_ops=e_op_list, c_ops=c_ops(), options=options)
+    return result
+def compute_two_dimensional_polarization(T_val, phi_1, phi_2):
+    ### Compute Two-Dimensional Polarization
+    # get the symmetric times, t / tau
+    tau_values, t_values = get_times_for_T(T_val, fine_spacing)
+
+    # initialize the time domain Spectroscopy
+    data = np.zeros((len(tau_values), len(t_values)))
+
+    # only make the necessary steps (don't calculate too many states that we don't need)
+    index_0 = np.abs(times - (tau_values[-1] - Delta_ts[1] + Delta_ts[0])).argmin()  # Find the closest index to reduce computation time
+    # select range  ->  to reduce computation time
+    times_0 = times[:index_0+1]
+
+    # calculate the evolution of the first pulse in the desired range for tau
+    data_1  = compute_pulse(psi_ini, times_0, phi_1, 0)
+
+    # for every tau value -> calculate the next pulses
+    for tau_idx, tau in enumerate(tau_values):
+        # find the position in times, which corresponds to the current tau
+        i       = np.abs((times_0 + Delta_ts[1] - Delta_ts[0]) - tau_values[tau_idx]).argmin()
+
+        # take this state and evolve it with the second pulse, but only as far as desired
+        psi_1   = data_1.states[i]
+
+        # select range  ->  to reduce computation time
+        j = np.abs((times - times_0[i] - Delta_ts[1] + Delta_ts[2]) - T_val).argmin()
+        times_1 = times[i:j+1]
+
+        # compute second pulse for waiting time T
+        data_2  = compute_pulse(psi_1, times_1, phi_2, 1)
+        psi_2   = data_2.states[j-i]
+
+        # compute the last pulse with times t
+        times_2 = times[j:]
+        data_f  = compute_pulse(psi_2, times_2, 0, 2)
+
+        for t_idx, t in enumerate(t_values):
+            # store the data for the case
+            if t_idx + tau_idx < len(tau_values):
+
+                k = np.abs(t_values[t_idx] - (times_2 - times_2[0] - Delta_ts[2])).argmin()
+                psi_f = data_f.states[k]
+                data[tau_idx, t_idx] = expect(Dip_op, psi_f)
+
+                # make one plot for this case
+                #if t == t_values[len(t_values)//2] and tau == tau_values[len(tau_values)//3]:
+                #    Plot_example_evo_with_DipOp(T_val, tau, phi_1, phi_2, times_0, times_1, times_2, data_1, data_2, data_f, i, j, k)
+                #    Plot_example_evo(T_val, tau, phi_1, phi_2, times_0, times_1, times_2, data_1, data_2, data_f, i, j, k)
+    return tau_values, t_values, data
+
+# RESULTS from 2D Spectroscopy with all phases and times_T, already averaged over all phi
 RESULT = main(phases, times_T)
+
 # Example usage
 global_time_result, global_freq_result = extend_and_transform_averaged_results(RESULT)

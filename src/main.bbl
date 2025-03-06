@@ -1,0 +1,298 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global}
+    \entry{Rivas_2010}{article}{}
+      \name{author}{4}{}{%
+        {{hash=5f753dfd047806a2fba8bcb6aca6a085}{%
+           family={Rivas},
+           familyi={R\bibinitperiod},
+           given={Ángel},
+           giveni={Á\bibinitperiod}}}%
+        {{hash=d889ac042f6e23da2a9f01ab859afecc}{%
+           family={K\bibnamedelima Plato},
+           familyi={K\bibinitperiod\bibinitdelim P\bibinitperiod},
+           given={A\bibnamedelima Douglas},
+           giveni={A\bibinitperiod\bibinitdelim D\bibinitperiod}}}%
+        {{hash=5548792b6e6efbd7c38409d66bde46fd}{%
+           family={Huelga},
+           familyi={H\bibinitperiod},
+           given={Susana\bibnamedelima F},
+           giveni={S\bibinitperiod\bibinitdelim F\bibinitperiod}}}%
+        {{hash=8830243fa04103591b1d683ace9c7427}{%
+           family={B\bibnamedelima Plenio},
+           familyi={B\bibinitperiod\bibinitdelim P\bibinitperiod},
+           given={Martin},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{297a36dd387578c5a94747a2937f77c7}
+      \strng{fullhash}{df9c613d055375c7ae0d20a9c1847b84}
+      \strng{bibnamehash}{297a36dd387578c5a94747a2937f77c7}
+      \strng{authorbibnamehash}{297a36dd387578c5a94747a2937f77c7}
+      \strng{authornamehash}{297a36dd387578c5a94747a2937f77c7}
+      \strng{authorfullhash}{df9c613d055375c7ae0d20a9c1847b84}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{We derive Markovian master equations for single and interacting harmonic systems in different scenarios, including strong internal coupling. By comparing the dynamics resulting from the corresponding master equations with numerical simulations of the global system's evolution, we delimit their validity regimes and assess the robustness of the assumptions usually made in the process of deriving the reduced Markovian dynamics. The results of these illustrative examples serve to clarify the general properties of other open quantum system scenarios subject to treatment within a Markovian approximation.}
+      \field{journaltitle}{New Journal of Physics}
+      \field{month}{11}
+      \field{number}{11}
+      \field{title}{Markovian master equations: a critical study}
+      \field{volume}{12}
+      \field{year}{2010}
+      \field{pages}{113032}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.1088/1367-2630/12/11/113032
+      \endverb
+      \verb{urlraw}
+      \verb https://dx.doi.org/10.1088/1367-2630/12/11/113032
+      \endverb
+      \verb{url}
+      \verb https://dx.doi.org/10.1088/1367-2630/12/11/113032
+      \endverb
+    \endentry
+    \entry{krumland2023twodimensional}{article}{}
+      \name{author}{5}{}{%
+        {{hash=bbc9e85b9bad5c45b1dfa6ab0668fd80}{%
+           family={Krumland},
+           familyi={K\bibinitperiod},
+           given={Jannis},
+           giveni={J\bibinitperiod}}}%
+        {{hash=9c24fb9c3f0506a68abaac3971f692b9}{%
+           family={Guerrini},
+           familyi={G\bibinitperiod},
+           given={Michele},
+           giveni={M\bibinitperiod}}}%
+        {{hash=7c9e024557e51f9280853620fb9fd4e7}{%
+           family={De\bibnamedelima Sio},
+           familyi={D\bibinitperiod\bibinitdelim S\bibinitperiod},
+           given={Antonietta},
+           giveni={A\bibinitperiod}}}%
+        {{hash=7cfbe0b52fdd695a318e9071932beda1}{%
+           family={Lienau},
+           familyi={L\bibinitperiod},
+           given={Christoph},
+           giveni={C\bibinitperiod}}}%
+        {{hash=6701a7447b9c515cd546e2428a27186c}{%
+           family={Cocchi},
+           familyi={C\bibinitperiod},
+           given={Caterina},
+           giveni={C\bibinitperiod}}}%
+      }
+      \strng{namehash}{464606955ad49a55d9fae7e345c88640}
+      \strng{fullhash}{c99a5fa102814c5c88e74f35afc8abfa}
+      \strng{bibnamehash}{464606955ad49a55d9fae7e345c88640}
+      \strng{authorbibnamehash}{464606955ad49a55d9fae7e345c88640}
+      \strng{authornamehash}{464606955ad49a55d9fae7e345c88640}
+      \strng{authorfullhash}{c99a5fa102814c5c88e74f35afc8abfa}
+      \field{sortinit}{6}
+      \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{The recent development of multidimensional ultrafast spectroscopy techniques calls for the introduction of computational schemes that allow for the simulation of such experiments and the interpretation of the corresponding results from a microscopic point of view. In this work, we present a general and efficient first-principles scheme to compute two-dimensional electronic spectroscopy maps based on real-time time-dependent density-functional theory. The interface of this approach with the Ehrenfest scheme for molecular dynamics enables the inclusion of vibronic effects in the calculations based on a classical treatment of the nuclei. The computational complexity of the simulations is reduced by the application of numerical advances such as branching techniques, undersampling, and a novel reduced phase cycling scheme, applicable for systems with inversion symmetry. We demonstrate the effectiveness of this method by applying it to prototypical molecules such as benzene, pyridine, and pyrene. We discuss the role of the approximations that inevitably enter the adopted theoretical framework and set the stage for further extensions of the proposed method to more realistic systems.}
+      \field{issn}{1931-9401}
+      \field{journaltitle}{Applied Physics Reviews}
+      \field{month}{01}
+      \field{number}{1}
+      \field{title}{Two-dimensional electronic spectroscopy from first principles}
+      \field{volume}{11}
+      \field{year}{2024}
+      \field{pages}{011305}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.1063/5.0172621
+      \endverb
+      \verb{eprint}
+      \verb https://pubs.aip.org/aip/apr/article-pdf/doi/10.1063/5.0172621/18847826/011305\_1\_5.0172621.pdf
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1063/5.0172621
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1063/5.0172621
+      \endverb
+    \endentry
+    \entry{Segarra-Martí2018}{article}{}
+      \name{author}{5}{}{%
+        {{hash=b98132cfd2d1c2838944635108ddc98f}{%
+           family={Segarra-Martí},
+           familyi={S\bibinithyphendelim M\bibinitperiod},
+           given={Javier},
+           giveni={J\bibinitperiod}}}%
+        {{hash=5ac21333b8262447c0185f30fa0db4c3}{%
+           family={Mukamel},
+           familyi={M\bibinitperiod},
+           given={Shaul},
+           giveni={S\bibinitperiod}}}%
+        {{hash=35feb0474150cd49595ae8b7fcbe1897}{%
+           family={Garavelli},
+           familyi={G\bibinitperiod},
+           given={Marco},
+           giveni={M\bibinitperiod}}}%
+        {{hash=a9c638e3695783e359ce828795eb45ce}{%
+           family={Nenov},
+           familyi={N\bibinitperiod},
+           given={Artur},
+           giveni={A\bibinitperiod}}}%
+        {{hash=c4b251aeb408843899b14be40b92c58a}{%
+           family={Rivalta},
+           familyi={R\bibinitperiod},
+           given={Ivan},
+           giveni={I\bibinitperiod}}}%
+      }
+      \strng{namehash}{fcd0160d125aa1789185f7d830bcc73e}
+      \strng{fullhash}{afab5038a51cd7365dd386eca37a8f95}
+      \strng{bibnamehash}{fcd0160d125aa1789185f7d830bcc73e}
+      \strng{authorbibnamehash}{fcd0160d125aa1789185f7d830bcc73e}
+      \strng{authornamehash}{fcd0160d125aa1789185f7d830bcc73e}
+      \strng{authorfullhash}{afab5038a51cd7365dd386eca37a8f95}
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{We introduce the basic concepts of two-dimensional electronic spectroscopy (2DES) and a general theoretical framework adopted to calculate, from first principles, the nonlinear response of multi-chromophoric systems in realistic environments. Specifically, we focus on UV-active chromophores representing the building blocks of biological systems, from proteins to nucleic acids, describing our progress in developing computational tools and protocols for accurate simulation of their 2DUV spectra. The roadmap for accurate 2DUV spectroscopy simulations is illustrated starting with benchmarking of the excited-state manifold of the chromophoric units in a vacuum, which can be used for building exciton Hamiltonians for large-scale applications or as a reference for first-principles simulations with reduced computational cost, enabling treatment of minimal (still realistic) multi-chromophoric model systems. By adopting a static approximation that neglects dynamic processes such as spectral diffusion and population transfer, we show how 2DUV is able to characterize the ground-state conformational space of dinucleosides and small peptides comprising dimeric chromophoric units (in their native environment) by tracking inter-chromophoric electronic couplings. Recovering the excited-state coherent vibrational dynamics and population transfers, we observe a remarkable agreement between the predicted 2DUV spectra of the pyrene molecule and the experimental results. These results further led to theoretical studies of the excited-state dynamics in a solvated dinucleoside system, showing that spectroscopic fingerprints of long-lived excited-state minima along the complex photoinduced decay pathways of DNA/RNA model systems can be simulated at a reasonable computational cost. Our results exemplify the impact of accurate simulation of 2DES spectra in revealing complex physicochemical properties of fundamental biological systems and should trigger further theoretical developments as well as new experiments.}
+      \field{issn}{2364-8961}
+      \field{journaltitle}{Topics in Current Chemistry}
+      \field{number}{3}
+      \field{title}{Towards Accurate Simulation of Two-Dimensional Electronic Spectroscopy}
+      \field{volume}{376}
+      \field{year}{2018}
+      \field{pages}{24}
+      \range{pages}{1}
+      \verb{doi}
+      \verb 10.1007/s41061-018-0201-8
+      \endverb
+      \verb{urlraw}
+      \verb https://doi.org/10.1007/s41061-018-0201-8
+      \endverb
+      \verb{url}
+      \verb https://doi.org/10.1007/s41061-018-0201-8
+      \endverb
+    \endentry
+    \entry{Sun2024}{unknown}{}
+      \name{author}{4}{}{%
+        {{hash=fe7bbf39e1dc31f3269e598ae4ff13bc}{%
+           family={Sun},
+           familyi={S\bibinitperiod},
+           given={Haoran},
+           giveni={H\bibinitperiod}}}%
+        {{hash=06e355fb465dde9367d6de3c82182f36}{%
+           family={Harbola},
+           familyi={H\bibinitperiod},
+           given={Upendra},
+           giveni={U\bibinitperiod}}}%
+        {{hash=5ac21333b8262447c0185f30fa0db4c3}{%
+           family={Mukamel},
+           familyi={M\bibinitperiod},
+           given={Shaul},
+           giveni={S\bibinitperiod}}}%
+        {{hash=cea19e37089d231644b0b0351f5a70d9}{%
+           family={Galperin},
+           familyi={G\bibinitperiod},
+           given={Michael},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{20dc5cfd0668d02bda7eefce200b290f}
+      \strng{fullhash}{916dc3f7235ad89d27f70b540f06c5b6}
+      \strng{bibnamehash}{20dc5cfd0668d02bda7eefce200b290f}
+      \strng{authorbibnamehash}{20dc5cfd0668d02bda7eefce200b290f}
+      \strng{authornamehash}{20dc5cfd0668d02bda7eefce200b290f}
+      \strng{authorfullhash}{916dc3f7235ad89d27f70b540f06c5b6}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{12}
+      \field{title}{Two-dimensional spectroscopy of open quantum systems}
+      \field{year}{2024}
+      \verb{doi}
+      \verb 10.48550/arXiv.2412.10931
+      \endverb
+    \endentry
+    \entry{Hamm2005}{book}{}
+      \name{author}{1}{}{%
+        {{hash=ed90f62d8a0220b204f27d5edd610819}{%
+           family={Hamm},
+           familyi={H\bibinitperiod},
+           given={Peter},
+           giveni={P\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Zurich, Switzerland}%
+      }
+      \list{publisher}{1}{%
+        {University of Zurich}%
+      }
+      \strng{namehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{fullhash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{bibnamehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{authorbibnamehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{authornamehash}{ed90f62d8a0220b204f27d5edd610819}
+      \strng{authorfullhash}{ed90f62d8a0220b204f27d5edd610819}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{8}
+      \field{note}{or: Mukamel for Dummies}
+      \field{title}{Principles of Nonlinear Optical Spectroscopy: A Practical Approach}
+      \field{year}{2005}
+    \endentry
+    \entry{Mukamel1995}{book}{}
+      \name{author}{1}{}{%
+        {{hash=5ac21333b8262447c0185f30fa0db4c3}{%
+           family={Mukamel},
+           familyi={M\bibinitperiod},
+           given={Shaul},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {New York}%
+      }
+      \list{publisher}{1}{%
+        {Oxford University Press}%
+      }
+      \strng{namehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{fullhash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{bibnamehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{authorbibnamehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{authornamehash}{5ac21333b8262447c0185f30fa0db4c3}
+      \strng{authorfullhash}{5ac21333b8262447c0185f30fa0db4c3}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{0-19-509278-3}
+      \field{title}{Principles of Nonlinear Optical Spectroscopy}
+      \field{year}{1995}
+      \field{pages}{543}
+      \range{pages}{1}
+    \endentry
+  \enddatalist
+  \missing{AsenjoGarcia2017}
+  \missing{Eddins2022}
+  \missing{Ramakrishnan2023}
+  \missing{Scully2015}
+\endrefsection
+\endinput
+
