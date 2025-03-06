@@ -20,7 +20,7 @@ fac_twopi = 1#* 2*np.pi
 # =============================
 # SYSTEM PARAMETERS
 # =============================
-N_atoms = 1
+N_atoms = 2
 Coupled = False
 omega_L = 0.47973       # reciprocal fs            #fac_twopi*c*16000        # for N_atoms=2  excitation in the center of one-exciton manifold
 E_freqs = [omega_L] * 3 # Laser frequencies
@@ -405,6 +405,8 @@ def test(test_args, times, e_op_list, g_value):
     plt.show()
 
 def setup_system(N_atoms, Coupled=False):
+    E0 = 1e-19 * 1.509 * 10**18
+    E_amps = [E0, E0, 1e-2 * E0]
     if N_atoms == 1:
         psi_ini = atom_g
         omega_a = 0.47973
@@ -412,8 +414,6 @@ def setup_system(N_atoms, Coupled=False):
         omega_L = 0.47973  # Define omega_L for consistency
         J = 0
         mu_a = 1
-        E0 = 1e-19 * 1.509 * 10**18
-        E_amps = [E0, E0, 1e-2 * E0]
         g_value = mu_a * E0
         rabi_0 = g_value / hbar
         H0 = hbar * omega_a * ket2dm(atom_e)
@@ -432,8 +432,7 @@ def setup_system(N_atoms, Coupled=False):
         t_max = t_max_r
         gamma_0, gamma_phi = 300**-1, 100**-1
     elif N_atoms == 2:
-        E0 = 1e-19 * 1.509 * 10**18
-        E_amps = [E0, E0, 1e-2 * E0]
+        psi_ini = tensor(atom_g, atom_g)
 
         def Hamilton_dimer_sys():
             H = hbar * (omega_a * ket2dm(tensor(atom_e, atom_g))
@@ -442,18 +441,17 @@ def setup_system(N_atoms, Coupled=False):
                         + (omega_a + omega_b) * ket2dm(tensor(atom_e, atom_e)))
             return H
 
+
         pulse_duration = 5
-        Delta_ts = [pulse_duration / 2] * 3
-        fine_spacing = 1
+        Delta_ts       = [pulse_duration / 2] * 3
+        fine_spacing   = 1
         T = 1e-2
         g = 1
 
         def n(w):
             return 1 / (np.exp(w * (Boltzmann * T)**-1) - 1)
-
         def ohmic_spectrum(w):
             return g**2 * w / wc * np.exp(-w / wc)
-
         def Corr_fct(w):
             if w > 0:
                 return n(w) * ohmic_spectrum(w)
@@ -462,7 +460,6 @@ def setup_system(N_atoms, Coupled=False):
             else:
                 return g**2 / (wc * (Boltzmann * T)**-1)
 
-        psi_ini = tensor(atom_g, atom_g)
 
         def calc_mu(H):
             eigenvecs = H.eigenstates()[1]
@@ -489,7 +486,7 @@ def setup_system(N_atoms, Coupled=False):
         if Coupled:
             J = 300.0
             omega_a = 0.49037
-            omega_b = fac_twopi * c * 15800
+            omega_b = # fac_twopi * c * 15800
             mu_a = 1
             mu_b = -0.23
         else:
