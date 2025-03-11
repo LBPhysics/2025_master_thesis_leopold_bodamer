@@ -235,8 +235,7 @@ Cell[BoxData[
     {"\[Placeholder]"}
    }]}]], "Input",
  CellChangeTimes->{{3.949634559769721*^9, 3.9496345603418283`*^9}, {
-  3.9503499481822023`*^9, 
-  3.950349949351223*^9}},ExpressionUUID->"b6ca67b1-8e90-442e-b1fb-\
+  3.9503499481822023`*^9, 3.950349949351223*^9}},ExpressionUUID->"b6ca67b1-8e90-442e-b1fb-\
 b4333f622cef"],
 
 Cell[BoxData[
@@ -402,7 +401,7 @@ Cell[BoxData[
  GraphicsBox[{{}, {
     {RGBColor[0.368417, 0.506779, 0.709798], PointSize[0.009166666666666668], 
      AbsoluteThickness[1.6], PointBox[CompressedData["
-1:eJw11glQlEcWAOAZGZTbYUBAQeQ+ZoDgcofI/5JFoyhGVNSoMQQVWCUrKy66
+1:eJw11glQlEcWAOAZGZTbYUBAQeQ+ZoDgcofI/5JFoyhGVNSoMQQVWCUrKy6
 aqIR0TVGQ0R0QVwOAamFBRdjBIP+jbEQEhAkKk4MAUSH+75nYFidfv1XURT1
 //11v+73XmMbuW/97jkCgaDmzc/b3/QxJcWXX39xIredS097+5gQ68I4r/wn
 cs5L85gQB5PRFXveq+bqat8+ErKlc9fHJfFX+CjNIyEP9w7bfCuu56knIQ/i
@@ -526,7 +525,45 @@ Cell[BoxData[
  CellLabel->"Out[93]=",ExpressionUUID->"3c2012bf-1d16-49b0-a65d-77d36af34988"]
 }, Open  ]],
 
-Cell["", "Text",ExpressionUUID->"f8ae3c30-ec47-42c7-971f-54830080071c"]
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Test", " ", "infinite", " ", "sums"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"(*", " ", 
+    RowBox[{"Example", " ", "1", ":", " ", 
+     RowBox[{"Sum", " ", "of", " ", "geometric", " ", "series"}]}], " ", 
+    "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"geometricSum", "=", 
+     RowBox[{"Sum", "[", 
+      RowBox[{
+       RowBox[{"x", "^", "n"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"n", ",", "0", ",", "Infinity"}], "}"}]}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{"Example", " ", "2", ":", " ", 
+     RowBox[{"Sum", " ", "of", " ", "reciprocal", " ", "squares"}]}], " ", 
+    "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"zeta2", "=", 
+     RowBox[{"Sum", "[", 
+      RowBox[{
+       RowBox[{"1", "/", 
+        RowBox[{"n", "^", "2"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{"n", ",", "1", ",", "Infinity"}], "}"}]}], "]"}]}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"(*", " ", 
+    RowBox[{"Print", " ", "results"}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{"Print", "[", 
+    RowBox[{"\"\<Geometric series sum (|x| < 1): \>\"", ",", "geometricSum"}], 
+    "]"}], "\[IndentingNewLine]", 
+   RowBox[{"Print", "[", 
+    RowBox[{"\"\<Sum of 1/n^2 (Zeta(2)): \>\"", ",", "zeta2"}], "]"}]}]}]], 
+ "Input"]
 },
 WindowSize->{808, 911},
 WindowMargins->{{Automatic, 470}, {Automatic, 73}},
@@ -569,4 +606,42 @@ Cell[20366, 528, 71, 0, 28, "Text",ExpressionUUID->"f8ae3c30-ec47-42c7-971f-5483
 }
 ]
 *)
+
+(* Define a spectral density function - using standard Ohmic form with exponential cutoff *)
+SpectralDensity[omega_, omega_c_, alpha_] := alpha * omega * Exp[-omega/omega_c];
+
+(* Define the correlation function for infinite modes using spectral density *)
+InfiniteModesCorrelationFunction[tau_, T_, omega_c_, alpha_] := 
+  Integrate[
+    SpectralDensity[omega, omega_c, alpha] * 
+    (BoseEinstein[omega, T] * Exp[-I*omega*tau] + 
+     (BoseEinstein[omega, T] + 1) * Exp[I*omega*tau]),
+    {omega, 0, Infinity}
+  ];
+
+(* Example usage with infinite modes *)
+temperature = 1;
+omega_c = 5;  (* cutoff frequency *)
+alpha = 0.1;  (* coupling strength *)
+tauValues = Range[-5, 15, 0.1];
+
+(* Calculate correlation values - using NIntegrate for numerical evaluation *)
+infiniteCorrelationValues = Table[
+  NIntegrate[
+    SpectralDensity[omega, omega_c, alpha] * 
+    (BoseEinstein[omega, temperature] * Exp[-I*omega*tau] + 
+     (BoseEinstein[omega, temperature] + 1) * Exp[I*omega*tau]),
+    {omega, 0, Infinity},
+    Method -> "ExtrapolatingOscillatory"
+  ],
+  {tau, tauValues}
+];
+
+(* Plot the real part of the infinite modes correlation function *)
+ListPlot[
+  Transpose[{tauValues, Re[infiniteCorrelationValues]}],
+  PlotRange -> All,
+  AxesLabel -> {"tau", "Re[g(tau)]"},
+  PlotLabel -> "Infinite Modes Correlation Function"
+]
 

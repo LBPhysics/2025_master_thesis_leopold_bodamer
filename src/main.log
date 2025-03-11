@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2024.12.16)  6 MAR 2025 12:31
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2024.12.16)  11 MAR 2025 16:38
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -927,7 +927,20 @@ LaTeX Warning: Citation 'AsenjoGarcia2017' on page 2 undefined on input line 67.
 
 LaTeX Warning: Citation 'Scully2015' on page 2 undefined on input line 70.
 
-) [2]
+[2]
+LaTeX Font Info:    Font shape `U/msa/m/n' will be
+(Font)              scaled to size 12.50409pt on input line 178.
+LaTeX Font Info:    Font shape `U/msa/m/n' will be
+(Font)              scaled to size 9.37807pt on input line 178.
+LaTeX Font Info:    Font shape `U/msa/m/n' will be
+(Font)              scaled to size 7.29405pt on input line 178.
+LaTeX Font Info:    Font shape `U/msb/m/n' will be
+(Font)              scaled to size 12.50409pt on input line 178.
+LaTeX Font Info:    Font shape `U/msb/m/n' will be
+(Font)              scaled to size 9.37807pt on input line 178.
+LaTeX Font Info:    Font shape `U/msb/m/n' will be
+(Font)              scaled to size 7.29405pt on input line 178.
+ [3]) [4]
 Overfull \hbox (0.42686pt too wide) in paragraph at lines 131--131
 []\T1/ppl/m/n/10.95 Javier Segarra-Martí et al. \T1/ppl/m/it/10.95 To-wards Ac-cu-rate Sim-u-la-tion of Two-Dimensional Elec-tronic Spec-
  []
@@ -945,11 +958,11 @@ Overfull \hbox (10.17482pt too wide) in paragraph at lines 131--131
  []
 
 1: section
-[3
+[5
 
 
 
-] (./main.aux (./Chapters/C1_Introduction.aux))
+{/usr/share/texmf/fonts/enc/dvips/cm-super/cm-super-t1.enc}] (./main.aux (./Chapters/C1_Introduction.aux))
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2020/03/25>
@@ -961,18 +974,18 @@ Package logreq Info: Writing requests to 'main.run.xml'.
 
  ) 
 Here is how much of TeX's memory you used:
- 29788 strings out of 476106
- 643039 string characters out of 5793932
- 1937975 words of memory out of 5000000
- 51432 multiletter control sequences out of 15000+600000
- 606730 words of font info for 121 fonts, out of 8000000 for 9000
+ 29850 strings out of 476106
+ 643892 string characters out of 5793932
+ 1938975 words of memory out of 5000000
+ 51472 multiletter control sequences out of 15000+600000
+ 623826 words of font info for 168 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
  96i,20n,94p,2177b,1793s stack positions out of 10000i,1000n,20000p,200000b,200000s
- </home/leopold/.texlive2023/texmf-var/fonts/pk/ljfour/jknappen/ec/ectt1095.600pk></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/mathpazo/fplmri.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplri8a.pfb>
-Output written on main.pdf (7 pages, 111706 bytes).
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/mathpazo/fplmr.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/mathpazo/fplmri.pfb></usr/share/texmf/fonts/type1/public/cm-super/sftt1095.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/palatino/uplri8a.pfb>
+Output written on main.pdf (9 pages, 153257 bytes).
 PDF statistics:
- 147 PDF objects out of 1000 (max. 8388607)
- 107 compressed objects within 2 object streams
- 23 named destinations out of 1000 (max. 500000)
+ 160 PDF objects out of 1000 (max. 8388607)
+ 127 compressed objects within 2 object streams
+ 31 named destinations out of 1000 (max. 500000)
  33 words of extra memory for PDF output out of 10000 (max. 10000000)
 
