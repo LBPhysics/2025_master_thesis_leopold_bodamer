@@ -10,81 +10,150 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[      4649,        143]
-NotebookOptionsPosition[      3648,        117]
-NotebookOutlinePosition[      4015,        133]
-CellTagsIndexPosition[      3972,        130]
+NotebookDataLength[      8560,        318]
+NotebookOptionsPosition[      7082,        282]
+NotebookOutlinePosition[      7446,        298]
+CellTagsIndexPosition[      7403,        295]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
 Notebook[{
 
 Cell[CellGroupData[{
-Cell["Non Commutative Algebra", "Subsection",
- CellChangeTimes->{{3.9514726481059637`*^9, 
-  3.9514726549334373`*^9}},ExpressionUUID->"7e9a43e4-87d1-4846-aa77-\
+Cell["\[LineSeparator]Non Commutative Algebra", "Subsection",
+ CellChangeTimes->{{3.9514726481059637`*^9, 3.9514726549334373`*^9}, 
+   3.951473422361306*^9},ExpressionUUID->"7e9a43e4-87d1-4846-aa77-\
 c1dfd65557e2"],
 
 Cell[CellGroupData[{
 
 Cell["<< NCAlgebra`;", "Input",
  CellChangeTimes->{{3.951472423801566*^9, 3.951472429479165*^9}},
+ CellLabel->"In[7]:=",ExpressionUUID->"f16377e3-c40e-4284-a85e-1a81f83bb6af"],
+
+Cell["\<\
+------------------------------------------------------------
+
+NCAlgebra - Version 6.0.3
+
+Compatible with Mathematica Version 10 and above
+
+
+
+Authors:
+
+
+
+  J. William Helton*
+
+  Mauricio de Oliveira&
+
+
+
+* Math, UCSD, La Jolla, CA
+
+& MAE, UCSD, La Jolla, CA
+
+
+
+with major earlier contributions by:
+
+
+
+  Mark Stankus$ 
+
+  Robert L. Miller#
+
+
+
+$ Math, Cal Poly San Luis Obispo
+
+# General Atomics Corp
+
+
+
+Copyright: 
+
+  Helton and de Oliveira 2023
+
+  Helton and de Oliveira 2017
+
+  Helton 2002
+
+  Helton and Miller June 1991
+
+  All rights reserved.
+
+
+
+The program was written by the authors and by:
+
+  David Hurst, Daniel Lamm, Orlando Merino, Robert Obar,
+
+  Henry Pfister, Mike Walker, John Wavrik, Lois Yu,
+
+  J. Camino, J. Griffin, J. Ovall, T. Shaheen, John Shopple. 
+
+  The beginnings of the program come from eran@slac.
+
+  Considerable recent help came from Igor Klep.
+
+
+
+Current primary support is from the 
+
+  NSF Division of Mathematical Sciences.
+
+  
+
+This program was written with support from 
+
+  AFOSR, NSF, ONR, Lab for Math and Statistics at UCSD,
+
+  UCSD Faculty Mentor Program,
+
+  and US Department of Education.
+
+
+
+For NCAlgebra updates see:
+
+
+
+  www.github.com/NCAlgebra/NC
+
+  www.math.ucsd.edu/~ncalg
+
+
+
+------------------------------------------------------------
+\
+\>", "Print",
+ CellChangeTimes->{3.9514734237147512`*^9},
  CellLabel->
-  "In[659]:=",ExpressionUUID->"f16377e3-c40e-4284-a85e-1a81f83bb6af"],
+  "During evaluation of \
+In[7]:=",ExpressionUUID->"e373c39a-3171-492f-ac8e-fcab6b115ad2"],
 
 Cell[BoxData[
  TemplateBox[{
   "NCAlgebra","SmallCapSymbolsNonCommutative",
    "\"All lower cap single letter symbols (e.g. a,b,c,...) were set as \
-noncommutative.\"",2,659,121,32138115282021258487,"Local",
-   "NCAlgebra`NCAlgebra"},
+noncommutative.\"",2,7,1,32138199207412798620,"Local","NCAlgebra`NCAlgebra"},
   "MessageTemplate2"]], "Message", "MSG",
- CellChangeTimes->{{3.9514724214444857`*^9, 3.95147242971563*^9}},
+ CellChangeTimes->{{3.9514724214444857`*^9, 3.95147242971563*^9}, 
+   3.951473423731982*^9},
  CellLabel->
   "During evaluation of \
-In[659]:=",ExpressionUUID->"c563d8e5-ecdc-41c9-9750-c4c3e2904c06"]
-}, Open  ]],
-
-Cell[BoxData[{
- RowBox[{
-  RowBox[{"destroy", " ", "=", " ", "a"}], " ", 
-  ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"create", " ", "=", " ", 
-   RowBox[{"tp", "[", 
-    RowBox[{"aj", "[", "a", "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
- RowBox[{
-  RowBox[{"bosonicRule", "=", 
-   RowBox[{"{", 
-    RowBox[{
-     RowBox[{
-      RowBox[{"Commutator", "[", 
-       RowBox[{"a", ",", "aDag"}], "]"}], "\[Rule]", "1"}], ",", 
-     RowBox[{
-      RowBox[{"Commutator", "[", 
-       RowBox[{"a", ",", "a"}], "]"}], "\[Rule]", "0"}], ",", 
-     RowBox[{
-      RowBox[{"Commutator", "[", 
-       RowBox[{"aDag", ",", "aDag"}], "]"}], "\[Rule]", "0"}]}], "}"}]}], 
-  ";"}]}], "Input",
- CellChangeTimes->{{3.95147243949415*^9, 3.951472466039834*^9}, {
-  3.9514725380693283`*^9, 3.951472551141261*^9}, {3.951472739722327*^9, 
-  3.951472905370487*^9}, {3.951472936266554*^9, 3.951472942576285*^9}},
- CellLabel->
-  "In[718]:=",ExpressionUUID->"32041e3b-bfc7-4de8-bbe9-4c0c16025702"],
-
-Cell[BoxData[""], "Input",
- CellChangeTimes->{{3.951472635958371*^9, 3.951472636901394*^9}, {
-  3.951472729301683*^9, 
-  3.951472729989916*^9}},ExpressionUUID->"00ab57bd-4d33-4fe0-bcda-\
-eaff8bd18de5"]
+In[7]:=",ExpressionUUID->"e8cb51ca-5399-45b1-897c-8e0593246200"]
+}, Open  ]]
 }, Open  ]],
 
 Cell[CellGroupData[{
 
-Cell["Quantum Mechanical stuff", "Subsection",
- CellChangeTimes->{{3.951472662085395*^9, 
-  3.951472667685358*^9}},ExpressionUUID->"3e6715fc-fc64-4f47-bda5-\
+Cell["\[LineSeparator]Quantum Mechanical definitions", "Subsection",
+ CellChangeTimes->{{3.951472662085395*^9, 3.951472667685358*^9}, {
+  3.951473402440609*^9, 
+  3.9514734245371447`*^9}},ExpressionUUID->"3e6715fc-fc64-4f47-bda5-\
 45eec0739344"],
 
 Cell[BoxData[
@@ -100,23 +169,119 @@ Cell[BoxData[
      RowBox[{"Commutator", "[", 
       RowBox[{"A_", ",", "B_"}], "]"}], ":=", 
      RowBox[{
-      RowBox[{"A", ".", "B"}], "-", 
-      RowBox[{"B", ".", "A"}]}]}], ";"}], "\[IndentingNewLine]", 
+      RowBox[{"A", "**", "B"}], "-", 
+      RowBox[{"B", "**", "A"}]}]}], ";"}], "\[IndentingNewLine]", 
    RowBox[{
     RowBox[{
      RowBox[{"AntiCommutator", "[", 
       RowBox[{"A_", ",", "B_"}], "]"}], ":=", 
      RowBox[{
-      RowBox[{"A", ".", "B"}], "+", 
-      RowBox[{"B", ".", "A"}]}]}], ";"}], "\[IndentingNewLine]"}]}]], "Input",
- 
- CellChangeTimes->{{3.9514726709543753`*^9, 
-  3.951472726920844*^9}},ExpressionUUID->"10ab69a9-4465-4dbd-b94c-\
+      RowBox[{"A", "**", "B"}], "+", 
+      RowBox[{"B", "**", "A"}]}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"Commutator", "[", 
+     RowBox[{
+      RowBox[{"a_", "**", "b_"}], ",", "c_"}], "]"}], ":=", 
+    RowBox[{
+     RowBox[{"a", "**", 
+      RowBox[{"Commutator", "[", 
+       RowBox[{"b", ",", "c"}], "]"}]}], "+", 
+     RowBox[{
+      RowBox[{"Commutator", "[", 
+       RowBox[{"a", ",", "c"}], "]"}], "**", "b"}]}]}]}]}]], "Input",
+ CellChangeTimes->{{3.9514726709543753`*^9, 3.951472726920844*^9}, {
+  3.951473460220224*^9, 3.951473467609511*^9}, {3.951473740553977*^9, 
+  3.951473760330303*^9}},ExpressionUUID->"10ab69a9-4465-4dbd-b94c-\
 2e033e03b882"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Calculations", "Subsection",
+ CellChangeTimes->{{3.951473411368367*^9, 3.951473426745347*^9}, 
+   3.9514737587300863`*^9},ExpressionUUID->"9a4e7519-0c61-4c14-b50e-\
+189a472d014d"],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"destroy", " ", "=", " ", "a"}], " ", 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"create", " ", "=", " ", 
+   RowBox[{"tp", "[", 
+    RowBox[{"aj", "[", "a", "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"bosonicRule", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"Commutator", "[", 
+       RowBox[{"create", ",", " ", "destroy"}], "]"}], "\[Rule]", "1"}], ",", 
+     " ", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"create", "**", "destroy"}], "-", 
+       RowBox[{"destroy", "**", "create"}]}], " ", "\[Rule]", "1"}]}], 
+    "}"}]}], ";"}], "\[IndentingNewLine]", "bosonicRule"}], "Input",
+ CellChangeTimes->{{3.9514734173239822`*^9, 3.951473519548421*^9}, {
+  3.9514738692942867`*^9, 3.951473884827608*^9}},
+ CellLabel->"In[52]:=",ExpressionUUID->"d5184383-43fc-4338-943e-23a488daf51c"],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", 
+      RowBox[{"a", "**", 
+       OverscriptBox["a", "_"]}]}], "+", 
+     RowBox[{
+      OverscriptBox["a", "_"], "**", "a"}]}], "\[Rule]", "1"}], ",", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"-", 
+      RowBox[{"a", "**", 
+       OverscriptBox["a", "_"]}]}], "+", 
+     RowBox[{
+      OverscriptBox["a", "_"], "**", "a"}]}], "\[Rule]", "1"}]}], 
+  "}"}]], "Output",
+ CellChangeTimes->{
+  3.951473436689085*^9, {3.951473482984967*^9, 3.9514735199247723`*^9}, 
+   3.951473885887941*^9},
+ CellLabel->"Out[55]=",ExpressionUUID->"a3ea8e05-bba7-4983-bbdc-3e2fb524e234"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"x", " ", "=", " ", 
+   RowBox[{"Commutator", "[", 
+    RowBox[{
+     RowBox[{"create", " ", "**", "destroy"}], ",", " ", "create"}], "]"}]}], 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{"x", " ", "/.", "bosonicRule"}]}], "Input",
+ CellChangeTimes->{{3.951473769418961*^9, 3.9514738531214037`*^9}},
+ CellLabel->"In[56]:=",ExpressionUUID->"40f8ef49-bf87-482c-b043-e09a5dc97a0d"],
+
+Cell[BoxData[
+ RowBox[{
+  OverscriptBox["a", "_"], "**", 
+  RowBox[{"(", 
+   RowBox[{
+    RowBox[{"a", "**", 
+     OverscriptBox["a", "_"]}], "-", 
+    RowBox[{
+     OverscriptBox["a", "_"], "**", "a"}]}], ")"}]}]], "Output",
+ CellChangeTimes->{3.951473853646078*^9, 3.951473887449432*^9},
+ CellLabel->"Out[57]=",ExpressionUUID->"807f75f8-96af-4bb1-a92c-1548511c2c4d"]
+}, Open  ]]
 }, Open  ]]
 },
 WindowSize->{1920, 1052},
-WindowMargins->{{0, Automatic}, {-301, Automatic}},
+WindowMargins->{{0, Automatic}, {0, Automatic}},
 Magnification:>0.9 Inherited,
 FrontEndVersion->"12.0 for Linux x86 (64-bit) (April 8, 2019)",
 StyleDefinitions->"Default.nb"
@@ -133,17 +298,27 @@ CellTagsIndex->{}
 (*NotebookFileOutline
 Notebook[{
 Cell[CellGroupData[{
-Cell[580, 22, 175, 3, 50, "Subsection",ExpressionUUID->"7e9a43e4-87d1-4846-aa77-c1dfd65557e2"],
+Cell[580, 22, 214, 3, 76, "Subsection",ExpressionUUID->"7e9a43e4-87d1-4846-aa77-c1dfd65557e2"],
 Cell[CellGroupData[{
-Cell[780, 29, 180, 3, 29, "Input",ExpressionUUID->"f16377e3-c40e-4284-a85e-1a81f83bb6af"],
-Cell[963, 34, 449, 10, 24, "Message",ExpressionUUID->"c563d8e5-ecdc-41c9-9750-c4c3e2904c06"]
-}, Open  ]],
-Cell[1427, 47, 983, 26, 74, "Input",ExpressionUUID->"32041e3b-bfc7-4de8-bbe9-4c0c16025702"],
-Cell[2413, 75, 201, 4, 29, InheritFromParent,ExpressionUUID->"00ab57bd-4d33-4fe0-bcda-eaff8bd18de5"]
+Cell[819, 29, 175, 2, 29, "Input",ExpressionUUID->"f16377e3-c40e-4284-a85e-1a81f83bb6af"],
+Cell[997, 33, 1454, 101, 1630, "Print",ExpressionUUID->"e373c39a-3171-492f-ac8e-fcab6b115ad2"],
+Cell[2454, 136, 465, 10, 24, "Message",ExpressionUUID->"e8cb51ca-5399-45b1-897c-8e0593246200"]
+}, Open  ]]
 }, Open  ]],
 Cell[CellGroupData[{
-Cell[2651, 84, 172, 3, 50, "Subsection",ExpressionUUID->"3e6715fc-fc64-4f47-bda5-45eec0739344"],
-Cell[2826, 89, 806, 25, 96, InheritFromParent,ExpressionUUID->"10ab69a9-4465-4dbd-b94c-2e033e03b882"]
+Cell[2968, 152, 245, 4, 76, "Subsection",ExpressionUUID->"3e6715fc-fc64-4f47-bda5-45eec0739344"],
+Cell[3216, 158, 1246, 36, 96, "Input",ExpressionUUID->"10ab69a9-4465-4dbd-b94c-2e033e03b882"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4499, 199, 185, 3, 50, "Subsection",ExpressionUUID->"9a4e7519-0c61-4c14-b50e-189a472d014d"],
+Cell[CellGroupData[{
+Cell[4709, 206, 877, 23, 96, "Input",ExpressionUUID->"d5184383-43fc-4338-943e-23a488daf51c"],
+Cell[5589, 231, 646, 21, 33, "Output",ExpressionUUID->"a3ea8e05-bba7-4983-bbdc-3e2fb524e234"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6272, 257, 411, 9, 52, InheritFromParent,ExpressionUUID->"40f8ef49-bf87-482c-b043-e09a5dc97a0d"],
+Cell[6686, 268, 368, 10, 33, "Output",ExpressionUUID->"807f75f8-96af-4bb1-a92c-1548511c2c4d"]
+}, Open  ]]
 }, Open  ]]
 }
 ]
