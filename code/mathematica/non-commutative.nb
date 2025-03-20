@@ -1,0 +1,151 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[      4649,        143]
+NotebookOptionsPosition[      3648,        117]
+NotebookOutlinePosition[      4015,        133]
+CellTagsIndexPosition[      3972,        130]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Non Commutative Algebra", "Subsection",
+ CellChangeTimes->{{3.9514726481059637`*^9, 
+  3.9514726549334373`*^9}},ExpressionUUID->"7e9a43e4-87d1-4846-aa77-\
+c1dfd65557e2"],
+
+Cell[CellGroupData[{
+
+Cell["<< NCAlgebra`;", "Input",
+ CellChangeTimes->{{3.951472423801566*^9, 3.951472429479165*^9}},
+ CellLabel->
+  "In[659]:=",ExpressionUUID->"f16377e3-c40e-4284-a85e-1a81f83bb6af"],
+
+Cell[BoxData[
+ TemplateBox[{
+  "NCAlgebra","SmallCapSymbolsNonCommutative",
+   "\"All lower cap single letter symbols (e.g. a,b,c,...) were set as \
+noncommutative.\"",2,659,121,32138115282021258487,"Local",
+   "NCAlgebra`NCAlgebra"},
+  "MessageTemplate2"]], "Message", "MSG",
+ CellChangeTimes->{{3.9514724214444857`*^9, 3.95147242971563*^9}},
+ CellLabel->
+  "During evaluation of \
+In[659]:=",ExpressionUUID->"c563d8e5-ecdc-41c9-9750-c4c3e2904c06"]
+}, Open  ]],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"destroy", " ", "=", " ", "a"}], " ", 
+  ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"create", " ", "=", " ", 
+   RowBox[{"tp", "[", 
+    RowBox[{"aj", "[", "a", "]"}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{
+  RowBox[{"bosonicRule", "=", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"Commutator", "[", 
+       RowBox[{"a", ",", "aDag"}], "]"}], "\[Rule]", "1"}], ",", 
+     RowBox[{
+      RowBox[{"Commutator", "[", 
+       RowBox[{"a", ",", "a"}], "]"}], "\[Rule]", "0"}], ",", 
+     RowBox[{
+      RowBox[{"Commutator", "[", 
+       RowBox[{"aDag", ",", "aDag"}], "]"}], "\[Rule]", "0"}]}], "}"}]}], 
+  ";"}]}], "Input",
+ CellChangeTimes->{{3.95147243949415*^9, 3.951472466039834*^9}, {
+  3.9514725380693283`*^9, 3.951472551141261*^9}, {3.951472739722327*^9, 
+  3.951472905370487*^9}, {3.951472936266554*^9, 3.951472942576285*^9}},
+ CellLabel->
+  "In[718]:=",ExpressionUUID->"32041e3b-bfc7-4de8-bbe9-4c0c16025702"],
+
+Cell[BoxData[""], "Input",
+ CellChangeTimes->{{3.951472635958371*^9, 3.951472636901394*^9}, {
+  3.951472729301683*^9, 
+  3.951472729989916*^9}},ExpressionUUID->"00ab57bd-4d33-4fe0-bcda-\
+eaff8bd18de5"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Quantum Mechanical stuff", "Subsection",
+ CellChangeTimes->{{3.951472662085395*^9, 
+  3.951472667685358*^9}},ExpressionUUID->"3e6715fc-fc64-4f47-bda5-\
+45eec0739344"],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"(", 
+     RowBox[{"Anti", "-"}], ")"}], " ", "Commutator", " ", "of", " ", "Two", 
+    " ", "Operators"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"Commutator", "[", 
+      RowBox[{"A_", ",", "B_"}], "]"}], ":=", 
+     RowBox[{
+      RowBox[{"A", ".", "B"}], "-", 
+      RowBox[{"B", ".", "A"}]}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"AntiCommutator", "[", 
+      RowBox[{"A_", ",", "B_"}], "]"}], ":=", 
+     RowBox[{
+      RowBox[{"A", ".", "B"}], "+", 
+      RowBox[{"B", ".", "A"}]}]}], ";"}], "\[IndentingNewLine]"}]}]], "Input",
+ 
+ CellChangeTimes->{{3.9514726709543753`*^9, 
+  3.951472726920844*^9}},ExpressionUUID->"10ab69a9-4465-4dbd-b94c-\
+2e033e03b882"]
+}, Open  ]]
+},
+WindowSize->{1920, 1052},
+WindowMargins->{{0, Automatic}, {-301, Automatic}},
+Magnification:>0.9 Inherited,
+FrontEndVersion->"12.0 for Linux x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 175, 3, 50, "Subsection",ExpressionUUID->"7e9a43e4-87d1-4846-aa77-c1dfd65557e2"],
+Cell[CellGroupData[{
+Cell[780, 29, 180, 3, 29, "Input",ExpressionUUID->"f16377e3-c40e-4284-a85e-1a81f83bb6af"],
+Cell[963, 34, 449, 10, 24, "Message",ExpressionUUID->"c563d8e5-ecdc-41c9-9750-c4c3e2904c06"]
+}, Open  ]],
+Cell[1427, 47, 983, 26, 74, "Input",ExpressionUUID->"32041e3b-bfc7-4de8-bbe9-4c0c16025702"],
+Cell[2413, 75, 201, 4, 29, InheritFromParent,ExpressionUUID->"00ab57bd-4d33-4fe0-bcda-eaff8bd18de5"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[2651, 84, 172, 3, 50, "Subsection",ExpressionUUID->"3e6715fc-fc64-4f47-bda5-45eec0739344"],
+Cell[2826, 89, 806, 25, 96, InheritFromParent,ExpressionUUID->"10ab69a9-4465-4dbd-b94c-2e033e03b882"]
+}, Open  ]]
+}
+]
+*)
+
