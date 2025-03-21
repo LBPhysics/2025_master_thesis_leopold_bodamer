@@ -1,0 +1,487 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 12.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     17701,        479]
+NotebookOptionsPosition[     16648,        453]
+NotebookOutlinePosition[     16982,        468]
+CellTagsIndexPosition[     16939,        465]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+   "Define", " ", "the", " ", "symbolic", " ", "function", " ", "for", " ", 
+    "the", " ", "correlation", " ", "function", " ", "with", " ", "symbolic", 
+    " ", "s"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"ClearAll", "[", 
+    RowBox[{
+    "rho1", ",", "rho", ",", "rhoOhmic", ",", "sOhmicBath", ",", 
+     "\[Omega]cOhmicBath"}], "]"}], "\n", "\n", 
+   RowBox[{
+    RowBox[{"CorrelationFct", "[", 
+     RowBox[{"t_", ",", "rhoFunction_"}], "]"}], ":=", 
+    RowBox[{"Integrate", "[", "\[IndentingNewLine]", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"rhoFunction", "[", "\[Omega]", "]"}], "*", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{
+          RowBox[{"Coth", "[", 
+           RowBox[{"\[Beta]", " ", 
+            RowBox[{"\[Omega]", "/", "2"}]}], "]"}], " ", 
+          RowBox[{"Cos", "[", 
+           RowBox[{"\[Omega]", " ", "t"}], "]"}]}], "-", 
+         RowBox[{"I", " ", 
+          RowBox[{"Sin", "[", 
+           RowBox[{"\[Omega]", " ", "t"}], "]"}]}]}], ")"}]}], ",", 
+      RowBox[{"{", 
+       RowBox[{"\[Omega]", ",", "0", ",", "\[Infinity]"}], "}"}], ",", 
+      "\[IndentingNewLine]", 
+      RowBox[{"Assumptions", "\[Rule]", 
+       RowBox[{"{", 
+        RowBox[{
+         RowBox[{"\[Omega]c", ">", "0"}], ",", 
+         RowBox[{"\[Beta]", "\[GreaterEqual]", "0"}], ",", 
+         RowBox[{"t", "\[Element]", "Reals"}]}], "}"}]}]}], "]"}]}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{"CorrelationFct", "[", 
+    RowBox[{"t", ",", " ", "rho"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.9515565147619257`*^9, 3.9515565177729177`*^9}, {
+   3.951557076160502*^9, 3.951557150096348*^9}, {3.951559335713746*^9, 
+   3.9515593480268497`*^9}, {3.9515593802219753`*^9, 3.951559380810972*^9}, {
+   3.951559438059182*^9, 3.951559438346239*^9}, {3.951559519809389*^9, 
+   3.951559570187664*^9}, {3.951559799819653*^9, 3.951559801387151*^9}, {
+   3.9515600506719027`*^9, 3.951560058463051*^9}, 3.951560113983041*^9, {
+   3.9515602852259274`*^9, 
+   3.9515602864776*^9}},ExpressionUUID->"6d1d5899-e07f-403c-b967-\
+80fbd435b27b"],
+
+Cell[BoxData[
+ RowBox[{"Integrate", "[", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"rho", "[", "\[Omega]", "]"}], " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"Cos", "[", 
+        RowBox[{"t", " ", "\[Omega]"}], "]"}], " ", 
+       RowBox[{"Coth", "[", 
+        FractionBox[
+         RowBox[{"\[Beta]", " ", "\[Omega]"}], "2"], "]"}]}], "-", 
+      RowBox[{"\[ImaginaryI]", " ", 
+       RowBox[{"Sin", "[", 
+        RowBox[{"t", " ", "\[Omega]"}], "]"}]}]}], ")"}]}], ",", 
+   RowBox[{"{", 
+    RowBox[{"\[Omega]", ",", "0", ",", "\[Infinity]"}], "}"}], ",", 
+   RowBox[{"Assumptions", "\[Rule]", 
+    RowBox[{"{", 
+     RowBox[{
+      RowBox[{"\[Omega]c", ">", "0"}], ",", 
+      RowBox[{"\[Beta]", "\[GreaterEqual]", "0"}], ",", 
+      RowBox[{"t", "\[Element]", 
+       TemplateBox[{},
+        "Reals"]}]}], "}"}]}]}], "]"}]], "Output",
+ CellChangeTimes->{3.95155957057477*^9, 3.951559790908815*^9, 
+  3.951559845349931*^9, 3.951560116400055*^9},
+ CellLabel->"Out[13]=",ExpressionUUID->"e6f9fa25-adad-496d-8390-876e6e9661a5"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+   "Define", " ", "rho1", " ", "function", " ", "with", " ", "s", " ", "as", 
+    " ", "a", " ", "symbol"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"rho1", "[", 
+     RowBox[{"\[Omega]_", ",", "\[Omega]c_", ",", "s_"}], "]"}], ":=", 
+    "\[IndentingNewLine]", 
+    RowBox[{"2", " ", "\[Alpha]", " ", 
+     RowBox[{"\[Omega]c", "^", 
+      RowBox[{"(", 
+       RowBox[{"1", "-", "s"}], ")"}]}], " ", 
+     RowBox[{"\[Omega]", "^", "s"}], " ", 
+     RowBox[{"Exp", "[", 
+      RowBox[{
+       RowBox[{"-", "\[Omega]"}], "/", "\[Omega]c"}], "]"}]}]}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"s", ";"}], "\[IndentingNewLine]", 
+   RowBox[{"\[Omega]c", ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"$Assumptions", "=", 
+     RowBox[{"{", 
+      RowBox[{
+       RowBox[{"s", ">", "0"}], ",", 
+       RowBox[{"\[Omega]c", ">", "1"}]}], "}"}]}], ";"}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"sOhmicBath", "=", "s"}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"\[Omega]cOhmicBath", "=", "\[Omega]c"}], ";"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"rhoOhmic", "[", "\[Omega]_", "]"}], ":=", 
+    RowBox[{"rho1", "[", 
+     RowBox[{"\[Omega]", ",", "\[Omega]cOhmicBath", ",", "sOhmicBath"}], 
+     "]"}]}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"rho", "[", "\[Omega]_", "]"}], " ", ":=", " ", 
+    RowBox[{"rhoOhmic", "[", "\[Omega]", "]"}]}], "\[IndentingNewLine]", 
+   RowBox[{"rho", "[", "\[Omega]", "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.951557229011167*^9, 3.951557254768653*^9}, {
+   3.951558688793806*^9, 3.9515587021349487`*^9}, {3.951558747002328*^9, 
+   3.951558782541112*^9}, {3.9515589234388437`*^9, 3.951558931933365*^9}, 
+   3.951559270124919*^9, {3.951559345496587*^9, 3.9515593768423*^9}, {
+   3.951559721909586*^9, 3.951559781370604*^9}, {3.9515598346217737`*^9, 
+   3.95155988858739*^9}, {3.951560160065673*^9, 3.951560164462296*^9}, 
+   3.9515602940623093`*^9, {3.9515603457428923`*^9, 3.951560366595172*^9}},
+ CellLabel->"In[36]:=",ExpressionUUID->"5552d393-29ee-4f35-b982-e479ba80ba07"],
+
+Cell[BoxData[
+ RowBox[{"2", " ", 
+  SuperscriptBox["\[ExponentialE]", 
+   RowBox[{"-", 
+    FractionBox["\[Omega]", "\[Omega]c"]}]], " ", "\[Alpha]", " ", 
+  SuperscriptBox["\[Omega]", "s"], " ", 
+  SuperscriptBox["\[Omega]c", 
+   RowBox[{"1", "-", "s"}]]}]], "Output",
+ CellChangeTimes->{
+  3.951560164772593*^9, {3.951560355467991*^9, 3.951560367107967*^9}},
+ CellLabel->"Out[44]=",ExpressionUUID->"d973f881-a23e-4505-ad11-bcbf4718d2f8"]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"Set", " ", "s"}], ",", 
+    RowBox[{"\[Omega]c", " ", "and", " ", "\[Beta]"}]}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"result", "=", 
+    RowBox[{"CorrelationFct", "[", 
+     RowBox[{"t", ",", "rho"}], "]"}]}], "\n", 
+   RowBox[{"Print", "[", 
+    RowBox[{"\"\<Result: \>\"", ",", "result"}], "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.951558868487761*^9, 3.9515589706760674`*^9}, 
+   3.951559749909697*^9, 3.951559899533475*^9},
+ CellLabel->"In[45]:=",ExpressionUUID->"9998da6c-2160-40f1-b309-9cd2de77ca79"],
+
+Cell[BoxData[
+ RowBox[{"ConditionalExpression", "[", 
+  RowBox[{
+   FractionBox[
+    RowBox[{"2", " ", "\[Alpha]", " ", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{"PolyGamma", "[", 
+        RowBox[{"1", ",", 
+         FractionBox[
+          RowBox[{
+           FractionBox["1", "10000"], "+", 
+           RowBox[{"\[ImaginaryI]", " ", "t"}]}], "\[Beta]"]}], "]"}], "+", 
+       RowBox[{"PolyGamma", "[", 
+        RowBox[{"1", ",", 
+         FractionBox[
+          RowBox[{
+           FractionBox["1", "10000"], "-", 
+           RowBox[{"\[ImaginaryI]", " ", "t"}], "+", "\[Beta]"}], 
+          "\[Beta]"]}], "]"}]}], ")"}]}], 
+    SuperscriptBox["\[Beta]", "2"]], ",", 
+   RowBox[{"0", "<", "\[Beta]", "<", 
+    FractionBox["1", "10000"]}]}], "]"}]], "Output",
+ CellChangeTimes->{3.951559918639316*^9, 3.951560196064475*^9},
+ CellLabel->"Out[25]=",ExpressionUUID->"c694b8fe-338d-4381-ac12-2e542c7d47ba"],
+
+Cell[BoxData[
+ InterpretationBox[
+  RowBox[{"\<\"Result: \"\>", "\[InvisibleSpace]", 
+   RowBox[{"ConditionalExpression", "[", 
+    RowBox[{
+     FractionBox[
+      RowBox[{"2", " ", "\[Alpha]", " ", 
+       RowBox[{"(", 
+        RowBox[{
+         RowBox[{"PolyGamma", "[", 
+          RowBox[{"1", ",", 
+           FractionBox[
+            RowBox[{
+             FractionBox["1", "10000"], "+", 
+             RowBox[{"\[ImaginaryI]", " ", "t"}]}], "\[Beta]"]}], "]"}], "+", 
+         
+         RowBox[{"PolyGamma", "[", 
+          RowBox[{"1", ",", 
+           FractionBox[
+            RowBox[{
+             FractionBox["1", "10000"], "-", 
+             RowBox[{"\[ImaginaryI]", " ", "t"}], "+", "\[Beta]"}], 
+            "\[Beta]"]}], "]"}]}], ")"}]}], 
+      SuperscriptBox["\[Beta]", "2"]], ",", 
+     RowBox[{"0", "<", "\[Beta]", "<", 
+      FractionBox["1", "10000"]}]}], "]"}]}],
+  SequenceForm["Result: ", 
+   ConditionalExpression[
+   2 $CellContext`\[Alpha] $CellContext`\[Beta]^(-2) (
+     PolyGamma[
+      1, (Rational[1, 10000] + 
+        Complex[0, 1] $CellContext`t)/$CellContext`\[Beta]] + 
+     PolyGamma[
+      1, $CellContext`\[Beta]^(-1) (Rational[1, 10000] + 
+        Complex[0, -1] $CellContext`t + $CellContext`\[Beta])]), 
+    Inequality[0, Less, $CellContext`\[Beta], Less, 
+     Rational[1, 10000]]]],
+  Editable->False]], "Print",
+ CellChangeTimes->{3.9515599186410513`*^9, 3.951560196066434*^9},
+ CellLabel->
+  "During evaluation of \
+In[25]:=",ExpressionUUID->"d6718213-fd7b-4520-bf6d-7bc297c5489d"]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{"\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+  
+  RowBox[{"(*", 
+   RowBox[{"Define", " ", "the", " ", "symbolic", " ", "function", " ", 
+    RowBox[{"Cfun", "[", 
+     RowBox[{"t", ",", "s", ",", "omega_c"}], "]"}]}], "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"ClearAll", "[", "CorrelationFct", "]"}], "\n", 
+   RowBox[{
+    RowBox[{
+     RowBox[{"CorrelationFct", "[", 
+      RowBox[{"t_", ",", "s_", ",", "\[Omega]c_"}], "]"}], ":=", 
+     RowBox[{"Integrate", "[", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"rho", "[", "\[Omega]", "]"}], "*", 
+        RowBox[{"(", 
+         RowBox[{
+          RowBox[{
+           RowBox[{"Coth", "[", 
+            RowBox[{"\[Beta]", " ", 
+             RowBox[{"\[Omega]", "/", "2"}]}], "]"}], " ", 
+           RowBox[{"Cos", "[", 
+            RowBox[{"\[Omega]", " ", "t"}], "]"}]}], "-", 
+          RowBox[{"I", " ", 
+           RowBox[{"Sin", "[", 
+            RowBox[{"\[Omega]", " ", "t"}], "]"}]}]}], ")"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Omega]", ",", "0", ",", "\[Infinity]"}], "}"}]}], "]"}]}], 
+    ";"}], "\[IndentingNewLine]", 
+   RowBox[{"CorrelationFct", "[", 
+    RowBox[{"t", ",", "s", ",", "\[Omega]c"}], "]"}], "\n", 
+   RowBox[{
+    SubsuperscriptBox["\[Integral]", "0", "\[Infinity]"], 
+    RowBox[{
+     RowBox[{"rho", "[", "\[Omega]", "]"}], " ", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"Cos", "[", 
+         RowBox[{"t", " ", "\[Omega]"}], "]"}], " ", 
+        RowBox[{"Coth", "[", 
+         FractionBox[
+          RowBox[{"\[Beta]", " ", "\[Omega]"}], "2"], "]"}]}], "-", 
+       RowBox[{"\[ImaginaryI]", " ", 
+        RowBox[{"Sin", "[", 
+         RowBox[{"t", " ", "\[Omega]"}], "]"}]}]}], ")"}], 
+     RowBox[{"\[DifferentialD]", "\[Omega]"}]}]}], "\n", "\n", 
+   RowBox[{
+    SubsuperscriptBox["\[Integral]", "0", "\[Infinity]"], 
+    RowBox[{
+     RowBox[{"rho", "[", "\[Omega]", "]"}], " ", 
+     RowBox[{"(", 
+      RowBox[{
+       RowBox[{
+        RowBox[{"Cos", "[", 
+         RowBox[{"t", " ", "\[Omega]"}], "]"}], " ", 
+        RowBox[{"Coth", "[", 
+         FractionBox[
+          RowBox[{"\[Beta]", " ", "\[Omega]"}], "2"], "]"}]}], "-", 
+       RowBox[{"\[ImaginaryI]", " ", 
+        RowBox[{"Sin", "[", 
+         RowBox[{"t", " ", "\[Omega]"}], "]"}]}]}], ")"}], 
+     RowBox[{"\[DifferentialD]", "\[Omega]"}]}]}], "\n", 
+   RowBox[{"(*", 
+    RowBox[{
+    "Define", " ", "the", " ", "specific", " ", "rho", " ", "function"}], 
+    "*)"}], 
+   RowBox[{"ClearAll", "[", "rho1", "]"}], "\n", 
+   RowBox[{
+    RowBox[{"rho1", "[", 
+     RowBox[{"\[Omega]_", ",", "\[Omega]c_", ",", "s_"}], "]"}], ":=", 
+    RowBox[{"2", " ", "\[Alpha]", " ", 
+     RowBox[{"\[Omega]c", "^", 
+      RowBox[{"(", 
+       RowBox[{"1", "-", "s"}], ")"}]}], " ", 
+     RowBox[{"\[Omega]", "^", "s"}], " ", 
+     RowBox[{"Exp", "[", 
+      RowBox[{
+       RowBox[{"-", "\[Omega]"}], "/", "\[Omega]c"}], "]"}]}]}], 
+   "\[IndentingNewLine]", "\[IndentingNewLine]", 
+   RowBox[{"rho1", "[", 
+    RowBox[{"\[Omega]", ",", "\[Omega]c", ",", "s"}], "]"}], "\n", 
+   RowBox[{"2", " ", 
+    SuperscriptBox["\[ExponentialE]", 
+     RowBox[{"-", 
+      FractionBox["\[Omega]", "\[Omega]c"]}]], " ", "\[Alpha]", " ", 
+    SuperscriptBox["\[Omega]", "s"], " ", 
+    SuperscriptBox["\[Omega]c", 
+     RowBox[{"1", "-", "s"}]]}], "\n", 
+   RowBox[{"(*", 
+    RowBox[{
+     RowBox[{
+      RowBox[{"Set", " ", "s"}], "=", "1"}], ",", " ", 
+     RowBox[{"\[Omega]c", "=", "10000"}], ",", 
+     RowBox[{"and", " ", "\[Beta]", " ", "to", " ", "a", " ", "value", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"e", ".", "g", "."}], ",", 
+        RowBox[{"\[Beta]", "=", "1"}]}], ")"}]}]}], "*)"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"sOhmicBath", "=", "1"}], "\n", 
+   RowBox[{"\[Omega]cOhmicBath", "=", "10000"}], "\n", 
+   RowBox[{"\[Beta]", "=", "100000"}], "\n", 
+   RowBox[{"(*", 
+    RowBox[{"Define", " ", 
+     RowBox[{"rho", "[", "\[Omega]", "]"}], " ", "for", " ", "the", " ", 
+     "given", " ", "s", " ", "and", " ", "\[Omega]c"}], "*)"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"rho", "[", "\[Omega]_", "]"}], ":=", 
+    RowBox[{"rho1", "[", 
+     RowBox[{"\[Omega]", ",", "\[Omega]cOhmicBath", ",", "sOhmicBath"}], 
+     "]"}]}], "\n", "1", "\n", "10000", "\n", "100000", "\n", 
+   RowBox[{"(*", 
+    RowBox[{
+    "Now", " ", "call", " ", "the", " ", "function", " ", "for", " ", "a", 
+     " ", "specific", " ", "value", " ", "of", " ", "t"}], "*)"}], 
+   "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"t", "=", "1"}], ";"}], "\n", 
+   RowBox[{"result", "=", 
+    RowBox[{"CorrelationFct", "[", 
+     RowBox[{"t", ",", "sOhmicBath", ",", "\[Omega]cOhmicBath"}], "]"}]}], 
+   "\[IndentingNewLine]", 
+   RowBox[{"Print", "[", 
+    RowBox[{"\"\<Result: \>\"", ",", "result"}], "]"}], "\n", 
+   RowBox[{"\[Alpha]", " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        FractionBox["19999999800000000", "10000000200000001"], "-", 
+        FractionBox[
+         RowBox[{"4000000000000", " ", "\[ImaginaryI]"}], 
+         "10000000200000001"]}], ")"}], "+", 
+      FractionBox[
+       RowBox[{"PolyGamma", "[", 
+        RowBox[{"1", ",", 
+         RowBox[{
+          FractionBox["1", "1000000000"], "-", 
+          FractionBox["\[ImaginaryI]", "100000"]}]}], "]"}], "5000000000"], 
+      "+", 
+      FractionBox[
+       RowBox[{"PolyGamma", "[", 
+        RowBox[{"1", ",", 
+         RowBox[{
+          FractionBox["1", "1000000000"], "+", 
+          FractionBox["\[ImaginaryI]", "100000"]}]}], "]"}], "5000000000"]}], 
+     ")"}]}], "\n", 
+   InterpretationBox[
+    RowBox[{"\"\<Result: \>\"", "\[InvisibleSpace]", 
+     RowBox[{"\[Alpha]", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"(", 
+         RowBox[{
+          FractionBox["19999999800000000", "10000000200000001"], "-", 
+          FractionBox[
+           RowBox[{"4000000000000", " ", "\[ImaginaryI]"}], 
+           "10000000200000001"]}], ")"}], "+", 
+        FractionBox[
+         RowBox[{"PolyGamma", "[", 
+          RowBox[{"1", ",", 
+           RowBox[{
+            FractionBox["1", "1000000000"], "-", 
+            FractionBox["\[ImaginaryI]", "100000"]}]}], "]"}], "5000000000"], 
+        "+", 
+        FractionBox[
+         RowBox[{"PolyGamma", "[", 
+          RowBox[{"1", ",", 
+           RowBox[{
+            FractionBox["1", "1000000000"], "+", 
+            FractionBox["\[ImaginaryI]", "100000"]}]}], "]"}], 
+         "5000000000"]}], ")"}]}]}],
+    SequenceForm["Result: ", $CellContext`\[Alpha] (Complex[
+        Rational[19999999800000000, 10000000200000001], 
+        Rational[-4000000000000, 10000000200000001]] + 
+      Rational[1, 5000000000] PolyGamma[1, 
+         Complex[
+          Rational[1, 1000000000], 
+          Rational[-1, 100000]]] + Rational[1, 5000000000] PolyGamma[1, 
+         Complex[
+          Rational[1, 1000000000], 
+          Rational[1, 100000]]])],
+    Editable->False]}]}]], "Input",
+ CellChangeTimes->{{3.951561057898479*^9, 
+  3.9515610583377333`*^9}},ExpressionUUID->"25afe784-e4ca-46a4-8c0e-\
+b517de49d84a"]
+},
+WindowSize->{1920, 1052},
+WindowMargins->{{0, Automatic}, {0, Automatic}},
+FrontEndVersion->"12.0 for Linux x86 (64-bit) (April 8, 2019)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[580, 22, 2143, 50, 193, "Input",ExpressionUUID->"6d1d5899-e07f-403c-b967-80fbd435b27b"],
+Cell[2726, 74, 1045, 28, 52, "Output",ExpressionUUID->"e6f9fa25-adad-496d-8390-876e6e9661a5"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[3808, 107, 2166, 50, 285, "Input",ExpressionUUID->"5552d393-29ee-4f35-b982-e479ba80ba07"],
+Cell[5977, 159, 439, 10, 42, "Output",ExpressionUUID->"d973f881-a23e-4505-ad11-bcbf4718d2f8"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[6453, 174, 594, 15, 78, "Input",ExpressionUUID->"9998da6c-2160-40f1-b309-9cd2de77ca79"],
+Cell[7050, 191, 910, 24, 84, "Output",ExpressionUUID->"c694b8fe-338d-4381-ac12-2e542c7d47ba"],
+Cell[7963, 217, 1526, 41, 72, "Print",ExpressionUUID->"d6718213-fd7b-4520-bf6d-7bc297c5489d"]
+}, Open  ]],
+Cell[9504, 261, 7140, 190, 831, "Input",ExpressionUUID->"25afe784-e4ca-46a4-8c0e-b517de49d84a"]
+}
+]
+*)
+
