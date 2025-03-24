@@ -10,10 +10,10 @@
 NotebookFileLineBreakTest
 NotebookFileLineBreakTest
 NotebookDataPosition[       158,          7]
-NotebookDataLength[     17701,        479]
-NotebookOptionsPosition[     16648,        453]
-NotebookOutlinePosition[     16982,        468]
-CellTagsIndexPosition[     16939,        465]
+NotebookDataLength[     18209,        483]
+NotebookOptionsPosition[     17155,        457]
+NotebookOutlinePosition[     17489,        472]
+CellTagsIndexPosition[     17446,        469]
 WindowFrame->Normal*)
 
 (* Beginning of Notebook Content *)
@@ -261,7 +261,14 @@ In[25]:=",ExpressionUUID->"d6718213-fd7b-4520-bf6d-7bc297c5489d"]
 
 Cell[BoxData[
  RowBox[{"\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
-  
+  "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+  "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+  "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+  "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
+  RowBox[{"(*", " ", 
+   RowBox[{"This", " ", "is", " ", "then", " ", "not", " ", "needen", " ", 
+    RowBox[{"anymore", "?"}]}], "*)"}], "\[IndentingNewLine]", 
+  "\[IndentingNewLine]", "\[IndentingNewLine]", "\[IndentingNewLine]", 
   RowBox[{"(*", 
    RowBox[{"Define", " ", "the", " ", "symbolic", " ", "function", " ", 
     RowBox[{"Cfun", "[", 
@@ -350,7 +357,7 @@ Cell[BoxData[
       FractionBox["\[Omega]", "\[Omega]c"]}]], " ", "\[Alpha]", " ", 
     SuperscriptBox["\[Omega]", "s"], " ", 
     SuperscriptBox["\[Omega]c", 
-     RowBox[{"1", "-", "s"}]]}], "\n", 
+     RowBox[{"1", "-", "s"}]]}], "\[IndentingNewLine]", 
    RowBox[{"(*", 
     RowBox[{
      RowBox[{
@@ -360,26 +367,23 @@ Cell[BoxData[
       RowBox[{"(", 
        RowBox[{
         RowBox[{"e", ".", "g", "."}], ",", 
-        RowBox[{"\[Beta]", "=", "1"}]}], ")"}]}]}], "*)"}], 
-   "\[IndentingNewLine]", 
+        RowBox[{"\[Beta]", "=", "1"}]}], ")"}]}]}], "*)"}], "\n", 
    RowBox[{"sOhmicBath", "=", "1"}], "\n", 
    RowBox[{"\[Omega]cOhmicBath", "=", "10000"}], "\n", 
-   RowBox[{"\[Beta]", "=", "100000"}], "\n", 
+   RowBox[{"\[Beta]", "=", "100000"}], "\[IndentingNewLine]", 
    RowBox[{"(*", 
     RowBox[{"Define", " ", 
      RowBox[{"rho", "[", "\[Omega]", "]"}], " ", "for", " ", "the", " ", 
-     "given", " ", "s", " ", "and", " ", "\[Omega]c"}], "*)"}], 
-   "\[IndentingNewLine]", 
+     "given", " ", "s", " ", "and", " ", "\[Omega]c"}], "*)"}], "\n", 
    RowBox[{
     RowBox[{"rho", "[", "\[Omega]_", "]"}], ":=", 
     RowBox[{"rho1", "[", 
      RowBox[{"\[Omega]", ",", "\[Omega]cOhmicBath", ",", "sOhmicBath"}], 
-     "]"}]}], "\n", "1", "\n", "10000", "\n", "100000", "\n", 
+     "]"}]}], "\n", "1", "\n", "10000", "\n", "100000", "\[IndentingNewLine]", 
    RowBox[{"(*", 
     RowBox[{
     "Now", " ", "call", " ", "the", " ", "function", " ", "for", " ", "a", 
-     " ", "specific", " ", "value", " ", "of", " ", "t"}], "*)"}], 
-   "\[IndentingNewLine]", 
+     " ", "specific", " ", "value", " ", "of", " ", "t"}], "*)"}], "\n", 
    RowBox[{
     RowBox[{"t", "=", "1"}], ";"}], "\n", 
    RowBox[{"result", "=", 
@@ -448,7 +452,7 @@ Cell[BoxData[
           Rational[1, 100000]]])],
     Editable->False]}]}]], "Input",
  CellChangeTimes->{{3.951561057898479*^9, 
-  3.9515610583377333`*^9}},ExpressionUUID->"25afe784-e4ca-46a4-8c0e-\
+  3.9515610824536963`*^9}},ExpressionUUID->"25afe784-e4ca-46a4-8c0e-\
 b517de49d84a"]
 },
 WindowSize->{1920, 1052},
@@ -480,7 +484,7 @@ Cell[6453, 174, 594, 15, 78, "Input",ExpressionUUID->"9998da6c-2160-40f1-b309-9c
 Cell[7050, 191, 910, 24, 84, "Output",ExpressionUUID->"c694b8fe-338d-4381-ac12-2e542c7d47ba"],
 Cell[7963, 217, 1526, 41, 72, "Print",ExpressionUUID->"d6718213-fd7b-4520-bf6d-7bc297c5489d"]
 }, Open  ]],
-Cell[9504, 261, 7140, 190, 831, "Input",ExpressionUUID->"25afe784-e4ca-46a4-8c0e-b517de49d84a"]
+Cell[9504, 261, 7647, 194, 1199, "Input",ExpressionUUID->"25afe784-e4ca-46a4-8c0e-b517de49d84a"]
 }
 ]
 *)
