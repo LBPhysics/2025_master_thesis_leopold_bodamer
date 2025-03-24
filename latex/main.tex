@@ -1,7 +1,6 @@
 %----------------------------------------------------------------------------------------
 %	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
 %----------------------------------------------------------------------------------------
-
 \documentclass[
 	11pt, english, singlespacing,
 %raft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
@@ -13,7 +12,7 @@
 %headsepline, % Uncomment to get a line under the header
 %chapterinoneline, % Uncomment to place the chapter title next to the number on one line
 %consistentlayout, % Uncomment to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
-]{MastersDoctoralThesis}
+]{style_thesis}
 
 %----------------------------------------------------------------------------------------
 %	PACKAGES
@@ -22,15 +21,15 @@
 \usepackage[T1]{fontenc}
 \usepackage{mathpazo} % Use the Palatino font by default
 
-
 %-------------------------------- Define the LIBRARY ------------------------------------
 
 \usepackage[backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp]{biblatex}
 \AtBeginBibliography{\renewcommand*{\finalnamedelim}{\addspace\bibstring{and}\space}}
 \renewcommand*{\bibnamedash}{\ifnumgreater{\value{liststop}}{1}{\space et al.}{}} % Et al. bei mehreren Autoren
 %\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
-\addbibresource{/home/leopold/PycharmProjects/Master_thesis/out/My_bibliography.bib}
-\RequireBibliographyStyle{customstyle_bibiliography} % Load the custom style
+\addbibresource{latex/bib/my_bibliography.bib} % TODO load the bibliography, or how can I connect zotero?
+\RequireBibliographyStyle{style_bibiliography}
+
 %----------------------------------------------------------------------------------------
 
 
@@ -84,7 +83,8 @@
 \frontmatter
 \pagestyle{plain}
 
-\input{Chapters/C0_titlepage}
+\input{/chapters/c00_titlepage}
+\input{/chapters/c01_declaration}
 
 %----------------------------------------------------------------------------------------
 %	ABSTRACT PAGE
@@ -107,21 +107,20 @@
 %	CONTENTS
 %----------------------------------------------------------------------------------------
 \mainmatter
-\pagestyle{thesis}
+\pagestyle{latex/style/thesis}
 
-%\include{Chapters/Acknow_Lists_Abbrs_Consts_Symbls_Dedication_}
-\include{Chapters/C1_Introduction}
-%\include{Chapters/C2_Theoretical_Background}
-%\include{Chapters/C3_Presenting_Basis}
-%\include{Chapters/C4_Adaptation_to_atoms}
-%\include{Chapters/C5_Conclusion}
+\include{latex/chapters/c02_acknow_lists_abbrs_consts_symbls_dedication__tex} % Corrected chapter path
+\include{latex/chapters/c10_introduction}
+\include{latex/chapters/c20_derivation_redfield_eq}
 
 %----------------------------------------------------------------------------------------
 %	APPENDICES
 %----------------------------------------------------------------------------------------
 
 \appendix
-%\include{Chapters/AppendixA}
+
+\include{latex/chapters/_template_appendix} % corrected appendix path
+
 
 %----------------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
