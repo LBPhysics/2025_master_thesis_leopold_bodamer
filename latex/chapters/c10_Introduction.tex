@@ -87,9 +87,9 @@ aims at developing a general framework to analyze the dynamical behaviour of sys
 that, as a result of their coupling with environmental degrees of freedom, will no
 longer evolve unitarily. \cite{rivasMarkovianMasterEquations2010}
 \\
-2DES> \cite{krumland_two-dimensional_2023}, \cite{segarra-marti_towards_2018}, \cite{sun_two-dimensional_2024}
+2DES> \cite{krumlandTwodimensionalElectronicSpectroscopy2023}, \cite{segarra-martiAccurateSimulationTwoDimensional2018}, \cite{sunTwodimensionalSpectroscopyOpen2024}
 \\
-NONlinear Optics> \cite{hamm_principles_nodate}, \cite{mukamel_principles_1995}
+NONlinear Optics> \cite{hammPrinciplesNonlinearOptical}, \cite{mukamelPrinciplesNonlinearOptical1995}
 \\
 Spectroscopy investigates the interaction between matter and electromagnetic radiation, offering a means to analyze composition and structure.
 Central to this analysis is the understanding of how molecules respond to specific frequencies of light, revealing information about their energy levels and bonding.
@@ -97,14 +97,9 @@ Key concepts include wavelength ($\lambda$), wavenumber ($\bar{\nu}$), and frequ
 Wavelength, the distance between successive wave crests, is typically measured in nanometers or micrometers.
 Wavenumber, expressed in inverse centimeters (cm$^{-1}$), represents the number of waves per unit distance and is directly proportional to energy, defined as $\bar{\nu} = 1/\lambda$ (where $\lambda$ is in cm).
 Frequency, the number of wave cycles per second, is measured in Hertz (Hz), and the angular frequency ($\omega$) is related to frequency by $\omega = 2\pi\nu$.
-The relationship between angular frequency and wavenumber is given by $\omega = 2\pi c \bar{\nu}$, where $c$ is the speed of light.
-
-\\
-Then I turned everything into $fs^{-1}$.
-
-
-\\
-Spectrometers are instruments designed to measure the intensity of light as a function of wavelength or frequency.
+The relationship between angular frequency and wavenumber is given by $\omega = 2\pi c \bar{\nu}$, where $c$ is the speed of light.\\
+Next, I converted all units into femtoseconds ($fs^{-1}$), which is commonly used in time-domain spectroscopy.\\
+Spectrometers are instruments designed to measure the intensity of light as a function of wavelength or frequency.\\
 Different types of spectrometers are employed for various regions of the electromagnetic spectrum.
 Notably, UV-Vis spectrometers analyze absorption and transmission of ultraviolet and visible light, while infrared (IR) spectrometers measure the absorption of infrared light, providing insights into molecular vibrations.
 Nuclear Magnetic Resonance (NMR) spectrometers probe the magnetic properties of atomic nuclei, revealing molecular structure.
@@ -119,10 +114,10 @@ The quantum mechanical state of a bosonic bath in thermal equilibrium at tempera
 \rho = \frac{1}{Z} e^{-\beta H}, \quad Z = \text{Tr}\left[e^{-\beta H}\right]
 \]
 And the expectation value of an operator \( A \) in a system \( S \) is given by:
-\[
-\langle A \rangle_T = \text{Tr_S}[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta \hbar \omega_n} \langle n | A | n \rangle,
-\]
 
+$$
+\langle A \rangle_T = \text{Tr}_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
+$$
 where \(|n\rangle\) are number states. 
 The inverse temperature \(\beta\) is defined as:
 
@@ -239,9 +234,8 @@ In this case the spectral density is given by::
 \end{equation}
 for all frequencies $\omega$, which implies memoryless frinction. 
 However, in reality this idealization can't hold because every spectral density falls to 0 fro $\omega \to \infty$.
-Analogy to classical resistor, where the dissipation is proportional to the current.
+Analogy to classical resistor, where the dissipation is proportional to the current.\\
 
-\\
 A commonly used form in open quantum system models is the Ohmic spectral density with an exponential cutoff:
 \[
 J(\omega) \;=\; \alpha \,\omega\, e^{-\omega/\omega_c},

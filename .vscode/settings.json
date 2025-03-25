@@ -23,8 +23,8 @@
     ],
     "latex-workshop.latex.recipes": [                       // Defines the LaTeX recipes used by LaTeX Workshop
         {
-            "name": "pdflatex -> biber -> pdflatex", 
-            "tools": ["pdflatex", "biber", "pdflatex"]
+            "name": "pdflatex -> biber -> 2*pdflatex", 
+            "tools": ["pdflatex", "biber", "pdflatex", "pdflatex"]
         }
     ],
     // "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save

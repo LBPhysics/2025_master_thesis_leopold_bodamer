@@ -2375,12 +2375,12 @@
     <bcf:datasource type="file" datatype="bibtex" glob="false">bib/my_bibliography.bib</bcf:datasource>
   </bcf:bibdata>
   <bcf:section number="0">
-    <bcf:citekey order="1" intorder="1">rivas_markovian_2010</bcf:citekey>
-    <bcf:citekey order="2" intorder="1">krumland_two-dimensional_2023</bcf:citekey>
-    <bcf:citekey order="3" intorder="1">segarra-marti_towards_2018</bcf:citekey>
-    <bcf:citekey order="4" intorder="1">sun_two-dimensional_2024</bcf:citekey>
-    <bcf:citekey order="5" intorder="1">hamm_principles_nodate</bcf:citekey>
-    <bcf:citekey order="6" intorder="1">mukamel_principles_1995</bcf:citekey>
+    <bcf:citekey order="1" intorder="1">rivasMarkovianMasterEquations2010</bcf:citekey>
+    <bcf:citekey order="2" intorder="1">krumlandTwodimensionalElectronicSpectroscopy2023</bcf:citekey>
+    <bcf:citekey order="3" intorder="1">segarra-martiAccurateSimulationTwoDimensional2018</bcf:citekey>
+    <bcf:citekey order="4" intorder="1">sunTwodimensionalSpectroscopyOpen2024</bcf:citekey>
+    <bcf:citekey order="5" intorder="1">hammPrinciplesNonlinearOptical</bcf:citekey>
+    <bcf:citekey order="6" intorder="1">mukamelPrinciplesNonlinearOptical1995</bcf:citekey>
     <bcf:citekey order="7" intorder="1">breuer_theory_2009</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
