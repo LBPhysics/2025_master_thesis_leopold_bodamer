@@ -27,7 +27,7 @@
 \AtBeginBibliography{\renewcommand*{\finalnamedelim}{\addspace\bibstring{and}\space}}
 \renewcommand*{\bibnamedash}{\ifnumgreater{\value{liststop}}{1}{\space et al.}{}} % Et al. bei mehreren Autoren
 %\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
-\addbibresource{latex/bib/my_bibliography.bib} % TODO load the bibliography, or how can I connect zotero?
+\addbibresource{bib/my_bibliography.bib} % TODO load the bibliography, or how can I connect zotero?
 \RequireBibliographyStyle{style_bibiliography}
 
 %----------------------------------------------------------------------------------------
@@ -83,8 +83,8 @@
 \frontmatter
 \pagestyle{plain}
 
-\input{/chapters/c00_titlepage}
-\input{/chapters/c01_declaration}
+\input{chapters/c00_titlepage}
+%\input{chapters/c01_declaration}
 
 %----------------------------------------------------------------------------------------
 %	ABSTRACT PAGE
@@ -107,11 +107,11 @@
 %	CONTENTS
 %----------------------------------------------------------------------------------------
 \mainmatter
-\pagestyle{latex/style/thesis}
+\pagestyle{thesis}
 
-\include{latex/chapters/c02_acknow_lists_abbrs_consts_symbls_dedication__tex} % Corrected chapter path
-\include{latex/chapters/c10_introduction}
-\include{latex/chapters/c20_derivation_redfield_eq}
+%\include{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication__tex} % Corrected chapter path
+%\include{chapters/c10_introduction}
+\include{chapters/c20_derivation_redfield_eq}
 
 %----------------------------------------------------------------------------------------
 %	APPENDICES
@@ -119,7 +119,7 @@
 
 \appendix
 
-\include{latex/chapters/_template_appendix} % corrected appendix path
+\include{chapters/_template_appendix} % corrected appendix path
 
 
 %----------------------------------------------------------------------------------------

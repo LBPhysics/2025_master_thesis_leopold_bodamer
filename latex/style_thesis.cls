@@ -26,7 +26,7 @@
 %----------------------------------------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}[1996/12/01]
-\newcommand{\classname}{MastersDoctoralThesis}
+\newcommand{\classname}{style_thesis}
 \ProvidesClass{\classname}[2017/08/27 v1.6 LaTeXTemplates.com]
 \providecommand{\baseclass}{book}
 \RequirePackage{etoolbox}
@@ -196,8 +196,7 @@
 \RequirePackage{siunitx} % Required for \SI commands
 
 \RequirePackage{graphicx} % Required to include images
-\graphicspath{{Figures/}{./}} % Specifies where to look for included images
-
+\graphicspath{{C:/Users/leopo/.vscode/master_thesis/figures/figures_in_development_svg/}} % TODO this is not general
 \RequirePackage{booktabs} % Required for better table rules
 
 \RequirePackage{caption} % Required for customising the captions

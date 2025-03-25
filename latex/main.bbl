@@ -1,0 +1,70 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global/global}
+    \entry{breuer_theory_2009}{book}{}{}
+      \name{author}{2}{}{%
+        {{hash=44be9d24e3ede84bee3691a7a300e5db}{%
+           family={Breuer},
+           familyi={B\bibinitperiod},
+           given={Heinz-Peter},
+           giveni={H\bibinithyphendelim P\bibinitperiod}}}%
+        {{hash=4b215190f542b12fd214896e21eff64b}{%
+           family={Petruccione},
+           familyi={P\bibinitperiod},
+           given={Francesco},
+           giveni={F\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Oxford}%
+      }
+      \list{publisher}{1}{%
+        {Clarendon Press}%
+      }
+      \strng{namehash}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{fullhash}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{fullhashraw}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{bibnamehash}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{authorbibnamehash}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{authornamehash}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{authorfullhash}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \strng{authorfullhashraw}{fc984943b8bdb1c48eb687b8f74fd49b}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{edition}{1. publ. in paperback, [Nachdr.]}
+      \field{isbn}{978-0-19-852063-4 978-0-19-921390-0}
+      \field{langid}{english}
+      \field{pagetotal}{613}
+      \field{title}{The theory of open quantum systems}
+      \field{year}{2009}
+      \field{dateera}{ce}
+      \verb{file}
+      \verb PDF:C\:\\Users\\leopo\\Zotero\\storage\\5ZSKSRLA\\Breuer and Petruccione - 2009 - The theory of open quantum systems.pdf:application/pdf
+      \endverb
+      \keyw{linter/error}
+    \endentry
+  \enddatalist
+  \missing{Gardiner2004}
+  \missing{Lindblad1976}
+\endrefsection
+\endinput
+
