@@ -11,7 +11,8 @@
 
 \section{Derivation of the Lindblad equation from microscopic dynamics}
 
-The most common derivation of the Lindblad master equation is based on open quantum theory. The Lindblad equation is then an effective motion equation for a subsystem that belongs to a more complicated system. This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuer_theory_2009} as well as Gardiner and Zoller \cite{Gardiner2004}. Here, we follow the derivation presented in Ref. \cite{Lindblad1976}. Our initial point is displayed in Fig. \ref{fig:system_env}. A total system belonging to a Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
+The most common derivation of the Lindblad master equation is based on open quantum theory. The Lindblad equation is then an effective motion equation for a subsystem that belongs to a more complicated system. This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuer_theory_2009} 
+A total system belonging to a Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
 
 The evolution of the total system is given by the von Neumann equation,
 \begin{equation}
@@ -19,10 +20,13 @@ The evolution of the total system is given by the von Neumann equation,
 \end{equation}
 
 As we are interested in the dynamics of the system without the environment, we trace over the environment degrees of freedom to obtain the reduced density matrix of the system $\rho(t) = \mathrm{Tr}_E[\rho_T]$. The total Hamiltonian can be separated as
+
+\paragraph{Step 1: Interaction picture}
+
 \begin{equation}
-    H_T = H_S \otimes \mathbb{1}_E + \mathbb{1}_S \otimes H_E + \lambda H_I,
+    H_T = H_S \otimes \mathbb{1}_E + \mathbb{1}_S \otimes H_E + \alpha H_I,
 \end{equation}
-where $H_S \in \mathcal{H}_S$, $H_E \in \mathcal{H}_E$, and $H_I \in \mathcal{H}_T$ represents the interaction between the system and the environment with coupling strength $\lambda$. The interaction term is typically decomposed as
+where $H_S \in \mathcal{H}_S$, $H_E \in \mathcal{H}_E$, and $H_I \in \mathcal{H}_T$ represents the interaction between the system and the environment with coupling strength $\alpha$. The interaction term is typically decomposed as
 \begin{equation}
     H_I = \sum_i S_i \otimes E_i,
 \end{equation}
@@ -30,31 +34,63 @@ where $S_i \in \mathcal{B}(\mathcal{H}_S)$ and $E_i \in \mathcal{B}(\mathcal{H}_
 
 To describe the system dynamics, we move to the interaction picture where the operators evolve with respect to $H_S + H_E$,
 \begin{equation}
-    \tilde{O}(t) = e^{i(H_S+H_E)t} O e^{-i(H_S+H_E)t}.
+    \hat{O}(t) = e^{i(H_S+H_E)t} O e^{-i(H_S+H_E)t}.
 \end{equation}
+
 The time evolution in the interaction picture is given by
 \begin{equation}
-    \dot{\tilde{\rho}}_T(t) = -i [\tilde{H}_I(t), \tilde{\rho}_T(t)],
+    \dot{\hat{\rho}}_T(t) = -i \alpha [\hat{H}_I(t), \hat{\rho}_T(t)],
 \end{equation}
+
+\paragraph{Step 2: Expand}
 which can be formally integrated as
+
 \begin{equation}
-    \tilde{\rho}_T(t) = \tilde{\rho}_T(0) - i \lambda \int_0^t ds [\tilde{H}_I(s), \tilde{\rho}_T(s)].
+    \hat{\rho}_T(t) = \hat{\rho}_T(0) - i \alpha \int_0^t ds [\hat{H}_I(s), \hat{\rho}_T(s)].
 \end{equation}
 
-Substituting this back into the evolution equation and tracing out the environment under the Born approximation ($\rho_T(t) \approx \rho_S(t) \otimes \rho_E$), we obtain the Redfield equation,
 \begin{equation}
-    \dot{\rho}_S(t) = -\lambda^2 \int_0^t ds \mathrm{Tr}_E [\tilde{H}_I(t), [\tilde{H}_I(s), \rho_S(t) \otimes \rho_E]].
+    \dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right] - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t') \right] \right] dt'.
 \end{equation}
 
-Under the Markov approximation, we extend the upper limit of integration to $\infty$, obtaining the general form of the master equation,
 \begin{equation}
-    \dot{\rho}_S(t) = \sum_{i,j} \Gamma_{ij} (S_j \rho_S S_i^\dagger - \frac{1}{2} \{ S_i^\dagger S_j, \rho_S \}).
+    \int_t^{t'} d s \hat{\rho}_T(s) = -i \int_t^{t'} \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] ds,
 \end{equation}
-This is the standard form of the Lindblad master equation, where $\Gamma_{ij}$ are coefficients obtained from the spectral properties of the environment.
 
-%-----------------------------------
-%	SUBSECTION 1
-%-----------------------------------
-\subsection{Subsection 1}
+\begin{equation}
+    \hat{\rho}_T(t') - \hat{\rho}_T(t) = -i \alpha \int_t^{t'} \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] ds.
+\end{equation}
 
-Nunc posuere quam at lectus tristique eu ultrices augue venenatis. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Aliquam erat volutpat. Vivamus sodales tortor eget quam adipiscing in vulputate ante ullamcorper. Sed eros ante, lacinia et sollicitudin et, aliquam sit amet augue. In hac habitasse platea dictumst.
+\begin{equation}
+    \dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right] 
+    - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t) \right] \right] + \mathcal{O} (\alpha^3).
+\end{equation}
+
+\paragraph{Step 3: Partial trace}
+
+\begin{equation}
+    \dot{\rho}_S(t) = -i \alpha [\hat{H}_I(t),\hat{\rho}_T(0)]  - \alpha^2 \int_0^t ds \mathrm{Tr}_E [\hat{H}_I(t), [\hat{H}_I(s), \rho_S(t) \otimes \rho_E]].
+\end{equation}
+
+Approximation
+\begin{equation}
+    \hat{\rho}_T(0) = \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)
+\end{equation}
+using eq. 
+
+\begin{equation}
+    \sum_i \mathrm{Tr}_E[ S_i \otimes E_i , \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)] =     \sum_i (S_i \hat{\rho}_S(0) - \hat{\rho}_S(0) S_i)\cdot  \mathrm{Tr}_E [E_i \hat{\rho}_E(0)]
+\end{equation}
+
+Argue that 
+\begin{equation}
+    < E_i >_E = \mathrm{Tr}_E [E_i \hat{\rho}_E(0)]
+\end{equation}
+with new Hamiltonian
+...
+\begin{equation}
+    \hat{H}_S' = \hat{H}_S + \sum_i S_i \otimes (E_i - < E_i >_E)
+\end{equation}
+
+
+TODO FINISH this derivation
