@@ -29,25 +29,16 @@
             "tools": ["pdflatex", "biber", "pdflatex"]
         }
     ],
-    "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save
+//    "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save
 
     "git.enableSmartCommit": true,
     
     "files.exclude": {
-        "**/.fdb_latexmk": true,
-        "**/node_modules": true,
-        "**/.synctex.gz": true,
-        "**/.run.xml": true,
-        "**/.aux": true,
-        "**/.bbl": true,
-        "**/.blg": true,
-        "**/.fls": true,
-        "**/.log": true,
-        "**/.out": true,
-        "**/.toc": true,
-        "**/.bcf": true,
-
-        //"**/.git": true,
+        "**/.DS_Store": false,
+        "**/.git": false,
+        "**/.hg": false,
+        "**/.svn": false,
+        "**/Thumbs.db": false
     },
 
 }

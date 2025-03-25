@@ -52,48 +52,31 @@ where:
 
 \section{Motivation}
 \noindent
-Quantum computing, an exceptionally promising area of study in modern physics, offers a fundamentally new way to process and transmit information.
-Applications of this, not yet scalable technology range from cryptography to drug research.
-Quantum computers would especially outperform classical computers in quantum simulations of chemical / physical systems \cite{Eddins2022}.
-Qubits, the analog to classical bits, for example,
-photons or atoms play a crucial role in harnessing this quantum technology \cite{Ramakrishnan2023}.
-The area which describes photons and their interaction with matter is quantum optics.
-One essential goal of this filed is to build efficient and controllable interactions between photons and atoms.
-A challenge for this is unwanted (spontaneous) emission, where photons are scattered into channels out of control.
-This spontaneous emission hampers the development of quantum technologies, especially in quantum information processing.
-%Quantum information processing stands at the forefront of modern technological advancement.
-Subradiant states are a promising concept for this field of study.
-These states appear when many emitters interact via light-mediated resonant dipole-dipole interactions
-and inherit lifetimes magnitudes larger than that of a single emitter \cite{AsenjoGarcia2017}.
-Insights into information transport within complex systems are of utmost interest,
-as they could lead to advances in quantum computing. %routing and storage
-Especially with subradiant states, as they also offer ultrafast readout \cite{Scully2015}.
-%Zhen Wang et al. demonstrated, that a switching between sub- and superradiant modes is possible \cite{Wang2020}.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 1
 %----------------------------------------------------------------------------------------
 %\section{Objective}
-        %\vspace{0.5cm}
-        %\noindent
-        %The goal of this thesis is
-        %to perform robust directional photon routing on atomic systems in free-space using subradiant states.
-        %Focusing on a Y-shaped atomic tree, different topologies are explored to enable long-lived information transport as a proof of concept.
-        %
-        %\section{Outline}
-        %This thesis is structured as follows.
-        %Chapter \ref{Chapter2} introduces the theoretical background.
-        %It covers the concepts of open quantum systems,
-        %subradiance and superradiance, the Green tensor, and the reciprocal space.
-        %These tools are essential foundations for describing atom-atom interactions in free space,
-        %including dipole-dipole interactions and coupling to a photonic bath.
-        %%After this chapter, the reader already knows...
-        %The quantum router of \cite{Startingpoint} is presented and summarized in Chapter \ref{Chapter3}.
-        %It introduces the concepts of graph theory and explains how quantum evolution on a graph topology can be utilized to achieve directional routing of information.
-        %Chapter \ref{Chapter4} will be the core of this thesis, adapting this model to an atomic system.
-        %This chapter delves into the challenges of implementing directional routing in a fully connected atomic system and investigates various solutions to control the phase of interactions.
-        %It further extends the analysis to systems with a larger number of atoms, focusing on coupling control and routing capabilities in different configurations, such as equilateral and isosceles triangles.
-        %Chapter \ref{Chapter5} concludes the thesis by summarizing the results and discussing potential future directions in the field of quantum routing in atomic systems.
+%\vspace{0.5cm}
+%\noindent
+%The goal of this thesis is
+%to perform robust directional photon routing on atomic systems in free-space using subradiant states.
+%Focusing on a Y-shaped atomic tree, different topologies are explored to enable long-lived information transport as a proof of concept.
+%
+%\section{Outline}
+%This thesis is structured as follows.
+%Chapter \ref{Chapter2} introduces the theoretical background.
+%It covers the concepts of open quantum systems,
+%subradiance and superradiance, the Green tensor, and the reciprocal space.
+%These tools are essential foundations for describing atom-atom interactions in free space,
+%including dipole-dipole interactions and coupling to a photonic bath.
+%%After this chapter, the reader already knows...
+%The quantum router of \cite{Startingpoint} is presented and summarized in Chapter \ref{Chapter3}.
+%It introduces the concepts of graph theory and explains how quantum evolution on a graph topology can be utilized to achieve directional routing of information.
+%Chapter \ref{Chapter4} will be the core of this thesis, adapting this model to an atomic system.
+%This chapter delves into the challenges of implementing directional routing in a fully connected atomic system and investigates various solutions to control the phase of interactions.
+%It further extends the analysis to systems with a larger number of atoms, focusing on coupling control and routing capabilities in different configurations, such as equilateral and isosceles triangles.
+%Chapter \ref{Chapter5} concludes the thesis by summarizing the results and discussing potential future directions in the field of quantum routing in atomic systems.
 
 
 It is widely assumed that one of the crucial tasks currently facing quantum theorists
@@ -102,27 +85,12 @@ any experiment, a quantum system is subject to noise and decoherence due to the
 unavoidable interaction with its surroundings. The theory of open quantum systems
 aims at developing a general framework to analyze the dynamical behaviour of systems
 that, as a result of their coupling with environmental degrees of freedom, will no
-longer evolve unitarily. \cite{Rivas_2010}
-
-
-
-2DES> \cite{krumland2023twodimensional}, \cite{Segarra-Martí2018}, \cite{Sun2024}
-
-
-
-NONlinear Optics> \cite{Hamm2005}, \cite{Mukamel1995}
-
-
-
-
-
-
-
-
-
-
-
-
+longer evolve unitarily. \cite{rivas_markovian_2010}
+\newline
+2DES> \cite{krumland_two-dimensional_2023}, \cite{segarra-marti_towards_2018}, \cite{sun_two-dimensional_2024}
+\newline
+NONlinear Optics> \cite{hamm_principles_nodate}, \cite{mukamel_principles_1995}
+\newline
 Spectroscopy investigates the interaction between matter and electromagnetic radiation, offering a means to analyze composition and structure.
 Central to this analysis is the understanding of how molecules respond to specific frequencies of light, revealing information about their energy levels and bonding.
 Key concepts include wavelength ($\lambda$), wavenumber ($\bar{\nu}$), and frequency ($\nu$).
@@ -131,9 +99,11 @@ Wavenumber, expressed in inverse centimeters (cm$^{-1}$), represents the number 
 Frequency, the number of wave cycles per second, is measured in Hertz (Hz), and the angular frequency ($\omega$) is related to frequency by $\omega = 2\pi\nu$.
 The relationship between angular frequency and wavenumber is given by $\omega = 2\pi c \bar{\nu}$, where $c$ is the speed of light.
 
+\newline
 Then I turned everything into $fs^{-1}$.
 
 
+\newline
 Spectrometers are instruments designed to measure the intensity of light as a function of wavelength or frequency.
 Different types of spectrometers are employed for various regions of the electromagnetic spectrum.
 Notably, UV-Vis spectrometers analyze absorption and transmission of ultraviolet and visible light, while infrared (IR) spectrometers measure the absorption of infrared light, providing insights into molecular vibrations.
@@ -142,6 +112,78 @@ Nuclear Magnetic Resonance (NMR) spectrometers probe the magnetic properties of 
 
 
 
+\newpage
+\section{Bath Correlators and Transition Rates}
+The quantum mechanical state of a bosonic bath in thermal equilibrium at temperature \( T \) is given by the density matrix:
+\[
+\rho = \frac{1}{Z} e^{-\beta H}, \quad Z = \text{Tr}\left[e^{-\beta H}\right]
+\]
+And the expectation value of an operator \( A \) in a system \( S \) is given by:
+\[
+\langle A \rangle_T = \text{Tr_S}[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta \hbar \omega_n} \langle n | A | n \rangle,
+\]
+
+where \(|n\rangle\) are number states. 
+The inverse temperature \(\beta\) is defined as:
+
+\[
+\beta = \frac{1}{k_B T}
+\]
+
+\subsection{Bath Correlator}
+
+The bath correlator is given by:
+\[
+C(\tau) = \langle B(\tau) B(0) \rangle
+\]
+where the bath operator \( B \) is defined as:
+\[
+B = \sum_{n=1}^{\infty} c_n x_n
+\]
+and the bath operator in terms of creation and annihilation operators is:
+\[
+B(0) = \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^\dagger),
+\]
+\[
+B(\tau) = \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \left( b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau} \right).
+\]
+Substituting \( B(\tau) \) and \( B(0) \) into the bath correlator expression:
+\[
+C(\tau) = \left\langle \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau}) \sum_{m=1}^{\infty} c_m \sqrt{\frac{1}{2 m_m \omega_m}} (b_m + b_m^\dagger) \right\rangle.
+\]
+Applying the thermal expectation values:
+\[
+\langle b_n b_m^\dagger \rangle = \delta_{nm} (n_n + 1), \quad \langle b_n^\dagger b_m \rangle = \delta_{nm} n_n,
+\]
+where \( n_n \) is the Bose-Einstein distribution:
+\[
+n_n = \frac{1}{e^{\beta \omega_n} - 1}.
+\]
+We get:
+\[
+C(\tau) = \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \left[ (n_n + 1) e^{-i \omega_n \tau} + n_n e^{i \omega_n \tau} \right].
+\]
+Next, we express the correlation in terms of the spectral density \( J(\omega) \), which is defined as:
+\[
+J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n).
+\]
+Thus, the bath correlator becomes:
+\[
+C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ (n(\omega) + 1) e^{-i \omega \tau} + n(\omega) e^{i \omega \tau} \right].
+\]
+Rearranging the terms, we get:
+\[
+C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ \coth\left( \frac{\beta \omega}{2} \right) \cos(\omega \tau) - i \sin(\omega \tau) \right].
+\]
+This is the desired result:
+\[
+C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left( \coth\left( \frac{\omega}{2} \right) \cos(\omega \tau) - i \sin(\omega \tau) \right)
+\]
+
+
+
+
+\newpage
 \section*{Conversion from Discrete Sum to Continuous Spectral Density}
 
 \noindent In the theory of open quantum systems, one often moves from a discrete description of the bath to a continuous one. This is summarized by the transformation:
@@ -188,13 +230,25 @@ J(\omega) \;=\; \rho(\omega)\,g(\omega)^2.
 \]
 
 \subsection*{5. Ohmic Spectral Density with Exponential Cutoff}
+Source: Ulrich Weiss chapter 7.3:
+(*my interpretation: The Redfield equation is influenced by classical phenomenological models of dissipation*)
+In the strict Ohmic case, damping is frequency-independent. $ \gamma(\omega) = \gamma $. 
+In this case the spectral density is given by::
+\begin{equation}
+  J(\omega) \propto \gamma \omega
+\end{equation}
+for all frequencies $\omega$, which implies memoryless frinction. 
+However, in reality this idealization can't hold because every spectral density falls to 0 fro $\omega \to \infty$.
+Analogy to classical resistor, where the dissipation is proportional to the current.
+
+\newline
 A commonly used form in open quantum system models is the Ohmic spectral density with an exponential cutoff:
 \[
 J(\omega) \;=\; \alpha \,\omega\, e^{-\omega/\omega_c},
 \]
 where:
 \begin{itemize}
-  \item $\alpha$ is a coupling constant,
-  \item $\omega_c$ is the cutoff frequency.
+  \item $\alpha$ is a dimensionless coupling constant,
+  \item $\omega_c$ is a high frequency cutoff.
 \end{itemize}
 ``Ohmic'' means $J(\omega) \propto \omega$ for small $\omega$, and the exponential cutoff ensures convergence at large $\omega$.

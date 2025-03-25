@@ -3,15 +3,14 @@
 %----------------------------------------------------------------------------------------
 \documentclass[
 	11pt, english, singlespacing,
-%raft, % Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
-%nolistspacing, % If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
-	liststotoc, % Uncomment to add the list of figures/tables/etc to the table of contents
-	toctotoc, % Uncomment to add the main table of contents to the table of contents
-%parskip, % Uncomment to add space between paragraphs
-%nohyperref, % Uncomment to not load the hyperref package
-%headsepline, % Uncomment to get a line under the header
-%chapterinoneline, % Uncomment to place the chapter title next to the number on one line
-%consistentlayout, % Uncomment to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
+%raft, 				% Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
+%nolistspacing, 	% If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
+	liststotoc, 	% Uncomment to add the list of figures/tables/etc to the table of contents
+	toctotoc, 		% Uncomment to add the main table of contents to the table of contents
+%parskip, 			% Uncomment to add space between paragraphs
+%headsepline, 		% Uncomment to get a line under the header
+%chapterinoneline, 	% Uncomment to place the chapter title next to the number on one line
+%consistentlayout, 	% Uncomment to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
 ]{style_thesis}
 
 %----------------------------------------------------------------------------------------
@@ -19,8 +18,8 @@
 %----------------------------------------------------------------------------------------
 \usepackage[utf8]{inputenc} % Required for inputting international characters
 \usepackage[T1]{fontenc}
-\usepackage{mathpazo} % Use the Palatino font by default
-
+%\usepackage{mathpazo} % Use the Palatino font by default
+H
 %-------------------------------- Define the LIBRARY ------------------------------------
 
 \usepackage[backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp]{biblatex}
@@ -85,6 +84,7 @@
 
 \input{chapters/c00_titlepage}
 %\input{chapters/c01_declaration}
+\input{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication}
 
 %----------------------------------------------------------------------------------------
 %	ABSTRACT PAGE
@@ -109,8 +109,7 @@
 \mainmatter
 \pagestyle{thesis}
 
-%\include{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication__tex} % Corrected chapter path
-%\include{chapters/c10_introduction}
+\include{chapters/c10_introduction}
 \include{chapters/c20_derivation_redfield_eq}
 
 %----------------------------------------------------------------------------------------

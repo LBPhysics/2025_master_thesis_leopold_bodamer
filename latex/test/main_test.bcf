@@ -2364,31 +2364,3 @@
     <bcf:datasource type="file" datatype="bibtex" glob="false">bib/my_bibliography.bib</bcf:datasource>
   </bcf:bibdata>
   <bcf:section number="0">
-    <bcf:citekey order="1" intorder="1">rivas_markovian_2010</bcf:citekey>
-    <bcf:citekey order="2" intorder="1">krumland_two-dimensional_2023</bcf:citekey>
-    <bcf:citekey order="3" intorder="1">segarra-marti_towards_2018</bcf:citekey>
-    <bcf:citekey order="4" intorder="1">sun_two-dimensional_2024</bcf:citekey>
-    <bcf:citekey order="5" intorder="1">hamm_principles_nodate</bcf:citekey>
-    <bcf:citekey order="6" intorder="1">mukamel_principles_1995</bcf:citekey>
-    <bcf:citekey order="7" intorder="1">breuer_theory_2009</bcf:citekey>
-  </bcf:section>
-  <!-- SORTING TEMPLATES -->
-  <bcf:sortingtemplate name="none">
-    <bcf:sort order="1">
-      <bcf:sortitem order="1">citeorder</bcf:sortitem>
-    </bcf:sort>
-    <bcf:sort order="2">
-      <bcf:sortitem order="1">intciteorder</bcf:sortitem>
-    </bcf:sort>
-  </bcf:sortingtemplate>
-  <!-- DATALISTS -->
-  <bcf:datalist section="0"
-                name="none/global//global/global"
-                type="entry"
-                sortingtemplatename="none"
-                sortingnamekeytemplatename="global"
-                labelprefix=""
-                uniquenametemplatename="global"
-                labelalphanametemplatename="global">
-  </bcf:datalist>
-</bcf:controlfile>

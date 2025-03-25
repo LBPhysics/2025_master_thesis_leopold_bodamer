@@ -8,8 +8,9 @@
 /dataSources.local.xml
 
 # My ignored files
-/out/ #Ignores the out folder where aux files are stored.
-/figures/figures_from_python/
+../figures/figures_from_python/
+../latex/test/
+
 
 *.aux
 *.bbl
