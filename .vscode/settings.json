@@ -3,8 +3,6 @@
     "git.autofetch": true,                                  // Automatically fetches changes from the Git repository, keeping your local branch up-to-date
 
     "latex-workshop.latex.tools": [
-    
-
         {
             "name": "pdflatex",
             "command": "pdflatex",
@@ -12,7 +10,7 @@
                 "-synctex=1",                               // Enables SyncTeX, allowing forward and reverse synchronization between the PDF and .tex file
                 "-interaction=nonstopmode",                 // Continues compilation despite errors, useful for quick iterations
                 "-file-line-error",                         // Improves error messages by showing file and line number
-                "-output-directory=%OUTDIR%",               // output directory is generated
+                "-output-directory=%OUTDIR%",               // Output directory is generated
                 "%DOC%"                                     // Placeholder for the document's main.tex file
             ],
             "env": {}
@@ -29,16 +27,31 @@
             "tools": ["pdflatex", "biber", "pdflatex"]
         }
     ],
-//    "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save
+    // "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save
 
     "git.enableSmartCommit": true,
     
     "files.exclude": {
-        "**/.DS_Store": false,
-        "**/.git": false,
-        "**/.hg": false,
-        "**/.svn": false,
-        "**/Thumbs.db": false
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/*.aux": true,
+        "**/*.bbl-SAVE-ERROR": true,
+        "**/main_test.bcf": true,
+        "**/*.bcf": true,
+        "**/*.log": true,
+        "**/*.out": true,
+        "**/*.gz": true,
+        "**/*.xml": true,
+        "**/*.toc": true,
+        "**/.github": true,
+        "**/.idea": false,
+        "**/.venv": true
     },
 
+    "explorerExclude.backup": {
+        
+    }
 }
