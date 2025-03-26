@@ -1,5 +1,5 @@
 % $ biblatex auxiliary file $
-% $ biblatex bbl format version 3.3 $
+% $ biblatex bbl format version 3.2 $
 % Do not modify the above lines!
 %
 % This is an auxiliary file used by the 'biblatex' package.
@@ -18,8 +18,8 @@
 
 
 \refsection{0}
-  \datalist[entry]{none/global//global/global/global}
-    \entry{rivasMarkovianMasterEquations2010}{article}{}{}
+  \datalist[entry]{none/global//global/global}
+    \entry{rivasMarkovianMasterEquations2010}{article}{}
       \name{author}{4}{}{%
         {{hash=5f753dfd047806a2fba8bcb6aca6a085}{%
            family={Rivas},
@@ -44,12 +44,10 @@
       }
       \strng{namehash}{297a36dd387578c5a94747a2937f77c7}
       \strng{fullhash}{df9c613d055375c7ae0d20a9c1847b84}
-      \strng{fullhashraw}{df9c613d055375c7ae0d20a9c1847b84}
       \strng{bibnamehash}{297a36dd387578c5a94747a2937f77c7}
       \strng{authorbibnamehash}{297a36dd387578c5a94747a2937f77c7}
       \strng{authornamehash}{297a36dd387578c5a94747a2937f77c7}
       \strng{authorfullhash}{df9c613d055375c7ae0d20a9c1847b84}
-      \strng{authorfullhashraw}{df9c613d055375c7ae0d20a9c1847b84}
       \field{sortinit}{1}
       \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
       \field{labelnamesource}{author}
@@ -78,7 +76,7 @@
       \endverb
       \keyw{Quantum Physics}
     \endentry
-    \entry{krumlandTwodimensionalElectronicSpectroscopy2023}{misc}{}{}
+    \entry{krumlandTwodimensionalElectronicSpectroscopy2023}{misc}{}
       \name{author}{5}{}{%
         {{hash=bbc9e85b9bad5c45b1dfa6ab0668fd80}{%
            family={Krumland},
@@ -111,12 +109,10 @@
       }
       \strng{namehash}{464606955ad49a55d9fae7e345c88640}
       \strng{fullhash}{0a28f3007cbfabc1de8089361d445ddc}
-      \strng{fullhashraw}{0a28f3007cbfabc1de8089361d445ddc}
       \strng{bibnamehash}{464606955ad49a55d9fae7e345c88640}
       \strng{authorbibnamehash}{464606955ad49a55d9fae7e345c88640}
       \strng{authornamehash}{464606955ad49a55d9fae7e345c88640}
       \strng{authorfullhash}{0a28f3007cbfabc1de8089361d445ddc}
-      \strng{authorfullhashraw}{0a28f3007cbfabc1de8089361d445ddc}
       \field{sortinit}{2}
       \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
       \field{labelnamesource}{author}
@@ -151,7 +147,7 @@
       \endverb
       \keyw{Condensed Matter - Mesoscale and Nanoscale Physics}
     \endentry
-    \entry{segarra-martiAccurateSimulationTwoDimensional2018}{article}{}{}
+    \entry{segarra-martiAccurateSimulationTwoDimensional2018}{article}{}
       \name{author}{5}{}{%
         {{hash=b98132cfd2d1c2838944635108ddc98f}{%
            family={Segarra-Martí},
@@ -181,12 +177,10 @@
       }
       \strng{namehash}{fcd0160d125aa1789185f7d830bcc73e}
       \strng{fullhash}{afab5038a51cd7365dd386eca37a8f95}
-      \strng{fullhashraw}{afab5038a51cd7365dd386eca37a8f95}
       \strng{bibnamehash}{fcd0160d125aa1789185f7d830bcc73e}
       \strng{authorbibnamehash}{fcd0160d125aa1789185f7d830bcc73e}
       \strng{authornamehash}{fcd0160d125aa1789185f7d830bcc73e}
       \strng{authorfullhash}{afab5038a51cd7365dd386eca37a8f95}
-      \strng{authorfullhashraw}{afab5038a51cd7365dd386eca37a8f95}
       \field{sortinit}{3}
       \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
       \field{labelnamesource}{author}
@@ -214,7 +208,7 @@
       \verb https://doi.org/10.1007/s41061-018-0201-8
       \endverb
     \endentry
-    \entry{sunTwodimensionalSpectroscopyOpen2024}{misc}{}{}
+    \entry{sunTwodimensionalSpectroscopyOpen2024}{misc}{}
       \name{author}{4}{}{%
         {{hash=fe7bbf39e1dc31f3269e598ae4ff13bc}{%
            family={Sun},
@@ -242,12 +236,10 @@
       }
       \strng{namehash}{20dc5cfd0668d02bda7eefce200b290f}
       \strng{fullhash}{916dc3f7235ad89d27f70b540f06c5b6}
-      \strng{fullhashraw}{916dc3f7235ad89d27f70b540f06c5b6}
       \strng{bibnamehash}{20dc5cfd0668d02bda7eefce200b290f}
       \strng{authorbibnamehash}{20dc5cfd0668d02bda7eefce200b290f}
       \strng{authornamehash}{20dc5cfd0668d02bda7eefce200b290f}
       \strng{authorfullhash}{916dc3f7235ad89d27f70b540f06c5b6}
-      \strng{authorfullhashraw}{916dc3f7235ad89d27f70b540f06c5b6}
       \field{sortinit}{4}
       \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
       \field{labelnamesource}{author}
@@ -281,7 +273,7 @@
       \endverb
       \keyw{Condensed Matter - Mesoscale and Nanoscale Physics,Physics - Chemical Physics,Physics - Optics}
     \endentry
-    \entry{hammPrinciplesNonlinearOptical}{article}{}{}
+    \entry{hammPrinciplesNonlinearOptical}{article}{}
       \name{author}{1}{}{%
         {{hash=ed90f62d8a0220b204f27d5edd610819}{%
            family={Hamm},
@@ -291,12 +283,10 @@
       }
       \strng{namehash}{ed90f62d8a0220b204f27d5edd610819}
       \strng{fullhash}{ed90f62d8a0220b204f27d5edd610819}
-      \strng{fullhashraw}{ed90f62d8a0220b204f27d5edd610819}
       \strng{bibnamehash}{ed90f62d8a0220b204f27d5edd610819}
       \strng{authorbibnamehash}{ed90f62d8a0220b204f27d5edd610819}
       \strng{authornamehash}{ed90f62d8a0220b204f27d5edd610819}
       \strng{authorfullhash}{ed90f62d8a0220b204f27d5edd610819}
-      \strng{authorfullhashraw}{ed90f62d8a0220b204f27d5edd610819}
       \field{sortinit}{5}
       \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
       \field{labelnamesource}{author}
@@ -307,7 +297,7 @@
       \verb PDF:/home/leopold/Zotero/storage/RK5YGSQ2/Hamm - Principles of Nonlinear Optical Spectroscopy A Practical Approach.pdf:application/pdf
       \endverb
     \endentry
-    \entry{mukamelPrinciplesNonlinearOptical1995}{book}{}{}
+    \entry{mukamelPrinciplesNonlinearOptical1995}{book}{}
       \name{author}{1}{}{%
         {{hash=5ac21333b8262447c0185f30fa0db4c3}{%
            family={Mukamel},
@@ -323,12 +313,10 @@
       }
       \strng{namehash}{5ac21333b8262447c0185f30fa0db4c3}
       \strng{fullhash}{5ac21333b8262447c0185f30fa0db4c3}
-      \strng{fullhashraw}{5ac21333b8262447c0185f30fa0db4c3}
       \strng{bibnamehash}{5ac21333b8262447c0185f30fa0db4c3}
       \strng{authorbibnamehash}{5ac21333b8262447c0185f30fa0db4c3}
       \strng{authornamehash}{5ac21333b8262447c0185f30fa0db4c3}
       \strng{authorfullhash}{5ac21333b8262447c0185f30fa0db4c3}
-      \strng{authorfullhashraw}{5ac21333b8262447c0185f30fa0db4c3}
       \field{sortinit}{6}
       \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
       \field{labelnamesource}{author}
