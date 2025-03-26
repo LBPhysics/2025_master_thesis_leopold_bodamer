@@ -57,7 +57,6 @@
         "**/*.xdv": true,
         "**/*.ps": true,
         "**/*.eps": true,
-        "**/*.pdf": true,
         "**/*.run.xml": true,
         "**/*.fdb_latexmk": true,
         "**/*.synctex": true,
