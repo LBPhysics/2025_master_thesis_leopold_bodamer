@@ -11,7 +11,9 @@
 
 \section{Derivation of the Lindblad equation from microscopic dynamics}
 
-The most common derivation of the Lindblad master equation is based on open quantum theory. The Lindblad equation is then an effective motion equation for a subsystem that belongs to a more complicated system. This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuer_theory_2009} 
+The most common derivation of the Lindblad master equation is based on open quantum theory. 
+The Lindblad equation is then an effective motion equation for a subsystem that belongs to a more complicated system. 
+This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuer_theory_2009}. 
 A total system belonging to a Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
 
 The evolution of the total system is given by the von Neumann equation,
@@ -63,7 +65,7 @@ which can be formally integrated as
 
 \begin{equation}
     \dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right] 
-    - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t) \right] \right] + \mathcal{O} (\alpha^3).
+    - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t) \right] \right] dt' + \mathcal{O} (\alpha^3).
 \end{equation}
 
 \paragraph{Step 3: Partial trace}
@@ -84,13 +86,43 @@ using eq.
 
 Argue that 
 \begin{equation}
-    < E_i >_E = \mathrm{Tr}_E [E_i \hat{\rho}_E(0)]
+    < E_i >_0 \equiv \mathrm{Tr}_E [E_i \hat{\rho}_E(0)]
 \end{equation}
-with new Hamiltonian
-...
 \begin{equation}
-    \hat{H}_S' = \hat{H}_S + \sum_i S_i \otimes (E_i - < E_i >_E)
+    H_T = H + H_E + \alpha H_I + \underbrace{\alpha \sum_i ( S_i \otimes \mathbb{1} ) < E_i >_0 - \alpha \sum_i ( S_i \otimes \mathbb{1} ) < E_i >_0}_{= 0}
+\end{equation}
+with a new Hamiltonian
+\begin{equation}
+    \hat{H}_S' = \hat{H}_S + \sum_i S_i \otimes (E_i - < E_i >_0)
+\end{equation}
+where the extra term can be seen as a constant shift of the energy levels of the system. 
+The interaction Hamiltonian can now be written as
+\begin{equation}
+    \hat{H}_I' = \sum_i S_i \otimes (E_i - < E_i >)
 \end{equation}
 
+Now lets define $s' = t - s$
 
-TODO FINISH this derivation
+\begin{align}
+    \dot{\hat{\rho}}_T(t) &= \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t-s'), \hat{\rho}_T(t) \right] \right] ds'\\
+    \Rightarrow \dot{\hat{\rho}}_T(t) &= \alpha^2 \int_0^t \mathrm{Tr}_E \left[ \hat{H}_I(t), \left[ \hat{H}_I(t-s), \hat{\rho}_T(t) \right] \right] ds
+\end{align}
+
+
+Assumption
+\begin{equation}
+    \hat{\rho}_T(t) = \hat{\rho}_S(t) \otimes \hat{\rho}_E(t)
+\end{equation}
+and Expand
+\begin{align}
+    \dot{\hat{\rho}}_T(t) &= \alpha^2 \int_0^t ds \mathrm{Tr}_E \bigg\{ 
+        \hat{H}_I(t) \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \notag \\
+        &\quad - \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \hat{H}_I(t) 
+    \bigg\} \notag \\
+    &=  \alpha^2 \int_0^t ds \bigg\{ 
+        \mathrm{Tr}_E \big[ \hat{H}_I(t) \hat{H}_I(t-s) \hat{\rho}_T(t) \big] - 
+        \mathrm{Tr}_E \big[ \hat{H}_I(t) \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \notag \\
+        &\quad - \mathrm{Tr}_E \big[ \hat{H}_I(t-s) \hat{\rho}_T(t) \hat{H}_I(t) \big] - 
+        \mathrm{Tr}_E \big[ \hat{\rho}_T(t) \hat{H}_I(t-s) \hat{H}_I(t) \big] 
+    \bigg\}.
+\end{align}
