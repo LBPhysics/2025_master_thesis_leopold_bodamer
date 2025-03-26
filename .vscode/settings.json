@@ -50,8 +50,4 @@
         "**/.idea": false,
         "**/.venv": true
     },
-
-    "explorerExclude.backup": {
-        
-    }
 }
