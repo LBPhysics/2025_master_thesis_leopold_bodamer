@@ -27,7 +27,7 @@
             "tools": ["pdflatex", "biber", "pdflatex", "pdflatex"]
         }
     ],
-    // "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save
+     "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save
 
     "git.enableSmartCommit": true,
     

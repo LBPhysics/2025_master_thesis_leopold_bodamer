@@ -196,7 +196,8 @@
 \RequirePackage{siunitx} % Required for \SI commands
 
 \RequirePackage{graphicx} % Required to include images
-\graphicspath{{C:/Users/leopo/.vscode/master_thesis/figures/figures_in_development_svg/}} % TODO this is not general
+\graphicspath{{../figures/figures_in_development_svg/}}
+%\graphicspath{{C:/Users/leopo/.vscode/master_thesis/figures/figures_in_development_svg/}} % TODO this is not general
 \RequirePackage{booktabs} % Required for better table rules
 
 \RequirePackage{caption} % Required for customising the captions

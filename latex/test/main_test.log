@@ -1,9 +1,9 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.3.19)  25 MAR 2025 15:54
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2025.3.19)  26 MAR 2025 11:07
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**/home/leopold/PycharmProjects/Master_thesis/latex/test/main_test
+**/home/leopold/PycharmProjects/Master_thesis/latex/test/main_test.tex
 (/home/leopold/PycharmProjects/Master_thesis/latex/test/main_test.tex
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
@@ -24,10 +24,10 @@ l.16 ^^M
  
 Here is how much of TeX's memory you used:
  22 strings out of 474222
- 712 string characters out of 5748733
+ 657 string characters out of 5748733
  1922975 words of memory out of 5000000
  22375 multiletter control sequences out of 15000+600000
  558069 words of font info for 36 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 19i,0n,29p,202b,17s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 19i,0n,29p,206b,17s stack positions out of 10000i,1000n,20000p,200000b,200000s
 /home/leopold/PycharmProjects/Master_thesis/latex/test/main_test.tex:16:  ==> Fatal error occurred, no output PDF file produced!

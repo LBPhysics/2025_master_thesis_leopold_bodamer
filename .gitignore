@@ -1,0 +1,61 @@
+# Default ignored files
+/shelf/
+/workspace.xml
+# Editor-based HTTP Client requests
+/httpRequests/
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+# My ignored files
+../figures/figures_from_python/
+figures_in_development_svg/
+../latex/test/
+latex/test/
+.idea/
+
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+
+# Ignore LaTeX auxiliary and log files
+*.aux
+*.bbl-SAVE-ERROR
+main_test.bcf
+*.bcf
+*.log
+*.out
+*.gz
+*.xml
+*.toc
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore virtual environments
+.venv/
+env/
+
+# Ignore system and IDE-specific files
+.DS_Store
+Thumbs.db
+
+# Ignore version control directories
+.svn/
+.hg/
+
+# Ignore build and compiled files
+build/
+dist/
+
+# Ignore dependency folders
+node_modules/
