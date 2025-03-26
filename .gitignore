@@ -9,8 +9,6 @@
 
 # My ignored files
 /figures/figures_from_python/
-figures_in_development_svg/
-latex/test/
 latex/test/
 .idea/
 
@@ -346,3 +344,4 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 latex/main.pdf
+README.md
