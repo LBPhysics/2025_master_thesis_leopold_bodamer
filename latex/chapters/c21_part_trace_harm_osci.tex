@@ -1,14 +1,25 @@
 % Chapter Template
 
-\chapter{Chapter Title Here} % Main chapter title
+\chapter{Bath Correlation functions} % Main chapter title
 
 \label{Chapter_calc_extra_stuff} % Label for referencing this chapter
 
 %----------------------------------------------------------------------------------------
 %	SECTION 1
 %----------------------------------------------------------------------------------------
+\subsection{Bath Correlator}
+\label{subsec:bath_correlator}
 
-\section{Infinite Geometric Series}
+The general task of this chapter is to calculate the  bath correlator, which is defined as:
+\begin{equation} \label{eq:bath_correlator}
+C(\tau) = \langle B(\tau) B(0) \rangle,
+\end{equation}
+It is often also called two point correlation function and can bee seen as measuring the operator \( B \) at two different times in the bath.
+The bath operator \( B \) will be specified later.
+
+\section{Usefull tools}
+
+\subsection{Infinite Geometric Series}
 An infinite geometric series is a series of the form:
 \begin{equation} \label{eq:infinite_geometric_series}
 S = a + ar + ar^2 + ar^3 + \dots = \sum_{n=0}^{\infty} ar^n,
@@ -18,35 +29,39 @@ where \(a\) is the first term and \(r\) is the common ratio. If \(|r| < 1\), the
 S = \frac{a}{1 - r}.
 \end{equation}
 
-Another useful sum is:
-\begin{equation} \label{eq:useful_sum}
+Derivation of the Eq. \eqref{eq:geometric_series_sum} with respect to $ r $ returns another usefull series, to be used in the subsequent calculations:
+\begin{equation} \label{eq:derivation_geometric_sum}
 \sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad \text{for } |r| < 1,
 \end{equation}
-which can be derived from Eq. \eqref{eq:geometric_series_sum}.
+
 
 %----------------------------------------------------------------------------------------
 %	SECTION 2
 %----------------------------------------------------------------------------------------
 
-\subsection{Partial Trace}
+\subsection{Trace}
 If we have a bipartite system \( A \otimes B \), the reduced density matrix of system \( A \) is obtained by tracing out system \( B \):
 \begin{equation} \label{eq:partial_trace}
 \rho_A = \Tr_B[\rho_{AB}].
 \end{equation}
-If one is interested in the expectation value of an operator \( A \) in a system \( S \), this can be calculated with:
+If one is interested in the expectation value of an operator \( A \) in a system \( S \), this can be calculated with the trace:
 \begin{equation} \label{eq:expectation_value}
 \langle A \rangle_S = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
+\end{equation}
+where the inverse temperature \(\beta\) is defined as:
+\begin{equation} \label{eq:beta_definition}
+\beta = \frac{1}{k_B T}.
 \end{equation}
 
 %----------------------------------------------------------------------------------------
 %	SECTION 3
 %----------------------------------------------------------------------------------------
 
-\section{Partial Trace of Harmonic Oscillators in Thermal Equilibrium}
+\section{Harmonic Oscillators}
+A bosonic bath is modeled by an infinitely big set of harmonic oscillators, which we assume to be in thermal equilibrium.
+For such a system the thermal state is described by the Gibbs distribution:
 
-For an infinite set of harmonic oscillators, the thermal state is described by the Gibbs distribution:
-
-\begin{equation} \label{eq:gibbs_distribution}
+\begin{equation} \label{eq:gibbs_state}
 \rho = \frac{e^{-\beta H}}{Z}, \quad H = \sum_k \hbar \omega_k \left(a_k^{\dagger} a_k + \frac{1}{2}\right),
 \end{equation}
 
@@ -75,8 +90,9 @@ n_k &= \langle a_k^{\dagger} a_k \rangle_{\text{th}} = \Tr \left[ a_k^{\dagger} 
 %    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
     &= \frac{1}{e^{\beta \hbar \omega_k} - 1}.
 \end{align}
+where we have used Eq. \eqref{eq:derivation_geometric_sum} in the last step.
 
-The partition function for a bath then generalizes as a product:
+The partition function for the infinite set then generalizes to a product:
 \begin{equation} \label{eq:generalized_partition_function}
 Z = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
 \end{equation}
@@ -85,33 +101,16 @@ Z = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
 %	SECTION 4
 %----------------------------------------------------------------------------------------
 
-\section{Bath Correlators and Transition Rates}
+\section{Bath Correlators}
 \label{sec:bath_corr_trans_rates}
 
-The state of a bosonic bath (infinite set of harmonic oscillators) in thermal equilibrium at temperature \( T \) is given by a Gibbs state, which density matrix has the form:
-\begin{equation} \label{eq:Gibbs_state}
-\rho = \frac{1}{Z} e^{-\beta H}, \quad .
-\end{equation}
-The expectation value of an operator \( A \) in a system \( S \) is:
-\begin{equation} \label{eq:expectation_value_bath}
-\langle A \rangle_T = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
-\end{equation}
-The inverse temperature \(\beta\) is defined as:
-\begin{equation} \label{eq:beta_definition}
-\beta = \frac{1}{k_B T}.
-\end{equation}
-
-\subsection{Bath Correlator}
-\label{subsec:bath_correlator}
-
-The bath correlator is defined as:
-\begin{equation} \label{eq:bath_correlator}
-C(\tau) = \langle B(\tau) B(0) \rangle,
-\end{equation}
-where the bath operator \( B \) is:
+Now we turn to calculating the Correlator.
+The bath operator \( B \) is:
 \begin{equation} \label{eq:bath_operator}
 B = \sum_{n=1}^{\infty} c_n x_n.
 \end{equation}
+With this definition note, that in sec. \ref{sec:sec:Derivation_redfield_eq_from_microscopic_dynamics}} the interaction hamiltonian reduces, such that only one bath correlator $C(\tau) \equiv C_{ii}(\tau)$ in Eq. \eqref{eq:Environment_Correlation_Function} remains.
+
 Expressing \( B \) in terms of creation and annihilation operators:
 \begin{align}
 B(0) &= \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^\dagger), \label{eq:bath_operator_t0} \\
