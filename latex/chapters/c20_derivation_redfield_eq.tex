@@ -1,9 +1,8 @@
 % Chapter Template
-% Chapter Template
 
-\chapter{Chapter Title Here} % Main chapter title
+\chapter{Derivation of the Redfield Equation} % Main chapter title
 
-\label{ChapterX} % Change X to a consecutive number; for referencing this chapter elsewhere, use \ref{ChapterX}
+\label{Chapter_calc_redfield_eq} % Label for referencing this chapter
 
 %----------------------------------------------------------------------------------------
 %	SECTION 1
@@ -16,113 +15,161 @@ The Lindblad equation is then an effective motion equation for a subsystem that 
 This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuer_theory_2009}. 
 A total system belonging to a Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
 
-The evolution of the total system is given by the von Neumann equation,
+The evolution of the total system is given by the von Neumann equation:
 \begin{equation}
-    \dot{\rho}_T(t) = -i[H_T, \rho_T(t)].
+    \dot{\rho}_T(t) = -i[H_T, \rho_T(t)],
+    \label{eq:von_neumann}
 \end{equation}
+where $\rho_T(t)$ is the density matrix of the total system, and $H_T$ is the total Hamiltonian.
 
-As we are interested in the dynamics of the system without the environment, we trace over the environment degrees of freedom to obtain the reduced density matrix of the system $\rho(t) = \mathrm{Tr}_E[\rho_T]$. The total Hamiltonian can be separated as
-
-\paragraph{Step 1: Interaction picture}
-
+As we are interested in the dynamics of the system without the environment, we trace over the environment degrees of freedom to obtain the reduced density matrix of the system $\rho(t) = \mathrm{Tr}_E[\rho_T]$. The total Hamiltonian can be separated as:
 \begin{equation}
     H_T = H_S \otimes \mathbb{1}_E + \mathbb{1}_S \otimes H_E + \alpha H_I,
+    \label{eq:total_hamiltonian}
 \end{equation}
-where $H_S \in \mathcal{H}_S$, $H_E \in \mathcal{H}_E$, and $H_I \in \mathcal{H}_T$ represents the interaction between the system and the environment with coupling strength $\alpha$. The interaction term is typically decomposed as
+where $H_S \in \mathcal{H}_S$, $H_E \in \mathcal{H}_E$, and $H_I \in \mathcal{H}_T$ represents the interaction between the system and the environment with coupling strength $\alpha$. The interaction term is typically decomposed as:
 \begin{equation}
     H_I = \sum_i S_i \otimes E_i,
+    \label{eq:interaction_hamiltonian}
 \end{equation}
 where $S_i \in \mathcal{B}(\mathcal{H}_S)$ and $E_i \in \mathcal{B}(\mathcal{H}_E)$.
 
-To describe the system dynamics, we move to the interaction picture where the operators evolve with respect to $H_S + H_E$,
+%----------------------------------------------------------------------------------------
+%	SECTION 2
+%----------------------------------------------------------------------------------------
+
+\subsection{Interaction Picture}
+
+To describe the system dynamics, we move to the interaction picture where the operators evolve with respect to $H_S + H_E$:
 \begin{equation}
     \hat{O}(t) = e^{i(H_S+H_E)t} O e^{-i(H_S+H_E)t}.
+    \label{eq:interaction_picture}
 \end{equation}
 
-The time evolution in the interaction picture is given by
+The time evolution in the interaction picture is given by:
 \begin{equation}
     \dot{\hat{\rho}}_T(t) = -i \alpha [\hat{H}_I(t), \hat{\rho}_T(t)],
+    \label{eq:interaction_evolution}
 \end{equation}
-
-\paragraph{Step 2: Expand}
-which can be formally integrated as
-
+which can be formally integrated as:
 \begin{equation}
     \hat{\rho}_T(t) = \hat{\rho}_T(0) - i \alpha \int_0^t ds [\hat{H}_I(s), \hat{\rho}_T(s)].
+    \label{eq:formal_integration}
 \end{equation}
 
-\begin{equation}
-    \dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right] - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t') \right] \right] dt'.
-\end{equation}
-
-\begin{equation}
-    \int_t^{t'} d s \hat{\rho}_T(s) = -i \int_t^{t'} \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] ds,
-\end{equation}
-
-\begin{equation}
-    \hat{\rho}_T(t') - \hat{\rho}_T(t) = -i \alpha \int_t^{t'} \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] ds.
-\end{equation}
-
+Expanding to second order in $\alpha$, we obtain:
 \begin{equation}
     \dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right] 
-    - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t) \right] \right] dt' + \mathcal{O} (\alpha^3).
+    - \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t') \right] \right] dt' + \mathcal{O} (\alpha^3).
+    \label{eq:second_order_expansion}
 \end{equation}
 
-\paragraph{Step 3: Partial trace}
+%----------------------------------------------------------------------------------------
+%	SECTION 3
+%----------------------------------------------------------------------------------------
 
-\begin{equation}
-    \dot{\rho}_S(t) = -i \alpha [\hat{H}_I(t),\hat{\rho}_T(0)]  - \alpha^2 \int_0^t ds \mathrm{Tr}_E [\hat{H}_I(t), [\hat{H}_I(s), \rho_S(t) \otimes \rho_E]].
-\end{equation}
+\subsection{Partial Trace and Approximation}
 
-Approximation
+Taking the partial trace over the environment, we obtain:
 \begin{equation}
-    \hat{\rho}_T(0) = \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)
-\end{equation}
-using eq. 
-
-\begin{equation}
-    \sum_i \mathrm{Tr}_E[ S_i \otimes E_i , \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)] =     \sum_i (S_i \hat{\rho}_S(0) - \hat{\rho}_S(0) S_i)\cdot  \mathrm{Tr}_E [E_i \hat{\rho}_E(0)]
+    \dot{\rho}_S(t) = -i \alpha [\hat{H}_I(t),\hat{\rho}_T(0)]  
+    - \alpha^2 \int_0^t ds \mathrm{Tr}_E \big[\hat{H}_I(t), [\hat{H}_I(s), \rho_S(t) \otimes \rho_E]\big].
+    \label{eq:partial_trace}
 \end{equation}
 
-Argue that 
+Assuming an initial product state:
 \begin{equation}
-    < E_i >_0 \equiv \mathrm{Tr}_E [E_i \hat{\rho}_E(0)]
+    \hat{\rho}_T(0) = \hat{\rho}_S(0) \otimes \hat{\rho}_E(0),
+    \label{eq:initial_product_state}
 \end{equation}
+and using the relation:
 \begin{equation}
-    H_T = H + H_E + \alpha H_I + \underbrace{\alpha \sum_i ( S_i \otimes \mathbb{1} ) < E_i >_0 - \alpha \sum_i ( S_i \otimes \mathbb{1} ) < E_i >_0}_{= 0}
+    \sum_i \mathrm{Tr}_E\big[ S_i \otimes E_i , \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)\big] = \sum_i \big(S_i \hat{\rho}_S(0) - \hat{\rho}_S(0) S_i\big) \cdot \mathrm{Tr}_E \big[E_i \hat{\rho}_E(0)\big],
+    \label{eq:trace_relation}
 \end{equation}
-with a new Hamiltonian
+we define:
 \begin{equation}
-    \hat{H}_S' = \hat{H}_S + \sum_i S_i \otimes (E_i - < E_i >_0)
-\end{equation}
-where the extra term can be seen as a constant shift of the energy levels of the system. 
-The interaction Hamiltonian can now be written as
-\begin{equation}
-    \hat{H}_I' = \sum_i S_i \otimes (E_i - < E_i >)
+    \langle E_i \rangle_0 \equiv \mathrm{Tr}_E \big[E_i \hat{\rho}_E(0)\big].
+    \label{eq:environment_expectation}
 \end{equation}
 
-Now lets define $s' = t - s$
+The total Hamiltonian can then be rewritten as:
+\begin{equation}
+    H_T = H_S' + H_E + \alpha H_I',
+    \label{eq:shifted_hamiltonian}
+\end{equation}
+where:
+\begin{equation}
+    H_S' = H_S + \sum_i S_i \otimes (E_i - \langle E_i \rangle_0),
+    \label{eq:shifted_system_hamiltonian}
+\end{equation}
+and:
+\begin{equation}
+    H_I' = \sum_i S_i \otimes (E_i - \langle E_i \rangle_0).
+    \label{eq:shifted_interaction_hamiltonian}
+\end{equation}
 
+%----------------------------------------------------------------------------------------
+%	SECTION 4
+%----------------------------------------------------------------------------------------
+
+\subsection{Final Expression}
+
+Defining $s' = t - s$, we rewrite the second-order term as:
 \begin{align}
-    \dot{\hat{\rho}}_T(t) &= \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t-s'), \hat{\rho}_T(t) \right] \right] ds'\\
-    \Rightarrow \dot{\hat{\rho}}_T(t) &= \alpha^2 \int_0^t \mathrm{Tr}_E \left[ \hat{H}_I(t), \left[ \hat{H}_I(t-s), \hat{\rho}_T(t) \right] \right] ds
+    \dot{\rho}_S(t) &= \alpha^2 \int_0^t ds \mathrm{Tr}_E \bigg\{ 
+        \hat{H}_I(t) \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \notag \\
+        &\quad - \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \hat{H}_I(t) 
+    \bigg\}.
+    \label{eq:final_expression}
 \end{align}
-
 
 Assumption
 \begin{equation}
     \hat{\rho}_T(t) = \hat{\rho}_S(t) \otimes \hat{\rho}_E(t)
 \end{equation}
 and Expand
-\begin{align}
-    \dot{\hat{\rho}}_T(t) &= \alpha^2 \int_0^t ds \mathrm{Tr}_E \bigg\{ 
-        \hat{H}_I(t) \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \notag \\
-        &\quad - \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \hat{H}_I(t) 
-    \bigg\} \notag \\
-    &=  \alpha^2 \int_0^t ds \bigg\{ 
+\begin{equation}
+    \dot{\hat{\rho}}_T(t) = \alpha^2 \int_0^t ds \mathrm{Tr}_E 
+    \bigg\{ 
+        \hat{H}_I(t) \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big]  - 
+                     \big[ \hat{H}_I(t-s) \hat{\rho}_T(t)  - \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \hat{H}_I(t) 
+    \bigg\}.
+\end{equation}
+Expanding further, we obtain:
+\begin{equation}
+    \dot{\hat{\rho}}_T(t) =  \alpha^2 \int_0^t ds 
+    \bigg\{ 
         \mathrm{Tr}_E \big[ \hat{H}_I(t) \hat{H}_I(t-s) \hat{\rho}_T(t) \big] - 
-        \mathrm{Tr}_E \big[ \hat{H}_I(t) \hat{\rho}_T(t) \hat{H}_I(t-s) \big] \notag \\
-        &\quad - \mathrm{Tr}_E \big[ \hat{H}_I(t-s) \hat{\rho}_T(t) \hat{H}_I(t) \big] - 
+        \mathrm{Tr}_E \big[ \hat{H}_I(t) \hat{\rho}_T(t) \hat{H}_I(t-s) \big] - 
+        \mathrm{Tr}_E \big[ \hat{H}_I(t-s) \hat{\rho}_T(t) \hat{H}_I(t) \big] + 
         \mathrm{Tr}_E \big[ \hat{\rho}_T(t) \hat{H}_I(t-s) \hat{H}_I(t) \big] 
     \bigg\}.
+    \label{eq:expanded_expression}
+\end{equation}
+
+now lets insert the interaction Hamiltonian by summing $ i' -> t - s$ $ i -> t $
+
+\begin{align}
+    \dot{\hat{\rho}}_T(t) &= \alpha^2  \sum_{i, i'} \int_0^t ds 
+    \bigg\{
+            \mathrm{Tr}_E
+            &\big[ \hat{S}_i(t) \hat{S}_{i'}(t-s) \hat{\rho}_S(t)      \otimes   \hat{E}_{i}(t) \hat{E}_{i'}(t-s) \hat{\rho}_E(t)  \big] - 
+            &\big[ \hat{S}_i(t) \hat{\rho}_S(t) \hat{S}_{i'}(t-s)      \otimes   \hat{E}_{i}(t) \hat{\rho}_E(t) \hat{E}_{i'}(t-s)  \big] - 
+            &\big[ \hat{S}_{i'}(t-s) \hat{\rho}_S(t) \hat{S}_i(t)      \otimes   \hat{E}_{i'}(t-s) \hat{\rho}_E(t) \hat{E}_{i}(t)  \big] + 
+            &\big[ \hat{\rho}_S(t) \hat{S}_{i'}(t-s) \hat{S}_i(t)      \otimes   \hat{\rho}_E(t) \hat{E}_{i'}(t-s) \hat{E}_{i}(t)  \big] 
+    \bigg\}.
+\end{align}
+
+Now the Trace only acts on the environment, so the system operators can be taken out of the trace and we can define the Correlation functions
+\begin{align}
+    C_{ij}(t - s) = \mathrm{Tr}_E \big[\hat{E}_{i}(t) \hat{E}_{i'}(t-s) \hat{\rho}_E(t)  \big] 
+\end{align}
+such that
+\begin{align}
+    \dot{\hat{\rho}}_T(t) = \alpha^2  \sum_{i, i'} \int_0^t ds 
+    \bigg\{
+            C_{ij}(t - s) \big[ \hat{S}_i(t),  \hat{S}_{i'}(t-s) \hat{\rho}_S(t) \big] + \text{H.c.} 
+    \bigg\}.
+\label{eq:redfield_final}
 \end{align}

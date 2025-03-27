@@ -31,12 +31,14 @@
 
 %----------------------------------------------------------------------------------------
 
+% Define trace operator
+\newcommand{\Tr}{\mathrm{Tr}}
 
 \usepackage[autostyle=true]{csquotes}
 
 \usepackage{hyperref}
 \usepackage{amsmath, amssymb, amsfonts}
-\usepackage{bm}       % For bold Greek letters
+\usepackage{bbold}
 \usepackage{caption}
 \captionsetup{width=1.0\textwidth, font=normal, labelfont=bf}
 
@@ -106,11 +108,13 @@
 %----------------------------------------------------------------------------------------
 %	CONTENTS
 %----------------------------------------------------------------------------------------
+
 \mainmatter
 \pagestyle{thesis}
 
 \include{chapters/c10_introduction}
 \include{chapters/c20_derivation_redfield_eq}
+\include{chapters/c21_part_trace_harm_osci}
 
 %----------------------------------------------------------------------------------------
 %	APPENDICES

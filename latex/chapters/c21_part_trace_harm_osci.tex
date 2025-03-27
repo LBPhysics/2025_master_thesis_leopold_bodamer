@@ -1,0 +1,153 @@
+% Chapter Template
+
+\chapter{Chapter Title Here} % Main chapter title
+
+\label{Chapter_calc_extra_stuff} % Label for referencing this chapter
+
+%----------------------------------------------------------------------------------------
+%	SECTION 1
+%----------------------------------------------------------------------------------------
+
+\section{Infinite Geometric Series}
+An infinite geometric series is a series of the form:
+\begin{equation} \label{eq:infinite_geometric_series}
+S = a + ar + ar^2 + ar^3 + \dots = \sum_{n=0}^{\infty} ar^n,
+\end{equation}
+where \(a\) is the first term and \(r\) is the common ratio. If \(|r| < 1\), the sum converges to:
+\begin{equation} \label{eq:geometric_series_sum}
+S = \frac{a}{1 - r}.
+\end{equation}
+
+Another useful sum is:
+\begin{equation} \label{eq:useful_sum}
+\sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad \text{for } |r| < 1,
+\end{equation}
+which can be derived from Eq. \eqref{eq:geometric_series_sum}.
+
+%----------------------------------------------------------------------------------------
+%	SECTION 2
+%----------------------------------------------------------------------------------------
+
+\subsection{Partial Trace}
+If we have a bipartite system \( A \otimes B \), the reduced density matrix of system \( A \) is obtained by tracing out system \( B \):
+\begin{equation} \label{eq:partial_trace}
+\rho_A = \Tr_B[\rho_{AB}].
+\end{equation}
+If one is interested in the expectation value of an operator \( A \) in a system \( S \), this can be calculated with:
+\begin{equation} \label{eq:expectation_value}
+\langle A \rangle_S = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
+\end{equation}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 3
+%----------------------------------------------------------------------------------------
+
+\section{Partial Trace of Harmonic Oscillators in Thermal Equilibrium}
+
+For an infinite set of harmonic oscillators, the thermal state is described by the Gibbs distribution:
+
+\begin{equation} \label{eq:gibbs_distribution}
+\rho = \frac{e^{-\beta H}}{Z}, \quad H = \sum_k \hbar \omega_k \left(a_k^{\dagger} a_k + \frac{1}{2}\right),
+\end{equation}
+
+\subsection{Single Mode}
+For a single mode \( k \) harmonic oscillator \( H = \hbar \omega_k a_k^{\dagger} a_k \) in thermal equilibrium at temperature \( T \), the density matrix is given by:
+
+\begin{equation} \label{eq:single_mode_density_matrix}
+\rho = \frac{e^{-\beta \hbar \omega_k a_k^{\dagger} a_k}}{Z},
+\end{equation}
+where \( \omega_k \) is the constant frequency of the mode \( k \).
+The partition function can be calculated by the geometric series:
+
+\begin{equation} \label{eq:partition_function}
+    Z = \Tr\left[e^{-\beta H}\right] = \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k a_k^{\dagger} a_k} | m \rangle
+    = \sum_{k=0}^{\infty} \langle m | m \rangle \delta_{km} e^{-\beta \hbar \omega_k k} \\
+%    = e^{-\beta \frac{\hbar \omega_k }{2}} \sum_{k=0}^{\infty} e^{-\beta \hbar \omega_k k} 
+    = \frac{1}{1 - e^{-\beta \hbar \omega_k}}. % e^{-\beta \frac{\hbar \omega_k}{2}}
+\end{equation}
+where \(|n\rangle\) are number states. 
+Using this, the expectation value of the number operator can be calculated:
+
+\begin{align} \label{eq:expectation_number_operator}
+n_k &= \langle a_k^{\dagger} a_k \rangle_{\text{th}} = \Tr \left[ a_k^{\dagger} a_k \frac{e^{-\beta H}}{Z} \right] \\
+    &= \frac{\Tr \left[ a_k^{\dagger} a_k e^{-\beta \hbar \omega_k a_k^{\dagger} a_k} \right]}{Z} \\
+    &= \frac{\sum_{m=0}^{\infty} \langle m|a_k^{\dagger} a_k e^{-\beta \hbar \omega_k a_k^{\dagger} a_k}|m \rangle}{\frac{1}{1 - e^{-\beta \hbar \omega_k}}} \\
+%    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
+    &= \frac{1}{e^{\beta \hbar \omega_k} - 1}.
+\end{align}
+
+The partition function for a bath then generalizes as a product:
+\begin{equation} \label{eq:generalized_partition_function}
+Z = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
+\end{equation}
+
+%----------------------------------------------------------------------------------------
+%	SECTION 4
+%----------------------------------------------------------------------------------------
+
+\section{Bath Correlators and Transition Rates}
+\label{sec:bath_corr_trans_rates}
+
+The state of a bosonic bath (infinite set of harmonic oscillators) in thermal equilibrium at temperature \( T \) is given by a Gibbs state, which density matrix has the form:
+\begin{equation} \label{eq:Gibbs_state}
+\rho = \frac{1}{Z} e^{-\beta H}, \quad .
+\end{equation}
+The expectation value of an operator \( A \) in a system \( S \) is:
+\begin{equation} \label{eq:expectation_value_bath}
+\langle A \rangle_T = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
+\end{equation}
+The inverse temperature \(\beta\) is defined as:
+\begin{equation} \label{eq:beta_definition}
+\beta = \frac{1}{k_B T}.
+\end{equation}
+
+\subsection{Bath Correlator}
+\label{subsec:bath_correlator}
+
+The bath correlator is defined as:
+\begin{equation} \label{eq:bath_correlator}
+C(\tau) = \langle B(\tau) B(0) \rangle,
+\end{equation}
+where the bath operator \( B \) is:
+\begin{equation} \label{eq:bath_operator}
+B = \sum_{n=1}^{\infty} c_n x_n.
+\end{equation}
+Expressing \( B \) in terms of creation and annihilation operators:
+\begin{align}
+B(0) &= \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^\dagger), \label{eq:bath_operator_t0} \\
+B(\tau) &= \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \left( b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau} \right). \label{eq:bath_operator_tau}
+\end{align}
+
+Substituting \( B(\tau) \) and \( B(0) \) into Eq.~\eqref{eq:bath_correlator}:
+\begin{equation} \label{eq:correlator_substitution}
+C(\tau) = \left\langle \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau}) \sum_{m=1}^{\infty} c_m \sqrt{\frac{1}{2 m_m \omega_m}} (b_m + b_m^\dagger) \right\rangle.
+\end{equation}
+Using the thermal expectation values:
+\begin{align} \label{eq:thermal_expectations}
+\langle b_n b_m^\dagger \rangle &= \delta_{nm} (n_n + 1), \quad \langle b_n^\dagger b_m \rangle = \delta_{nm} n_n,
+\end{align}
+where \( n_n \) is the Bose-Einstein distribution:
+\begin{equation} \label{eq:bose_einstein_distribution}
+n_n = \frac{1}{e^{\beta \omega_n} - 1}.
+\end{equation}
+We obtain:
+\begin{equation} \label{eq:correlator_result}
+C(\tau) = \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \left[ (n_n + 1) e^{-i \omega_n \tau} + n_n e^{i \omega_n \tau} \right].
+\end{equation}
+
+\subsection{Spectral Density Representation}
+\label{subsec:spectral_density}
+
+Expressing \( C(\tau) \) in terms of the spectral density \( J(\omega) \), defined as:
+\begin{equation} \label{eq:spectral_density}
+J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n),
+\end{equation}
+the bath correlator becomes:
+\begin{equation} \label{eq:correlator_spectral_density}
+C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ (n(\omega) + 1) e^{-i \omega \tau} + n(\omega) e^{i \omega \tau} \right].
+\end{equation}
+Rearranging terms:
+\begin{equation} \label{eq:correlator_final}
+C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ \coth\left( \frac{\beta \omega}{2} \right) \cos(\omega \tau) - i \sin(\omega \tau) \right].
+\end{equation}
+This is the final result for the bath correlator.
