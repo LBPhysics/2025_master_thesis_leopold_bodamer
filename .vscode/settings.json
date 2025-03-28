@@ -25,6 +25,14 @@
         {
             "name": "pdflatex -> biber -> 2*pdflatex", 
             "tools": ["pdflatex", "biber", "pdflatex", "pdflatex"]
+        },
+        {
+            "name": "Quick pdflatex",
+            "tools": ["pdflatex"]
+        },
+        {
+            "name": "Quick biber",
+            "tools": ["biber"]
         }
     ],
      "latex-workshop.latex.autoBuild.run": "onSave",         // Automatically compiles the LaTeX document on every save

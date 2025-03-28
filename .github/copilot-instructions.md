@@ -16,10 +16,11 @@ If I want help with python, ignore them and use the instruductions at the bottom
     - Orientate on the templates .../Master_thesis/latex/chapters/_template... for example for the structure of a chapter.
 
     Follow these best practices:
+    0. NEVER SHORTEN MY EQUATIONS
     1. Always use good formatting, also in equations
     2. Always find and use good labels for equations, figures, sections, and so on!
     3. If a previous equation is used to make a next step, reference it
-        References have to be used as Eq. \eqref{...} for equations, (sub)sec\ref{...} for (sub)section and also other types
+        References have to be used as Eq. \eqref{...} for equations, (sub)sec (\ref{...}) for (sub)section and also other types
     4. Use semantic commands rather than manual formatting
     5. Include detailed comments explaining complex sections
     6. Properly structure sections and subsections
@@ -71,11 +72,37 @@ Use these following instructions only for python files .py and .ipynb in my mast
     code_a = code_b # comment explaining the code
 
     ### How to style plots
-    - Every label of a graphic has to be in latex formatting like : r"$\propto \vec{E}_{\text{out}} / \mu_{\text{a}}$" (variables cursive, descriptions of an object in normal text)
-    - For Graphics leave out plt.grid(True) and:
+    - In one plot never use the same linestyle twice, use: 'solid', 'dashed', 'dashdot', 'dotted', 'None', ' ', '', 
+    - In one plot never use the same color twice Use one uniform color pallete use: color='C0', ...
+    - labels have to be in latex formatting. example: r"$\propto \vec{E}_{\text{out}} / \mu_{\text{a}}$" (variables are cursive, descriptions of an object in normal text)
+    - don`t plot a grid
     - Correctly clip the data to result in a nice figure! and:
-    - Use one uniform color pallete, that is good for colorblind people: and:
     - Write all possible info in the title.
     - when displaying floats, please round to an appropriate digit
     - always try to display a quantity in terms of another one, to reduce the float values displayed.
     - If possible display greek variables with greek letters
+
+    ## Here is one basically perfect example
+    plt.figure(figsize=(10, 8))
+
+    ### Plot Spectral Density
+    plt.subplot(2, 1, 1)
+    max_abs_val = np.max(np.abs(spectral_density_vals))
+    plt.plot(normalized_frequencies, spectral_density_vals / max_abs_val, label=r"$J(\omega)$", color='C0')
+    plt.ylabel(r'$J(\omega) / J(\omega_c)$')
+    plt.xlabel(r'$\omega / \omega_c$')
+    plt.title(r"Bath at ($\alpha = 1$, $T = 0$)")
+    plt.legend()
+
+    ### Plot Correlation Function over t / wc
+    plt.subplot(2, 1, 2)
+    max_abs_val = np.max(np.abs(correlation_vals))
+    plt.plot(normalized_times, np.real(correlation_vals) / max_abs_val, label=r"$\mathrm{Re}[C(t)]$", color='C1')
+    plt.plot(normalized_times, np.imag(correlation_vals) / max_abs_val, label=r"$\mathrm{Im}[C(t)]$", color='C2')
+    plt.plot(normalized_times, np.abs(correlation_vals)  / max_abs_val, label=r"$|C(t)|$", color='C3')
+    plt.xlabel(r'Time $t \omega_c$')
+    plt.ylabel(r'$C(t) / C(0)$')
+    plt.title(r"Correlation Function")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()

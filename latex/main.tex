@@ -23,11 +23,9 @@
 %-------------------------------- Define the LIBRARY ------------------------------------
 
 \usepackage[backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp]{biblatex}
-\AtBeginBibliography{\renewcommand*{\finalnamedelim}{\addspace\bibstring{and}\space}}
-\renewcommand*{\bibnamedash}{\ifnumgreater{\value{liststop}}{1}{\space et al.}{}} % Et al. bei mehreren Autoren
 %\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
-\addbibresource{bib/my_bibliography.bib} % TODO load the bibliography, or how can I connect zotero?
-\RequireBibliographyStyle{style_bibiliography}
+\addbibresource{bib/my_bibliography.bib}
+\RequireBibliographyStyle{bib/style_bibiliography}
 
 %----------------------------------------------------------------------------------------
 
