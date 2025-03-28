@@ -139,14 +139,57 @@ C(\tau) = \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \left[ (n_n + 1) e^{-
 
 Expressing \( C(\tau) \) in terms of the spectral density \( J(\omega) \), defined as:
 \begin{equation} \label{eq:spectral_density}
-J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n),
+J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n) =  \sum_{n=1}^{\infty} g_j^2\,\delta(\omega - \omega_j),
 \end{equation}
-the bath correlator becomes:
+Where the bath is described as a set of harmonic oscillators.
+Each oscillator has frequency $\omega_n$ and couples via a unique coupling constant $g_n$ to the system.
+
+With this the bath correlator becomes:
 \begin{equation} \label{eq:correlator_spectral_density}
 C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ (n(\omega) + 1) e^{-i \omega \tau} + n(\omega) e^{i \omega \tau} \right].
 \end{equation}
-Rearranging terms:
+
+
+\subsection{How to get from discrete to continuum}
+As the frequencies $\{\omega_j\}$ become dense, replace the sum by an integral:
+\[
+\sum_{j=1}^{\infty} \quad \longrightarrow \quad \int d\omega'\,\rho(\omega'),
+\]
+where $\rho(\omega')$ is the density of states, indicating how many modes lie near frequency $\omega'$.
+In this continuum limit, the coupling $g_j$ generally becomes a function of frequency, $g(\omega')$:
+\[
+g_j^2 \;\;\longrightarrow\;\; g(\omega')^2.
+\]
+
+Putting these together, one obtains
+\[
+\sum_{j=1}^{\infty} g_j^2\,\delta(\omega - \omega_j)
+\;\;\longrightarrow\;\;
+\int_{0}^{\infty} d\omega'\,\rho(\omega')\,g(\omega')^2\,\delta(\omega - \omega').
+\]
+Using the sifting property of the delta function, this becomes
+\[
+J(\omega) \;=\; \rho(\omega)\,g(\omega)^2.
+\]
+
+For this continuum limit, the bath correlator becomes:
 \begin{equation} \label{eq:correlator_final}
 C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ \coth\left( \frac{\beta \omega}{2} \right) \cos(\omega \tau) - i \sin(\omega \tau) \right].
 \end{equation}
 This is the final result for the bath correlator.
+
+\subsection{Ohmic Spectral Density}
+
+A commonly used parametrization of the spectral density is made with an exponential cutoff:
+\[
+J(\omega) \;=\; \eta \,\omega\, e^{-\omega/\omega_c},
+\]
+to ensure that the Correlation function decays in time domain.
+this function is called (sub-/super-/ ) Ohmic for the values of $ s (< / > / =) 1 $ respectively.
+``Ohmic'' means $J(\omega) \propto \omega$ for small $\omega$
+The correspondance is drawn to electric capacitor, where the damping is proportion to the velocity.
+In the expression 
+\begin{itemize}
+  \item $\eta$ is a dimensionless coupling constant,
+  \item $\omega_c$ is the cutoff frequency.
+\end{itemize}
