@@ -13,7 +13,7 @@
 
 The general task of this chapter is to calculate the bath correlator, which is defined as:
 \begin{equation} \label{eq:bath_correlator}
-C(\tau) = \langle B(\tau) B(0) \rangle,
+	C(\tau) = \langle B(\tau) B(0) \rangle,
 \end{equation}
 where \( B \) is the bath operator, specified later. This correlator measures the operator \( B \) at two different times in the bath.
 
@@ -22,16 +22,16 @@ where \( B \) is the bath operator, specified later. This correlator measures th
 \subsection{Infinite Geometric Series}
 An infinite geometric series is expressed as:
 \begin{equation} \label{eq:infinite_geometric_series}
-S = a + ar + ar^2 + ar^3 + \dots = \sum_{n=0}^{\infty} ar^n,
+	S = a + ar + ar^2 + ar^3 + \dots = \sum_{n=0}^{\infty} ar^n,
 \end{equation}
 where \(a\) is the first term and \(r\) is the common ratio. For \(|r| < 1\), the sum converges to:
 \begin{equation} \label{eq:geometric_series_sum}
-S = \frac{a}{1 - r}.
+	S = \frac{a}{1 - r}.
 \end{equation}
 
 Differentiating Eq.~\eqref{eq:geometric_series_sum} with respect to \( r \) yields another useful series:
 \begin{equation} \label{eq:derivation_geometric_sum}
-\sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad \text{for } |r| < 1.
+	\sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad \text{for } |r| < 1.
 \end{equation}
 
 %----------------------------------------------------------------------------------------
@@ -41,15 +41,15 @@ Differentiating Eq.~\eqref{eq:geometric_series_sum} with respect to \( r \) yiel
 \subsection{Trace}
 For a bipartite system \( A \otimes B \), the reduced density matrix of system \( A \) is obtained by tracing out system \( B \):
 \begin{equation} \label{eq:partial_trace}
-\rho_A = \Tr_B[\rho_{AB}].
+	\rho_A = \Tr_B[\rho_{AB}].
 \end{equation}
 The expectation value of an operator \( A \) in a system \( S \) is calculated as:
 \begin{equation} \label{eq:expectation_value}
-\langle A \rangle_S = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
+	\langle A \rangle_S = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
 \end{equation}
 where the inverse temperature \(\beta\) is defined as:
 \begin{equation} \label{eq:beta_definition}
-\beta = \frac{1}{k_B T}.
+	\beta = \frac{1}{k_B T}.
 \end{equation}
 
 %----------------------------------------------------------------------------------------
@@ -62,39 +62,39 @@ A bosonic bath is modeled by an infinitely big set of harmonic oscillators, whic
 For such a system the thermal state is described by the Gibbs distribution:
 
 \begin{equation} \label{eq:gibbs_state}
-\rho = \frac{e^{-\beta H}}{Z}, \quad H = \sum_k \hbar \omega_k \left(a_k^{\dagger} a_k + \frac{1}{2}\right),
+	\rho = \frac{e^{-\beta H}}{Z}, \quad H = \sum_k \hbar \omega_k \left(a_k^{\dagger} a_k + \frac{1}{2}\right),
 \end{equation}
 
 \subsection{Single Mode}
 For a single mode \( k \) harmonic oscillator \( H = \hbar \omega_k a_k^{\dagger} a_k \) in thermal equilibrium at temperature \( T \), the density matrix is given by:
 
 \begin{equation} \label{eq:single_mode_density_matrix}
-\rho = \frac{e^{-\beta \hbar \omega_k a_k^{\dagger} a_k}}{Z},
+	\rho = \frac{e^{-\beta \hbar \omega_k a_k^{\dagger} a_k}}{Z},
 \end{equation}
 where \( \omega_k \) is the constant frequency of the mode \( k \).
 The partition function can be calculated by the geometric series:
 
 \begin{equation} \label{eq:partition_function}
-    Z = \Tr\left[e^{-\beta H}\right] = \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k a_k^{\dagger} a_k} | m \rangle
-    = \sum_{k=0}^{\infty} \langle m | m \rangle \delta_{km} e^{-\beta \hbar \omega_k k} \\
-%    = e^{-\beta \frac{\hbar \omega_k }{2}} \sum_{k=0}^{\infty} e^{-\beta \hbar \omega_k k} 
-    = \frac{1}{1 - e^{-\beta \hbar \omega_k}}. % e^{-\beta \frac{\hbar \omega_k}{2}}
+	Z = \Tr\left[e^{-\beta H}\right] = \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k a_k^{\dagger} a_k} | m \rangle
+	= \sum_{k=0}^{\infty} \langle m | m \rangle \delta_{km} e^{-\beta \hbar \omega_k k} \\
+	%    = e^{-\beta \frac{\hbar \omega_k }{2}} \sum_{k=0}^{\infty} e^{-\beta \hbar \omega_k k} 
+	= \frac{1}{1 - e^{-\beta \hbar \omega_k}}. % e^{-\beta \frac{\hbar \omega_k}{2}}
 \end{equation}
-where \(|n\rangle\) are number states. 
+where \(|n\rangle\) are number states.
 Using this, the expectation value of the number operator can be calculated:
 
 \begin{align} \label{eq:expectation_number_operator}
-n_k &= \langle a_k^{\dagger} a_k \rangle_{\text{th}} = \Tr \left[ a_k^{\dagger} a_k \frac{e^{-\beta H}}{Z} \right] \\
-    &= \frac{\Tr \left[ a_k^{\dagger} a_k e^{-\beta \hbar \omega_k a_k^{\dagger} a_k} \right]}{Z} \\
-    &= \frac{\sum_{m=0}^{\infty} \langle m|a_k^{\dagger} a_k e^{-\beta \hbar \omega_k a_k^{\dagger} a_k}|m \rangle}{\frac{1}{1 - e^{-\beta \hbar \omega_k}}} \\
-%    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
-    &= \frac{1}{e^{\beta \hbar \omega_k} - 1}.
+	n_k & = \langle a_k^{\dagger} a_k \rangle_{\text{th}} = \Tr \left[ a_k^{\dagger} a_k \frac{e^{-\beta H}}{Z} \right]                                           \\
+	    & = \frac{\Tr \left[ a_k^{\dagger} a_k e^{-\beta \hbar \omega_k a_k^{\dagger} a_k} \right]}{Z}                                                            \\
+	    & = \frac{\sum_{m=0}^{\infty} \langle m|a_k^{\dagger} a_k e^{-\beta \hbar \omega_k a_k^{\dagger} a_k}|m \rangle}{\frac{1}{1 - e^{-\beta \hbar \omega_k}}} \\
+	%    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
+	    & = \frac{1}{e^{\beta \hbar \omega_k} - 1}.
 \end{align}
 where we have used Eq. \eqref{eq:derivation_geometric_sum} in the last step.
 
 The partition function for the infinite set then generalizes to a product:
 \begin{equation} \label{eq:generalized_partition_function}
-Z = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
+	Z = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
 \end{equation}
 %----------------------------------------------------------------------------------------
 %	SECTION 4
@@ -106,32 +106,32 @@ Z = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
 Now we turn to calculating the bath correlator.
 The bath operator \( B \) is defined as:
 \begin{equation} \label{eq:bath_operator}
-B = \sum_{n=1}^{\infty} c_n x_n,
+	B = \sum_{n=1}^{\infty} c_n x_n,
 \end{equation}
 where \( c_n \) are coupling constants and \( x_n \) are position operators. Note that in Sec.~\ref{sec:Derivation_redfield_eq_from_microscopic_dynamics}, the interaction Hamiltonian reduces such that only one bath correlator \( C(\tau) \equiv C_{ii}(\tau) \) in Eq.~\eqref{eq:Environment_Correlation_Function} remains.
 
 Expressing \( B \) in terms of creation and annihilation operators:
 \begin{align}
-B(0) &= \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^\dagger), \label{eq:bath_operator_t0} \\
-B(\tau) &= \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \left( b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau} \right). \label{eq:bath_operator_tau}
+	B(0)    & = \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^\dagger), \label{eq:bath_operator_t0}                                                        \\
+	B(\tau) & = \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \left( b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau} \right). \label{eq:bath_operator_tau}
 \end{align}
 
 Substituting \( B(\tau) \) and \( B(0) \) into Eq.~\eqref{eq:bath_correlator}, we find:
 \begin{equation} \label{eq:correlator_substitution}
-C(\tau) = \left\langle \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau}) \sum_{m=1}^{\infty} c_m \sqrt{\frac{1}{2 m_m \omega_m}} (b_m + b_m^\dagger) \right\rangle.
+	C(\tau) = \left\langle \sum_{n=1}^{\infty} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n e^{-i \omega_n \tau} + b_n^\dagger e^{i \omega_n \tau}) \sum_{m=1}^{\infty} c_m \sqrt{\frac{1}{2 m_m \omega_m}} (b_m + b_m^\dagger) \right\rangle.
 \end{equation}
 
 Using the thermal expectation values:
 \begin{align} \label{eq:thermal_expectations}
-\langle b_n b_m^\dagger \rangle &= \delta_{nm} (n_n + 1), \quad \langle b_n^\dagger b_m \rangle = \delta_{nm} n_n,
+	\langle b_n b_m^\dagger \rangle & = \delta_{nm} (n_n + 1), \quad \langle b_n^\dagger b_m \rangle = \delta_{nm} n_n,
 \end{align}
 where \( n_n \) is the Bose-Einstein distribution:
 \begin{equation} \label{eq:bose_einstein_distribution}
-n_n = \frac{1}{e^{\beta \omega_n} - 1},
+	n_n = \frac{1}{e^{\beta \omega_n} - 1},
 \end{equation}
 we obtain:
 \begin{equation} \label{eq:correlator_result}
-C(\tau) = \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \left[ (n_n + 1) e^{-i \omega_n \tau} + n_n e^{i \omega_n \tau} \right].
+	C(\tau) = \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \left[ (n_n + 1) e^{-i \omega_n \tau} + n_n e^{i \omega_n \tau} \right].
 \end{equation}
 
 \subsection{Spectral Density Representation}
@@ -139,27 +139,27 @@ C(\tau) = \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \left[ (n_n + 1) e^{-
 
 The bath correlator can be expressed in terms of the spectral density \( J(\omega) \), defined as:
 \begin{equation} \label{eq:spectral_density}
-J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n).
+	J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n).
 \end{equation}
 
 With this, the bath correlator becomes:
 \begin{equation} \label{eq:correlator_spectral_density}
-C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ (n(\omega) + 1) e^{-i \omega \tau} + n(\omega) e^{i \omega \tau} \right].
+	C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ (n(\omega) + 1) e^{-i \omega \tau} + n(\omega) e^{i \omega \tau} \right].
 \end{equation}
 
 \subsection{Continuum Limit}
 As the frequencies \( \{\omega_j\} \) become dense, the sum transitions to an integral:
 \[
-\sum_{j=1}^{\infty} \quad \longrightarrow \quad \int d\omega'\,\rho(\omega'),
+	\sum_{j=1}^{\infty} \quad \longrightarrow \quad \int d\omega'\,\rho(\omega'),
 \]
 where \( \rho(\omega') \) is the density of states. The coupling \( g_j \) becomes a function of frequency, \( g(\omega') \), leading to:
 \[
-J(\omega) = \rho(\omega)\,g(\omega)^2.
+	J(\omega) = \rho(\omega)\,g(\omega)^2.
 \]
 
 In this continuum limit, the bath correlator Eq. \eqref{eq:correlator_result} becomes:
 \begin{equation} \label{eq:correlator_final}
-C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ \coth\left( \frac{\beta \omega}{2} \right) \cos(\omega \tau) - i \sin(\omega \tau) \right].
+	C(\tau) = \int_0^\infty d\omega \frac{J(\omega)}{\pi} \left[ \coth\left( \frac{\beta \omega}{2} \right) \cos(\omega \tau) - i \sin(\omega \tau) \right].
 \end{equation}
 
 \subsection{Ohmic Spectral Density}
@@ -169,10 +169,10 @@ Source: Ulrich Weiss chapter 7.3:
 (*my interpretation: The Redfield equation is influenced by classical phenomenological models of dissipation*)
 For an Ohmic spectral density, the damping is frequency-independent, and the spectral density is given by:
 \begin{equation} \label{eq:ohmic_spectral_density}
-J(\omega) \propto \gamma \omega,
+	J(\omega) \propto \gamma \omega,
 \end{equation}
 where \( \gamma \) is the damping constant. To ensure physical behavior, a cutoff is introduced:
 \begin{equation} \label{eq:cutoff_spectral_density}
-J(\omega) = \eta \frac{\omega^s}{\omega_c^{s-1}} e^{-\omega / \omega_c},
+	J(\omega) = \eta \frac{\omega^s}{\omega_c^{s-1}} e^{-\omega / \omega_c},
 \end{equation}
 where \( \eta \) is a dimensionless coupling constant, \( \omega_c \) is the cutoff frequency, and \( s \) determines the type of spectral density (Ohmic for \( s = 1 \), sub-Ohmic for \( s < 1 \), and super-Ohmic for \( s > 1 \)).

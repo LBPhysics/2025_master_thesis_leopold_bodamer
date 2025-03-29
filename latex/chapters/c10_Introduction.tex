@@ -13,27 +13,27 @@
 In this chapter, we aim to explain the phenomena of long coherences (lifetimes) and the excitation transport of light on a microtubule. The proposed model takes the following approach:
 
 \begin{itemize}
-    \item The microtubule is modeled as a cylindrical structure consisting of nodes. Each node represents an atom, which is modeled as a two-level system. The number of atoms, \( N_{\text{atoms}} \), is determined by the number of chains (\( n_{\text{chains}} \)) and the number of rings (\( n_{\text{rings}} \)), assuming fixed positions for these nodes.
-    \item The system is restricted to a single excitation.
-    \item A time-dependent coupling to an electric field is proposed, which may be either classical or quantum in nature. This coupling is intended to facilitate spectroscopy.
-    \item Two types of Lindblad operators are introduced to model dissipation processes. Specifically:
-    \begin{enumerate}
-        \item Spontaneous decay
-        \item Dephasing
-    \end{enumerate}
+	\item The microtubule is modeled as a cylindrical structure consisting of nodes. Each node represents an atom, which is modeled as a two-level system. The number of atoms, \( N_{\text{atoms}} \), is determined by the number of chains (\( n_{\text{chains}} \)) and the number of rings (\( n_{\text{rings}} \)), assuming fixed positions for these nodes.
+	\item The system is restricted to a single excitation.
+	\item A time-dependent coupling to an electric field is proposed, which may be either classical or quantum in nature. This coupling is intended to facilitate spectroscopy.
+	\item Two types of Lindblad operators are introduced to model dissipation processes. Specifically:
+	      \begin{enumerate}
+		      \item Spontaneous decay
+		      \item Dephasing
+	      \end{enumerate}
 \end{itemize}
 The Lindblad operators introduced to model the spontaneous decay and dephasing processes for each individual atom are defined as follows:
 
 \begin{align}
-    C_{\text{decay}}^{(i)} &= \sqrt{\gamma_0} \, \sigma_-^{(i)}, \\
-    C_{\text{dephase}}^{(i)} &= \sqrt{\gamma_\phi} \, \sigma_z^{(i)},
+	C_{\text{decay}}^{(i)}   & = \sqrt{\gamma_0} \, \sigma_-^{(i)},    \\
+	C_{\text{dephase}}^{(i)} & = \sqrt{\gamma_\phi} \, \sigma_z^{(i)},
 \end{align}
 
 where:
 \begin{itemize}
-    \item \( C_{\text{decay}}^{(i)} \) describes the spontaneous decay of the \(i\)-th atom, with a rate given by \(\gamma_0\).
-    \item \( C_{\text{dephase}}^{(i)} \) describes the dephasing of the \(i\)-th atom, with a rate given by \(\gamma_\phi\).
-    \item \( \sigma_-^{(i)} \) is the lowering operator for the \(i\)-th atom, and \( \sigma_z^{(i)} \) is the Pauli \( z \)-operator for the \(i\)-th atom.
+	\item \( C_{\text{decay}}^{(i)} \) describes the spontaneous decay of the \(i\)-th atom, with a rate given by \(\gamma_0\).
+	\item \( C_{\text{dephase}}^{(i)} \) describes the dephasing of the \(i\)-th atom, with a rate given by \(\gamma_\phi\).
+	\item \( \sigma_-^{(i)} \) is the lowering operator for the \(i\)-th atom, and \( \sigma_z^{(i)} \) is the Pauli \( z \)-operator for the \(i\)-th atom.
 \end{itemize}
 
 
