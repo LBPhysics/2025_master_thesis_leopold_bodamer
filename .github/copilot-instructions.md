@@ -52,6 +52,7 @@ Use these following instructions only for python files .py and .ipynb in my mast
     - Try to break down big problems into smaller ones and use functions.
     - Use a consistent coding style.
     - Follow best coding practices.
+    - please for "if..., else" statements always write the exceptions first for better readability 
     - Ensure code is efficient and optimized.
     - Avoid using deprecated functions or methods.
     - Include error handling where appropriate.
@@ -85,17 +86,8 @@ Use these following instructions only for python files .py and .ipynb in my mast
     ## Here is one basically perfect example
     plt.figure(figsize=(10, 8))
 
-    ### Plot Spectral Density
+    ### Plot correlation function
     plt.subplot(2, 1, 1)
-    max_abs_val = np.max(np.abs(spectral_density_vals))
-    plt.plot(normalized_frequencies, spectral_density_vals / max_abs_val, label=r"$J(\omega)$", color='C0')
-    plt.ylabel(r'$J(\omega) / J(\omega_c)$')
-    plt.xlabel(r'$\omega / \omega_c$')
-    plt.title(r"Bath at ($\alpha = 1$, $T = 0$)")
-    plt.legend()
-
-    ### Plot Correlation Function over t / wc
-    plt.subplot(2, 1, 2)
     max_abs_val = np.max(np.abs(correlation_vals))
     plt.plot(normalized_times, np.real(correlation_vals) / max_abs_val, label=r"$\mathrm{Re}[C(t)]$", color='C1')
     plt.plot(normalized_times, np.imag(correlation_vals) / max_abs_val, label=r"$\mathrm{Im}[C(t)]$", color='C2')
