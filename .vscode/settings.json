@@ -2,6 +2,7 @@
     "diffEditor.maxComputationTime": 0,                     // Disables computation time limits for the diff editor, useful for large diffs
     "git.autofetch": true,                                  // Automatically fetches changes from the Git repository, keeping your local branch up-to-date
 
+    "latex-workshop.bibtex-format.sort.enabled": true,
     "latex-workshop.latex.tools": [
         {
             "name": "pdflatex",
