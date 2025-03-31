@@ -53,12 +53,21 @@ This approximation is valid when \(\Omega \ll \omega_0\), allowing us to focus o
 
 \subsection{Density Matrix Formalism}
 
-The density matrix formalism provides a powerful framework to describe the dynamics of quantum systems, especially when dealing with mixed states or decoherence. The density matrix \(\rho\) is defined as:
+The density matrix formalism provides a powerful framework to describe the dynamics of quantum systems, especially when dealing with mixed states or decoherence. 
+The density matrix \(\rho\) is defined as:
 \begin{equation}
     \rho = |\psi\rangle \langle \psi|,
     \label{eq:DensityMatrix}
 \end{equation}
 for pure states, and as a statistical mixture for mixed states.
+In this formalism, the diagonal elements represent populations and the off-diagonal elements represent coherences between states.
+Coherences are phase relations between different quantum states, which are crucial for interference.
+For example for a two level system a clear phase relation and a pure quantum state would have off diagonal elements of $ \ rho_{ij} = 1/2$.
+This state is often referred to as a coherent superposition of the two states.
+
+When coupling a system to an environment, the environment is responsible for decoherence.
+The state evolves over time to a purely statistical mixture of states.
+
 
 The time evolution of the density matrix is governed by the Liouville-von Neumann equation:
 \begin{equation}

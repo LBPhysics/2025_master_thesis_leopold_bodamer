@@ -42,18 +42,18 @@ Differentiating Eq.~\eqref{eq:geometric_series_sum} with respect to \( r \) yiel
 For a bipartite system \( A \otimes B \), the reduced density matrix of system \( A \) is obtained by tracing out system \( B \):
 
 \begin{equation} \label{eq:partial_trace}
-	\rho_A = \Tr_B[\rho_{AB}],
+	\rho_A = \mathrm{Tr}_B[\rho_{AB}],
 \end{equation}
 where the partial trace over the subspace \( B \) is defined as:
 
 \begin{equation} \label{eq:partial_trace_definition}
-	\Tr_B\left[\sum_{i,j,k,l} | a_i \rangle \langle a_j | \otimes | b_k \rangle \langle b_l | \right] = \sum_{i,j} | a_i \rangle \langle a_j | \Tr\left[ | b_k \rangle \langle b_l | \right]
+	\mathrm{Tr}_B\left[\sum_{i,j,k,l} | a_i \rangle \langle a_j | \otimes | b_k \rangle \langle b_l | \right] = \sum_{i,j} | a_i \rangle \langle a_j | \mathrm{Tr}\left[ | b_k \rangle \langle b_l | \right]
 \end{equation}
 
 The expectation value of an operator \( A \) in a system \( S \) is calculated as:
 
 \begin{equation} \label{eq:expectation_value}
-	\langle A \rangle_S = \Tr_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
+	\langle A \rangle_S = \mathrm{Tr}_S[\rho_S A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn},
 \end{equation}
 where the inverse temperature \(\beta\) is defined as:
 \begin{equation} \label{eq:beta_definition}
@@ -69,7 +69,7 @@ A bosonic bath is modeled by an infinitely big set of harmonic oscillators, whic
 For such a system the thermal state is described by the Gibbs distribution:
 
 \begin{equation} \label{eq:gibbs_state}
-	\rho = \frac{e^{-\beta H}}{\Tr\left[e^{-\beta H}\right]}, \quad H = \sum_k \hbar \omega_k \left(b_k^{\dagger} b_k + \frac{1}{2}\right), \quad E_k = \hbar \omega_k (n_k + \frac{1}{2}),
+	\rho = \frac{e^{-\beta H}}{\mathrm{Tr}\left[e^{-\beta H}\right]}, \quad H = \sum_k \hbar \omega_k \left(b_k^{\dagger} b_k + \frac{1}{2}\right), \quad E_k = \hbar \omega_k (n_k + \frac{1}{2}),
 \end{equation}
 where \( \omega_k \) is the frequency of the \( k \)-th mode, \( b_k^{\dagger} \) and \( b_k \) are the creation and annihilation operators, respectively, and \( n_k = \langle b_k^{\dagger} b_k \rangle \) is the expectation value of the  number operator. 
 The number operator is an eigenoperator to the number states \(|k\rangle\)
@@ -86,7 +86,7 @@ where \( \omega_k \) is the constant frequency of the mode \( k \).
 The partition function \( Z \) can be calculated by the geometric series:
 
 \begin{equation} \label{eq:partition_function}
-	Z_k \equiv \Tr\left[e^{-\beta H}\right] 
+	Z_k \equiv \mathrm{Tr}\left[e^{-\beta H}\right] 
 	= \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k (n_k + \frac{1}{2})} | m \rangle
 	= e^{-\beta \hbar \omega_k / 2} \sum_{m=0}^{\infty} \langle m | m \rangle \delta_{km} e^{-\beta \hbar \omega_k n_k} \\
 	%    = e^{-\beta \frac{\hbar \omega_k }{2}} \sum_{k=0}^{\infty} e^{-\beta \hbar \omega_k k} 
@@ -95,8 +95,8 @@ The partition function \( Z \) can be calculated by the geometric series:
 Using this, the expectation value of the number operator can be calculated:
 
 \begin{align} \label{eq:expectation_number_operator}
-	n_k & = \langle b_k^{\dagger} b_k \rangle_{\text{th}} = \Tr \left[ b_k^{\dagger} b_k \frac{e^{-\beta H}}{Z_k} \right]                                           \\
-	    & = \frac{\Tr \left[ b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k} \right]}{Z_k}                                                            \\
+	n_k & = \langle b_k^{\dagger} b_k \rangle_{\text{th}} = \mathrm{Tr} \left[ b_k^{\dagger} b_k \frac{e^{-\beta H}}{Z_k} \right]                                           \\
+	    & = \frac{\mathrm{Tr} \left[ b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k} \right]}{Z_k}                                                            \\
 	    & = \frac{\sum_{m=0}^{\infty} \langle m|b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k}|m \rangle}{\frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}} \\
 	%    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
 	    & = \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
