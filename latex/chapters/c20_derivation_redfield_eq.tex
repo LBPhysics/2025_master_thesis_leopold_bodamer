@@ -4,6 +4,7 @@
 
 \label{Chapter:Derivation_Redfield_Equation} % Label for referencing this chapter
 
+The following derivation is part of \autocite{manzanoShortIntroductionLindblad2020}
 %----------------------------------------------------------------------------------------
 %	SECTION 1
 %----------------------------------------------------------------------------------------
@@ -11,9 +12,9 @@
 \section{Derivation from microscopic dynamics}
 \label{sec:Derivation_redfield_eq_from_microscopic_dynamics}
 
-The most common derivation of the Lindblad master equation is based on open quantum theory.
-The Lindblad equation is then an effective motion equation for a subsystem that belongs to a more complicated system.
-This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuer_theory_2009}.
+The most common derivation of the Redfield master equation is based on open quantum theory.
+The Redfield equation is then an effective motion equation for a subsystem that belongs to a more complicated system.
+This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuerTheoryOpenQuantum2009}.
 A total system belonging to a Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
 
 The evolution of the total system is given by the von Neumann equation:
@@ -35,6 +36,16 @@ where $H_S \in \mathcal{H}_S$, $H_E \in \mathcal{H}_E$, and $H_I \in \mathcal{H}
 \end{equation}
 where $S_i \in \mathcal{B}(\mathcal{H}_S)$ and $E_i \in \mathcal{B}(\mathcal{H}_E)$.
 
+The following requirements are to be fuildilled by the final derived equation:
+\begin{itemize}
+	\item The equation should be linear in the system density matrix $ \dot{ \rho}_S(t) = F(\rho_S(t))$ ( reduced equation of motion).
+	\item The equation should be Markovian, meaning that the evolution of the system density matrix at time $t$ only depends on the state of the system at time $t$ and not on its past history $ \dot{ \rho}_S(t) = \rho_S(t)$ .
+	\item The equation should be trace-preserving, meaning that $\mathrm{Tr}[\rho_S(t)] = \mathrm{Tr}[\rho_S(0)]$ for all times $t$.
+\end{itemize}
+However unlike the Linblad equation it does not guarantee the complete (not even normal) positivity of the density matrix, which is a requirement for a physical state.
+So care has to be taken, when the Redfieldequation is useful.
+The equation will be valid in the weak coupling limit, meaning that the interaction Hamiltonian $H_I$ is small compared to the system Hamiltonian $H_S$.
+
 %----------------------------------------------------------------------------------------
 %	SECTION 2
 %----------------------------------------------------------------------------------------
@@ -47,24 +58,36 @@ To describe the system dynamics, we move to the interaction picture where the op
 	\hat{O}(t) = e^{i(H_S+H_E)t} O e^{-i(H_S+H_E)t}.
 	\label{eq:Interaction_Picture_Operators}
 \end{equation}
-
 The time evolution in the interaction picture is given by:
+
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha [\hat{H}_I(t), \hat{\rho}_T(t)],
 	\label{eq:Interaction_Picture_Evolution}
 \end{equation}
 which can be formally integrated as:
+
 \begin{equation}
 	\hat{\rho}_T(t) = \hat{\rho}_T(0) - i \alpha \int_0^t ds [\hat{H}_I(s), \hat{\rho}_T(s)].
 	\label{eq:Formal_Integration}
 \end{equation}
-
+This equation will be inserted in Eq. \eqref{eq:Interaction_Picture_Evolution} to obtain the second-order expansion of the density matrix.
 Expanding to second order in $\alpha$, we obtain:
+
+\begin{equation}
+	\dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right]
+	- \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] \right] ds.
+	\label{eq:Second_Order_Expansion}
+\end{equation}
+which is not Morkovian, because of the intergal which sums up all the past
+The step of integration and insertion can be repreated leading to a series expansion of the density matrix:
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right]
 	- \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t') \right] \right] dt' + \mathcal{O} (\alpha^3).
-	\label{eq:Second_Order_Expansion}
+	\label{eq:Second_Order_Expansion_wo_third}
 \end{equation}
+where third order contributions are neglected.
+This can be justified by the fact that the interaction Hamiltonian is small compared to the system Hamiltonian (weak coupling limit).
+But remark, that it is still not Morkovian, because of the intergal over time.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 3
@@ -73,44 +96,55 @@ Expanding to second order in $\alpha$, we obtain:
 \subsection{Partial Trace and Approximation}
 \label{subsec:Partial_Trace_Approximation}
 
-Taking the partial trace over the environment, we obtain:
-\begin{equation}
-	\dot{\rho}_S(t) = -i \alpha [\hat{H}_I(t),\hat{\rho}_T(0)]
-	- \alpha^2 \int_0^t ds \mathrm{Tr}_E \big[\hat{H}_I(t), [\hat{H}_I(s), \rho_S(t) \otimes \rho_E]\big].
-	\label{eq:Partial_Trace_Derivation}
-\end{equation}
+By taking the interaction Hamiltonian Eq. \eqref{eq:Interaction_Hamiltonian} into account, assuming a seperatability of the system as an initial product state:
 
-Assuming an initial product state:
 \begin{equation}
 	\hat{\rho}_T(0) = \hat{\rho}_S(0) \otimes \hat{\rho}_E(0),
 	\label{eq:Initial_Product_State}
 \end{equation}
-and using the relation:
-\begin{equation}
-	\sum_i \mathrm{Tr}_E\big[ S_i \otimes E_i , \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)\big] = \sum_i \big(S_i \hat{\rho}_S(0) - \hat{\rho}_S(0) S_i\big) \cdot \mathrm{Tr}_E \big[E_i \hat{\rho}_E(0)\big],
-	\label{eq:Trace_Relation}
-\end{equation}
-we define:
+and aking the partial trace over the environment, we obtain:
+
+\begin{align}
+	\sum_i \mathrm{Tr}_E\big[ S_i \otimes E_i , \hat{\rho}_S(0) \otimes \hat{\rho}_E(0)\big] 
+	= \sum_i \big(S_i \hat{\rho}_S(0) - \hat{\rho}_S(0) S_i\big) \cdot \mathrm{Tr}_E \big[E_i \hat{\rho}_E(0)\big],
+	\label{eq:Trace_Relation_first_part}
+\end{align}
+
+for the first part of Eq. \eqref{eq:Second_Order_Expansion_wo_third}, where we used the cyclic property of the trace.
+We define the average of the bath degrees of freedom at zero temperature:
+
 \begin{equation}
 	\langle E_i \rangle_0 \equiv \mathrm{Tr}_E \big[E_i \hat{\rho}_E(0)\big].
 	\label{eq:Environment_Expectation_Value}
 \end{equation}
+which have to be justified to result to zero. 
 
-The total Hamiltonian can then be rewritten as:
+This can be done when adding a zero to the total Hamiltonian
+
 \begin{equation}
 	H_T = H_S' + H_E + \alpha H_I',
 	\label{eq:Shifted_Total_Hamiltonian}
 \end{equation}
-where:
-\begin{equation}
-	H_S' = H_S + \sum_i S_i \otimes (E_i - \langle E_i \rangle_0),
-	\label{eq:Shifted_System_Hamiltonian}
-\end{equation}
-and:
+and defining a new interaction Hamiltonian:
+
 \begin{equation}
 	H_I' = \sum_i S_i \otimes (E_i - \langle E_i \rangle_0).
 	\label{eq:Shifted_Interaction_Hamiltonian}
 \end{equation}
+where the price of a new system Hamiltonian is payed:
+\begin{equation}
+	H_S' = H_S + \sum_i S_i \otimes (E_i - \langle E_i \rangle_0),
+	\label{eq:Shifted_System_Hamiltonian}
+\end{equation}
+This however doesn't change the structure of the system Hamiltonian.
+It only accounts for a redefinition of the energy levels ("a sort of renormalization").
+This way the equation \eqref{eq:Trace_Relation_first_part} results to zero and only the second part of the equation Eq. \eqref{eq:Second_Order_Expansion_wo_third} remains.
+\begin{align}
+	\dot{\rho}_S(t) = -i \alpha [\hat{H}_I(t),\hat{\rho}_T(0)]
+	&- \alpha^2 \int_0^t ds \mathrm{Tr}_E \big[\hat{H}_I(t), [\hat{H}_I(s), \rho_S(t) \otimes \rho_E]\big] \notag \\
+	= &- \alpha^2 \int_0^t ds \mathrm{Tr}_E \big[\hat{H}_I(t), [\hat{H}_I(s), \rho_S(t) \otimes \rho_E]\big].
+	\label{eq:Partial_Trace_Derivation}
+\end{align}
 
 %----------------------------------------------------------------------------------------
 %	SECTION 4
@@ -128,12 +162,14 @@ Defining $s' = t - s$, we rewrite the second-order term as:
 	\label{eq:Second_Order_Final_Expression}
 \end{align}
 
-Assuming:
+A seperatability at all times is now assumed:
+
 \begin{equation}
 	\hat{\rho}_T(t) = \hat{\rho}_S(t) \otimes \hat{\rho}_E(t),
 	\label{eq:Reduced_Density_Matrix_Assumption}
 \end{equation}
-and expanding Eq. \eqref{eq:Second_Order_Final_Expression}, we obtain:
+This assumtion has to be made even stronger later $\hat{\rho}_T(t) = \hat{\rho}_S(t) \otimes \hat{\rho}_E(0)$.
+Expanding Eq. \eqref{eq:Second_Order_Final_Expression}, we obtain:
 \begin{align}
 	\dot{\hat{\rho}}_T(t) & =  \alpha^2 \int_0^t ds
 	\bigg\{
@@ -171,3 +207,9 @@ such that:
 	\bigg\}.
 	\label{eq:Redfield_Equation_Final}
 \end{align}
+which is the desired form of the Redfield equation.
+
+Note however, that the we have not used the strong condition $\hat{\rho}_T(t) = \hat{\rho}_S(t) \otimes \hat{\rho}_E(0)$. was not used yet.
+This however will make it possible to calculate the correlations Eq. \eqref{eq:Environment_Correlation_Function}, because we can assume that the enviroment is in a thermal equilibruium at a certain temperature.
+Because of the assumption this is the case for all times.
+It is equivalent to say that the environment is unaffected by the system. It is memoryless, because it is very big.
