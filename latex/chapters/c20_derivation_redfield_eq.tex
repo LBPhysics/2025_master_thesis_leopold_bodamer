@@ -1,7 +1,4 @@
-% Chapter Template
-
 \chapter{Derivation of the Redfield Equation} % Main chapter title
-
 \label{Chapter:Derivation_Redfield_Equation} % Label for referencing this chapter
 
 The following derivation is part of \cite{manzanoShortIntroductionLindblad2020}
@@ -11,21 +8,30 @@ The following derivation is part of \cite{manzanoShortIntroductionLindblad2020}
 
 \section{Derivation from microscopic dynamics}
 \label{sec:Derivation_redfield_eq_from_microscopic_dynamics}
-
 The most common derivation of the Redfield master equation is based on open quantum theory.
-The Redfield equation is then an effective motion equation for a subsystem that belongs to a more complicated system.
-This derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuerTheoryOpenQuantum2009}.
-A total system belonging to a Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
+We will begin by discussing the general problem, where a small quantum system interacts with a larger environment.
+The total system Hilbert space $\mathcal{H}_T$ is divided into our system of interest, belonging to a Hilbert space $\mathcal{H}_S$, and the environment living in $\mathcal{H}_E$.
 
-The evolution of the total system is given by the von Neumann equation:
+\begin{equation}
+	\mathcal{H}_T = \mathcal{H}_S \otimes \mathcal{H}_E.
+	\label{eq:Total_Hilbert_Space}
+\end{equation}
+The Redfield equation is then an effective motion equation for a this subsystem of interest $ S $.
+The derivation can be found in several textbooks such as Breuer and Petruccione \cite{breuerTheoryOpenQuantum2009}.
+
+The evolution of the total system is given by the Liouville-Von Neumann equation, which represents the starting point of our derivation:
 
 \begin{equation}
 	\dot{\rho}_T(t) = -i[H_T, \rho_T(t)],
 	\label{eq:Von_Neumann_Equation}
 \end{equation}
 where $\rho_T(t)$ is the density matrix of the total system, and $H_T$ is the total Hamiltonian.
+Note that we used units where $\hbar = 1$.
+This equation can not be solved for arbitrary large enviroments.
+But as we are interested in the dynamics of the system without the environment,
+we trace over the environment degrees of freedom to obtain the reduced density matrix of the system
+$\rho(t) = \mathrm{Tr}_E[\rho_T]$.
 
-As we are interested in the dynamics of the system without the environment, we trace over the environment degrees of freedom to obtain the reduced density matrix of the system $\rho(t) = \mathrm{Tr}_E[\rho_T]$.
 The total Hamiltonian can be separated as:
 
 \begin{equation}
@@ -60,14 +66,14 @@ The equation will be valid in the weak coupling limit, meaning that the constant
 \label{subsec:Interaction_Picture}
 
 To describe the system dynamics, we move to the interaction picture where the operators evolve with respect to $H_S + H_E$.
-And arbitrary operator $O$ in the Schroedinger picture takes the form
+Any arbitrary operator $O$ in the Schroedinger picture takes the form
 
 \begin{equation}
 	\hat{O}(t) = e^{i(H_S+H_E)t} O e^{-i(H_S+H_E)t},
 	\label{eq:Interaction_Picture_Operators}
 \end{equation}
-in the interaction picture. States evolve according to the interaction Hamiltonian $H_I$:
-The time evolution of the density matrix is given in the interaction picture by the Liouville-von Neumann equation:
+in the interaction picture, and depends on time.
+States now evolve only according to the interaction Hamiltonian $H_I$, and the Liouville-Von Neumann equation (Eq. \eqref{eq:Von_Neumann_Equation}) changes to:
 
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha [\hat{H}_I(t), \hat{\rho}_T(t)],
@@ -83,7 +89,7 @@ This equation will be inserted in Eq. \eqref{eq:LiouvilleVN}:
 
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right]
-	- \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] \right] ds.
+	- \alpha^2 \int_0^t \left[ \hat{H}_I(t), \left[ \hat{H}_I(s), \hat{\rho}_T(s) \right] \right] ds,
 	\label{eq:Second_Order_Expansion}
 \end{equation}
 which is not Morkovian, because of the intergal which sums up all the past.
@@ -91,21 +97,25 @@ The step of integration and insertion can be repreated leading to a series expan
 
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha \underbrace{\left[ \hat{H}_I(t), \hat{\rho}_T(0) \right]}_{\text{(1)}}
-	- \alpha^2 \int_0^t \underbrace{\left[ \hat{H}_I(t), \left[ \hat{H}_I(t'), \hat{\rho}_T(t') \right] \right]}_{\text{(2)}} dt' + \mathcal{O} (\alpha^3).
+	- \alpha^2 \int_0^t \underbrace{\left[ \hat{H}_I(t), \left[ \hat{H}_I(s), \hat{\rho}_T(t) \right] \right]}_{\text{(2)}} ds + \mathcal{O} (\alpha^3).
 	\label{eq:Second_Order_Expansion_wo_third}
 \end{equation}
 where third order contributions (and higher) are neglected from now on.
-This can be justified in the weak coupling limit where $ \alpha \ll 1 $, which represents our first approximation.
-Remark, that Eq. \eqref{eq:Second_Order_Expansion_wo_third} is still not Morkovian, because of the intergal over time.
+This can be justified in the weak coupling limit where $ \alpha \ll 1 $, which represents the "\textbf{Born}" approximation.
 
+In this sense, the Redfield equation will be a second-order approximation of the actual dynamics.
+The weak coupling assumption does not hold universally and cannot be applied to all systems.
+For instance, it is often invalid in chemical or biological systems.
+
+Remark, that Eq. \eqref{eq:Second_Order_Expansion_wo_third} is still not Morkovian, because of the intergal over time.
 Since we are only interested in the dynamics of the system $ S $, we will now take the partial trace over the environment degrees of freedom in Eq. \eqref{eq:Second_Order_Expansion_wo_third}.
 
 %----------------------------------------------------------------------------------------
 %	SUBSECTION 2
 %----------------------------------------------------------------------------------------
 
-\subsection{Partial Trace and Approximation}
-\label{subsec:Partial_Trace_Approximation}
+\subsection{Partial Trace}
+\label{subsec:Partial_Trace}
 
 We now assume the whole system to be seperatable at $ t = 0 $ as a product state:
 
@@ -114,7 +124,7 @@ We now assume the whole system to be seperatable at $ t = 0 $ as a product state
 	\label{eq:Initial_Product_State}
 \end{equation}
 which means, that the two sub-systems only come into contact at $ t = 0 $ and there are no correlations.
-We take the interaction Hamiltonian Eq. \eqref{eq:Interaction_Hamiltonian} into account.
+We take the interaction Hamiltonian Eq. \eqref{eq:Interaction_Hamiltonian}, which has the same shape in the Interaction Picture into account.
 With this, the partial trace over the environment of the part (1) of Eq. \eqref{eq:Second_Order_Expansion_wo_third} is given by:
 
 \begin{align}

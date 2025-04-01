@@ -27,7 +27,8 @@
 \addbibresource{bib/my_bibliography.bib}
 \RequireBibliographyStyle{bib/style_bibiliography}
 
-%\bibliographystyle{apsrev4-2} % Use APS style
+%\usepackage[numbers,sort&compress]{natbib}
+%\bibliographystyle{apsrev4-2}
 
 %----------------------------------------------------------------------------------------
 
@@ -69,7 +70,7 @@
 
 \input{chapters/c00_titlepage}
 %\input{chapters/c01_declaration}
-\input{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication}
+%\input{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication}
 
 %----------------------------------------------------------------------------------------
 %	ABSTRACT PAGE
@@ -95,18 +96,18 @@
 \mainmatter
 \pagestyle{thesis}
 
-\include{chapters/_template_chapter}
-\include{chapters/c10_introduction}
+%\include{chapters/_template_chapter}
+%\include{chapters/c10_introduction}
 \include{chapters/c20_derivation_redfield_eq}
-\include{chapters/c21_part_trace_harm_osci}
-\include{chapters/c22_Rabi_osci}
+%\include{chapters/c21_part_trace_harm_osci}
+%\include{chapters/c22_Rabi_osci}
 %----------------------------------------------------------------------------------------
 %	APPENDICES
 %----------------------------------------------------------------------------------------
 
 \appendix
 
-%\include{chapters/_template_appendix} % corrected appendix path
+%\include{appendices/_template_appendix} % corrected appendix path
 
 %----------------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
