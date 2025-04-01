@@ -10,17 +10,13 @@
 % Vel (vel@latextemplates.com)
 % Johannes Böttcher
 %
+% Eddited for his thesis by:
+% Leopold Bodamer
+%
 % Notes:
 % 1) This class file defines the structure and layout of the template file (main.tex).
 % 2) It has been written in such a way that under most circumstances you should not need
-% to edit it; updating it to a newer version will be harder. If you do make changes, please change the name of
-% the file and add comments to make your changes more visible.
-%
-% Class license:
-% LPPL v1.3c (http://www.latex-project.org/lppl)
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %----------------------------------------------------------------------------------------
 %	CLASS DEFINITION AND PARAMETERS
 %----------------------------------------------------------------------------------------
@@ -133,7 +129,6 @@
 
 \ifbool{parskip}{\RequirePackage{parskip}} % If the parskip option is passed to the class, require the parskip package 
 
-
 \ifbool{listtoc}{% If the liststotoc option has been passed to the class, add the lists to the table of contents
 	\patchcmd{\listoftables}{\@starttoc{lot}}{%
 		\addchaptertocentry{\listtablename}\@starttoc{lot}%
@@ -196,12 +191,12 @@
 \RequirePackage{siunitx} % Required for \SI commands
 
 \RequirePackage{graphicx} % Required to include images
-\graphicspath{{../figures/figures_in_development_svg/}}
-%\graphicspath{{C:/Users/leopo/.vscode/master_thesis/figures/figures_in_development_svg/}} % TODO this is not general
+\graphicspath{{../figures/figures_in_development_svg/}} % TODO not sure if this relative path works with LaTeX
 \RequirePackage{booktabs} % Required for better table rules
 
 \RequirePackage{caption} % Required for customising the captions
-\captionsetup{justification=centerlast,font=small,labelfont=sc,margin=50pt}
+%\captionsetup{justification=centerlast,font=small,labelfont=sc,margin=50pt}        % ORIGINAL
+\captionsetup{width=1.0\textwidth, font=normal, labelfont=bf}						% My version
 
 %----------------------------------------------------------------------------------------
 %	DEFINE CUSTOM THESIS INFORMATION COMMANDS
@@ -252,19 +247,22 @@
 \colorlet{mdtRed}{red!50!black}
 
 %----------------------------------------------------------------------------------------
-%	MARGINS
+%	MARGIN SETTINGS % My version
 %----------------------------------------------------------------------------------------
 
-\RequirePackage{geometry}
+
+\usepackage{geometry}  % Load normally instead of \RequirePackage
+
 \geometry{
-	headheight=4ex,
-	includehead,
-	includefoot,
-%    textwidth=16cm, % changes the textwith
-%    left=2cm,   % Left margin
-%    right=2cm,  % Right margin
-%    top=3cm,    % Top margin
-%    bottom=3cm  % Bottom margin
+    paper=a4paper,
+    inner=2cm,
+    outer=3cm,
+    bindingoffset=0.5cm,
+    top=1.5cm,
+    bottom=1.5cm,
+    headheight=4ex,
+    includehead,
+    includefoot
 }
 
 \raggedbottom
@@ -273,11 +271,11 @@
 %	PENALTIES
 %----------------------------------------------------------------------------------------
 
-\doublehyphendemerits=10000 % No consecutive line hyphens
-\brokenpenalty=10000 % No broken words across columns/pages
-\widowpenalty=9999 % Almost no widows at bottom of page
-\clubpenalty=9999 % Almost no orphans at top of page
-\interfootnotelinepenalty=9999 % Almost never break footnotes
+\doublehyphendemerits=10000 	% No consecutive line hyphens
+\brokenpenalty=10000 			% No broken words across columns/pages
+\widowpenalty=9999 				% Almost no widows at bottom of page
+\clubpenalty=9999 				% Almost no orphans at top of page
+\interfootnotelinepenalty=9999 	% Almost never break footnotes
 
 %----------------------------------------------------------------------------------------
 %	HEADERS AND FOOTERS
@@ -300,6 +298,7 @@
 	\ofoot[\shorttitle/\authorname]{\shorttitle/\authorname}
 	\ifoot[\today]{\today}
 }
+
 \pagestyle{thesis}
 \ifbool{headsepline}{\KOMAoption{headsepline}{true}}{}
 \PreventPackageFromLoading[\ClassError{\classname}{Package `fancyhdr' is

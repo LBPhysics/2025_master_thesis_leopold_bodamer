@@ -8,8 +8,8 @@
 %	SECTION 1
 %----------------------------------------------------------------------------------------
 
-\subsection{Bath Correlator}
-\label{subsec:bath_correlator}
+\section{Bath Correlator}
+\label{sec:bath_correlator}
 
 The general task of this chapter is to calculate the bath correlator, which is defined as:
 \begin{equation} \label{eq:bath_correlator}
@@ -71,7 +71,7 @@ For such a system the thermal state is described by the Gibbs distribution:
 \begin{equation} \label{eq:gibbs_state}
 	\rho = \frac{e^{-\beta H}}{\mathrm{Tr}\left[e^{-\beta H}\right]}, \quad H = \sum_k \hbar \omega_k \left(b_k^{\dagger} b_k + \frac{1}{2}\right), \quad E_k = \hbar \omega_k (n_k + \frac{1}{2}),
 \end{equation}
-where \( \omega_k \) is the frequency of the \( k \)-th mode, \( b_k^{\dagger} \) and \( b_k \) are the creation and annihilation operators, respectively, and \( n_k = \langle b_k^{\dagger} b_k \rangle \) is the expectation value of the  number operator. 
+where \( \omega_k \) is the frequency of the \( k \)-th mode, \( b_k^{\dagger} \) and \( b_k \) are the creation and annihilation operators, respectively, and \( n_k = \langle b_k^{\dagger} b_k \rangle \) is the expectation value of the  number operator.
 The number operator is an eigenoperator to the number states \(|k\rangle\)
 and the number $n_k$ represents the number of excitations in that mode.
 The energy of the k-th mode $ E_k $ is directly related to this number.
@@ -86,7 +86,7 @@ where \( \omega_k \) is the constant frequency of the mode \( k \).
 The partition function \( Z \) can be calculated by the geometric series:
 
 \begin{equation} \label{eq:partition_function}
-	Z_k \equiv \mathrm{Tr}\left[e^{-\beta H}\right] 
+	Z_k \equiv \mathrm{Tr}\left[e^{-\beta H}\right]
 	= \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k (n_k + \frac{1}{2})} | m \rangle
 	= e^{-\beta \hbar \omega_k / 2} \sum_{m=0}^{\infty} \langle m | m \rangle \delta_{km} e^{-\beta \hbar \omega_k n_k} \\
 	%    = e^{-\beta \frac{\hbar \omega_k }{2}} \sum_{k=0}^{\infty} e^{-\beta \hbar \omega_k k} 
@@ -95,11 +95,11 @@ The partition function \( Z \) can be calculated by the geometric series:
 Using this, the expectation value of the number operator can be calculated:
 
 \begin{align} \label{eq:expectation_number_operator}
-	n_k & = \langle b_k^{\dagger} b_k \rangle_{\text{th}} = \mathrm{Tr} \left[ b_k^{\dagger} b_k \frac{e^{-\beta H}}{Z_k} \right]                                           \\
-	    & = \frac{\mathrm{Tr} \left[ b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k} \right]}{Z_k}                                                            \\
+	n_k & = \langle b_k^{\dagger} b_k \rangle_{\text{th}} = \mathrm{Tr} \left[ b_k^{\dagger} b_k \frac{e^{-\beta H}}{Z_k} \right]                                                             \\
+	    & = \frac{\mathrm{Tr} \left[ b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k} \right]}{Z_k}                                                                              \\
 	    & = \frac{\sum_{m=0}^{\infty} \langle m|b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k}|m \rangle}{\frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}} \\
 	%    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
-	    & = \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
+	    & = \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}}                                                                                                                   \\
 	    & = \frac{1}{e^{\beta \hbar \omega_k} - 1}.
 \end{align}
 where we have used Eq. \eqref{eq:derivation_geometric_sum} in the last step.
