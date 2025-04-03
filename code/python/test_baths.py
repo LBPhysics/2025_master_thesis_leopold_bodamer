@@ -44,7 +44,11 @@ def n(w, T):
 
     # Avoid division by zero for w == 0
     nonzero_mask = w != 0
-    result[nonzero_mask] = 1 / (np.exp(hbar * w[nonzero_mask] / (Boltzmann * T)) - 1)
+    large_mask = (hbar * w[nonzero_mask] / (Boltzmann * T)) > 700  # Avoid overflow
+    result[nonzero_mask & ~large_mask] = 1 / (
+        np.exp(hbar * w[nonzero_mask & ~large_mask] / (Boltzmann * T)) - 1
+    )
+    result[nonzero_mask & large_mask] = 0  # Approximation for large values
 
     return result
 
@@ -153,11 +157,11 @@ def plot_bath_with_qutip_from_f(
     max_corr = np.max(np.abs(correlation_vals))
 
     # Handle cases where the maximum values are zero to avoid division by zero
-    if max_J == 0:
+    if max_J <= 1e-10:
         max_J = 1
-    if max_P == 0:
+    if max_P <= 1e-10:
         max_P = 1
-    if max_corr == 0:
+    if max_corr <= 1e-10:
         max_corr = 1
 
     # =============================
@@ -258,58 +262,46 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
     )
 
     # Fourier Transform of Power Spectrum
-    def custom_fourier_transform(data, frequencies):
+    def compute_C_t(S_w, frequencies):
         """
-        Custom implementation of the Fourier Transform.
+        Computes C(t) using the inverse Fourier transform from given S(w) and frequency values.
 
         Parameters:
-            data (np.ndarray): Input data to transform (e.g., power spectrum values).
-            frequencies (np.ndarray): Frequency values corresponding to the data.
+        S_w (numpy array): Corresponding values of S(omega)
+        frequencies (numpy array): Array of frequency values (omega)
 
         Returns:
-            np.ndarray: Transformed data in the time domain.
-            np.ndarray: Normalized time values corresponding to the frequencies.
+        C_t (numpy array): Computed values of C(t)
+        t_values (numpy array): Time values corresponding to C(t)
         """
-        num_points = len(frequencies)
-        time_step = (frequencies[1] - frequencies[0]) / (
-            2 * np.pi
-        )  # Time step based on frequency spacing
-        times = (
-            np.linspace(-num_points / 2, num_points / 2 - 1, num_points) * time_step
-        )  # Generate time values
+        # Determine frequency step (assuming uniform spacing)
+        delta_w = frequencies[1] - frequencies[0]
 
-        # Perform the Fourier Transform manually
-        transformed_data = np.zeros(num_points, dtype=complex)
-        for t_idx, t in enumerate(times):
-            transformed_data[t_idx] = np.sum(
-                data * np.exp(-2j * np.pi * frequencies * t)
-            )
+        # Define the time domain
+        N = len(frequencies)  # Number of points
+        t_values = np.fft.fftshift(np.fft.fftfreq(N, d=delta_w / (2 * np.pi)))
 
-        # Normalize the time values
-        normalized_times = times * cutoff
+        # Compute inverse Fourier transform using FFT
+        C_t = (
+            np.fft.fftshift(np.fft.ifft(np.fft.ifftshift(S_w))) * len(S_w) / (2 * np.pi)
+        )
 
-        return np.fft.fftshift(transformed_data), np.fft.fftshift(normalized_times)
+        return C_t, t_values
 
     # Use the custom Fourier Transform function
-    correlation_vals, normalized_times = custom_fourier_transform(
-        power_spectrum_vals, frequencies
-    )
-
-    # correlation_vals = np.fft.fftshift(np.fft.ifft(power_spectrum_vals))  # Apply inverse FFT and shift for symmetry
-    ## Generate normalized time values corresponding to the frequencies
-    # time_step = (frequencies[1] - frequencies[0]) / (2 * np.pi)  # Time step based on frequency spacing
-    # normalized_times = np.fft.fftshift(np.fft.fftfreq(len(frequencies), d=time_step)) * cutoff  # Normalize times by wc
+    correlation_vals, times = compute_C_t(power_spectrum_vals, frequencies)
+    normalized_times = times * cutoff  # Normalize time by wc
 
     max_J = np.max(np.abs(spectral_density_vals))
     max_P = np.max(np.abs(power_spectrum_vals))
     max_corr = np.max(np.abs(correlation_vals))
 
     # Handle cases where the maximum values are zero to avoid division by zero
-    if max_J == 0:
+    if max_J <= 1e-10:
         max_J = 1
-    if max_P == 0:
+    if max_P <= 1e-10:
         max_P = 1
-    if max_corr == 0:
+    if max_corr <= 1e-10:
         max_corr = 1
     axes_paper = []
 
@@ -344,7 +336,6 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
     clip_mask = (normalized_times >= -25) & (normalized_times <= 25)
     clipped_times = normalized_times[clip_mask]
     clipped_correlation_vals = correlation_vals[clip_mask]
-
     ax2.plot(
         clipped_times,
         np.real(clipped_correlation_vals) / max_corr,
@@ -384,7 +375,7 @@ def main():
     global Boltzmann, hbar, T
     Boltzmann = 1  # Boltzmann constant in J/K
     hbar = 1  # Reduced Planck's constant in J·s
-    T = 1  # Temperature in Kelvin
+    T = 1e0  # Temperature in Kelvin
     plt.rcParams.update(
         {
             "text.usetex": True,  # Enable LaTeX for text rendering
@@ -410,20 +401,35 @@ def main():
     eta, cutoff = 0.1, 1e3
     args_ohmic = {"eta": eta, "cutoff": cutoff, "s": 1.0}
     args_paper = {"g": np.sqrt(eta * cutoff), "cutoff": cutoff}
-    args_drude_lorentz = {"lambda": 0.1, "cutoff": cutoff}
+    args_drude_lorentz = {"lambda": eta * cutoff / 2, "cutoff": cutoff}
 
     # Test the function with different baths
-
+    """
     axs0 = plot_bath_from_paper_with_paper(args_paper)
     axs1 = plot_bath_with_qutip_from_f(
         spectral_density_func_paper, args_paper, func_name="J", bath="paper"
     )
-    # axs1_ = plot_bath_with_qutip_from_f(Power_spectrum_func_paper, args_paper, func_name="S", bath="paper")
-    # axs2 = plot_bath_with_qutip_from_f(spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic")
-    # axs2_ = plot_bath_with_qutip_from_f(Power_spectrum_func_ohmic, args_ohmic, func_name="S", bath="ohmic")  # Not defined
-    # axs3 = plot_bath_with_qutip_from_f(spectral_density_func_drude_lorentz, args_drude_lorentz, func_name="J", bath="drude_lorentz")
-    # plt.savefig("bath_comparison_Paper_Qutip.svg", dpi=300, bbox_inches='tight')
+    axs1_ = plot_bath_with_qutip_from_f(
+        Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
+    )
 
+    axs2_ = plot_bath_with_qutip_from_f(
+        Power_spectrum_func_ohmic, args_ohmic, func_name="S", bath="ohmic"
+    )
+    """
+
+    axs2 = plot_bath_with_qutip_from_f(
+        spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic"
+    )
+    axs3 = plot_bath_with_qutip_from_f(
+        spectral_density_func_drude_lorentz,
+        args_drude_lorentz,
+        func_name="J",
+        bath="drude_lorentz",
+    )
+
+    # plt.savefig("bath_comparison_Paper_Qutip.svg", dpi=300, bbox_inches='tight')
+    # plt.savefig("bath_Qutip_from_J_S.png", dpi=100, bbox_inches="tight")
     plt.show()
 
 
