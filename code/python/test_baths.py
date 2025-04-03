@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from qutip import BosonicEnvironment
+import os
 
 
 # =============================
@@ -396,6 +397,14 @@ def main():
             "savefig.transparent": True,  # Save figures with transparent background
         }
     )
+    # Define the output directory relative to the main directory of the repository
+    repo_root_dir = os.path.abspath(
+        os.path.join(os.getcwd(), "../../")
+    )  # Navigate to the main directory
+    output_dir = os.path.join(
+        repo_root_dir, "figures", "figures_from_python"
+    )  # Define the output folder path
+    os.makedirs(output_dir, exist_ok=True)
 
     # Define arguments for the baths
     eta, cutoff = 0.1, 1e3
