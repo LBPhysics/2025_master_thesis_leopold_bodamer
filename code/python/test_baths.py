@@ -41,7 +41,7 @@ def Power_spectrum_func_ohmic(w, args):
 # =============================
 
 
-def n(w, T):
+def n(w):
     """
     Bose-Einstein distribution function.
     """
@@ -79,13 +79,13 @@ def Power_spectrum_func_paper(w, args):
     # Positive frequencies
     positive_mask = w > 0
     result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * n(
-        w[positive_mask], T
+        w[positive_mask]
     )
 
     # Negative frequencies
     negative_mask = w < 0
     result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * (
-        1 + n(-w[negative_mask], T)
+        1 + n(-w[negative_mask])
     )
 
     return result
@@ -197,8 +197,8 @@ def plot_bath_with_qutip_from_f(
         color="C1",
         linestyle="dashed",
     )
-    ax1.set_xlabel(r"$\omega / \tilde{\omega}_{\text{c}}$")
-    ax1.set_ylabel(r"$f / f(\tilde{\omega}_{\text{c}})$")
+    ax1.set_xlabel(r"$\omega / \omega_{\text{c}}$")
+    ax1.set_ylabel(r"$f / f(\omega_{\text{c}})$")
     ax1.set_title(r"Spectral Density $ J $ and Power Spectrum $ S $")
     ax1.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
@@ -226,7 +226,7 @@ def plot_bath_with_qutip_from_f(
         linestyle="solid",
         color="C4",
     )
-    ax2.set_xlabel(r"Time $t \tilde{\omega}_{\text{c}}$")
+    ax2.set_xlabel(r"Time $t \omega_{\text{c}}$")
     ax2.set_ylabel(r"$f / \text{max}|C|$")
     ax2.set_title(r"Correlation Function $ C $")
     ax2.legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -328,8 +328,8 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
         color="C3",
         linestyle="dashed",
     )
-    ax1.set_xlabel(r"$\omega / \tilde{\omega}_{\text{c}}$")
-    ax1.set_ylabel(r"$f / f(\tilde{\omega}_{\text{c}})$")
+    ax1.set_xlabel(r"$\omega / \omega_{\text{c}}$")
+    ax1.set_ylabel(r"$f / f(\omega_{\text{c}})$")
     ax1.set_title(r"Spectral Density $ J $ and Power Spectrum $ S $")
     ax1.legend()
     axes_paper.append(ax1)
@@ -360,7 +360,7 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
         linestyle="solid",
         color="C5",
     )
-    ax2.set_xlabel(r"Time $t \tilde{\omega}_{\text{c}}$")
+    ax2.set_xlabel(r"Time $t \omega_{\text{c}}$")
     ax2.set_ylabel(r"$f / \text{max}|C|$")
     ax2.set_title(r"Correlation Function $ C $ (Clipped)")
     ax2.legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -423,15 +423,15 @@ def main():
         Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
     )
 
-    axs2_ = plot_bath_with_qutip_from_f(
-        Power_spectrum_func_ohmic, args_ohmic, func_name="S", bath="ohmic"
-    )
+    """
 
     axs2 = plot_bath_with_qutip_from_f(
         spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic"
     )
+    axs2_ = plot_bath_with_qutip_from_f(
+        Power_spectrum_func_ohmic, args_ohmic, func_name="S", bath="ohmic"
+    )
 
-    """
     axs3 = plot_bath_with_qutip_from_f(
         spectral_density_func_drude_lorentz,
         args_drude_lorentz,
