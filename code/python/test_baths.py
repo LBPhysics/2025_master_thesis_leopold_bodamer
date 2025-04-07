@@ -36,6 +36,11 @@ def Power_spectrum_func_ohmic(w, args):
     return np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
 
 
+# =============================
+# BATH FUNCTIONS
+# =============================
+
+
 def n(w, T):
     """
     Bose-Einstein distribution function.
@@ -54,9 +59,6 @@ def n(w, T):
     return result
 
 
-# =============================
-# BATH FUNCTIONS
-# =============================
 def spectral_density_func_paper(w, args):
     """
     Spectral density function for a bath as given in the paper.
@@ -198,7 +200,7 @@ def plot_bath_with_qutip_from_f(
     ax1.set_xlabel(r"$\omega / \tilde{\omega}_{\text{c}}$")
     ax1.set_ylabel(r"$f / f(\tilde{\omega}_{\text{c}})$")
     ax1.set_title(r"Spectral Density $ J $ and Power Spectrum $ S $")
-    ax1.legend()
+    ax1.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     ### Plot Correlation Function over t / wc
     ax2 = plt.subplot(2, 1, 2)
@@ -227,7 +229,7 @@ def plot_bath_with_qutip_from_f(
     ax2.set_xlabel(r"Time $t \tilde{\omega}_{\text{c}}$")
     ax2.set_ylabel(r"$f / \text{max}|C|$")
     ax2.set_title(r"Correlation Function $ C $")
-    ax2.legend(loc="upper right")
+    ax2.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     plt.tight_layout()
 
@@ -361,7 +363,7 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
     ax2.set_xlabel(r"Time $t \tilde{\omega}_{\text{c}}$")
     ax2.set_ylabel(r"$f / \text{max}|C|$")
     ax2.set_title(r"Correlation Function $ C $ (Clipped)")
-    ax2.legend(loc="upper right")
+    ax2.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     axes_paper.append(ax2)
 
     plt.tight_layout()
@@ -413,7 +415,6 @@ def main():
     args_drude_lorentz = {"lambda": eta * cutoff / 2, "cutoff": cutoff}
 
     # Test the function with different baths
-    """
     axs0 = plot_bath_from_paper_with_paper(args_paper)
     axs1 = plot_bath_with_qutip_from_f(
         spectral_density_func_paper, args_paper, func_name="J", bath="paper"
@@ -425,17 +426,19 @@ def main():
     axs2_ = plot_bath_with_qutip_from_f(
         Power_spectrum_func_ohmic, args_ohmic, func_name="S", bath="ohmic"
     )
-    """
 
     axs2 = plot_bath_with_qutip_from_f(
         spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic"
     )
+
+    """
     axs3 = plot_bath_with_qutip_from_f(
         spectral_density_func_drude_lorentz,
         args_drude_lorentz,
         func_name="J",
         bath="drude_lorentz",
     )
+    """
 
     # plt.savefig("bath_comparison_Paper_Qutip.svg", dpi=300, bbox_inches='tight')
     # plt.savefig("bath_Qutip_from_J_S.png", dpi=100, bbox_inches="tight")
