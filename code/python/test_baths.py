@@ -3,6 +3,14 @@ import matplotlib.pyplot as plt
 from qutip import BosonicEnvironment
 import os
 
+# Define constants
+
+# constants
+global Boltzmann, hbar, T
+Boltzmann = 1  # Boltzmann constant in J/K
+hbar = 1  # Reduced Planck's constant in J·s
+T = 1e0  # Temperature in Kelvin
+
 
 # =============================
 # TEST OUT BOSONIC BATHS
@@ -50,11 +58,15 @@ def n(w):
 
     # Avoid division by zero for w == 0
     nonzero_mask = w != 0
-    large_mask = (hbar * w[nonzero_mask] / (Boltzmann * T)) > 700  # Avoid overflow
-    result[nonzero_mask & ~large_mask] = 1 / (
-        np.exp(hbar * w[nonzero_mask & ~large_mask] / (Boltzmann * T)) - 1
-    )
-    result[nonzero_mask & large_mask] = 0  # Approximation for large values
+    large_mask = (hbar * w / (Boltzmann * T)) > 700  # Avoid overflow threshold
+
+    # Compute the exponential term only for safe values
+    safe_mask = nonzero_mask & ~large_mask
+    exp_term = np.exp(hbar * w[safe_mask] / (Boltzmann * T))
+    result[safe_mask] = 1 / (exp_term - 1)
+
+    # For large values, approximate the result as 0
+    result[nonzero_mask & large_mask] = 0
 
     return result
 
@@ -74,6 +86,7 @@ def Power_spectrum_func_paper(w, args):
     Handles both positive and negative frequencies.
     """
     # Create an array to store the results
+    w = np.asarray(w)  # Ensure w is a NumPy array
     result = np.zeros_like(w)
 
     # Positive frequencies
@@ -98,7 +111,7 @@ def plot_bath_with_qutip_from_f(
     function,
     args,
     frequencies_range=(-25, 25),
-    num_points=1000,
+    num_points=500,
     func_name=None,
     bath=None,
 ):
@@ -236,7 +249,7 @@ def plot_bath_with_qutip_from_f(
     return axes
 
 
-def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_points=1000):
+def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_points=500):
     """
     Plot the spectral density, power spectrum, and correlation function for the bath as described in the paper.
 
@@ -328,6 +341,15 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
         color="C3",
         linestyle="dashed",
     )
+    ax1.hlines(
+        y=np.sqrt(eta * cutoff) ** 2 * Boltzmann * T / cutoff,
+        xmin=normalized_frequencies[0],
+        xmax=normalized_frequencies[-1],
+        color="black",
+        linestyle="dotted",
+        linewidth=1,
+        label=r"$zero value$",
+    )  # Add horizontal line at y=0
     ax1.set_xlabel(r"$\omega / \omega_{\text{c}}$")
     ax1.set_ylabel(r"$f / f(\omega_{\text{c}})$")
     ax1.set_title(r"Spectral Density $ J $ and Power Spectrum $ S $")
@@ -336,7 +358,9 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
 
     # Plot Fourier Transform of Power Spectrum
     # Clip the data to the range of -25 to 25 for better visualization
-    clip_mask = (normalized_times >= -25) & (normalized_times <= 25)
+    clip_mask = (normalized_times >= frequencies_range[0]) & (
+        normalized_times <= frequencies_range[0]
+    )
     clipped_times = normalized_times[clip_mask]
     clipped_correlation_vals = correlation_vals[clip_mask]
     ax2.plot(
@@ -374,11 +398,6 @@ def main():
     """
     Main function to test the plot_bath_with_qutip_from_f function with different spectral density and power spectrum functions.
     """
-    # Define constants
-    global Boltzmann, hbar, T
-    Boltzmann = 1  # Boltzmann constant in J/K
-    hbar = 1  # Reduced Planck's constant in J·s
-    T = 1e0  # Temperature in Kelvin
     plt.rcParams.update(
         {
             "text.usetex": True,  # Enable LaTeX for text rendering
@@ -409,22 +428,23 @@ def main():
     os.makedirs(output_dir, exist_ok=True)
 
     # Define arguments for the baths
+    global eta, cutoff
     eta, cutoff = 0.1, 1e3
     args_ohmic = {"eta": eta, "cutoff": cutoff, "s": 1.0}
     args_paper = {"g": np.sqrt(eta * cutoff), "cutoff": cutoff}
-    args_drude_lorentz = {"lambda": eta * cutoff / 2, "cutoff": cutoff}
+    # args_drude_lorentz = {"lambda": eta * cutoff / 2, "cutoff": cutoff}
 
     # Test the function with different baths
     axs0 = plot_bath_from_paper_with_paper(args_paper)
-    axs1 = plot_bath_with_qutip_from_f(
-        spectral_density_func_paper, args_paper, func_name="J", bath="paper"
-    )
+    # plt.show()
+
+    """
     axs1_ = plot_bath_with_qutip_from_f(
         Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
     )
-
-    """
-
+    axs1 = plot_bath_with_qutip_from_f(
+        spectral_density_func_paper, args_paper, func_name="J", bath="paper"
+    )
     axs2 = plot_bath_with_qutip_from_f(
         spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic"
     )
