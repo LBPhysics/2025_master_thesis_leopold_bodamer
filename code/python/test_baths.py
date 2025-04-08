@@ -1,15 +1,47 @@
-import numpy as np
-import matplotlib.pyplot as plt
+from bath_constants import (
+    Boltzmann,
+    hbar,
+    Temp,
+    eta,
+    cutoff,
+    ##############
+    args_paper,
+    args_drude_lorentz,
+    args_ohmic,
+)
 from qutip import BosonicEnvironment
+import matplotlib.pyplot as plt
+import numpy as np
 import os
 
-# Define constants
-
-# constants
-global Boltzmann, hbar, T
-Boltzmann = 1  # Boltzmann constant in J/K
-hbar = 1  # Reduced Planck's constant in J·s
-T = 1e0  # Temperature in Kelvin
+plt.rcParams.update(
+    {
+        "text.usetex": True,  # Enable LaTeX for text rendering
+        "font.family": "serif",  # Use a serif font family
+        "font.serif": [],  #'Palatino' or []  Set Palatino or standard latex font
+        "text.latex.preamble": r"\usepackage{amsmath}",
+        "font.size": 20,  # Font size for general text
+        "axes.titlesize": 20,  # Font size for axis titles
+        "axes.labelsize": 20,  # Font size for axis labels
+        "xtick.labelsize": 20,  # Font size for x-axis tick labels
+        "ytick.labelsize": 20,  # Font size for y-axis tick labels
+        "legend.fontsize": 20,  # Font size for legends
+        "figure.figsize": [8, 6],  # Size of the plot (width x height)
+        "figure.autolayout": True,  # Automatic layout adjustment
+        "savefig.format": "svg",  # Default format for saving figures
+        "figure.facecolor": "none",  # Make the figure face color transparent
+        "axes.facecolor": "none",  # Make the axes face color transparent
+        "savefig.transparent": True,  # Save figures with transparent background
+    }
+)
+# Define the output directory relative to the main directory of the repository
+repo_root_dir = os.path.abspath(
+    os.path.join(os.getcwd(), "../../")
+)  # Navigate to the main directory
+output_dir = os.path.join(
+    repo_root_dir, "figures", "figures_from_python"
+)  # Define the output folder path
+os.makedirs(output_dir, exist_ok=True)
 
 
 # =============================
@@ -40,7 +72,7 @@ def Power_spectrum_func_ohmic(w, args):
     Power spectrum function in the frequency domain for an ohmic bath.
     Handles both positive and negative frequencies.
     """
-    coth_term = 1 / np.tanh(w / (2 * Boltzmann * T))
+    coth_term = 1 / np.tanh(w / (2 * Boltzmann * Temp))
     return np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
 
 
@@ -49,20 +81,20 @@ def Power_spectrum_func_ohmic(w, args):
 # =============================
 
 
-def n(w):
+def n(w, Boltzmann, hbar, Temp):
     """
     Bose-Einstein distribution function.
     """
-    w = np.asarray(w)  # Ensure w is a NumPy array
+    w = np.asarray(w, dtype=float)  # Ensure w is a NumPy array
     result = np.zeros_like(w)  # Initialize result array with zeros
 
     # Avoid division by zero for w == 0
     nonzero_mask = w != 0
-    large_mask = (hbar * w / (Boltzmann * T)) > 700  # Avoid overflow threshold
+    large_mask = (hbar * w / (Boltzmann * Temp)) > 700  # Avoid overflow threshold
 
     # Compute the exponential term only for safe values
     safe_mask = nonzero_mask & ~large_mask
-    exp_term = np.exp(hbar * w[safe_mask] / (Boltzmann * T))
+    exp_term = np.exp(hbar * w[safe_mask] / (Boltzmann * Temp))
     result[safe_mask] = 1 / (exp_term - 1)
 
     # For large values, approximate the result as 0
@@ -85,21 +117,43 @@ def Power_spectrum_func_paper(w, args):
     Power spectrum function in the frequency domain as given in the paper.
     Handles both positive and negative frequencies.
     """
+    # Extract constants from args
+    Boltzmann = args["Boltzmann"]
+    hbar = args["hbar"]
+    Temp = args["Temp"]
+    g = args["g"]
+
     # Create an array to store the results
-    w = np.asarray(w)  # Ensure w is a NumPy array
+    w = np.asarray(w, dtype=float)  # Ensure w is a NumPy array
     result = np.zeros_like(w)
+
+    #    # Positive frequencies
+    #    positive_mask = w > 0
+    #    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * n(w
+    #        w[positive_mask], Boltzmann, hbar, Temp
+    #    )
+    #
+    #    # Negative frequencies
+    #    negative_mask = w < 0
+    #    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * (
+    #        1 + n(-w[negative_mask], Boltzmann, hbar, Temp)
+    #    )
 
     # Positive frequencies
     positive_mask = w > 0
-    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * n(
-        w[positive_mask]
+    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * (
+        1 + n(w[positive_mask], Boltzmann, hbar, Temp)
     )
 
     # Negative frequencies
     negative_mask = w < 0
-    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * (
-        1 + n(-w[negative_mask])
+    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * n(
+        -w[negative_mask], Boltzmann, hbar, Temp
     )
+
+    # Zero frequency
+    zero_mask = w == 0
+    result[zero_mask] = g**2 * Boltzmann * Temp / cutoff
 
     return result
 
@@ -111,7 +165,7 @@ def plot_bath_with_qutip_from_f(
     function,
     args,
     frequencies_range=(-25, 25),
-    num_points=500,
+    num_points=5000,
     func_name=None,
     bath=None,
 ):
@@ -121,7 +175,7 @@ def plot_bath_with_qutip_from_f(
     Parameters:
         function (function): Function defining the spectral density.
         args (dict): Arguments for the spectral density function.
-        T (float): Temperature.
+        Temp (float): Temperature.
         frequencies_range (tuple): Range of frequencies to evaluate.
         num_points (int): Number of points for frequency and time ranges.
 
@@ -145,17 +199,17 @@ def plot_bath_with_qutip_from_f(
     if func_name == "J":
         if bath == "ohmic":
             env = BosonicEnvironment.from_spectral_density(
-                lambda w: function(w, args), wMax=10 * cutoff, T=T
+                lambda w: function(w, args), wMax=10 * cutoff, T=Temp
             )
         else:
             env = BosonicEnvironment.from_spectral_density(
                 lambda w: function(w, args),  # - function(-w, args),
                 wMax=10 * cutoff,
-                T=T,
+                T=Temp,
             )
     elif func_name == "S":
         env = BosonicEnvironment.from_power_spectrum(
-            lambda w: function(w, args), wMax=10 * cutoff, T=T
+            lambda w: function(w, args), wMax=10 * cutoff, T=Temp
         )
     else:
         print(
@@ -169,14 +223,14 @@ def plot_bath_with_qutip_from_f(
     correlation_vals = env.correlation_function(times)  # Correlation function
 
     max_J = np.max(np.abs(spectral_density_vals))
-    max_P = np.max(np.abs(power_spectrum_vals))
+    max_S = np.max(np.abs(power_spectrum_vals))
     max_corr = np.max(np.abs(correlation_vals))
 
     # Handle cases where the maximum values are zero to avoid division by zero
     if max_J <= 1e-10:
         max_J = 1
-    if max_P <= 1e-10:
-        max_P = 1
+    if max_S <= 1e-10:
+        max_S = 1
     if max_corr <= 1e-10:
         max_corr = 1
 
@@ -188,7 +242,7 @@ def plot_bath_with_qutip_from_f(
 
     plt.suptitle(
         r"Bath at $\beta$ = "
-        + f"{1/(Boltzmann * T):.2f}"
+        + f"{1/(Boltzmann * Temp):.2f}"
         + " with QuTiP from $"
         + func_name
         + r"(\omega)$"
@@ -205,7 +259,7 @@ def plot_bath_with_qutip_from_f(
     )
     ax1.plot(
         normalized_frequencies,
-        power_spectrum_vals / max_P,
+        power_spectrum_vals / max_S,
         label=r"$S(\omega)$ q",
         color="C1",
         linestyle="dashed",
@@ -249,7 +303,7 @@ def plot_bath_with_qutip_from_f(
     return axes
 
 
-def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_points=500):
+def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_points=5000):
     """
     Plot the spectral density, power spectrum, and correlation function for the bath as described in the paper.
 
@@ -309,21 +363,21 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
     normalized_times = times * cutoff  # Normalize time by wc
 
     max_J = np.max(np.abs(spectral_density_vals))
-    max_P = np.max(np.abs(power_spectrum_vals))
+    max_S = np.max(np.abs(power_spectrum_vals))
     max_corr = np.max(np.abs(correlation_vals))
 
     # Handle cases where the maximum values are zero to avoid division by zero
     if max_J <= 1e-10:
         max_J = 1
-    if max_P <= 1e-10:
-        max_P = 1
+    if max_S <= 1e-10:
+        max_S = 1
     if max_corr <= 1e-10:
         max_corr = 1
     axes_paper = []
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8))
     fig.suptitle(
-        r"Bath from Paper  $\beta$ = " + f"{1/(Boltzmann * T):.2f}" + " with Paper"
+        r"Bath from Paper  $\beta$ = " + f"{1/(Boltzmann * Temp):.2f}" + " with Paper"
     )
 
     # Plot J and Power Spectrum S
@@ -336,13 +390,13 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
     )
     ax1.plot(
         normalized_frequencies,
-        power_spectrum_vals / max_P,
+        power_spectrum_vals / max_S,
         label=r"$S(\omega)$ p",
         color="C3",
         linestyle="dashed",
     )
     ax1.hlines(
-        y=np.sqrt(eta * cutoff) ** 2 * Boltzmann * T / cutoff,
+        y=np.sqrt(eta * cutoff) ** 2 * Boltzmann * Temp / cutoff / max_S,
         xmin=normalized_frequencies[0],
         xmax=normalized_frequencies[-1],
         color="black",
@@ -359,7 +413,7 @@ def plot_bath_from_paper_with_paper(args, frequencies_range=(-25, 25), num_point
     # Plot Fourier Transform of Power Spectrum
     # Clip the data to the range of -25 to 25 for better visualization
     clip_mask = (normalized_times >= frequencies_range[0]) & (
-        normalized_times <= frequencies_range[0]
+        normalized_times <= frequencies_range[1]
     )
     clipped_times = normalized_times[clip_mask]
     clipped_correlation_vals = correlation_vals[clip_mask]
@@ -398,52 +452,16 @@ def main():
     """
     Main function to test the plot_bath_with_qutip_from_f function with different spectral density and power spectrum functions.
     """
-    plt.rcParams.update(
-        {
-            "text.usetex": True,  # Enable LaTeX for text rendering
-            "font.family": "serif",  # Use a serif font family
-            "font.serif": [],  #'Palatino' or []  Set Palatino or standard latex font
-            "text.latex.preamble": r"\usepackage{amsmath}",
-            "font.size": 20,  # Font size for general text
-            "axes.titlesize": 20,  # Font size for axis titles
-            "axes.labelsize": 20,  # Font size for axis labels
-            "xtick.labelsize": 20,  # Font size for x-axis tick labels
-            "ytick.labelsize": 20,  # Font size for y-axis tick labels
-            "legend.fontsize": 20,  # Font size for legends
-            "figure.figsize": [8, 6],  # Size of the plot (width x height)
-            "figure.autolayout": True,  # Automatic layout adjustment
-            "savefig.format": "svg",  # Default format for saving figures
-            "figure.facecolor": "none",  # Make the figure face color transparent
-            "axes.facecolor": "none",  # Make the axes face color transparent
-            "savefig.transparent": True,  # Save figures with transparent background
-        }
-    )
-    # Define the output directory relative to the main directory of the repository
-    repo_root_dir = os.path.abspath(
-        os.path.join(os.getcwd(), "../../")
-    )  # Navigate to the main directory
-    output_dir = os.path.join(
-        repo_root_dir, "figures", "figures_from_python"
-    )  # Define the output folder path
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Define arguments for the baths
-    global eta, cutoff
-    eta, cutoff = 0.1, 1e3
-    args_ohmic = {"eta": eta, "cutoff": cutoff, "s": 1.0}
-    args_paper = {"g": np.sqrt(eta * cutoff), "cutoff": cutoff}
-    # args_drude_lorentz = {"lambda": eta * cutoff / 2, "cutoff": cutoff}
-
     # Test the function with different baths
     axs0 = plot_bath_from_paper_with_paper(args_paper)
     # plt.show()
 
     """
-    axs1_ = plot_bath_with_qutip_from_f(
-        Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
-    )
     axs1 = plot_bath_with_qutip_from_f(
         spectral_density_func_paper, args_paper, func_name="J", bath="paper"
+    )
+    axs1_ = plot_bath_with_qutip_from_f(
+        Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
     )
     axs2 = plot_bath_with_qutip_from_f(
         spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic"
@@ -451,6 +469,7 @@ def main():
     axs2_ = plot_bath_with_qutip_from_f(
         Power_spectrum_func_ohmic, args_ohmic, func_name="S", bath="ohmic"
     )
+
 
     axs3 = plot_bath_with_qutip_from_f(
         spectral_density_func_drude_lorentz,
@@ -463,6 +482,8 @@ def main():
     # plt.savefig("bath_comparison_Paper_Qutip.svg", dpi=300, bbox_inches='tight')
     # plt.savefig("bath_Qutip_from_J_S.png", dpi=100, bbox_inches="tight")
     plt.show()
+
+    print(Power_spectrum_func_paper(0, args_paper))
 
 
 if __name__ == "__main__":
