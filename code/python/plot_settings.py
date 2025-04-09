@@ -33,4 +33,5 @@ output_dir = os.path.join(
 )  # Define the output folder path
 os.makedirs(output_dir, exist_ok=True)
 
-mpl.use("Agg")  # Use a non-interactive backend / SAVE figures to svg files
+# mpl.use("Agg")  # Use a non-interactive backend / SAVE figures to svg files
+mpl.use("inline")  # Use a non-interactive backend / SAVE figures to svg files

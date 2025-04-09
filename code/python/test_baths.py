@@ -127,29 +127,30 @@ def Power_spectrum_func_paper(w, args):
     w = np.asarray(w, dtype=float)  # Ensure w is a NumPy array
     result = np.zeros_like(w)
 
-    #    # Positive frequencies
-    #    positive_mask = w > 0
-    #    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * n(w
-    #        w[positive_mask], Boltzmann, hbar, Temp
-    #    )
-    #
-    #    # Negative frequencies
-    #    negative_mask = w < 0
-    #    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * (
-    #        1 + n(-w[negative_mask], Boltzmann, hbar, Temp)
-    #    )
-
     # Positive frequencies
     positive_mask = w > 0
-    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * (
-        1 + n(w[positive_mask], Boltzmann, hbar, Temp)
+    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * n(
+        w[positive_mask], Boltzmann, hbar, Temp
     )
 
     # Negative frequencies
     negative_mask = w < 0
-    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * n(
-        -w[negative_mask], Boltzmann, hbar, Temp
+    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * (
+        1 + n(-w[negative_mask], Boltzmann, hbar, Temp)
     )
+
+    #    # Positive frequencies
+    #    positive_mask = w > 0
+    #    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * (
+    #        1 + n(w[positive_mask], Boltzmann, hbar, Temp)
+    #    )
+    #
+    #    # Negative frequencies
+    #    negative_mask = w < 0
+    #    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * n(
+    #        -w[negative_mask], Boltzmann, hbar, Temp
+    #    )
+    #
 
     # Zero frequency
     zero_mask = w == 0
