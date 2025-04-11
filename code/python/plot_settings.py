@@ -34,4 +34,7 @@ output_dir = os.path.join(
 os.makedirs(output_dir, exist_ok=True)
 
 # mpl.use("Agg")  # Use a non-interactive backend / SAVE figures to svg files
-mpl.use("inline")  # Use a non-interactive backend / SAVE figures to svg files
+mpl.use(
+    "module://matplotlib_inline.backend_inline"
+)  # Use inline backend for Jupyter notebooks
+# mpl.use('TkAgg')  # open each plot in interactive window

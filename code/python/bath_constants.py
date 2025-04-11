@@ -11,9 +11,9 @@ Boltzmann = 1.0  # Boltzmann constant in J/K
 hbar = 1.0  # Reduced Planck's constant in J·s
 c = 1.0  # Speed of light in m/s
 
-Temp = 1e0  # Temperature in Kelvin
-eta = 1 / 100  # Coupling strength
-cutoff = 1e2  # Cutoff frequency
+Temp = 1e3  # Temperature in Kelvin
+eta = 1e-2  # Coupling strength
+cutoff = 1e1  # Cutoff frequency
 
 # Define the args_bath dictionaries
 args_paper = {
