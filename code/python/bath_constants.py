@@ -13,7 +13,7 @@ c = 1.0  # Speed of light in m/s
 
 Temp = 1e3  # Temperature in Kelvin
 eta = 1e-2  # Coupling strength
-cutoff = 1e1  # Cutoff frequency
+cutoff = 1e2  # Cutoff frequency
 
 # Define the args_bath dictionaries
 args_paper = {
