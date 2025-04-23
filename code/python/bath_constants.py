@@ -11,7 +11,7 @@ Boltzmann = 1.0  # Boltzmann constant in J/K
 hbar = 1.0  # Reduced Planck's constant in J·s
 c = 1.0  # Speed of light in m/s
 
-Temp = 1e3  # Temperature in Kelvin
+Temp = 1e-3  # Temperature in Kelvin
 eta = 1e-2  # Coupling strength
 cutoff = 1e2  # Cutoff frequency
 
