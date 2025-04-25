@@ -184,7 +184,7 @@ def plot_bath_with_qutip_from_f(
         matplotlib.figure.Figure: The generated figure containing the plots.
     """
 
-    cutoff = args["cutoff"]  # Cutoff frequency
+    cutoff = args["cutoff"]  # Cfgutoff frequency
 
     # ============================= Define frequency and time ranges
     frequencies = np.linspace(
@@ -454,13 +454,13 @@ def main():
     Main function to test the plot_bath_with_qutip_from_f function with different spectral density and power spectrum functions.
     """
     # Test the function with different baths
-    axs0 = plot_bath_from_paper_with_paper(args_paper)
+    # axs0 = plot_bath_from_paper_with_paper(args_paper)
     # plt.show()
-
-    """
     axs1 = plot_bath_with_qutip_from_f(
         spectral_density_func_paper, args_paper, func_name="J", bath="paper"
     )
+
+    """
     axs1_ = plot_bath_with_qutip_from_f(
         Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
     )
