@@ -1,5 +1,4 @@
 import numpy as np
-
 """
     This file contains constants and parameters for the bath models.
     The different baths are modelled to agree as much as possible.
