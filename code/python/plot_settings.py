@@ -5,9 +5,9 @@ import os
 # Matplotlib settings according to LaTeX caption formatting
 plt.rcParams.update(
     {
-        "text.usetex": False,  # Enable LaTeX for text rendering
+        "text.usetex": True,  # Enable LaTeX for text rendering
         "font.family": "serif",  # Use a serif font family
-        "font.serif": [], # or "Palatino",   Set Palatino or standard latex font
+        "font.serif": "Palatino",  # or [], Set Palatino or standard latex font
         "text.latex.preamble": r"\usepackage{amsmath}",
         "font.size": 20,  # Font size for general text
         "axes.titlesize": 20,  # Font size for axis titles
