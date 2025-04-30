@@ -12,7 +12,7 @@ Boltzmann = 1.0  # Boltzmann constant in J/K
 hbar = 1.0  # Reduced Planck's constant in J·s
 
 global Temp, eta, cutoff
-Temp = 1e-3  # Temperature in Kelvin
+Temp = 1e2  # Temperature in Kelvin
 eta = 1e-2  # dim.less Coupling strength
 cutoff = 1e2  # Cutoff frequency
 
@@ -101,24 +101,18 @@ def Power_spectrum_func_ohmic(w, args):
 
 def n(w, Boltzmann, hbar, Temp):
     """
-    Bose-Einstein distribution function.
+    Bose-Einstein distribution function for scalar inputs.
     """
-    w = np.asarray(w, dtype=float)  # Ensure w is a NumPy array
-    result = np.zeros_like(w)  # Initialize result array with zeros
+    if w == 0:
+        return 0  # Avoid division by zero for w == 0
 
-    # Avoid division by zero for w == 0
-    nonzero_mask = w != 0
-    large_mask = (hbar * w / (Boltzmann * Temp)) > 700  # Avoid overflow threshold
+    # Avoid overflow for large values of hbar * w / (Boltzmann * Temp)
+    if (hbar * w / (Boltzmann * Temp)) > 700:
+        return 0  # Approximate the result as 0 for large values
 
-    # Compute the exponential term only for safe values
-    safe_mask = nonzero_mask & ~large_mask
-    exp_term = np.exp(hbar * w[safe_mask] / (Boltzmann * Temp))
-    result[safe_mask] = 1 / (exp_term - 1)
-
-    # For large values, approximate the result as 0
-    result[nonzero_mask & large_mask] = 0
-
-    return result
+    # Compute the Bose-Einstein distribution
+    exp_term = np.exp(hbar * w / (Boltzmann * Temp))
+    return 1 / (exp_term - 1)
 
 
 def spectral_density_func_paper(w, args):
@@ -133,48 +127,42 @@ def spectral_density_func_paper(w, args):
 def Power_spectrum_func_paper(w, args):
     """
     Power spectrum function in the frequency domain as given in the paper.
-    Handles both positive and negative frequencies.
+    Handles only float inputs for w.
     """
     # Extract constants from args
     Boltzmann = args["Boltzmann"]
     hbar = args["hbar"]
     Temp = args["Temp"]
     g = args["g"]
+    cutoff = args["cutoff"]
 
-    # Create an array to store the results
-    w = np.asarray(w, dtype=float)  # Ensure w is a NumPy array
-    result = np.zeros_like(w)
+    if w > 0:
+        # Positive frequency
+        return spectral_density_func_paper(w, args) * n(w, Boltzmann, hbar, Temp)
+    elif w < 0:
+        # Negative frequency
+        return spectral_density_func_paper(-w, args) * (
+            1 + n(-w, Boltzmann, hbar, Temp)
+        )
+    else:
+        # Zero frequency
+        return g**2 * Boltzmann * Temp / cutoff
 
-    # Positive frequencies
-    positive_mask = w > 0
-    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * n(
-        w[positive_mask], Boltzmann, hbar, Temp
-    )
 
-    # Negative frequencies
-    negative_mask = w < 0
-    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * (
-        1 + n(-w[negative_mask], Boltzmann, hbar, Temp)
-    )
+def Power_spectrum_func_paper_array(w_array, args):
+    """
+    Wrapper for Power_spectrum_func_paper to handle array-like inputs.
+    Calls Power_spectrum_func_paper for each element in the array.
 
-    #    # Positive frequencies
-    #    positive_mask = w > 0
-    #    result[positive_mask] = spectral_density_func_paper(w[positive_mask], args) * (
-    #        1 + n(w[positive_mask], Boltzmann, hbar, Temp)
-    #    )
-    #
-    #    # Negative frequencies
-    #    negative_mask = w < 0
-    #    result[negative_mask] = spectral_density_func_paper(-w[negative_mask], args) * n(
-    #        -w[negative_mask], Boltzmann, hbar, Temp
-    #    )
-    #
+    Parameters:
+        w_array (array-like): Array of frequency values.
+        args (dict): Arguments for the power spectrum function.
 
-    # Zero frequency
-    zero_mask = w == 0
-    result[zero_mask] = g**2 * Boltzmann * Temp / cutoff
-
-    return result
+    Returns:
+        np.ndarray: Array of power spectrum values.
+    """
+    w_array = np.asarray(w_array, dtype=float)  # Ensure input is a NumPy array
+    return np.array([Power_spectrum_func_paper(w, args) for w in w_array])
 
 
 # =============================
@@ -222,7 +210,7 @@ def plot_bath_with_qutip_from_f(
             )
         else:
             env = BosonicEnvironment.from_spectral_density(
-                lambda w: function(w, args),  # - function(-w, args),
+                lambda w: function(w, args),
                 wMax=10 * cutoff,
                 T=Temp,
             )
@@ -474,14 +462,15 @@ def main():
     # Test the function with different baths
     # axs0 = plot_bath_from_paper_with_paper(args_paper)
     # plt.show()
-    axs1 = plot_bath_with_qutip_from_f(
+    """    axs1 = plot_bath_with_qutip_from_f(
         spectral_density_func_paper, args_paper, func_name="J", bath="paper"
+    )
+    """
+    axs1_ = plot_bath_with_qutip_from_f(
+        Power_spectrum_func_paper_array, args_paper, func_name="S", bath="paper"
     )
 
     """
-    axs1_ = plot_bath_with_qutip_from_f(
-        Power_spectrum_func_paper, args_paper, func_name="S", bath="paper"
-    )
     axs2 = plot_bath_with_qutip_from_f(
         spectral_density_func_ohmic, args_ohmic, func_name="J", bath="ohmic"
     )
@@ -502,7 +491,9 @@ def main():
     # plt.savefig("bath_Qutip_from_J_S.png", dpi=100, bbox_inches="tight")
     plt.show()
 
-    print(Power_spectrum_func_paper(0, args_paper))
+    print(
+        "the zero point value C_tilde(0)=S(0)", Power_spectrum_func_paper(0, args_paper)
+    )
 
 
 if __name__ == "__main__":
