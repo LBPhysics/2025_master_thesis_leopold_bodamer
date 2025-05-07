@@ -5,59 +5,17 @@
 
 \label{ChapterRabiOscillations} % For referencing this chapter elsewhere, use \ref{ChapterRabiOscillations}
 
-%----------------------------------------------------------------------------------------
-%	SECTION 1: Rabi Oscillations
-%----------------------------------------------------------------------------------------
-
-\section{Rabi Oscillations}
-
-Rabi oscillations describe the coherent oscillatory behavior of a two-level quantum system interacting with a resonant electromagnetic field. This phenomenon is fundamental in quantum mechanics and quantum optics, with applications in quantum computing, spectroscopy, and atomic physics.
-
-Consider a two-level system with states \(|g\rangle\) (ground state) and \(|e\rangle\) (excited state). The interaction with a classical electromagnetic field can be described by the time-dependent Hamiltonian:
-\begin{equation}
-    H(t) = \frac{\hbar \omega_0}{2} \sigma_z + \hbar \Omega \cos(\omega t) \sigma_x,
-    \label{eq:RabiHamiltonian}
-\end{equation}
-where:
-\begin{itemize}
-    \item \(\omega_0\) is the transition frequency between the two levels,
-    \item \(\Omega\) is the Rabi frequency, proportional to the field amplitude,
-    \item \(\omega\) is the frequency of the driving field,
-    \item \(\sigma_z\) and \(\sigma_x\) are Pauli matrices.
-\end{itemize}
-
-The dynamics of the system are governed by the Schrödinger equation:
-\begin{equation}
-    i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = H(t) |\psi(t)\rangle.
-    \label{eq:Schrodinger}
-\end{equation}
-
-%-----------------------------------
-%	SUBSECTION 1: Rotating Wave Approximation (RWA)
-%-----------------------------------
-
-\subsection{Rotating Wave Approximation (RWA)}
-
-The rotating wave approximation simplifies the analysis of the Hamiltonian in Eq. \eqref{eq:RabiHamiltonian}. By moving to a rotating frame and neglecting rapidly oscillating terms, the effective Hamiltonian becomes:
-\begin{equation}
-    H_{\text{RWA}} = \frac{\hbar \Delta}{2} \sigma_z + \frac{\hbar \Omega}{2} \sigma_x,
-    \label{eq:RWAHamiltonian}
-\end{equation}
-where \(\Delta = \omega - \omega_0\) is the detuning between the driving field and the transition frequency.
-
-This approximation is valid when \(\Omega \ll \omega_0\), allowing us to focus on the resonant interaction. The RWA reveals the essence of Rabi oscillations, where the population of the two levels oscillates with the Rabi frequency \(\Omega_R = \sqrt{\Delta^2 + \Omega^2}\).
-
 %-----------------------------------
 %	SUBSECTION 2: Density Matrix Formalism
 %-----------------------------------
 
 \subsection{Density Matrix Formalism}
 
-The density matrix formalism provides a powerful framework to describe the dynamics of quantum systems, especially when dealing with mixed states or decoherence. 
+The density matrix formalism provides a powerful framework to describe the dynamics of quantum systems, especially when dealing with mixed states or decoherence.
 The density matrix \(\rho\) is defined as:
 \begin{equation}
-    \rho = |\psi\rangle \langle \psi|,
-    \label{eq:DensityMatrix}
+	\rho = |\psi\rangle \langle \psi|,
+	\label{eq:DensityMatrix}
 \end{equation}
 for pure states, and as a statistical mixture for mixed states.
 In this formalism, the diagonal elements represent populations and the off-diagonal elements represent coherences between states.
@@ -71,17 +29,298 @@ The state evolves over time to a purely statistical mixture of states.
 
 The time evolution of the density matrix is governed by the Liouville-von Neumann equation:
 \begin{equation}
-    \frac{\partial \rho}{\partial t} = -\frac{i}{\hbar} [H, \rho],
-    \label{eq:Liouville}
+	\frac{\partial \rho}{\partial t} = -\frac{i}{\hbar} [H, \rho],
+	\label{eq:Liouville}
 \end{equation}
 where \(H\) is the system Hamiltonian.
 
 In the presence of decoherence or dissipation, the dynamics can be described using the Lindblad master equation:
 \begin{equation}
-    \frac{\partial \rho}{\partial t} = -\frac{i}{\hbar} [H, \rho] + \sum_k \mathcal{L}_k(\rho),
-    \label{eq:Lindblad}
+	\frac{\partial \rho}{\partial t} = -\frac{i}{\hbar} [H, \rho] + \sum_k \mathcal{L}_k(\rho),
+	\label{eq:Lindblad}
 \end{equation}
 where \(\mathcal{L}_k(\rho)\) are Lindblad operators modeling the interaction with the environment.
+
+
+%----------------------------------------------------------------------------------------
+%	SECTION 1: Rabi Oscillations
+%----------------------------------------------------------------------------------------
+
+\section{Rabi Oscillations}
+
+Rabi oscillations describe the coherent oscillatory behavior of a two-level quantum system interacting with a resonant electromagnetic field. This phenomenon is fundamental in quantum mechanics and quantum optics, with applications in quantum computing, spectroscopy, and atomic physics.
+
+Consider a two-level system with states \(|g\rangle\) (ground state) and \(|e\rangle\) (excited state). The interaction with a classical electromagnetic field can be described by the time-dependent Hamiltonian:
+\begin{equation}
+	H(t) = \frac{\hbar \omega_0}{2} \sigma_z + \hbar \Omega \cos(\omega t) \sigma_x,
+	\label{eq:RabiHamiltonian}
+\end{equation}
+where:
+\begin{itemize}
+	\item \(\omega_0\) is the transition frequency between the two levels,
+	\item \(\Omega\) is the Rabi frequency, proportional to the field amplitude,
+	\item \(\omega\) is the frequency of the driving field,
+	\item \(\sigma_z\) and \(\sigma_x\) are Pauli matrices.
+\end{itemize}
+
+The dynamics of the system are governed by the Schrödinger equation:
+\begin{equation}
+	i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = H(t) |\psi(t)\rangle.
+	\label{eq:Schrodinger}
+\end{equation}
+
+%-----------------------------------
+%	SUBSECTION 1: Rotating Wave Approximation (RWA)
+%-----------------------------------
+
+\subsection{Rotating Wave Approximation (RWA)}
+
+The rotating wave approximation simplifies the analysis of the Hamiltonian in Eq. \eqref{eq:RabiHamiltonian}. By moving to a rotating frame and neglecting rapidly oscillating terms, the effective Hamiltonian becomes:
+\begin{equation}
+	H_{\text{RWA}} = \frac{\hbar \Delta}{2} \sigma_z + \frac{\hbar \Omega}{2} \sigma_x,
+	\label{eq:RWAHamiltonian}
+\end{equation}
+where \(\Delta = \omega - \omega_0\) is the detuning between the driving field and the transition frequency.
+
+This approximation is valid when \(\Omega \ll \omega_0\), allowing us to focus on the resonant interaction. The RWA reveals the essence of Rabi oscillations, where the population of the two levels oscillates with the Rabi frequency \(\Omega_R = \sqrt{\Delta^2 + \Omega^2}\).
+
+
+
+\section{Applying the RWA Explicitly}
+
+Suppose the electric field is classical and oscillatory:
+\[
+	E(t) = E_0 \cos(\omega t) = \frac{E_0}{2}\left(e^{i\omega t} + e^{-i\omega t}\right)
+\]
+
+Then the interaction Hamiltonian is:
+\[
+	H_{\text{int}}(t) = -\hat{\mu} \cdot E(t)
+	= -\left(\mu_{eg} |e\rangle\langle g| + \mu_{ge} |g\rangle\langle e|\right) \cdot \frac{E_0}{2}\left(e^{i\omega t} + e^{-i\omega t}\right)
+\]
+
+Expanding:
+\[
+	H_{\text{int}}(t) = -\frac{E_0}{2} \left[
+		\mu_{eg} |e\rangle\langle g| \left(e^{i\omega t} + e^{-i\omega t}\right) +
+		\mu_{ge} |g\rangle\langle e| \left(e^{i\omega t} + e^{-i\omega t}\right)
+		\right]
+\]
+
+Now go to the interaction picture, where the operators evolve like:
+\[
+	|e\rangle\langle g| \rightarrow |e\rangle\langle g| e^{i\omega_0 t}, \quad |g\rangle\langle e| \rightarrow |g\rangle\langle e| e^{-i\omega_0 t}
+\]
+with \(\omega_0 = \frac{E_e - E_g}{\hbar}\), the Bohr frequency.
+
+So now the time-dependent terms look like:
+\begin{itemize}
+	\item \(|e\rangle\langle g| e^{i(\omega_0 \pm \omega)t}\)
+	\item \(|g\rangle\langle e| e^{-i(\omega_0 \pm \omega)t}\)
+\end{itemize}
+
+In \textbf{RWA}, you drop the "counter-rotating" (fast) terms like:
+\[
+	e^{i(\omega_0 + \omega)t}, \quad e^{-i(\omega_0 + \omega)t}
+\]
+and keep only:
+\[
+	e^{i(\omega_0 - \omega)t}, \quad e^{-i(\omega_0 - \omega)t}
+\]
+
+\subsection*{Result of Applying RWA}
+
+You end up with an effective interaction Hamiltonian:
+\[
+	H_{\text{int}}^{\text{(RWA)}}(t) = -\frac{E_0}{2} \left(
+	\mu_{eg} |e\rangle\langle g| e^{i(\omega_0 - \omega)t} +
+	\mu_{ge} |g\rangle\langle e| e^{-i(\omega_0 - \omega)t}
+	\right)
+\]
+
+This form describes energy exchange between the system and the field when the driving frequency \(\omega\) is near-resonant with the transition frequency \(\omega_0\), and is the basis for understanding phenomena like \textbf{Rabi oscillations}.
+
+\subsection{1. Schrödinger Picture}
+We consider a two-level system with states $\ket{g}$ and $\ket{e}$, transition frequency:
+\[
+	\omega_0 = \frac{E_e - E_g}{\hbar}
+\]
+
+The system Hamiltonian is:
+\[
+	H_S = \hbar \omega_0 \ket{e}\bra{e}
+\]
+
+The dipole interaction with a classical field $E(t)$ is:
+\[
+	H_{\text{int}}(t) = -\left( \mu_{eg} \ket{e}\bra{g} + \mu_{ge} \ket{g}\bra{e} \right) E(t)
+\]
+
+Total Hamiltonian:
+\[
+	H(t) = H_S + H_{\text{int}}(t)
+\]
+
+\subsection*{2. Rotating Frame Transformation}
+
+We define the unitary transformation:
+\[
+	U(t) = e^{i \omega t \ket{e}\bra{e}} =
+	\begin{pmatrix}
+		1 & 0             \\
+		0 & e^{i\omega t}
+	\end{pmatrix}
+\]
+
+The transformed density matrix is:
+\[
+	\tilde{\rho}(t) = U(t) \rho(t) U^\dagger(t)
+\]
+
+The new Hamiltonian becomes:
+\[
+	\tilde{H}(t) = U(t) H(t) U^\dagger(t) - i\hbar U(t) \frac{d}{dt} U^\dagger(t)
+\]
+
+The second term gives:
+\[
+	-i\hbar U(t) \frac{d}{dt} U^\dagger(t) = - \hbar \omega \ket{e}\bra{e}
+\]
+
+Thus:
+\[
+	\tilde{H}(t) = \hbar (\omega_0 - \omega) \ket{e}\bra{e} + U(t) H_{\text{int}}(t) U^\dagger(t)
+\]
+
+Define the detuning:
+\[
+	\Delta = \omega - \omega_0
+\]
+
+\subsection*{3. Transforming the Interaction Hamiltonian}
+
+Assume $E(t) = E_0 \cos(\omega t) = \frac{E_0}{2} (e^{i\omega t} + e^{-i\omega t})$
+
+In the rotating frame:
+\[
+	U(t) \ket{e}\bra{g} U^\dagger(t) = e^{i\omega t} \ket{e}\bra{g}
+\]
+\[
+	U(t) \ket{g}\bra{e} U^\dagger(t) = e^{-i\omega t} \ket{g}\bra{e}
+\]
+
+So:
+\[
+	\tilde{H}_{\text{int}}(t) = -\frac{E_0}{2} \left[
+		\mu_{eg} e^{i\omega t} \ket{e}\bra{g} (e^{i\omega t} + e^{-i\omega t}) + \mu_{ge} e^{-i\omega t} \ket{g}\bra{e} (e^{i\omega t} + e^{-i\omega t})
+		\right]
+\]
+\[
+	\tilde{H}_{\text{int}}(t) = -\frac{E_0}{2} \left[
+		\mu_{eg} \ket{e}\bra{g} (e^{i2\omega t} + 1) + \mu_{ge} \ket{g}\bra{e} (1 + e^{-i2\omega t})
+		\right]
+\]
+
+\subsection*{4. Rotating Wave Approximation (RWA)}
+
+Under RWA, drop fast-rotating terms $e^{\pm i2\omega t}$, keeping only:
+\[
+	\tilde{H}_{\text{RWA}} = -\hbar \Delta \ket{e}\bra{e} - \frac{E_0}{2} \left(
+	\mu_{eg} \ket{e}\bra{g} + \mu_{ge} \ket{g}\bra{e}
+	\right)
+\]
+
+\subsection*{5. Equation of Motion}
+
+The von Neumann equation becomes:
+\[
+	\frac{d}{dt} \tilde{\rho}(t) = -\frac{i}{\hbar} [\tilde{H}_{\text{RWA}}, \tilde{\rho}(t)] + \text{(dissipation)}
+\]
+
+This leads to equations for the coherences $\sigma_{eg}$ and populations $\rho_{ee}, \rho_{gg}$, where $\omega_0$ no longer appears directly — only $\Delta$ and field coupling terms remain.
+
+To recover the entries of the original density matrix $\rho(t)$ from the evolved density matrix in the rotating frame $\tilde{\rho}(t)$, we use the inverse of the unitary transformation $U(t)$:
+\[
+	\rho(t) = U^\dagger(t) \tilde{\rho}(t) U(t)
+\]
+where
+\[
+	U(t) = e^{i \omega t \ket{e}\bra{e}} =
+	\begin{pmatrix}
+		1 & 0             \\
+		0 & e^{i\omega t}
+	\end{pmatrix}
+\]
+and its adjoint is
+\[
+	U^\dagger(t) = e^{-i \omega t \ket{e}\bra{e}} =
+	\begin{pmatrix}
+		1 & 0              \\
+		0 & e^{-i\omega t}
+	\end{pmatrix}
+\]
+
+Let the density matrices be:
+\[
+	\rho(t) =
+	\begin{pmatrix}
+		\rho_{gg}(t) & \rho_{ge}(t) \\
+		\rho_{eg}(t) & \rho_{ee}(t)
+	\end{pmatrix}
+\]
+and
+\[
+	\tilde{\rho}(t) =
+	\begin{pmatrix}
+		\tilde{\rho}_{gg}(t) & \tilde{\rho}_{ge}(t) \\
+		\tilde{\rho}_{eg}(t) & \tilde{\rho}_{ee}(t)
+	\end{pmatrix}
+\]
+
+Then, the recovery process is:
+\[
+	\rho(t) =
+	\begin{pmatrix}
+		1 & 0              \\
+		0 & e^{-i\omega t}
+	\end{pmatrix}
+	\begin{pmatrix}
+		\tilde{\rho}_{gg}(t) & \tilde{\rho}_{ge}(t) \\
+		\tilde{\rho}_{eg}(t) & \tilde{\rho}_{ee}(t)
+	\end{pmatrix}
+	\begin{pmatrix}
+		1 & 0             \\
+		0 & e^{i\omega t}
+	\end{pmatrix}
+\]
+\[
+	\rho(t) =
+	\begin{pmatrix}
+		\tilde{\rho}_{gg}(t)                & \tilde{\rho}_{ge}(t)                \\
+		e^{-i\omega t} \tilde{\rho}_{eg}(t) & e^{-i\omega t} \tilde{\rho}_{ee}(t)
+	\end{pmatrix}
+	\begin{pmatrix}
+		1 & 0             \\
+		0 & e^{i\omega t}
+	\end{pmatrix}
+\]
+\[
+	\rho(t) =
+	\begin{pmatrix}
+		\tilde{\rho}_{gg}(t)                & e^{i\omega t} \tilde{\rho}_{ge}(t) \\
+		e^{-i\omega t} \tilde{\rho}_{eg}(t) & \tilde{\rho}_{ee}(t)
+	\end{pmatrix}
+\]
+
+Thus, the entries of the original density matrix $\rho(t)$ are related to the entries of the density matrix in the rotating frame $\tilde{\rho}(t)$ by:
+\begin{align*}
+	\rho_{gg}(t) & = \tilde{\rho}_{gg}(t)                \\
+	\rho_{ee}(t) & = \tilde{\rho}_{ee}(t)                \\
+	\rho_{ge}(t) & = e^{i\omega t} \tilde{\rho}_{ge}(t)  \\
+	\rho_{eg}(t) & = e^{-i\omega t} \tilde{\rho}_{eg}(t)
+\end{align*}
+
+
 
 %----------------------------------------------------------------------------------------
 %	SECTION 2: Applications and Implications
@@ -91,9 +330,9 @@ where \(\mathcal{L}_k(\rho)\) are Lindblad operators modeling the interaction wi
 
 Rabi oscillations and the associated theoretical tools, such as the RWA and density matrix formalism, have wide-ranging applications:
 \begin{itemize}
-    \item \textbf{Quantum Computing:} Rabi oscillations are used to implement quantum gates by precisely controlling the population of qubits.
-    \item \textbf{Spectroscopy:} The Rabi frequency provides information about the interaction strength between light and matter.
-    \item \textbf{Atomic Physics:} Understanding Rabi oscillations is essential for manipulating atomic states in experiments.
+	\item \textbf{Quantum Computing:} Rabi oscillations are used to implement quantum gates by precisely controlling the population of qubits.
+	\item \textbf{Spectroscopy:} The Rabi frequency provides information about the interaction strength between light and matter.
+	\item \textbf{Atomic Physics:} Understanding Rabi oscillations is essential for manipulating atomic states in experiments.
 \end{itemize}
 
 These concepts form the foundation for advanced topics in quantum mechanics and quantum technologies.
