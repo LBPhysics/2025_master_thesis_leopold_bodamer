@@ -20,7 +20,7 @@ The density matrix \(\rho\) is defined as:
 for pure states, and as a statistical mixture for mixed states.
 In this formalism, the diagonal elements represent populations and the off-diagonal elements represent coherences between states.
 Coherences are phase relations between different quantum states, which are crucial for interference.
-For example for a two level system a clear phase relation and a pure quantum state would have off diagonal elements of $ \ rho_{ij} = 1/2$.
+For example for a two level system a clear phase relation and a pure quantum state would have off diagonal elements of $ \rho_{ij} = 1/2$.
 This state is often referred to as a coherent superposition of the two states.
 
 When coupling a system to an environment, the environment is responsible for decoherence.
@@ -48,26 +48,52 @@ where \(\mathcal{L}_k(\rho)\) are Lindblad operators modeling the interaction wi
 
 \section{Rabi Oscillations}
 
-Rabi oscillations describe the coherent oscillatory behavior of a two-level quantum system interacting with a resonant electromagnetic field. This phenomenon is fundamental in quantum mechanics and quantum optics, with applications in quantum computing, spectroscopy, and atomic physics.
+Rabi oscillations describe the coherent oscillatory behavior of a two-level quantum system interacting with a resonant electromagnetic field. 
+This phenomenon is fundamental in quantum mechanics and quantum optics, with applications in quantum computing, spectroscopy, and atomic physics.
 
-Consider a two-level system with states \(|g\rangle\) (ground state) and \(|e\rangle\) (excited state). The interaction with a classical electromagnetic field can be described by the time-dependent Hamiltonian:
+\subsection{1. Schrödinger Picture}
+Consider a two-level system with states \(|g\rangle\) (ground state) and \(|e\rangle\) (excited state). 
+The energy separation between the two states is given by:
 \begin{equation}
-	H(t) = \frac{\hbar \omega_0}{2} \sigma_z + \hbar \Omega \cos(\omega t) \sigma_x,
+	\omega_0 = \frac{E_e - E_g}{\hbar},
+	\label{eq:EnergySeparation}
+\end{equation}
+where \(E_e\) and \(E_g\) are the energies of the excited and ground states, respectively.
+
+The system Hamiltonian is expressed as:
+\begin{equation}
+	H_S = \hbar \omega_0 \ket{e}\bra{e}.
+	\label{eq:SystemHamiltonian}
+\end{equation}
+
+
+The interaction of the system with a classical electromagnetic field \(E(t)\) is described by the time-dependent interaction Hamiltonian:
+\begin{equation}
+	H_{\text{int}}(t) = - \mu E(t) = -\left( \mu_{eg} \ket{e}\bra{g} + \mu_{ge} \ket{g}\bra{e} \right) E(t),
+	\label{eq:InteractionHamiltonian}
+\end{equation}
+where \(\mu_{eg}\) and \(\mu_{ge}\) are the dipole matrix elements.
+
+The total Hamiltonian of the system is then given by:
+\begin{equation}
+	H(t) = H_S + H_{\text{int}}(t),
+	\label{eq:TotalHamiltonian}
+\end{equation}
+which combines the system's intrinsic energy and its interaction with the field.
+
+Alternatively, the total Hamiltonian can be written in terms of Pauli matrices as:
+\begin{equation}
+	H(t) = \frac{\hbar \omega_0}{2} \sigma_z + \hbar \Omega \cos(\omega_L t + \phi) \sigma_x,
 	\label{eq:RabiHamiltonian}
 \end{equation}
-where:
-\begin{itemize}
-	\item \(\omega_0\) is the transition frequency between the two levels,
-	\item \(\Omega\) is the Rabi frequency, proportional to the field amplitude,
-	\item \(\omega\) is the frequency of the driving field,
-	\item \(\sigma_z\) and \(\sigma_x\) are Pauli matrices.
-\end{itemize}
+where \(\Omega\) is the Rabi frequency, proportional to the field amplitude and the dipole matrix element, \(\phi\), \(\omega_L\) is the phase, frequency of the driving field respectively, and \(\sigma_z\) and \(\sigma_x\) are the Pauli matrices
 
-The dynamics of the system are governed by the Schrödinger equation:
+The time evolution of the system is governed by the time dependent Schrödinger equation:
 \begin{equation}
-	i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = H(t) |\psi(t)\rangle.
-	\label{eq:Schrodinger}
+	i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = H(t) |\psi(t)\rangle,
+	\label{eq:SchrodingerEquation}
 \end{equation}
+which describes the dynamics of the quantum state \(|\psi(t)\rangle\) under the influence of the Hamiltonian \(H(t)\).
 
 %-----------------------------------
 %	SUBSECTION 1: Rotating Wave Approximation (RWA)
@@ -75,214 +101,158 @@ The dynamics of the system are governed by the Schrödinger equation:
 
 \subsection{Rotating Wave Approximation (RWA)}
 
-The rotating wave approximation simplifies the analysis of the Hamiltonian in Eq. \eqref{eq:RabiHamiltonian}. By moving to a rotating frame and neglecting rapidly oscillating terms, the effective Hamiltonian becomes:
-\begin{equation}
-	H_{\text{RWA}} = \frac{\hbar \Delta}{2} \sigma_z + \frac{\hbar \Omega}{2} \sigma_x,
-	\label{eq:RWAHamiltonian}
-\end{equation}
-where \(\Delta = \omega - \omega_0\) is the detuning between the driving field and the transition frequency.
-
-This approximation is valid when \(\Omega \ll \omega_0\), allowing us to focus on the resonant interaction. The RWA reveals the essence of Rabi oscillations, where the population of the two levels oscillates with the Rabi frequency \(\Omega_R = \sqrt{\Delta^2 + \Omega^2}\).
-
-
+The rotating wave approximation simplifies the analysis of the Hamiltonian in Eq. \eqref{eq:RabiHamiltonian}. 
+This approximation is valid when \(\Omega \ll \omega_0\), allowing us to focus on the resonant interaction.
+The RWA reveals the essence of Rabi oscillations, where the population of the two levels oscillates with the Rabi frequency \(\Omega_R = \sqrt{\Delta^2 + \Omega^2}\).
 
 \section{Applying the RWA Explicitly}
 
 Suppose the electric field is classical and oscillatory:
-\[
-	E(t) = E_0 \cos(\omega t) = \frac{E_0}{2}\left(e^{i\omega t} + e^{-i\omega t}\right)
-\]
+\begin{equation}
+	E(t) = E_0 \cos(\omega_L t + \phi) = \frac{E_0}{2}\left(e^{i\omega_L t + i \phi} + e^{-i\omega_L t - i \phi}\right)
+	\label{eq:ElectricField}
+\end{equation}
 
-Then the interaction Hamiltonian is:
-\[
-	H_{\text{int}}(t) = -\hat{\mu} \cdot E(t)
-	= -\left(\mu_{eg} |e\rangle\langle g| + \mu_{ge} |g\rangle\langle e|\right) \cdot \frac{E_0}{2}\left(e^{i\omega t} + e^{-i\omega t}\right)
-\]
+Assuming \(\mathbf{d} = \mathbf{\mu}_{eg} \ket{e}\bra{g} + \mathbf{d}_{ge} \ket{g}\bra{e}\) and defining the Rabi frequency:
+\begin{equation}
+\hbar\Omega = -\mathbf{\mu}_{eg} \cdot \mathbf{E}_0
+\end{equation}
+is the Rabi frequency, proportional to the field amplitude and the dipole matrix element.
 
-Expanding:
-\[
-	H_{\text{int}}(t) = -\frac{E_0}{2} \left[
-		\mu_{eg} |e\rangle\langle g| \left(e^{i\omega t} + e^{-i\omega t}\right) +
-		\mu_{ge} |g\rangle\langle e| \left(e^{i\omega t} + e^{-i\omega t}\right)
-		\right]
-\]
+Then the interaction Hamiltonian \eqref{eq:InteractionHamiltonian} becomes:
+\begin{equation}
+	H_{\text{int}}(t) = \hbar\Omega \cos(\omega_L t + \phi) (\ket{e}\bra{g} + \ket{g}\bra{e})	
+	\label{eq:InteractionHamiltonian_RABI}
+\end{equation}
 
-Now go to the interaction picture, where the operators evolve like:
-\[
-	|e\rangle\langle g| \rightarrow |e\rangle\langle g| e^{i\omega_0 t}, \quad |g\rangle\langle e| \rightarrow |g\rangle\langle e| e^{-i\omega_0 t}
-\]
-with \(\omega_0 = \frac{E_e - E_g}{\hbar}\), the Bohr frequency.
+Now go to the interaction picture with a unitary transformation \( U_0(t) \):
+\begin{equation}
+	U_0(t) = e^{-i H_0 t / \hbar} = e^{-i \omega_0 t \ket{e}\bra{e}}
+	\label{eq:UnitaryTransformationH0_to_Interaction_pic}
+\end{equation}
 
-So now the time-dependent terms look like:
-\begin{itemize}
-	\item \(|e\rangle\langle g| e^{i(\omega_0 \pm \omega)t}\)
-	\item \(|g\rangle\langle e| e^{-i(\omega_0 \pm \omega)t}\)
-\end{itemize}
+The interaction Hamiltonian in the interaction picture is with Eq. \eqref{eq:UnitaryTransformationH0_to_Interaction_pic}:
+\begin{equation}
+	H_{\text{int}}^{(I)}(t) = U_0^\dagger(t) H_{\text{int}}(t) U_0(t).
+	\label{eq:InteractionHamiltonianInteractionPicture}
+\end{equation}
 
-In \textbf{RWA}, you drop the "counter-rotating" (fast) terms like:
-\[
-	e^{i(\omega_0 + \omega)t}, \quad e^{-i(\omega_0 + \omega)t}
-\]
-and keep only:
-\[
-	e^{i(\omega_0 - \omega)t}, \quad e^{-i(\omega_0 - \omega)t}
-\]
+Under this transformation, the operators evolve as described in Eq. \eqref{eq:InteractionHamiltonian_RABI}:
+\begin{equation}
+	\ket{e}\bra{g} \rightarrow e^{i\omega_0 t} \ket{e}\bra{g}, \quad
+	\ket{g}\bra{e} \rightarrow e^{-i\omega_0 t} \ket{g}\bra{e}.
+	\label{eq:OperatorEvolution}
+\end{equation}
 
-\subsection*{Result of Applying RWA}
+which results in
+\begin{equation}
+	H_{\text{int}}^{(I)}(t) = \hbar\Omega \cos(\omega_L t + \phi)\left(e^{i\omega_0 t} \ket{e}\bra{g} + e^{-i\omega_0 t} \ket{g}\bra{e} \right).
+	\label{eq:InteractionHamiltonianTransformed}
+\end{equation}
 
-You end up with an effective interaction Hamiltonian:
-\[
-	H_{\text{int}}^{\text{(RWA)}}(t) = -\frac{E_0}{2} \left(
-	\mu_{eg} |e\rangle\langle g| e^{i(\omega_0 - \omega)t} +
-	\mu_{ge} |g\rangle\langle e| e^{-i(\omega_0 - \omega)t}
-	\right)
-\]
+\subsection*{Rotating Frame Transformation}
 
-This form describes energy exchange between the system and the field when the driving frequency \(\omega\) is near-resonant with the transition frequency \(\omega_0\), and is the basis for understanding phenomena like \textbf{Rabi oscillations}.
-
-\subsection{1. Schrödinger Picture}
-We consider a two-level system with states $\ket{g}$ and $\ket{e}$, transition frequency:
-\[
-	\omega_0 = \frac{E_e - E_g}{\hbar}
-\]
-
-The system Hamiltonian is:
-\[
-	H_S = \hbar \omega_0 \ket{e}\bra{e}
-\]
-
-The dipole interaction with a classical field $E(t)$ is:
-\[
-	H_{\text{int}}(t) = -\left( \mu_{eg} \ket{e}\bra{g} + \mu_{ge} \ket{g}\bra{e} \right) E(t)
-\]
-
-Total Hamiltonian:
-\[
-	H(t) = H_S + H_{\text{int}}(t)
-\]
-
-\subsection*{2. Rotating Frame Transformation}
-
-We define the unitary transformation:
-\[
-	U(t) = e^{i \omega t \ket{e}\bra{e}} =
+We now define the unitary transformation:
+\begin{equation}
+	U_L(t) = e^{i \omega_L t \ket{e}\bra{e}} =
 	\begin{pmatrix}
 		1 & 0             \\
-		0 & e^{i\omega t}
+		0 & e^{i\omega_L t}
 	\end{pmatrix}
-\]
+	\label{eq:UnitaryTransformation}
+\end{equation}
+that rotates the reference frame of the system to the rotating frame at frequency \(\omega_L\).
 
 The transformed density matrix is:
-\[
-	\tilde{\rho}(t) = U(t) \rho(t) U^\dagger(t)
-\]
+\begin{equation}
+	\tilde{\rho}(t) = U_L^\dagger(t) \rho(t) U_L(t)
+	\label{eq:TransformedDensityMatrix}
+\end{equation}
 
-The new Hamiltonian becomes:
-\[
-	\tilde{H}(t) = U(t) H(t) U^\dagger(t) - i\hbar U(t) \frac{d}{dt} U^\dagger(t)
-\]
+and in this frame, the total transformed Hamiltonian is:
+\begin{equation}
+	\tilde{H}^I(t) = U_L^\dagger(t) H_{\text{int}}^I(t) U_L(t) - i\hbar U_L(t) \frac{d}{dt} U_L^\dagger(t)
+	\label{eq:TransformedHamiltonian}
+\end{equation}
 
 The second term gives:
-\[
-	-i\hbar U(t) \frac{d}{dt} U^\dagger(t) = - \hbar \omega \ket{e}\bra{e}
-\]
+\begin{equation}
+	-i\hbar U_L^\dagger(t) \frac{d}{dt} U_L(t) = - \hbar \omega_L \ket{e}\bra{e}
+	\label{eq:SecondTermHamiltonian}
+\end{equation}
 
 Thus:
-\[
-	\tilde{H}(t) = \hbar (\omega_0 - \omega) \ket{e}\bra{e} + U(t) H_{\text{int}}(t) U^\dagger(t)
-\]
+\begin{equation}
+	\tilde{H}^I(t) = - \hbar \omega_L \ket{e}\bra{e} + U_L^\dagger(t) H_{\text{int}}^I(t) U_L(t)
+	\label{eq:FinalTransformedHamiltonian}
+\end{equation}
 
-Define the detuning:
-\[
-	\Delta = \omega - \omega_0
-\]
 
-\subsection*{3. Transforming the Interaction Hamiltonian}
-
-Assume $E(t) = E_0 \cos(\omega t) = \frac{E_0}{2} (e^{i\omega t} + e^{-i\omega t})$
+\subsection*{Transforming the Interaction Hamiltonian}
 
 In the rotating frame:
-\[
-	U(t) \ket{e}\bra{g} U^\dagger(t) = e^{i\omega t} \ket{e}\bra{g}
-\]
-\[
-	U(t) \ket{g}\bra{e} U^\dagger(t) = e^{-i\omega t} \ket{g}\bra{e}
-\]
+\begin{equation}
+	U_L^\dagger(t) \ket{e}\bra{g} U_L(t) = e^{-i\omega_L t} \ket{e}\bra{g}, \quad
+	U_L^\dagger(t) \ket{g}\bra{e} U_L(t) = e^{i\omega_L t} \ket{g}\bra{e}
+	\label{eq:RotatingFrameOperators}
+\end{equation}
 
-So:
-\[
-	\tilde{H}_{\text{int}}(t) = -\frac{E_0}{2} \left[
-		\mu_{eg} e^{i\omega t} \ket{e}\bra{g} (e^{i\omega t} + e^{-i\omega t}) + \mu_{ge} e^{-i\omega t} \ket{g}\bra{e} (e^{i\omega t} + e^{-i\omega t})
-		\right]
-\]
-\[
-	\tilde{H}_{\text{int}}(t) = -\frac{E_0}{2} \left[
-		\mu_{eg} \ket{e}\bra{g} (e^{i2\omega t} + 1) + \mu_{ge} \ket{g}\bra{e} (1 + e^{-i2\omega t})
-		\right]
-\]
+The interaction Hamiltonian becomes:
+\begin{equation}
+	\tilde{H}_{\text{int}}(t) = -\hbar\Omega \cos(\omega_L t + \phi)\left(e^{i(\omega_0 - \omega_L)t} \ket{e}\bra{g} + e^{-i(\omega_0 - \omega_L)t} \ket{g}\bra{e} \right)	
+		\label{eq:TransformedInteractionHamiltonian}
+\end{equation}
 
-\subsection*{4. Rotating Wave Approximation (RWA)}
-
-Under RWA, drop fast-rotating terms $e^{\pm i2\omega t}$, keeping only:
-\[
+\subsection*{Rotating Wave Approximation (RWA)}
+We can use the identity:
+\begin{equation}
+	\cos(\omega_L t + \phi) = \frac{1}{2}\left(e^{i(\omega_L t + \phi)} + e^{-i(\omega_L t + \phi)} \right)
+\end{equation}
+	
+Under RWA, drop fast-rotating terms \(e^{\pm i2\omega_L t}\), keeping only:
+\begin{equation}
 	\tilde{H}_{\text{RWA}} = -\hbar \Delta \ket{e}\bra{e} - \frac{E_0}{2} \left(
 	\mu_{eg} \ket{e}\bra{g} + \mu_{ge} \ket{g}\bra{e}
 	\right)
-\]
+	\label{eq:RWAHamiltonianFinal}
+\end{equation}
 
-\subsection*{5. Equation of Motion}
+\subsection*{Equation of Motion}
 
 The von Neumann equation becomes:
-\[
-	\frac{d}{dt} \tilde{\rho}(t) = -\frac{i}{\hbar} [\tilde{H}_{\text{RWA}}, \tilde{\rho}(t)] + \text{(dissipation)}
-\]
+\begin{equation}
+	\frac{d}{dt} \tilde{\rho}(t) = -\frac{i}{\hbar} [\tilde{H}_{\text{RWA}}, \tilde{\rho}(t)] + \text{(dissipation terms)}
+	\label{eq:VonNeumannEquationRWA}
+\end{equation}
 
-This leads to equations for the coherences $\sigma_{eg}$ and populations $\rho_{ee}, \rho_{gg}$, where $\omega_0$ no longer appears directly — only $\Delta$ and field coupling terms remain.
-
-To recover the entries of the original density matrix $\rho(t)$ from the evolved density matrix in the rotating frame $\tilde{\rho}(t)$, we use the inverse of the unitary transformation $U(t)$:
-\[
-	\rho(t) = U^\dagger(t) \tilde{\rho}(t) U(t)
-\]
-where
-\[
-	U(t) = e^{i \omega t \ket{e}\bra{e}} =
-	\begin{pmatrix}
-		1 & 0             \\
-		0 & e^{i\omega t}
-	\end{pmatrix}
-\]
-and its adjoint is
-\[
-	U^\dagger(t) = e^{-i \omega t \ket{e}\bra{e}} =
-	\begin{pmatrix}
-		1 & 0              \\
-		0 & e^{-i\omega t}
-	\end{pmatrix}
-\]
+To recover the entries of the original density matrix \(\rho(t)\) from the evolved density matrix in the rotating frame \(\tilde{\rho}(t)\), we use the inverse of the unitary transformation \(U_L(t)\):
+\begin{equation}
+	\rho(t) = U_L^\dagger(t) \tilde{\rho}(t) U_L(t)
+	\label{eq:RecoverOriginalDensityMatrix}
+\end{equation}
+where \(U_L(t)\) and \(U_L^\dagger(t)\) are given in Eq. \eqref{eq:UnitaryTransformation}.
 
 Let the density matrices be:
-\[
+\begin{equation}
 	\rho(t) =
 	\begin{pmatrix}
 		\rho_{gg}(t) & \rho_{ge}(t) \\
 		\rho_{eg}(t) & \rho_{ee}(t)
-	\end{pmatrix}
-\]
-and
-\[
+	\end{pmatrix}, \quad
 	\tilde{\rho}(t) =
 	\begin{pmatrix}
 		\tilde{\rho}_{gg}(t) & \tilde{\rho}_{ge}(t) \\
 		\tilde{\rho}_{eg}(t) & \tilde{\rho}_{ee}(t)
 	\end{pmatrix}
-\]
+	\label{eq:DensityMatrices}
+\end{equation}
 
-Then, the recovery process is:
-\[
+The recovery process is:
+\begin{equation}
 	\rho(t) =
 	\begin{pmatrix}
 		1 & 0              \\
-		0 & e^{-i\omega t}
+		0 & e^{-i\omega_L t}
 	\end{pmatrix}
 	\begin{pmatrix}
 		\tilde{\rho}_{gg}(t) & \tilde{\rho}_{ge}(t) \\
@@ -290,35 +260,38 @@ Then, the recovery process is:
 	\end{pmatrix}
 	\begin{pmatrix}
 		1 & 0             \\
-		0 & e^{i\omega t}
+		0 & e^{i\omega_L t}
 	\end{pmatrix}
-\]
-\[
+	\label{eq:RecoveryProcess}
+\end{equation}
+
+Simplifying:
+\begin{equation}
 	\rho(t) =
 	\begin{pmatrix}
-		\tilde{\rho}_{gg}(t)                & \tilde{\rho}_{ge}(t)                \\
-		e^{-i\omega t} \tilde{\rho}_{eg}(t) & e^{-i\omega t} \tilde{\rho}_{ee}(t)
+		\tilde{\rho}_{gg}(t)                & e^{i\omega_L t} \tilde{\rho}_{ge}(t) \\
+		e^{-i\omega_L t} \tilde{\rho}_{eg}(t) & \tilde{\rho}_{ee}(t)
 	\end{pmatrix}
-	\begin{pmatrix}
-		1 & 0             \\
-		0 & e^{i\omega t}
-	\end{pmatrix}
-\]
-\[
-	\rho(t) =
-	\begin{pmatrix}
-		\tilde{\rho}_{gg}(t)                & e^{i\omega t} \tilde{\rho}_{ge}(t) \\
-		e^{-i\omega t} \tilde{\rho}_{eg}(t) & \tilde{\rho}_{ee}(t)
-	\end{pmatrix}
-\]
+	\label{eq:FinalRecoveredDensityMatrix}
+\end{equation}
 
 Thus, the entries of the original density matrix $\rho(t)$ are related to the entries of the density matrix in the rotating frame $\tilde{\rho}(t)$ by:
 \begin{align*}
 	\rho_{gg}(t) & = \tilde{\rho}_{gg}(t)                \\
 	\rho_{ee}(t) & = \tilde{\rho}_{ee}(t)                \\
-	\rho_{ge}(t) & = e^{i\omega t} \tilde{\rho}_{ge}(t)  \\
-	\rho_{eg}(t) & = e^{-i\omega t} \tilde{\rho}_{eg}(t)
+	\rho_{ge}(t) & = e^{i\omega_L t} \tilde{\rho}_{ge}(t)  \\
+	\rho_{eg}(t) & = e^{-i\omega_L t} \tilde{\rho}_{eg}(t)
 \end{align*}
+
+
+
+By moving to a rotating frame and neglecting rapidly oscillating terms, the effective Hamiltonian becomes:
+\begin{equation}
+	H_{\text{RWA}} = \frac{\hbar \Delta}{2} \sigma_z + \frac{\hbar \Omega}{2} \sigma_x,
+	\label{eq:RWAHamiltonian}
+\end{equation}
+
+
 
 
 
@@ -336,3 +309,55 @@ Rabi oscillations and the associated theoretical tools, such as the RWA and dens
 \end{itemize}
 
 These concepts form the foundation for advanced topics in quantum mechanics and quantum technologies.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section*{Step-by-Step Derivation of RWA in a Two-Level System (with Phase)}
+\subsection*{Step 5: Apply the Rotating Wave Approximation (RWA)}
+
+Use the identity:
+\begin{equation}
+\cos(\omega_L t + \phi) = \frac{1}{2}\left(e^{i(\omega_L t + \phi)} + e^{-i(\omega_L t + \phi)} \right)
+\end{equation}
+
+The interaction terms become:
+\begin{equation}
+\frac{\hbar\Omega}{2} \left( e^{i(\omega_0 t + \omega_L t + \phi)} \ket{e}\bra{g} + e^{i(\omega_0 t - \omega_L t - \phi)} \ket{e}\bra{g} + \text{h.c.} \right)
+\end{equation}
+
+Keep only the \textbf{slowly rotating terms} at frequency \(\Delta = \omega_0 - \omega_L\), and drop the fast ones. The RWA Hamiltonian becomes:
+\begin{equation}
+H_{\text{RWA}} = \hbar \Delta \ket{e}\bra{e} + \frac{\hbar \Omega}{2} \left( e^{i\phi} \ket{e}\bra{g} + e^{-i\phi} \ket{g}\bra{e} \right)
+\end{equation}
+
+\subsection*{Step 6: Solve the Dynamics (Rabi Oscillations with Phase)}
+
+In matrix form, in the basis \(\{ \ket{e}, \ket{g} \}\):
+\begin{equation}
+H_{\text{RWA}} = \frac{\hbar}{2}
+\begin{pmatrix}
+2\Delta & \Omega e^{i\phi} \\
+\Omega e^{-i\phi} & 0
+\end{pmatrix}
+\end{equation}
+
+The phase \(\phi\) does not change the \textbf{Rabi frequency}:
+\begin{equation}
+\Omega_R = \sqrt{\Delta^2 + \Omega^2}
+\end{equation}
+But it \textbf{rotates the axis of Rabi oscillations} in the Bloch sphere — i.e., it changes the \textbf{initial direction} of the drive.
