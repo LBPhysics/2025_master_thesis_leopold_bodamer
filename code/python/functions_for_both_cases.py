@@ -1486,59 +1486,55 @@ def compute_two_dimensional_polarization(
         data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 
         for t_idx, t_det in enumerate(t_det_vals):
-            if t_idx + tau_idx < len(tau_coh_vals):
-                actual_det_time = t_start_2 + system.Delta_ts[2] + t_det
+            actual_det_time = t_start_2 + system.Delta_ts[2] + t_det
+
+            if actual_det_time < system.t_max and actual_det_time < time_cut:
                 t_idx_in_times_2 = np.abs(times_2 - actual_det_time).argmin()
 
-                if actual_det_time < time_cut:
-                    rho_f = data_f.states[t_idx_in_times_2]
-                    if system.RWA_laser:
-                        rho_f = apply_RWA_phase_factors(
-                            rho_f, times_2[t_idx_in_times_2], omega=system.omega_laser
-                        )
-                    value = expect(system.Dip_op, rho_f)
-                    data[tau_idx, t_idx] = np.real(value)
+                rho_f = data_f.states[t_idx_in_times_2]
+                if system.RWA_laser:
+                    rho_f = apply_RWA_phase_factors(
+                        rho_f, times_2[t_idx_in_times_2], omega=system.omega_laser
+                    )
+                value = expect(system.Dip_op, rho_f)
+                data[tau_idx, t_idx] = np.real(value)
 
-                    if (
-                        t_idx == 0
-                        and tau_idx == len(tau_coh_vals) // 3
-                        and plot_example
-                    ):
-                        print(system.RWA_laser)
-                        data_1_expects = get_expect_vals_with_RWA(
-                            data_0.states[: idx_start_1 + 1],
-                            data_0.times[: idx_start_1 + 1],
-                            system,
+                if t_idx == 0 and tau_idx == len(tau_coh_vals) // 3 and plot_example:
+                    print(system.RWA_laser)
+                    data_1_expects = get_expect_vals_with_RWA(
+                        data_0.states[: idx_start_1 + 1],
+                        data_0.times[: idx_start_1 + 1],
+                        system,
+                    )
+                    data_2_expects = get_expect_vals_with_RWA(
+                        data_1.states[: idx_start_2_in_times_1 + 1],
+                        data_1.times[: idx_start_2_in_times_1 + 1],
+                        system,
+                    )
+                    data_f_expects = get_expect_vals_with_RWA(
+                        data_f.states, data_f.times, system
+                    )
+                    data_expectations = [
+                        np.concatenate(
+                            [
+                                data_1_expects[idx],
+                                data_2_expects[idx],
+                                data_f_expects[idx],
+                            ]
                         )
-                        data_2_expects = get_expect_vals_with_RWA(
-                            data_1.states[: idx_start_2_in_times_1 + 1],
-                            data_1.times[: idx_start_2_in_times_1 + 1],
-                            system,
-                        )
-                        data_f_expects = get_expect_vals_with_RWA(
-                            data_f.states, data_f.times, system
-                        )
-                        data_expectations = [
-                            np.concatenate(
-                                [
-                                    data_1_expects[idx],
-                                    data_2_expects[idx],
-                                    data_f_expects[idx],
-                                ]
-                            )
-                            for idx in range(len(system.e_ops_list) + 1)
-                        ]
+                        for idx in range(len(system.e_ops_list) + 1)
+                    ]
 
-                        Plot_example_evo(
-                            times_0[: idx_start_1 + 1],
-                            times_1,
-                            times_2,
-                            data_expectations,
-                            pulse_seq_f,
-                            tau_coh,
-                            T_wait,
-                            system=system,
-                        )
+                    Plot_example_evo(
+                        times_0[: idx_start_1 + 1],
+                        times_1,
+                        times_2,
+                        data_expectations,
+                        pulse_seq_f,
+                        tau_coh,
+                        T_wait,
+                        system=system,
+                    )
 
     return (
         t_det_vals,

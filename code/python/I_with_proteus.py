@@ -3,9 +3,11 @@ from functions_for_both_cases import *
 
 import numpy as np
 import psutil  # -> estimate RAM usage
-import pickle  # -> safe data
 import copy  # -> copy classes
 import time  # -> estimate elapsed time
+
+import pickle  # -> safe data
+import sys  # safe data
 import os  # -> safe data
 
 # =============================
@@ -75,15 +77,19 @@ def main():
     )
 
     # =============================
-    # Save the result to a file for later use
+    # Set output directory to a subfolder named 'output'
     # =============================
 
-    # Set output directory to a subfolder named 'output'
-    output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
-    os.makedirs(output_dir, exist_ok=True)  # Ensure the folder exists
-    save_path = os.path.join(
-        output_dir, f"two_d_data_tmax{system.t_max}_spacing{system.fine_spacing}.pkl"
-    )
+    if len(sys.argv) > 1:
+        output_dir = sys.argv[1]
+    else:
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
+
+    os.makedirs(output_dir, exist_ok=True)  # Ensure the output directory exists
+
+    # Construct base filename for saving
+    base_filename = f"two_d_data_tmax{system.t_max}_spacing{system.fine_spacing}.pkl"
+    save_path = os.path.join(output_dir, base_filename)
 
     counter = 1
     while os.path.exists(save_path):
