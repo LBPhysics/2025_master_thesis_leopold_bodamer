@@ -1,17 +1,3 @@
-lbodamer@proteus:~/projects> source ~/.bashrc
-(base) lbodamer@proteus:~/projects>
-
-conda activate master_env
-
-
-cd projects/
-
-ls 
-
-cat "filename"
-
-
-
 # =============================
 # FUNCTIONS for overlapping pulses
 # =============================
@@ -953,7 +939,13 @@ def Plot_example_evo(
     plt.show()
 
 
-def extend_time_tau_axes(ts, taus, data, pad_rows=(0, 0), pad_cols=(0, 0)):
+def extend_time_tau_axes(
+    ts: np.ndarray,
+    taus: np.ndarray,
+    data: np.ndarray,
+    pad_rows: tuple[int, int] = (0, 0),
+    pad_cols: tuple[int, int] = (0, 0),
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extend the ts and taus axes and pad the data array accordingly.
 
@@ -967,6 +959,7 @@ def extend_time_tau_axes(ts, taus, data, pad_rows=(0, 0), pad_cols=(0, 0)):
     Returns:
         tuple: (extended_ts, extended_taus, padded_data)
     """
+    print(f"Pad rows: {pad_rows}, Pad cols: {pad_cols}", data.shape, flush=True)
     # Pad the data array
     padded_data = np.pad(data, (pad_rows, pad_cols), mode="constant", constant_values=0)
 
@@ -1707,7 +1700,7 @@ def compute_many_polarizations(
     for omega in omega_ats:
         system_new = copy.deepcopy(system)  # create a copy of the system
         system_new.omega_A_cm = omega
-        print(system_new.omega_A)
+        print("new omega_A", system_new.omega_A)
         data = compute_two_dimensional_polarization(
             T_wait=T_wait,
             phi_0=phi_0,
@@ -1781,6 +1774,7 @@ def for_one_time_calc_phase_comb(
             )
             results.append(data)
     averaged_data = np.mean(np.stack(results), axis=0)
+
     return averaged_data
 
 
@@ -1814,6 +1808,7 @@ def parallel_process_all_combinations(
     # =============================
     # Parallelize over T_waits using ThreadPoolExecutor
     # =============================
+
     with ThreadPoolExecutor() as executor:
         future_to_idx = {
             executor.submit(
@@ -1825,11 +1820,12 @@ def parallel_process_all_combinations(
             idx = future_to_idx[future]
             try:
                 averaged_data = future.result()
+                # print(f" at index {idx} completed.", averaged_data.shape)
             except Exception as exc:
-                print(f"T_wait index {idx} generated an exception: {exc}")
+                # print(f"T_wait index {idx} generated an exception: {exc}")
                 averaged_data = None
             results[idx] = averaged_data
-
+            # print(len(results), results[idx].shape)
     return results
 
 
@@ -1925,8 +1921,32 @@ def run_parallel_for_sampled_omegas(
 
 
 def extend_and_plot_results(
-    averaged_results, times_T, times, extend_for=None, **plot_args_freq
-):
+    averaged_results: list[np.ndarray],
+    times_T: np.ndarray,
+    times: np.ndarray,
+    extend_for: tuple[int, int] = None,
+    **plot_args_freq,
+) -> None:
+    """
+    Extend and plot the results for a set of 2D spectra averaged over phase/inhomogeneous broadening.
+
+    Parameters
+    ----------
+    averaged_results : list of np.ndarray
+        List of 2D arrays (each shape: [len(taus), len(ts)]) for each T_wait.
+    times_T : np.ndarray
+        Array of T_wait values.
+    times : np.ndarray
+        Time grid used for simulation.
+    extend_for : tuple[int, int], optional
+        Padding for (rows, columns) as (before, after) for both axes.
+    **plot_args_freq : dict
+        Additional keyword arguments for frequency-domain plotting.
+
+    Returns
+    -------
+    None
+    """
     global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
     global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
 
@@ -1959,10 +1979,12 @@ def extend_and_plot_results(
     for i, data in enumerate(averaged_results):
         T_wait = times_T[i]
         ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+
         if extend_for is not None:
             ts, taus, data = extend_time_tau_axes(
                 ts, taus, data, pad_rows=extend_for, pad_cols=extend_for
             )
+
         nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
 
         # Map local data into the global arrays
