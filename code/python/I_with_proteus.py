@@ -1,24 +1,12 @@
-# =============================
-# FUNCTIONS for overlapping pulses
-# =============================
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
-import matplotlib.pyplot as plt
-from qutip.solver import Result
-from qutip import *
-import numpy as np
-import itertools
-import pickle
-import copy
-
 # Import the outsourced settings / functions
-from plot_settings import *
 from functions_for_both_cases import *
-import matplotlib as mpl
 
-mpl.use("TkAgg")  # open each plot in interactive window
-
+import numpy as np
+import psutil  # -> estimate RAM usage
+import pickle  # -> safe data
+import copy  # -> copy classes
+import time  # -> estimate elapsed time
+import os  # -> safe data
 
 # =============================
 # SYSTEM PARAMETERS     (**changeable**)
@@ -556,6 +544,8 @@ def compute_two_dimensional_polarization(
 
 
 def main():
+    start_time = time.time()  # Start timing
+
     """
     Main function to run the script.
     """
@@ -572,13 +562,13 @@ def main():
         omega_laser_cm=16000.0,
         E0=0.1,
         pulse_duration=15.0,
-        t_max=500.0,  # -> determines Δω ∝ 1/t_max
+        t_max=60.0,  # -> determines Δω ∝ 1/t_max
         fine_spacing=0.1,  # -> determines ω_max ∝ 1/Δt
         gamma_0=1 / 300,
         T2=100.0,
     )
 
-    print(system.summary())
+    system.summary()
 
     t_max = system.t_max
     fine_spacing_test = system.fine_spacing
@@ -601,58 +591,53 @@ def main():
         result, time_cut = check_the_solver(times_test_, test_params_copy)
         print("the evolution is actually unphisical after:", time_cut, "fs")
 
-    T_wait = times[-1] / 10
-    two_d_data = compute_two_dimensional_polarization(
-        T_wait,
-        phases[0],
-        phases[0],
+    T_wait = times[-1] / 100
+    times_T = [T_wait]
+
+    two_d_datas = parallel_process_all_combinations(
+        phases,
+        times_T,
         times=times,
         system=system,
-        plot_example=True,
     )
+
     # =============================
     # Save the result to a file for later use
     # =============================
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    save_path = os.path.join(script_dir, "two_d_data.pkl")
+
+    output_dir = os.path.dirname(os.path.abspath(__file__))
+    base_filename = f"two_d_data_tmax{system.t_max}_spacing{system.fine_spacing}.pkl"
+    save_path = os.path.join(output_dir, base_filename)
+
+    counter = 1
+    while os.path.exists(save_path):
+        save_path = os.path.join(
+            output_dir,
+            f"two_d_data_tmax{system.t_max}_spacing{system.fine_spacing}_{counter}.pkl",
+        )
+        counter += 1
+
     with open(save_path, "wb") as f:
-        pickle.dump(two_d_data, f)
-    print(f"2D data saved to {save_path}")
+        pickle.dump({"two_d_datas": two_d_datas, "times_T": times_T, "times": times}, f)
+        print(f"2D data and times_T saved to {save_path}")
 
-    # with open(save_path, "rb") as f:
-    #     two_d_data = pickle.load(f)
+    """
+    with open(save_path, "rb") as f:
+        data = pickle.load(f)
+        two_d_datas = data['two_d_datas']
+        times_T = data['times_T']
+    """
 
-    plot_args_freq = dict(  # (**changeable**)
-        space="freq",
-        type="real",  # plot the real part (also "imag", "phase", "abs")
-        safe=False,  # (dont) save the spectrum
-        positive=True,  # only plot the positive spectrum
-        use_custom_colormap=True,  # all zeros are white
-        section=(  # focus on the non zero part
-            1.4,
-            1.8,  # xmin, xmax,
-            1.4,
-            1.8,  # ymin, ymax
-        ),
-        # add more options as needed
-    )
+    elapsed_time = time.time() - start_time
+    hours = int(elapsed_time // 3600)
+    minutes = int((elapsed_time % 3600) // 60)
+    seconds = elapsed_time % 60
+    print(f"Execution time: {hours}h {minutes}m {seconds:.2f}s")
 
-    ts, taus, data = two_d_data[0], two_d_data[1], two_d_data[2]
-
-    extend_for = (0, 100)
-    ts, taus, data = extend_time_tau_axes(
-        ts, taus, data, pad_rows=extend_for, pad_cols=extend_for
-    )
-    plot_positive_color_map(
-        (ts, taus, data),
-        type="imag",  # because E ~ i*P
-        T_wait=T_wait,
-        safe=False,
-        use_custom_colormap=True,
-    )
-
-    nu_ts, nu_taus, s2d = compute_2d_fft_wavenumber(ts, taus, data)
-    plot_positive_color_map((nu_ts, nu_taus, s2d), T_wait=T_wait, **plot_args_freq)
+    process = psutil.Process(os.getpid())
+    mem_bytes = process.memory_info().rss  # Resident Set Size: memory in bytes
+    mem_mb = mem_bytes / (1024**2)  # Convert to MB
+    print(f"Approximate memory usage: {mem_mb:.2f} MB")
 
 
 if __name__ == "__main__":
