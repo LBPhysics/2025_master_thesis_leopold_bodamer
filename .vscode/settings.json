@@ -221,5 +221,11 @@
         "**/*.xwm": true,
         "**/*Notes.bib": true,
         "**/*.blg": true,
+        "**/.gitignore": true,
+        "README.md": true,
+        ".github": true,
+        "**/.vscode": true,
+        "**/.venv": true,
     },
+    "explorerExclude.backup": {},
 }
