@@ -10,27 +10,28 @@ import pickle  # -> safe data
 import sys  # safe data
 import os  # -> safe data
 
-# =============================
-# SYSTEM PARAMETERS     (**changeable**)
-# =============================
 
 ### Phase Cycling for Averaging
 phases = [k * np.pi / 2 for k in range(4)]
 
 
 def main():
-    start_time = time.time()  # Start timing
-
     """
     Main function to run the script.
     """
+    start_time = time.time()  # Start timing
+
     # =============================
     # SYSTEM PARAMETERS
     # =============================
     system = SystemParameters(
+        # WHICH SYSTEM:
         N_atoms=1,
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
+        # -duration SIMULATION:
+        t_max=20.0,
+        fine_spacing=0.5,
     )
 
     system.summary()
@@ -44,17 +45,16 @@ def main():
 
     # =============================
     test_params_copy = copy.deepcopy(system)
-    if "time_cut" not in globals() or test_params_copy.t_max != system.t_max:
-        # =============================
-        # ALWAYS CHECK Before running a serious simulation
-        # =============================
-        test_params_copy.t_max = 10 * t_max
-        test_params_copy.fine_spacing = 10 * fine_spacing_test
-        times_test_ = np.arange(
-            -Delta_ts[0], test_params_copy.t_max, test_params_copy.fine_spacing
-        )
-        result, time_cut = check_the_solver(times_test_, test_params_copy)
-        print("the evolution is actually unphisical after:", time_cut, "fs")
+    # =============================
+    # ALWAYS CHECK Before running a serious simulation
+    # =============================
+    test_params_copy.t_max = 10 * t_max
+    test_params_copy.fine_spacing = 10 * fine_spacing_test
+    times_test_ = np.arange(
+        -Delta_ts[0], test_params_copy.t_max, test_params_copy.fine_spacing
+    )
+    _, time_cut = check_the_solver(times_test_, test_params_copy)
+    print("\nthe evolution is actually unphysical after:", time_cut, "fs")
 
     T_wait = times[-1] / 100
     times_T = [T_wait]
@@ -64,6 +64,7 @@ def main():
         times_T,
         times=times,
         system=system,
+        kwargs={"plot_example": False},
     )
 
     # =============================
@@ -78,29 +79,31 @@ def main():
     os.makedirs(output_dir, exist_ok=True)  # Ensure the output directory exists
 
     # Construct base filename for saving
-    base_filename = f"two_d_data_tmax{system.t_max}_spacing{system.fine_spacing}.pkl"
+    base_filename = f"data_tmax{system.t_max:.0f}_dt_{system.fine_spacing}.pkl"
     save_path = os.path.join(output_dir, base_filename)
 
     counter = 1
     while os.path.exists(save_path):
         save_path = os.path.join(
             output_dir,
-            f"two_d_data_tmax{system.t_max}_spacing{system.fine_spacing}_{counter}.pkl",
+            f"data_tmax{system.t_max:.0f}_dt_{system.fine_spacing}_{counter}.pkl",
         )
         counter += 1
 
     with open(save_path, "wb") as f:
-        pickle.dump({"two_d_datas": two_d_datas, "times_T": times_T, "times": times}, f)
-        print(f"2D data and times_T and times saved to {save_path}")
+        pickle.dump(
+            {
+                "system": system,
+                "times": times,  # maybe not needed
+                "times_T": times_T,
+                "two_d_datas": two_d_datas,
+            },
+            f,
+        )
+        print(
+            f"\n2D system info, times_T, times and the spectral data was saved to {save_path}"
+        )
 
-    """
-    with open(save_path, "rb") as f:
-        data = pickle.load(f)
-        two_d_datas = data["two_d_datas"]
-        times_T = data["times_T"]
-        times = data["times"]
-        print(two_d_datas)
-    """
     # =============================
     # Print elapsed time and memory usage for performance monitoring
     # =============================
@@ -108,12 +111,17 @@ def main():
     hours = int(elapsed_time // 3600)
     minutes = int((elapsed_time % 3600) // 60)
     seconds = elapsed_time % 60
-    print(f"Execution time: {hours}h {minutes}m {seconds:.2f}s")
+    print(f"\nExecution time: {hours}h {minutes}m {seconds:.2f}s")
 
     process = psutil.Process(os.getpid())
     mem_bytes = process.memory_info().rss  # Resident Set Size: memory in bytes
     mem_mb = mem_bytes / (1024**2)  # Convert to MB
-    print(f"Approximate memory usage: {mem_mb:.2f} MB")
+    bound_mem_my_estimate = (
+        2 * len(times_T) * len(phases) ** 2 * len(times) ** 2 * 8 / (1024**2)
+    )  # 8 bytes per complex number
+    print(
+        f"\nApproximate memory usage: {mem_mb:.2f} MB vs my estimate: {bound_mem_my_estimate:.2f} MB"
+    )
 
 
 if __name__ == "__main__":

@@ -65,7 +65,7 @@ class SystemParameters:
     # Pulse and time grid parameters
     # =============================
     pulse_duration: float = 15.0  # in fs
-    t_max: float = 15.0  # in fs
+    t_max: float = 10.0  # in fs
     fine_spacing: float = 1.0  # in fs
     omega_laser_cm: float = 16000.0
     # in cm-1
@@ -268,7 +268,7 @@ class SystemParameters:
                 Es[2] -= self.omega_laser
                 Es[3] -= 2 * self.omega_laser
 
-            H_diag = Qobj(np.diag(Es), dims=self.H0_undiagonalized.dims)
+        H_diag = Qobj(np.diag(Es), dims=self.H0_undiagonalized.dims)
         return H_diag
 
     @property
@@ -422,7 +422,7 @@ class SystemParameters:
         return e_ops_labels
 
     @property
-    def c_ops_list(self):
+    def c_ops_list(self):  # TODO not including temperature!
         Gamma = self.Gamma
         gamma_phi = self.gamma_phi
 
@@ -567,27 +567,93 @@ class SystemParameters:
 
     def summary(self):
         """
-        Print a summary of all parameters and selected derived quantities,
-        skipping atom_g and atom_e, but including Dip_op and e_ops_labels.
+        Print a structured summary of system parameters, derived quantities, and solver-specific info.
         """
         print("=== SystemParameters Summary ===")
-        for k, v in self.__dict__.items():
-            if k not in ["hbar", "atom_g", "atom_e"]:
-                print(f"{k:20}: {v}")
-        print("--- Derived Quantities ---")
-        for name in [
-            "rabi_0",
-            "delta_rabi",
-            "rabi_gen",
-            "t_prd",
-            "fine_spacing",
-            "t_max",
-        ]:
-            print(f"{name:20}: {getattr(self, name)}")
-        print("\nDipole operator (Dip_op):")
+
+        # System Configuration
+        print("\n# The system with:")
+        print(f"    {'N_atoms':<20}: {self.N_atoms}")
+        print(f"    {'ODE_Solver':<20}: {self.ODE_Solver}")
+        print(f"    {'RWA_laser':<20}: {self.RWA_laser}")
+        print("was analyzed.")
+
+        # Simulation Parameters
+        print("\n# With parameters for the SIMULATION:")
+        print(f"    {'t_max':<20}: {self.t_max} fs")
+        print(f"    {'fine_spacing':<20}: {self.fine_spacing} fs")
+        print(f"    {'pulse_duration':<20}: {self.pulse_duration} fs")
+        print(f"    {'omega_laser':<20}: {self.omega_laser_cm} cm^-1")
+
+        # Atom/Energy Parameters
+        print("\n# With parameters for the ATOMS:")
+        print(f"    {'omega_A':<20}: {self.omega_A_cm} cm^-1")
+        print(f"    {'mu_A':<20}: {self.mu_A}")
+        if self.N_atoms == 1:
+            if self.Delta_cm is not None:
+                print(f"    {'Delta':<20}: {self.Delta_cm} cm^-1")
+        elif self.N_atoms == 2:
+            if self.omega_B_cm is not None:
+                print(f"    {'omega_B':<20}: {self.omega_B_cm} cm^-1")
+            if self.mu_B is not None:
+                print(f"    {'mu_B':<20}: {self.mu_B}")
+            if self.J_cm is not None:
+                print(f"    {'J':<20}: {self.J_cm} cm^-1")
+
+        # Bath Parameters
+        print("\n# With parameters for the BATH:")
+        if self.gamma_0 is not None:
+            print(f"    {'gamma_0':<20}: {self.gamma_0:.4f} fs-1?")
+        if self.gamma_phi is not None:
+            print(f"    {'gamma_phi':<20}: {self.gamma_phi:.4f} fs-1?")
+        print(f"    {'Temp':<20}: {self.Temp}")
+        print(f"    {'cutoff':<20}: {self.cutoff / self.omega_A:.1f} omega_A")
+
+        # Derived Quantities
+        print("\n# Additional generated parameters are:")
+        derived_quantities = ["rabi_0", "delta_rabi", "rabi_gen", "t_prd"]
+        for name in derived_quantities:
+            value = getattr(self, name, "N/A")
+            if isinstance(value, float):
+                print(f"    {name:<20}: {value:.3f}")
+            else:
+                print(f"    {name:<20}: {value}")
+
+        print(f"\n    {'Initial state (psi_ini)':<20}:")
+        print(self.psi_ini)
+        print(
+            f"\n    {'System Hamiltonian (H0_diagonalized)':<20}:"
+        )  # H0 is H0_diagonalized
+        print(self.H0)
+
+        # Solver Specifics
+        print("\n# Solver specific information:")
+        if self.ODE_Solver == "ME":
+            print(f"    {'c_ops_list':<20}:")
+            for op in self.c_ops_list:
+                print(f"        {op}")
+        elif self.ODE_Solver == "BR":
+            print(f"    {'a_ops_list':<20}:")
+            for op_spec in self.a_ops_list:
+                if isinstance(op_spec, list) and len(op_spec) == 2:
+                    print(f"        Operator: {op_spec[0]}, Spectrum: {op_spec[1]}")
+                else:
+                    print(f"        {op_spec}")
+        elif self.ODE_Solver == "Paper_BR":
+            print(f"    {'Redfield tensor R_paper used (calculated by R_paper(self))'}")
+            # Optionally print the R_paper matrix if it's not too large
+            # print(R_paper(self))
+        elif self.ODE_Solver == "Paper_eqs":
+            print(
+                f"    {'Custom ODE matrix used (calculated by matrix_ODE_paper(t, pulse_seq, self))'}"
+            )
+
+        # Operators
+        print("\n# Dipole operator (Dip_op):")
         print(self.Dip_op)
-        print("\nExpectation operator labels (e_ops_labels):")
+        print("\n# Expectation operator labels (e_ops_labels):")
         print(self.e_ops_labels)
+        print("\n=== End of Summary ===")
 
 
 # =============================
@@ -1072,11 +1138,12 @@ def plot_positive_color_map(
     # =============================
     # Save or show
     # =============================
-    if safe and output_dir is not None:
+
+    if safe and output_dir and system is not None:
         if not os.path.isdir(output_dir):
             raise ValueError(f"Output directory {output_dir} does not exist.")
         filename_parts = [
-            f"M={system.N_atoms}",
+            f"N={system.N_atoms}",
             f"mua={system.mu_A:.0f}",
             f"E0={system.E0:.2e}",
             f"wa={system.omega_A:.2f}",
@@ -1285,7 +1352,7 @@ def extend_time_tau_axes(
     Returns:
         tuple: (extended_ts, extended_taus, padded_data)
     """
-    print(f"Pad rows: {pad_rows}, Pad cols: {pad_cols}", data.shape, flush=True)
+    # print(f"Pad rows: {pad_rows}, Pad cols: {pad_cols}", data.shape, flush=True)
     # Pad the data array
     padded_data = np.pad(data, (pad_rows, pad_cols), mode="constant", constant_values=0)
 
@@ -1522,7 +1589,8 @@ def _matrix_ODE_paper_2atom(
     # 12: rho30, 13: rho31, 14: rho32, 15: rho33
 
     # --- d/dt rho_10 ---
-    term = -1j * (system.omega_ij(1, 0) - system.omega_laser) - system.Gamma_big_ij(1, 0
+    term = -1j * (system.omega_ij(1, 0) - system.omega_laser) - system.Gamma_big_ij(
+        1, 0
     )
     L[4, 4] = term  # ρ₁₀ ← ρ₁₀
     L[4, 0] = 1j * Et * system.Dip_op[1, 0]  # ρ₁₀ ← ρ₀₀
@@ -1587,7 +1655,8 @@ def _matrix_ODE_paper_2atom(
     L[9, 1] = 1j * Et * system.Dip_op[2, 0]  # ρ₂₁ ← ρ₀₁
 
     # --- d/dt rho_31 ---
-    term = -1j * (system.omega_ij(3, 1) - system.omega_laser) - system.Gamma_big_ij(3, 1
+    term = -1j * (system.omega_ij(3, 1) - system.omega_laser) - system.Gamma_big_ij(
+        3, 1
     )
     L[13, 13] = term  # ρ₃₁ ← ρ₃₁
     L[13, 5] = 1j * Et * system.Dip_op[3, 1]  # ρ₃₁ ← ρ₁₁
@@ -1601,7 +1670,9 @@ def _matrix_ODE_paper_2atom(
     L[7, 3] = 1j * Et * system.Dip_op[1, 0]  # ρ₁₃ ← ρ₀₃
 
     # --- d/dt rho_32 ---
-    term = -1j * (system.omega_ij(3, 2) - system.omega_laser) - system.Gamma_big_ij(3, 2)
+    term = -1j * (system.omega_ij(3, 2) - system.omega_laser) - system.Gamma_big_ij(
+        3, 2
+    )
     L[14, 14] = term  # ρ₃₂ ← ρ₃₂
     L[14, 10] = 1j * Et * system.Dip_op[3, 2]  # ρ₃₂ ← ρ₂₂
     L[14, 6] = 1j * Et * system.Dip_op[3, 1]  # ρ₃₂ ← ρ₁₂
@@ -2044,8 +2115,7 @@ def compute_two_dimensional_polarization(
     phi_1: float,
     times: np.ndarray,
     system: SystemParameters,
-    plot_example: bool = False,
-    **kwargs,
+    **kwargs: dict,
 ):
     """
     Compute the two-dimensional polarization for a given waiting time (T_wait) and
@@ -2057,12 +2127,14 @@ def compute_two_dimensional_polarization(
         phi_1 (float): Phase of the second pulse.
         times (np.ndarray): Time array.
         system: System object containing all relevant parameters.
-        plot_example (bool, optional): Whether to plot an example evolution.
         **kwargs: Additional keyword arguments.
+                  Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
 
     Returns:
         tuple: (t_det_vals, tau_coh_vals, data)
     """
+
+    plot_example = kwargs.get("plot_example", False)
 
     # get the symmetric times, tau_coh, t_det
     tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
@@ -2231,28 +2303,6 @@ def sigma(E: np.ndarray, Delta: float, E0: float = 0.0) -> np.ndarray:
     return norm * np.exp(exponent)
 
 
-"""# =============================
-# PLOT THE FUNCTION
-# =============================
-
-### Generate values for plotting
-E_values = np.linspace(-10, 10, 500) # energy range
-E0       = omega_A                       # center energy
-
-### Calculate sigma values
-sigma_values = sigma(E_values, Delta, E0)
-
-### Plot the function
-plt.figure(figsize=(10, 6))
-plt.plot(E_values, sigma_values, label=rf"$\Delta = {Delta}, E_0 = {E0}$", color='C0', linestyle='solid')
-plt.title(r"$\sigma(E - E_0)$ Function")
-plt.xlabel(r"$E$")
-plt.ylabel(r"$\sigma(E - E_0)$")
-plt.legend()
-plt.tight_layout()
-plt.show()"""
-
-
 def sample_from_sigma(
     N: int, Delta: float, E0: float, E_range: float = 10.0
 ) -> np.ndarray:
@@ -2365,25 +2415,6 @@ def compute_many_polarizations(
     return t_det_vals, tau_coh_vals, data_avg, omega_ats
 
 
-"""# Test the sampling function
-Delta_test = Delta
-E0_test = omega_A
-samples = sample_from_sigma(100, Delta=Delta_test, E0=E0_test)
-
-# Plot the results
-E_vals = np.linspace(E0_test - 5 * Delta_test, E0_test + 5 * Delta_test, 1000)
-sigma_vals = sigma(E_vals, Delta_test, E0_test)
-
-plt.figure(figsize=(8, 4))
-plt.hist(samples, bins=100, density=True, alpha=0.6, label='Sampled histogram')
-plt.plot(E_vals, sigma_vals / np.trapz(sigma_vals, E_vals), 'r-', label=r'Normalized $\sigma$(E)')
-plt.xlabel('E')
-plt.ylabel('Probability Density')
-plt.title(r'Rejection Sampling from $\sigma$(E)')
-plt.legend()
-plt.show()"""
-
-
 # ##########################
 # functions for parallel processing
 # ##########################
@@ -2392,6 +2423,7 @@ def for_one_time_calc_phase_comb(
     phases: list,
     times: np.ndarray,
     system: SystemParameters,
+    **kwargs: dict,
 ) -> np.ndarray:
     """
     Compute and average the 2D polarization for all phase combinations for one T_wait.
@@ -2406,6 +2438,8 @@ def for_one_time_calc_phase_comb(
         Time grid for computation.
     system : SystemParameters
         System parameters object.
+    **kwargs: Additional keyword arguments.
+                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
 
     Returns
     -------
@@ -2416,7 +2450,7 @@ def for_one_time_calc_phase_comb(
     for phi1 in phases:
         for phi2 in phases:
             _, _, data = compute_two_dimensional_polarization(
-                T_wait, phi1, phi2, times=times, system=system, plot_example=False
+                T_wait, phi1, phi2, times=times, system=system, **kwargs
             )
             results.append(data)
     averaged_data = np.mean(np.stack(results), axis=0)
@@ -2429,6 +2463,7 @@ def parallel_process_all_combinations(
     times_T: np.ndarray,
     times: np.ndarray,
     system: SystemParameters,
+    **kwargs: dict,
 ) -> list:
     """
     Compute the averaged 2D polarization for all T_wait in times_T using all phase combinations.
@@ -2443,6 +2478,8 @@ def parallel_process_all_combinations(
         Time grid for computation.
     system : SystemParameters
         System parameters object.
+    **kwargs: Additional keyword arguments.
+                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
 
     Returns
     -------
@@ -2458,7 +2495,7 @@ def parallel_process_all_combinations(
     with ThreadPoolExecutor() as executor:
         future_to_idx = {
             executor.submit(
-                for_one_time_calc_phase_comb, T_wait, phases, times, system
+                for_one_time_calc_phase_comb, T_wait, phases, times, system, **kwargs
             ): idx
             for idx, T_wait in enumerate(times_T)
         }
@@ -2481,6 +2518,7 @@ def parallel_process_all_omega_ats(
     times_T: np.ndarray,
     times: np.ndarray,
     system: SystemParameters,
+    **kwargs: dict,
 ) -> list:
     """
     Compute the averaged 2D polarization for all omega_ats and all T_wait in times_T using all phase combinations.
@@ -2497,6 +2535,8 @@ def parallel_process_all_omega_ats(
         Time grid for computation.
     system : SystemParameters
         System parameters object.
+    **kwargs: Additional keyword arguments.
+                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
 
     Returns
     -------
@@ -2508,7 +2548,7 @@ def parallel_process_all_omega_ats(
         system_new = copy.deepcopy(system)
         system_new.omega_A_cm = omega_at
         results = parallel_process_all_combinations(
-            phases, times_T, times, system=system_new
+            phases, times_T, times, system=system_new, **kwargs
         )
         all_results.append(results)
 
@@ -2534,6 +2574,7 @@ def run_parallel_for_sampled_omegas(
     times: np.ndarray,
     system: SystemParameters,
     E_range: float = 10.0,
+    **kwargs: dict,
 ) -> list:
     """
     Sample omega_ats using sample_from_sigma and run parallel_process_all_omega_ats.
@@ -2556,6 +2597,8 @@ def run_parallel_for_sampled_omegas(
         System parameters object.
     E_range : float, optional
         Range for sampling. Default is 10.
+    **kwargs: Additional keyword arguments.
+                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
 
     Returns
     -------
@@ -2564,7 +2607,7 @@ def run_parallel_for_sampled_omegas(
     """
     omega_ats = sample_from_sigma(N, Delta, E0, E_range=E_range)
     averaged_results = parallel_process_all_omega_ats(
-        omega_ats, phases, times_T, times, system=system
+        omega_ats, phases, times_T, times, system=system, **kwargs
     )
     return averaged_results
 
@@ -2574,7 +2617,7 @@ def extend_and_plot_results(
     times_T: np.ndarray,
     times: np.ndarray,
     extend_for: tuple[int, int] = None,
-    **plot_args_freq,
+    **plot_args_freq: dict,
 ) -> None:
     """
     Extend and plot the results for a set of 2D spectra averaged over phase/inhomogeneous broadening.
@@ -2687,5 +2730,6 @@ def extend_and_plot_results(
     )
     """
     plot_positive_color_map(
-        (global_nu_ts, global_nu_taus, global_data_freq), **plot_args_freq
+        (global_nu_ts, global_nu_taus, global_data_freq),
+        **plot_args_freq,
     )

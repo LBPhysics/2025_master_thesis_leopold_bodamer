@@ -36,7 +36,11 @@ dist/
 # Ignore dependency folders
 node_modules/
 
+# pickle files (data from simulation)
+*.pkl
 
+# large images
+*.svg
 
 ## Core latex/pdflatex auxiliary files:
 *.aux
