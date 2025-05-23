@@ -24,10 +24,9 @@ def main():
     # =============================
     # SYSTEM PARAMETERS
     # =============================
-    T_wait = times[-1] / 100
-    times_T = [T_wait]  # -> wait times for the 2D spectrum
-    N_sample = 2  # inhomogenity  -> the bigger the better
-
+    N_sample = (
+        1  # inhomogenity (averaging over how many frequencies) -> the bigger the better
+    )
     system = SystemParameters(
         # WHICH SYSTEM:
         N_atoms=1,
@@ -37,16 +36,18 @@ def main():
         t_max=20.0,  # -> determines Δω
         fine_spacing=0.1,  # -> determines ω_max
         # NECESSARY FOR THE DELAYED PHOTON EFFECT:
-        Delta_cm=200,  # -> determines Δω
+        Delta_cm=200 if N_sample > 1 else 0,
     )
-
-    system.summary()
-
     t_max = system.t_max
     fine_spacing_test = system.fine_spacing
 
     Delta_ts = system.Delta_ts
     times = np.arange(-Delta_ts[0], t_max, fine_spacing_test)
+
+    T_wait = times[-1] / 100
+    times_T = [T_wait]  # -> wait times for the 2D spectrum
+
+    # system.summary()
 
     # =============================
     test_params_copy = copy.deepcopy(system)
@@ -61,28 +62,22 @@ def main():
     _, time_cut = check_the_solver(times_test_, test_params_copy)
     print("\nthe evolution is actually unphysical after:", time_cut, "fs")
 
-    omega_ats = sample_from_sigma(N_sample, system.Delta, system.omega_A, E_range=3)
+    omega_ats = sample_from_sigma(
+        N_sample, system.Delta_cm, system.omega_A_cm, E_range=3
+    )
+    print(omega_ats)
     kwargs = {"plot_example": False}
 
     # DO THE SIMULATION
-    if system.Delta == 0 or N_sample <= 1:
-        two_d_datas = parallel_process_all_combinations(
-            phases=phases,
-            times_T=times_T,
-            times=times,
-            system=system,
-            kwargs=kwargs,
-        )
-    else:
-        two_d_datas = parallel_process_all_combinations_with_inhomogenity(
-            omega_ats=omega_ats,
-            phases=phases,
-            times_T=times_T,
-            times=times,
-            system=system,
-            kwargs=kwargs,
-        )
-
+    two_d_datas = parallel_process_all_combinations_with_inhomogenity(
+        omega_ats=omega_ats,
+        phases=phases,
+        times_T=times_T,
+        times=times,
+        system=system,
+        kwargs=kwargs,
+    )
+    """
     # =============================
     # Set output directory to a subfolder named 'output'
     # =============================
@@ -90,19 +85,21 @@ def main():
     if len(sys.argv) > 1:
         output_dir = sys.argv[1]
     else:
-        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
+        output_dir = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "papers_with_proteus_output"
+        )
 
     os.makedirs(output_dir, exist_ok=True)  # Ensure the output directory exists
 
     # Construct base filename for saving
-    base_filename = f"data_tmax{system.t_max:.0f}_dt_{system.fine_spacing}.pkl"
+    base_filename = f"data_for_tmax_{system.t_max:.0f}_dt_{system.fine_spacing}.pkl"
     save_path = os.path.join(output_dir, base_filename)
 
     counter = 1
     while os.path.exists(save_path):
         save_path = os.path.join(
             output_dir,
-            f"data_tmax{system.t_max:.0f}_dt_{system.fine_spacing}_{counter}.pkl",
+            f"data_for_tmax_{system.t_max:.0f}_dt_{system.fine_spacing}_{counter}.pkl",
         )
         counter += 1
 
@@ -119,7 +116,7 @@ def main():
         print(
             f"\n2D system info, times_T, times and the spectral data was saved to {save_path}"
         )
-
+    
     # =============================
     # Print elapsed time and memory usage for performance monitoring
     # =============================
@@ -138,6 +135,7 @@ def main():
     print(
         f"\nApproximate memory usage: {mem_mb:.2f} MB vs my estimate: {bound_mem_my_estimate:.2f} MB"
     )
+    """
 
 
 if __name__ == "__main__":
