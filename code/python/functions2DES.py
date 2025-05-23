@@ -9,6 +9,7 @@ from typing import Any, Optional
 import matplotlib.pyplot as plt
 from qutip import *
 import numpy as np
+import copy
 import os
 
 # functions from test_baths.py
@@ -124,8 +125,6 @@ class SystemParameters:
         if self.N_atoms == 1:
             self.psi_ini = ket2dm(self.atom_g)
 
-            if self.Delta_cm is None:
-                self.Delta_cm = 200.0
             if self.omega_A_cm is None:
                 # Use the instance's omega_laser_cm, which might have been overridden by the user
                 self.omega_A_cm = self.omega_laser_cm
@@ -156,12 +155,11 @@ class SystemParameters:
             if self.J_cm is None:
                 self.J_cm = 0.0  # Default coupling
 
-            # For N_atoms=2, Delta_cm is not typically used for the dimer model presented
-            if self.Delta_cm is not None:
-                # Or raise a warning/error if Delta_cm is set for N_atoms=2
-                pass
+        # inhomogenity (necessary for the delayed photon effect to appear) TODO: I dont observe this!
+        if self.Delta_cm is None:
+            self.Delta_cm = 200.0
 
-        # Store frequency values in fs units
+        # Store frequency values in fs units # Not needed!
         self._fs_values = {}  # TODO TEST THIS!! might be the wrong position
 
         # Find all attributes ending with '_cm' and convert them
@@ -192,7 +190,7 @@ class SystemParameters:
 
     def convert_cm_to_fs(self, value):
         """
-        Convert values from cm^-1 to fs^-1 (angular frequency)
+        Convert the wavenumber-frequencies from cm^-1 to angular frequency fs^-1
 
         Parameters:
             value (float): Value in cm^-1
@@ -310,10 +308,6 @@ class SystemParameters:
     @property
     def rabi_gen(self):
         return np.sqrt(self.rabi_0**2 + self.delta_rabi**2)
-
-    @property
-    def t_max_L(self):
-        return 6 * 2 * np.pi / self.omega_laser if self.omega_laser != 0 else 0.0
 
     @property
     def t_prd(self):
@@ -486,9 +480,7 @@ class SystemParameters:
 
         return a_ops_list
 
-    @property
     def omega_ij(self, i: int, j: int) -> float:
-        # TODO i think i can include this in the system class
         """
         Calculate the energy difference between two states.
 
@@ -584,6 +576,7 @@ class SystemParameters:
         print(f"    {'fine_spacing':<20}: {self.fine_spacing} fs")
         print(f"    {'pulse_duration':<20}: {self.pulse_duration} fs")
         print(f"    {'omega_laser':<20}: {self.omega_laser_cm} cm^-1")
+        print(f"    {'E0':<20}: {self.E0} (mu*E0, such that excitation is < 1%!)")
 
         # Atom/Energy Parameters
         print("\n# With parameters for the ATOMS:")
@@ -611,18 +604,11 @@ class SystemParameters:
 
         # Derived Quantities
         print("\n# Additional generated parameters are:")
-        derived_quantities = ["rabi_0", "delta_rabi", "rabi_gen", "t_prd"]
-        for name in derived_quantities:
-            value = getattr(self, name, "N/A")
-            if isinstance(value, float):
-                print(f"    {name:<20}: {value:.3f}")
-            else:
-                print(f"    {name:<20}: {value}")
 
-        print(f"\n    {'Initial state (psi_ini)':<20}:")
+        print(f"\n    {'psi_ini':<20}:")
         print(self.psi_ini)
         print(
-            f"\n    {'System Hamiltonian (H0_diagonalized)':<20}:"
+            f"\n    {'System Hamiltonian (diagonalized)':<20}:"
         )  # H0 is H0_diagonalized
         print(self.H0)
 
@@ -2113,10 +2099,10 @@ def compute_two_dimensional_polarization(
     T_wait: float,
     phi_0: float,
     phi_1: float,
-    times: np.ndarray,
+    times: np.ndarray,  # ACTURALLY a list -> qutip needs a list ?
     system: SystemParameters,
     **kwargs: dict,
-):
+) -> tuple[np.array, np.array, np.ndarray]:  # (time axis` + 2d polarization)
     """
     Compute the two-dimensional polarization for a given waiting time (T_wait) and
     the phases of the first and second pulses (phi_0, phi_1).
@@ -2140,7 +2126,7 @@ def compute_two_dimensional_polarization(
     tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
 
     # initialize the time domain Spectroscopy data tr(Dip_op * rho_final(tau_coh, t_det))
-    data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64)
+    data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.float32)
 
     idx_end_pulse0 = 0
     t_start_pulse0 = times[idx_end_pulse0]
@@ -2512,7 +2498,7 @@ def parallel_process_all_combinations(
     return results
 
 
-def parallel_process_all_omega_ats(
+def parallel_process_all_combinations_with_inhomogenity(
     omega_ats: list,
     phases: list,
     times_T: np.ndarray,
@@ -2562,53 +2548,6 @@ def parallel_process_all_omega_ats(
         averaged_data = np.mean(np.stack(data_for_t), axis=0)
         averaged_results.append(averaged_data)
 
-    return averaged_results
-
-
-def run_parallel_for_sampled_omegas(
-    N: int,
-    Delta: float,
-    E0: float,
-    phases: list,
-    times_T: np.ndarray,
-    times: np.ndarray,
-    system: SystemParameters,
-    E_range: float = 10.0,
-    **kwargs: dict,
-) -> list:
-    """
-    Sample omega_ats using sample_from_sigma and run parallel_process_all_omega_ats.
-
-    Parameters
-    ----------
-    N : int
-        Number of samples.
-    Delta : float
-        Energy splitting parameter.
-    E0 : float
-        Central energy.
-    phases : list
-        List of phase values.
-    times_T : np.ndarray
-        Array of T_wait values.
-    times : np.ndarray
-        Time grid for computation.
-    system : SystemParameters
-        System parameters object.
-    E_range : float, optional
-        Range for sampling. Default is 10.
-    **kwargs: Additional keyword arguments.
-                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
-
-    Returns
-    -------
-    list
-        Averaged 2D polarization arrays for each T_wait, averaged over sampled omegas.
-    """
-    omega_ats = sample_from_sigma(N, Delta, E0, E_range=E_range)
-    averaged_results = parallel_process_all_omega_ats(
-        omega_ats, phases, times_T, times, system=system, **kwargs
-    )
     return averaged_results
 
 

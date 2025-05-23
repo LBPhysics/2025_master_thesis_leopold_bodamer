@@ -24,14 +24,20 @@ def main():
     # =============================
     # SYSTEM PARAMETERS
     # =============================
+    T_wait = times[-1] / 100
+    times_T = [T_wait]  # -> wait times for the 2D spectrum
+    N_sample = 2  # inhomogenity  -> the bigger the better
+
     system = SystemParameters(
         # WHICH SYSTEM:
         N_atoms=1,
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
-        # -duration SIMULATION:
-        t_max=20.0,
-        fine_spacing=0.5,
+        # SIMULATION:
+        t_max=20.0,  # -> determines Δω
+        fine_spacing=0.1,  # -> determines ω_max
+        # NECESSARY FOR THE DELAYED PHOTON EFFECT:
+        Delta_cm=200,  # -> determines Δω
     )
 
     system.summary()
@@ -41,7 +47,6 @@ def main():
 
     Delta_ts = system.Delta_ts
     times = np.arange(-Delta_ts[0], t_max, fine_spacing_test)
-    # print("times: ", times[0], times[1], "...", times[-1], "len", len(times))
 
     # =============================
     test_params_copy = copy.deepcopy(system)
@@ -56,16 +61,27 @@ def main():
     _, time_cut = check_the_solver(times_test_, test_params_copy)
     print("\nthe evolution is actually unphysical after:", time_cut, "fs")
 
-    T_wait = times[-1] / 100
-    times_T = [T_wait]
+    omega_ats = sample_from_sigma(N_sample, system.Delta, system.omega_A, E_range=3)
+    kwargs = {"plot_example": False}
 
-    two_d_datas = parallel_process_all_combinations(
-        phases,
-        times_T,
-        times=times,
-        system=system,
-        kwargs={"plot_example": False},
-    )
+    # DO THE SIMULATION
+    if system.Delta == 0 or N_sample <= 1:
+        two_d_datas = parallel_process_all_combinations(
+            phases=phases,
+            times_T=times_T,
+            times=times,
+            system=system,
+            kwargs=kwargs,
+        )
+    else:
+        two_d_datas = parallel_process_all_combinations_with_inhomogenity(
+            omega_ats=omega_ats,
+            phases=phases,
+            times_T=times_T,
+            times=times,
+            system=system,
+            kwargs=kwargs,
+        )
 
     # =============================
     # Set output directory to a subfolder named 'output'
