@@ -15,7 +15,6 @@ from qutip import *  # simulations are done with QuTiP
 import numpy as np  # calculations
 import copy  # deep copy a class instance
 import os  #
-import gc  # garbage collector
 
 # functions from test_baths.py
 from test_baths import (
@@ -72,7 +71,7 @@ class SystemParameters:
     # =============================
     pulse_duration: float = 15.0  # in fs
     t_max: float = 10.0  # in fs
-    fine_spacing: float = 1.0  # in fs
+    dt: float = 1.0  # in fs
     omega_laser_cm: float = 16000.0
     # in cm-1
 
@@ -578,7 +577,7 @@ class SystemParameters:
         # Simulation Parameters
         print("\n# With parameters for the SIMULATION:")
         print(f"    {'t_max':<20}: {self.t_max} fs")
-        print(f"    {'fine_spacing':<20}: {self.fine_spacing} fs")
+        print(f"    {'dt':<20}: {self.dt} fs")
         print(f"    {'pulse_duration':<20}: {self.pulse_duration} fs")
         print(f"    {'omega_laser':<20}: {self.omega_laser_cm} cm^-1")
         print(f"    {'E0':<20}: {self.E0} (mu*E0, such that excitation is < 1%!)")
@@ -1666,7 +1665,7 @@ def _matrix_ODE_paper_2atom(
     )
     L[14, 14] = term  # ρ₃₂ ← ρ₃₂
     L[14, 10] = 1j * Et * system.Dip_op[3, 2]  # ρ₃₂ ← ρ₂₂
-    L[14, 6] = 1j * Et * system.Dip_op[3, 1]  # ρ₃₂ ← ρ₁₂
+    L[14, 6] = 1j * Et * system.D
     L[14, 12] = -1j * Et_conj * system.Dip_op[2, 0]  # ρ₃₂ ← ρ₃₀
 
     # --- d/dt rho_23 ---
@@ -1860,13 +1859,6 @@ def compute_pulse_evolution(
     if not isinstance(pulse_seq, PulseSequence) or len(pulse_seq.pulses) == 0:
         raise ValueError("Invalid or empty pulse sequence")
 
-    # Validate that pulses have appropriate timing
-    for i, pulse in enumerate(pulse_seq.pulses):
-        if pulse.pulse_start_time > times[-1] or pulse.pulse_start_time < times[0]:
-            raise ValueError(
-                f"Pulse {i} start time {pulse.pulse_start_time} is outside time range [{times[0]}, {times[-1]}]"
-            )
-
     # =============================
     # Set solver options
     # =============================
@@ -1882,145 +1874,91 @@ def compute_pulse_evolution(
     # =============================
     # Choose solver and compute the evolution
     # =============================
-    try:
-        if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
-            raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
+    if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
+        raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
 
-        if system.ODE_Solver == "Paper_eqs":
-            # Validate time range before solving
-            print(f"DEBUG: Time range validation for Paper_eqs solver:")
-            print(
-                f"  Time range: [{times[0]:.6f}, {times[-1]:.6f}], dt = {times[1]-times[0]:.6f}"
-            )
-            print(f"  Number of time points: {len(times)}")
-            print(f"  omega_A_cm = {system.omega_A_cm:.6f}")
-
-            # Check for time discontinuities (another common source of errors)
-            if len(times) > 1:
-                dt = np.diff(times)
-                if not np.allclose(dt, dt[0], rtol=1e-5):
-                    jumps = np.where(np.abs(dt - dt[0]) > 1e-5 * dt[0])[0]
-                    print(
-                        f"WARNING: Time step discontinuities detected at indices: {jumps[:10]}..."
-                    )
-                    print(f"  Time steps: {dt[jumps[:5]]}")
-
-            # Check pulse timing relative to time array
-            for i, pulse in enumerate(pulse_seq.pulses):
-                start_idx = np.argmin(np.abs(times - pulse.pulse_start_time))
-                if abs(times[start_idx] - pulse.pulse_start_time) > 1e-5:
-                    print(
-                        f"WARNING: Pulse {i} start time {pulse.pulse_start_time:.6f} "
-                        f"doesn't align with time grid (closest: {times[start_idx]:.6f})"
-                    )
-
-            if not system.RWA_laser:
-                raise ValueError("The equations of the paper only make sense with RWA")
-
-            try:
-                # You need to adapt Liouville to accept pulse_seq and system if needed
-                Liouville = QobjEvo(
-                    lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system)
+    if system.ODE_Solver == "Paper_eqs":
+        # Check for time discontinuities (another common source of errors)
+        if len(times) > 1:
+            dt = np.diff(times)
+            if not np.allclose(dt, dt[0], rtol=1e-5):
+                jumps = np.where(np.abs(dt - dt[0]) > 1e-5 * dt[0])[0]
+                print(
+                    f"WARNING: Time step discontinuities detected at indices: {jumps[:10]}..."
                 )
-                result = mesolve(
-                    Liouville,
-                    psi_ini,
-                    times,
-                    options=options,
+                print(f"  Time steps: {dt[jumps[:5]]}")
+
+        # Check pulse timing relative to time array
+        """
+        for i, pulse in enumerate(pulse_seq.pulses):
+            start_idx = np.argmin(np.abs(times - pulse.pulse_start_time))
+            if abs(times[start_idx] - pulse.pulse_start_time) > 1e-5:
+                print(
+                    f"WARNING: Pulse {i} start time {pulse.pulse_start_time:.6f} "
+                    f"doesn't align with time grid (closest: {times[start_idx]:.6f})"
                 )
-            except Exception as e:
-                raise RuntimeError(
-                    f"Paper_eqs solver failed: {str(e)}. Check the matrix_ODE_paper implementation."
-                ) from e
+        """
+        if not system.RWA_laser:
+            raise ValueError("The equations of the paper only make sense with RWA")
 
-        else:
-            try:
-                # Build Hamiltonian
-                H_free = system.H0_diagonalized  # already includes the RWA, if present!
-                if H_free is None or not isinstance(H_free, Qobj):
-                    raise ValueError(f"Invalid H0_diagonalized: {H_free}")
+        # You need to adapt Liouville to accept pulse_seq and system if needed
+        Liouville = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
 
-                H_int_evo = H_free + QobjEvo(
-                    lambda t, args=None: H_int(t, pulse_seq, system)
-                )
-            except Exception as e:
-                raise RuntimeError(f"Failed to construct Hamiltonian: {str(e)}") from e
-
-            c_ops = []
-
-            try:
-                if system.ODE_Solver == "Paper_BR":
-                    c_ops = [R_paper(system)]
-                    if not all(isinstance(op, Qobj) for op in c_ops):
-                        raise ValueError(f"Invalid Redfield tensor: {c_ops}")
-
-                    result = mesolve(
-                        H_int_evo,
-                        psi_ini,
-                        times,
-                        c_ops=c_ops,
-                        options=options,
-                    )
-
-                elif system.ODE_Solver == "ME":
-                    c_ops = system.c_ops_list
-                    if not all(isinstance(op, Qobj) for op in c_ops):
-                        raise ValueError(f"Invalid collapse operators: {c_ops}")
-
-                    result = mesolve(
-                        H_int_evo,
-                        psi_ini,
-                        times,
-                        c_ops=c_ops,
-                        options=options,
-                    )
-
-                elif system.ODE_Solver == "BR":
-                    if not hasattr(system, "a_ops_list") or system.a_ops_list is None:
-                        raise ValueError("Missing a_ops_list for BR solver")
-
-                    result = brmesolve(
-                        H_int_evo,
-                        psi_ini,
-                        times,
-                        a_ops=system.a_ops_list,
-                        options=options,
-                    )
-            except Exception as e:
-                solver_specific = {
-                    "Paper_BR": "Check Redfield tensor R_paper implementation.",
-                    "ME": "Check collapse operators c_ops_list.",
-                    "BR": "Check bath coupling operators a_ops_list.",
-                }
-                extra_info = solver_specific.get(system.ODE_Solver, "")
-
-                # Check for common time range issues
-                if "ZVINDY-- T" in str(e) and "illegal" in str(e):
-                    raise RuntimeError(
-                        f"Time point error in ZVODE solver. The solver tried to evaluate at a time outside its "
-                        f"current integration range. This often happens with pulse sequences that have large "
-                        f"time gaps or time overlaps. Try using smaller time steps or avoiding discontinuities. "
-                        f"Original error: {str(e)}"
-                    ) from e
-
-                raise RuntimeError(
-                    f"{system.ODE_Solver} solver failed: {str(e)}. {extra_info}"
-                ) from e
-
-        # Validate the result
-        if not hasattr(result, "states") or len(result.states) != len(times):
-            raise ValueError(
-                f"Solver returned invalid result with {len(getattr(result, 'states', []))} states for {len(times)} time points"
-            )
-
-        return result
-
-    except MemoryError:
-        raise MemoryError(
-            "Not enough memory to complete simulation. Try reducing the time steps or system size."
+        result = mesolve(
+            Liouville,
+            psi_ini,
+            times,
+            options=options,
         )
-    except Exception as e:
-        raise RuntimeError(f"Unexpected error in pulse evolution: {str(e)}") from e
+
+    else:
+        # Build Hamiltonian
+        H_free = system.H0_diagonalized  # already includes the RWA, if present!
+        if H_free is None or not isinstance(H_free, Qobj):
+            raise ValueError(f"Invalid H0_diagonalized: {H_free}")
+
+        H_int_evo = H_free + QobjEvo(lambda t, args=None: H_int(t, pulse_seq, system))
+
+        c_ops = []
+
+        if system.ODE_Solver == "Paper_BR":
+            c_ops = [R_paper(system)]
+            if not all(isinstance(op, Qobj) for op in c_ops):
+                raise ValueError(f"Invalid Redfield tensor: {c_ops}")
+
+            result = mesolve(
+                H_int_evo,
+                psi_ini,
+                times,
+                c_ops=c_ops,
+                options=options,
+            )
+
+        elif system.ODE_Solver == "ME":
+            c_ops = system.c_ops_list
+            if not all(isinstance(op, Qobj) for op in c_ops):
+                raise ValueError(f"Invalid collapse operators: {c_ops}")
+
+            result = mesolve(
+                H_int_evo,
+                psi_ini,
+                times,
+                c_ops=c_ops,
+                options=options,
+            )
+
+        elif system.ODE_Solver == "BR":
+            if not hasattr(system, "a_ops_list") or system.a_ops_list is None:
+                raise ValueError("Missing a_ops_list for BR solver")
+
+            result = brmesolve(
+                H_int_evo,
+                psi_ini,
+                times,
+                a_ops=system.a_ops_list,
+                options=options,
+            )
+    return result
 
 
 def get_expect_vals_with_RWA(
@@ -2123,7 +2061,6 @@ def check_the_solver(
     # CHECK DENSITY MATRIX PROPERTIES
     # =============================
     strg = ""
-    global time_cut
     omega = system.omega_laser
     time_cut = np.inf  # time after which the checks failed
     for index, state in enumerate(result.states):
@@ -2191,19 +2128,13 @@ def compute_two_dimensional_polarization(
     idx_start_pulse0 = 0
     t_start_pulse0 = times[idx_start_pulse0]
 
-    print("WHAT\n          the fuck\n          is going on\n", flush=True)
-    print(
-        f"t_start_pulse0 = {t_start_pulse0} and the time in the array is {times[idx_start_pulse0]}",
-        flush=True,
-    )
-
     idx_end_pulse0 = np.abs(times - (system.Delta_ts[0])).argmin()
     idx_start_pulse1_max = np.abs(
         times - (tau_coh_vals[-1] - system.Delta_ts[1])
     ).argmin()
     times_0 = times[: idx_start_pulse1_max + 1]
     if times_0.size == 0:
-        times_0 = times[idx_start_pulse0 : idx_end_pulse0 + 1]
+        times_0 = times[: idx_end_pulse0 + 1]
 
     # First pulse
     pulse_0 = (t_start_pulse0, phi_0)
@@ -2212,6 +2143,7 @@ def compute_two_dimensional_polarization(
         system=system,
         curr=pulse_0,
     )
+
     data_0 = compute_pulse_evolution(
         system.psi_ini, times_0, pulse_seq_0, system=system
     )
@@ -2275,7 +2207,7 @@ def compute_two_dimensional_polarization(
                 data[tau_idx, t_idx] = np.real(value)
 
                 if t_idx == 0 and tau_idx == len(tau_coh_vals) // 3 and plot_example:
-                    print(system.RWA_laser)
+                    # print(system.RWA_laser)
                     data_1_expects = get_expect_vals_with_RWA(
                         data_0.states[: idx_start_pulse1 + 1],
                         data_0.times[: idx_start_pulse1 + 1],
@@ -2456,7 +2388,7 @@ def compute_many_polarizations(
     for omega in omega_ats:
         system_new = copy.deepcopy(system)  # create a copy of the system
         system_new.omega_A_cm = omega
-        print("new omega_A", system_new.omega_A)
+        # print("new omega_A", system_new.omega_A)
         data = compute_two_dimensional_polarization(
             T_wait=T_wait,
             phi_0=phi_0,
@@ -2478,303 +2410,6 @@ def compute_many_polarizations(
 # ##########################
 # functions for parallel processing
 # ##########################
-def for_one_time_calc_phase_comb(
-    T_wait: float,
-    phases: list,
-    times: np.ndarray,
-    system: SystemParameters,
-    **kwargs: dict,
-) -> np.ndarray:
-    """
-    Compute and average the 2D polarization for all phase combinations for one T_wait.
-
-    Parameters
-    ----------
-    T_wait : float
-        Waiting time.
-    phases : list
-        List of phase values.
-    times : np.ndarray
-        Time grid for computation.
-    system : SystemParameters
-        System parameters object.
-    **kwargs: Additional keyword arguments.
-                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
-
-    Returns
-    -------
-    np.ndarray
-        Averaged 2D polarization data for this T_wait.
-    """
-    # Get dimensions for the result array first
-    tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
-
-    if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
-        return None
-
-    # Pre-allocate the accumulation array with zeros using float32 to reduce memory
-    accumulated_data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.float32)
-    count = 0
-
-    # Process each phase combination and accumulate results
-    for phi1 in phases:
-        for phi2 in phases:
-            _, _, data = compute_two_dimensional_polarization(
-                T_wait, phi1, phi2, times=times, system=system, **kwargs
-            )
-            # Add data to the accumulator (using the real part since data is 1j * real)
-            accumulated_data += np.real(data / 1j)
-            count += 1
-
-            # Force garbage collection to free memory
-            import gc
-
-            gc.collect()
-
-    # Compute average
-    if count > 0:
-        averaged_data = 1j * accumulated_data / count
-    else:
-        averaged_data = 1j * accumulated_data
-
-    return averaged_data
-
-
-def parallel_process_all_combinations(
-    phases: list,
-    times_T: np.ndarray,
-    times: np.ndarray,
-    system: SystemParameters,
-    **kwargs: dict,
-) -> list:
-    """
-    Compute the averaged 2D polarization for all T_wait in times_T using all phase combinations.
-
-    Parameters
-    ----------
-    phases : list
-        List of phase values.
-    times_T : np.ndarray
-        Array of T_wait values.
-    times : np.ndarray
-        Time grid for computation.
-    system : SystemParameters
-        System parameters object.
-    **kwargs: Additional keyword arguments.
-                Can include 'plot_example' (bool, optional): Whether to plot an example evolution.
-
-    Returns
-    -------
-    list
-        List of averaged 2D polarization arrays for each T_wait.
-    """
-    results = [None] * len(times_T)
-
-    for idx, T_wait in enumerate(times_T):
-        results[idx] = for_one_time_calc_phase_comb(
-            T_wait, phases, times, system, **kwargs
-        )
-
-    return results
-
-
-"""# Define this function outside the parallel_process_all_combinations_with_inhomogenity function
-def process_single_T_wait(
-    T_wait, times, system, phases, omega_ats, max_workers, kwargs
-):
-    tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
-
-    if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
-        return None
-
-    # Pre-allocate accumulation array
-    accumulated_data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.float32)
-
-    # Counter for averaging
-    total_count = 0
-
-    # Process all frequencies in parallel
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(
-                process_single_frequency,
-                omega_at=omega,
-                T_wait=T_wait,
-                times=times,
-                system=system,
-                phases=phases,
-                accumulated_data_shape=accumulated_data.shape,
-                kwargs=kwargs,
-            )
-            for omega in omega_ats
-        ]
-
-        for future in as_completed(futures):
-            try:
-                data_result, count = future.result()
-                accumulated_data += data_result
-                total_count += count
-            except Exception as e:
-                print(f"Error processing frequency: {str(e)}")
-                # Continue with other frequencies
-
-    # Average the accumulated data
-    if total_count > 0:
-        averaged_data = 1j * (accumulated_data / total_count)
-        return averaged_data
-    else:
-        return 1j * accumulated_data
-"""
-
-
-def process_single_T_wait(
-    T_wait, times, system, phases, omega_ats, max_workers, kwargs
-):
-    """
-    Process a single T_wait value with multiple frequencies sequentially.
-
-    Parameters
-    ----------
-    T_wait : float
-        Waiting time value to process.
-    times : np.ndarray
-        Time grid for simulation.
-    system : SystemParameters
-        System parameters object.
-    phases : list
-        List of phase values for phase cycling.
-    omega_ats : list
-        List of frequencies to simulate.
-    max_workers : int
-        Not used in sequential version but kept for API compatibility.
-    kwargs : dict
-        Additional arguments for compute_two_dimensional_polarization.
-
-    Returns
-    -------
-    np.ndarray
-        Averaged 2D data for this T_wait.
-    """
-    # Get dimensions for time arrays
-    tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
-
-    if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
-        return None
-
-    # Pre-allocate accumulation array
-    accumulated_data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.float32)
-
-    # Counter for averaging
-    total_count = 0
-
-    # Process all frequencies sequentially with a normal for loop
-    for omega in omega_ats:
-        try:
-            # Call process_single_frequency directly
-            data_result, count = process_single_frequency(
-                omega_at=omega,
-                T_wait=T_wait,
-                times=times,
-                system=system,
-                phases=phases,
-                accumulated_data_shape=accumulated_data.shape,
-                kwargs=kwargs,
-            )
-
-            # Accumulate the results
-            accumulated_data += data_result
-            total_count += count
-        except Exception as e:
-            print(f"Error processing frequency {omega}: {str(e)}")
-            # Continue with other frequencies
-
-    # Average the accumulated data
-    if total_count > 0:
-        averaged_data = 1j * (accumulated_data / total_count)
-        return averaged_data
-    else:
-        return 1j * accumulated_data
-
-
-# Also define this function outside, with all needed parameters as arguments
-def process_single_frequency(
-    omega_at, T_wait, times, system, phases, accumulated_data_shape, kwargs
-):
-    """Process a single frequency with all phase combinations."""
-    try:
-        system_new = copy.deepcopy(system)
-        system_new.omega_A_cm = omega_at  # Set the new frequency
-
-        # Accumulator for this frequency
-        freq_data = np.zeros(accumulated_data_shape, dtype=np.float32)
-        freq_count = 0
-
-        # Run calculations for all phase combinations
-        for phi1 in phases:
-            for phi2 in phases:
-                _, _, data = compute_two_dimensional_polarization(
-                    T_wait, phi1, phi2, times=times, system=system_new, **kwargs
-                )
-                freq_data += np.real(data / 1j)
-                freq_count += 1
-
-        return freq_data, freq_count
-    except Exception as e:
-        # Log the error but continue execution
-        print(f"Error processing frequency {omega_at}: {str(e)}")
-        # Return empty data rather than crashing
-        return np.zeros(accumulated_data_shape, dtype=np.float32), 0
-
-
-def parallel_process_all_combinations_with_inhomogenity(
-    omega_ats: list,  # List of different frequencies to simulate
-    phases: list,
-    times_T: np.ndarray,
-    times: np.ndarray,
-    system: SystemParameters,
-    max_workers: int = None,  # Number of processes to use
-    **kwargs: dict,
-) -> list:
-    """
-    Compute 2D spectra for multiple T_wait times with inhomogeneous broadening and phase cycling.
-    Uses parallel processing for better performance.
-
-    Parameters:
-        omega_ats: List of different frequencies to simulate
-        phases: List of phases for phase cycling
-        times_T: Array of T_wait values
-        times: Time grid for simulation
-        system: System parameters object
-        max_workers: Number of parallel processes (default: use CPU count)
-        **kwargs: Additional keyword arguments for compute_two_dimensional_polarization
-
-    Returns:
-        List of averaged 2D data arrays for each T_wait
-    """
-    # Process all T_wait values in parallel
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
-            executor.submit(
-                process_single_T_wait,
-                T_wait=T_wait,
-                times=times,
-                system=system,
-                phases=phases,
-                omega_ats=omega_ats,
-                max_workers=max_workers,
-                kwargs=kwargs,
-            )
-            for T_wait in times_T
-        ]
-
-        # Collect results in order
-        all_results = [None] * len(times_T)
-        for idx, future in enumerate(futures):
-            all_results[idx] = future.result()
-
-    return all_results
-
-
 def extend_and_plot_results(
     averaged_results: list[np.ndarray],
     times_T: np.ndarray,
@@ -2896,3 +2531,192 @@ def extend_and_plot_results(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,
     )
+
+
+def batch_process_all_combinations_with_inhomogeneity(
+    omega_ats: list,
+    phases: list,
+    times_T: np.ndarray,
+    times: np.ndarray,
+    system: SystemParameters,
+    max_workers: int = None,
+    **kwargs: dict,
+) -> list:
+    """
+    Compute 2D spectra using batch processing with parallelization of parameter combinations.
+    Pre-computes all parameter combinations, processes them in parallel for each T_wait.
+
+    Parameters
+    ----------
+    omega_ats : list
+        List of different frequencies to simulate.
+    phases : list
+        List of phases for phase cycling.
+    times_T : np.ndarray
+        Array of T_wait values.
+    times : np.ndarray
+        Time grid for simulation.
+    system : SystemParameters
+        System parameters object.
+    max_workers : int, optional
+        Number of workers for parallel processing (default: CPU count).
+    **kwargs : dict
+        Additional keyword arguments for compute_two_dimensional_polarization.
+
+    Returns
+    -------
+    list
+        List of averaged 2D data arrays for each T_wait.
+    """
+    from concurrent.futures import ProcessPoolExecutor, as_completed
+    import multiprocessing as mp
+
+    # Set default max_workers
+    if max_workers is None:
+        max_workers = mp.cpu_count()
+
+    # =============================
+    # PRE-COMPUTE ALL PARAMETER COMBINATIONS
+    # =============================
+    all_combinations = []
+    for omega_at in omega_ats:
+        for phi1 in phases:
+            for phi2 in phases:
+                all_combinations.append((omega_at, phi1, phi2))
+
+    print(
+        f"Processing {len(all_combinations)} parameter combinations for {len(times_T)} T_wait values"
+    )
+    print(f"Using {max_workers} parallel workers")
+
+    # =============================
+    # ITERATE OVER times_T AND PROCESS ALL COMBINATIONS IN PARALLEL
+    # =============================
+    all_results = []
+
+    for T_wait_idx, T_wait in enumerate(times_T):
+        print(f"Processing T_wait {T_wait_idx + 1}/{len(times_T)}: {T_wait}")
+
+        # Get dimensions for this T_wait
+        tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(
+            times, T_wait=T_wait
+        )
+
+        if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
+            all_results.append(None)
+            continue
+
+        # Pre-allocate accumulation array
+        accumulated_data = np.zeros(
+            (len(tau_coh_vals), len(t_det_vals)), dtype=np.float32
+        )
+        total_count = 0
+
+        # Process all combinations in parallel for this T_wait
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all combination tasks
+            futures = [
+                executor.submit(
+                    _process_single_combination,
+                    omega_at=omega_at,
+                    phi1=phi1,
+                    phi2=phi2,
+                    T_wait=T_wait,
+                    times=times,
+                    system=system,
+                    kwargs=kwargs,
+                )
+                for omega_at, phi1, phi2 in all_combinations
+            ]
+
+            # Collect results as they complete
+            completed_count = 0
+            for future in as_completed(futures):
+                try:
+                    data_result = future.result()
+                    if data_result is not None:
+                        # Accumulate data (extract real part since data is 1j * real)
+                        accumulated_data += np.real(data_result / 1j)
+                        total_count += 1
+
+                    completed_count += 1
+                    if completed_count % 10 == 0:
+                        print(
+                            f"  Completed {completed_count}/{len(all_combinations)} combinations"
+                        )
+
+                except Exception as e:
+                    print(f"Error processing combination: {str(e)}")
+                    continue
+
+        # Average the accumulated data for this T_wait
+        if total_count > 0:
+            averaged_data = 1j * (accumulated_data / total_count)
+        else:
+            averaged_data = 1j * accumulated_data
+
+        all_results.append(averaged_data)
+        print(
+            f"  Successfully processed {total_count}/{len(all_combinations)} combinations for T_wait={T_wait}"
+        )
+
+    return all_results
+
+
+def _process_single_combination(
+    omega_at: float,
+    phi1: float,
+    phi2: float,
+    T_wait: float,
+    times: np.ndarray,
+    system: SystemParameters,
+    kwargs: dict,
+) -> np.ndarray:
+    """
+    Process a single parameter combination for parallel execution.
+    This function runs in a separate process to avoid QUTIP thread safety issues.
+
+    Parameters
+    ----------
+    omega_at : float
+        Frequency for this combination.
+    phi1 : float
+        First phase value.
+    phi2 : float
+        Second phase value.
+    T_wait : float
+        Waiting time.
+    times : np.ndarray
+        Time grid.
+    system : SystemParameters
+        System parameters (will be deep copied).
+    kwargs : dict
+        Additional arguments.
+
+    Returns
+    -------
+    np.ndarray or None
+        The computed 2D polarization data, or None if failed.
+    """
+    try:
+        # Create system copy with new frequency
+        system_new = copy.deepcopy(system)
+        system_new.omega_A_cm = omega_at
+
+        # Compute 2D polarization for this combination
+        _, _, data = compute_two_dimensional_polarization(
+            T_wait=T_wait,
+            phi_0=phi1,
+            phi_1=phi2,
+            times=times,
+            system=system_new,
+            **kwargs,
+        )
+
+        return data
+
+    except Exception as e:
+        print(
+            f"Error in _process_single_combination: omega={omega_at}, phi1={phi1}, phi2={phi2}: {str(e)}"
+        )
+        return None
