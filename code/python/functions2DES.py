@@ -3,9 +3,9 @@
 # =============================
 
 from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
+import multiprocessing as mp
 from concurrent.futures import (
     ProcessPoolExecutor,
-    ThreadPoolExecutor,
     as_completed,
 )  # for parallelization
 from dataclasses import dataclass, field  # for the class definiton
@@ -44,7 +44,7 @@ class SystemParameters:
 
     # Temperature / cutoff of the bath
     Temp: float = 1.0
-    cutoff_: float = 1.0
+    cutoff_: float = 1.0  # later * omega_A
     # =============================
     # system size
     # =============================
@@ -953,207 +953,6 @@ def H_int(
     return H_int
 
 
-def plot_positive_color_map(
-    datas: tuple,
-    T_wait: float = np.inf,
-    space: str = "real",
-    type: str = "real",
-    output_dir: str = None,
-    ODE_Solver: str = None,
-    positive: bool = False,
-    safe: bool = False,
-    use_custom_colormap: bool = False,
-    section: tuple = None,  # (x_min, x_max, y_min, y_max)
-    system: SystemParameters = None,
-):
-    """
-    Create a color plot of 2D functional data for positive x and y values only.
-
-    Parameters:
-        datas (tuple): (x, y, data) where x and y are 1D arrays and data is a 2D array.
-        T_wait (float): waiting time to include in plot title and file name.
-        space (str): Either 'real' or 'freq' specifying the space of the data.
-        type (str): Type of data ('real', 'imag', 'abs', or 'phase'). Used only if space="freq".
-        output_dir (str, optional): Directory to save the plot.
-        ODE_Solver (str, optional): Solver name for filename.
-        positive (bool): Whether to use ONLY positive values of x and y.
-        safe (bool): If True, saves the plot to a file.
-        use_custom_colormap (bool): Use custom colormap with white at zero.
-        section (tuple, optional): (x_min, x_max, y_min, y_max) to zoom in.
-
-    Returns:
-        None
-    """
-    # =============================
-    # Validate input
-    # =============================
-    if not isinstance(datas, tuple) or len(datas) != 3:
-        raise ValueError("datas must be a tuple of (x, y, data)")
-
-    x, y, data = datas
-
-    x = np.real(x)
-    y = np.real(y)
-
-    data = np.array(data, dtype=np.complex128)
-    if np.abs(data).max() == 0:
-        raise ValueError("Data array is all zeros, cannot normalize.")
-    data = data / np.abs(data).max()  # normalize
-
-    if data.shape[1] != len(x):
-        raise ValueError(
-            f"Length of x ({len(x)}) must match the number of columns in data ({data.shape[1]})."
-        )
-    if data.shape[0] != len(y):
-        raise ValueError(
-            f"Length of y ({len(y)}) must match the number of rows in data ({data.shape[0]})."
-        )
-
-    # =============================
-    # Set plot labels and colormap
-    # =============================
-    if space not in ("real", "freq"):
-        raise ValueError("Invalid space. Must be 'real' or 'freq'.")
-    if space == "real":
-        colormap = "viridis"
-        title = r"$\text{Real space}$"
-        x_title = r"$t_{\text{det}}$ [fs]"
-        y_title = r"$\tau_{\text{coh}}$ [fs]"
-    else:
-        colormap = "plasma"
-        title = r"$\text{Freq space}$"
-        x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
-        y_title = r"$\omega_{\tau_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
-
-    if type not in ("real", "imag", "abs", "phase"):
-        raise ValueError("Invalid Type. Must be 'real', 'imag', 'abs', or 'phase'.")
-    if type == "real":
-        title += r"$\text{, Real 2D Spectrum}$"
-        data = np.real(data)
-    elif type == "imag":
-        title += r"$\text{, Imag 2D Spectrum}$"
-        data = np.imag(data)
-    elif type == "abs":
-        title += r"$\text{, Abs 2D Spectrum}$"
-        data = np.abs(data)
-        use_custom_colormap = False
-    elif type == "phase":
-        title += r"$\text{, Phase 2D Spectrum}$"
-        data = np.angle(data)
-
-    if T_wait != np.inf:
-        title += rf"$\ \text{{at }} T = {T_wait:.2f}$"
-
-    # =============================
-    # Restrict to positive quadrant if requested
-    # =============================
-    if positive:
-        rows, cols = data.shape
-        if rows % 2 != 0:
-            data = data[:-1, :]
-            y = y[:-1]
-        if cols % 2 != 0:
-            data = data[:, :-1]
-            x = x[:-1]
-        mid_x = len(x) // 2
-        mid_y = len(y) // 2
-        q1 = data[mid_y:, mid_x:]
-        q3 = data[:mid_y, :mid_x]
-        averaged_data = (q1 + np.flip(q3, axis=(0, 1))) / 2
-        x = x[mid_x:]
-        y = y[mid_y:]
-        data = averaged_data
-
-    # =============================
-    # Section cropping
-    # =============================
-    if section is not None:
-        x_min, x_max, y_min, y_max = section
-
-        # Validate coordinates are within data range
-        x_min = max(x_min, np.min(x))
-        x_max = min(x_max, np.max(x))
-        y_min = max(y_min, np.min(y))
-        y_max = min(y_max, np.max(y))
-
-        x_indices = np.where((x >= x_min) & (x <= x_max))[0]
-        y_indices = np.where((y >= y_min) & (y <= y_max))[0]
-
-        x_indices = x_indices[x_indices < data.shape[1]]
-        y_indices = y_indices[y_indices < data.shape[0]]
-
-        data = data[np.ix_(y_indices, x_indices)]
-        x = x[x_indices]
-        y = y[y_indices]
-
-    # =============================
-    # Custom colormap for zero-centered data
-    # =============================
-    norm = None
-    if use_custom_colormap:
-        vmin = np.min(data)
-        vmax = np.max(data)
-        vcenter = 0
-        cmap = plt.get_cmap("bwr")
-        colors = cmap(np.linspace(0, 1, 256))
-        mid = 128
-        colors[mid] = [1, 1, 1, 1]  # white at center
-        colormap = LinearSegmentedColormap.from_list("white_centered", colors)
-        if vmin < vcenter < vmax:
-            norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
-        else:
-            print(
-                f"Warning: Cannot use TwoSlopeNorm with vmin={vmin}, vcenter={vcenter}, vmax={vmax}. Using default normalization."
-            )
-
-    cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
-
-    # =============================
-    # Plotting
-    # =============================
-    plt.figure(figsize=(10, 8))
-    plt.pcolormesh(
-        x,
-        y,
-        data,
-        shading="auto",
-        cmap=colormap,
-        norm=norm,
-    )
-    plt.colorbar(label=cbarlabel)
-    plt.title(title)
-    plt.xlabel(x_title)
-    plt.ylabel(y_title)
-
-    # =============================
-    # Save or show
-    # =============================
-
-    if safe and output_dir and system is not None:
-        if not os.path.isdir(output_dir):
-            raise ValueError(f"Output directory {output_dir} does not exist.")
-        filename_parts = [
-            f"N={system.N_atoms}",
-            f"mua={system.mu_A:.0f}",
-            f"E0={system.E0:.2e}",
-            f"wa={system.omega_A:.2f}",
-            f"wL={system.omega_laser / system.omega_A:.1f}wa",
-            f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
-            f"pos={positive}",
-            f"space={space}",
-        ]
-        if ODE_Solver == "Paper_eqs":
-            filename_parts.append(f"Paper_eqs")
-        if space == "freq":
-            filename_parts.append(f"type_{type}")
-        file_name_combined = "_".join(filename_parts) + ".svg"
-        save_path_combined = os.path.join(output_dir, file_name_combined)
-        plt.savefig(save_path_combined)
-    else:
-        print("Plot not saved. Ensure 'safe' is True and 'output_dir' is specified.")
-    plt.show()
-
-
 def get_tau_cohs_and_t_dets_for_T_wait(
     times: np.ndarray, T_wait: float
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -1320,83 +1119,6 @@ def Plot_example_evo(
     )
     plt.tight_layout()
     plt.show()
-
-
-def extend_time_tau_axes(
-    ts: np.ndarray,
-    taus: np.ndarray,
-    data: np.ndarray,
-    pad_rows: tuple[int, int] = (0, 0),
-    pad_cols: tuple[int, int] = (0, 0),
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Extend the ts and taus axes and pad the data array accordingly.
-
-    Parameters:
-        ts (np.ndarray): Time axis (t).
-        taus (np.ndarray): Tau axis (coherence time).
-        data (np.ndarray): 2D data array.
-        pad_rows (tuple): Padding for rows (before, after) along taus axis.
-        pad_cols (tuple): Padding for columns (before, after) along ts axis.
-
-    Returns:
-        tuple: (extended_ts, extended_taus, padded_data)
-    """
-    # print(f"Pad rows: {pad_rows}, Pad cols: {pad_cols}", data.shape, flush=True)
-    # Pad the data array
-    padded_data = np.pad(data, (pad_rows, pad_cols), mode="constant", constant_values=0)
-
-    # Compute steps
-    dt = ts[1] - ts[0]
-    dtau = taus[1] - taus[0]
-
-    # Extend axes
-    extended_ts = np.linspace(
-        ts[0] - pad_cols[0] * dt, ts[-1] + pad_cols[1] * dt, padded_data.shape[1]
-    )
-    extended_taus = np.linspace(
-        taus[0] - pad_rows[0] * dtau,
-        taus[-1] + pad_rows[1] * dtau,
-        padded_data.shape[0],
-    )
-
-    return extended_ts, extended_taus, padded_data
-
-
-def compute_2d_fft_wavenumber(ts, taus, data):
-    """
-    Compute the 2D FFT of the data and convert axes to wavenumber units.
-
-    Parameters:
-        ts (np.ndarray): Time axis for detection.
-        taus (np.ndarray): Time axis for coherence.
-        data (np.ndarray): 2D data array.
-
-    Returns:
-        tuple: (nu_ts, nu_taus, s2d) where
-            nu_ts (np.ndarray): Wavenumber axis for detection.
-            nu_taus (np.ndarray): Wavenumber axis for coherence.
-            s2d (np.ndarray): 2D FFT of the input data.
-    """
-    # Calculate frequency axes (cycle/fs)
-    taufreqs = np.fft.fftshift(np.fft.fftfreq(len(taus), d=(taus[1] - taus[0])))
-    tfreqs = np.fft.fftshift(np.fft.fftfreq(len(ts), d=(ts[1] - ts[0])))
-
-    # Convert to wavenumber units [10^4 cm⁻¹]
-    nu_taus = taufreqs / 2.998 * 10
-    nu_ts = tfreqs / 2.998 * 10
-
-    # 2D FFT: first over tau (axis=1), then over t (axis=0), take imaginary part
-    """ TODO check
-    if np.any(np.imag(data)):
-        data = np.imag(data)
-    else:
-        data = np.real(data)
-    """
-    # 2D FFT: first over tau (axis=1), then over t (axis=0)
-    s2d = np.fft.fftshift(np.fft.fft(np.fft.fft(data, axis=1), axis=0))
-
-    return nu_ts, nu_taus, s2d
 
 
 def apply_RWA_phase_factors(
@@ -2243,11 +1965,11 @@ def compute_two_dimensional_polarization(
                         T_wait,
                         system=system,
                     )
-
+    print(data[0, 0])
     return (
         t_det_vals,
         tau_coh_vals,
-        data,  # (data itself is real)
+        data,  # (polarization itself is real)
     )
 
 
@@ -2411,128 +2133,6 @@ def compute_many_polarizations(
 # ##########################
 # functions for parallel processing
 # ##########################
-def extend_and_plot_results(
-    averaged_results: list[np.ndarray],
-    times_T: np.ndarray,
-    times: np.ndarray,
-    extend_for: tuple[int, int] = None,
-    **plot_args_freq: dict,
-) -> None:
-    """
-    Extend and plot the results for a set of 2D spectra averaged over phase/inhomogeneous broadening.
-
-    Parameters
-    ----------
-    averaged_results : list of np.ndarray
-        List of 2D arrays (each shape: [len(taus), len(ts)]) for each T_wait.
-    times_T : np.ndarray
-        Array of T_wait values.
-    times : np.ndarray
-        Time grid used for simulation.
-    extend_for : tuple[int, int], optional
-        Padding for (rows, columns) as (before, after) for both axes.
-    **plot_args_freq : dict
-        Additional keyword arguments for frequency-domain plotting.
-
-    Returns
-    -------
-    None
-    """
-    if not averaged_results:
-        print("No results to plot")
-        return
-
-    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-    global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
-
-    if extend_for is not None:
-        global_ts, global_taus, global_data_time = extend_time_tau_axes(
-            global_ts,
-            global_taus,
-            global_data_time,
-            pad_rows=extend_for,
-            pad_cols=extend_for,
-        )
-
-    global_nu_ts, global_nu_taus, _ = compute_2d_fft_wavenumber(
-        global_ts, global_taus, np.zeros((len(global_ts), len(global_taus)))
-    )
-    global_data_freq = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
-
-    # =============================
-    # Combine all data arrays into global arrays for time and frequency domains
-    # =============================
-
-    # Initialize global arrays with zeros
-    # global_ts and global_taus are the largest axes (from the first T_wait)
-    # global_data_time and global_data_freq are already initialized above
-
-    def find_closest_index(local_vals, global_vals):
-        """Find indices in global_vals closest to each value in local_vals."""
-        return [np.argmin(np.abs(global_vals - v)) for v in local_vals]
-
-    for i, data in enumerate(averaged_results):
-        data = data.astype(np.complex64)  # or np.complex128 for higher precision
-        data = 1j * data  # because E ~ i*P TODO check
-
-        T_wait = times_T[i]
-        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
-
-        if extend_for is not None:
-            ts, taus, data = extend_time_tau_axes(
-                ts, taus, data, pad_rows=extend_for, pad_cols=extend_for
-            )
-
-        nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
-
-        # Map local data into the global arrays
-        tau_indices = find_closest_index(taus, global_taus)
-        t_indices = find_closest_index(ts, global_ts)
-        for local_tau_idx, global_tau_idx in enumerate(tau_indices):
-            for local_t_idx, global_t_idx in enumerate(t_indices):
-                # Check bounds before assignment to avoid IndexError
-                if (
-                    global_tau_idx < global_data_time.shape[0]
-                    and global_t_idx < global_data_time.shape[1]
-                ):
-                    global_data_time[global_tau_idx, global_t_idx] += data[
-                        local_tau_idx, local_t_idx
-                    ]
-                    global_data_freq[global_tau_idx, global_t_idx] += data_freq[
-                        local_tau_idx, local_t_idx
-                    ]
-                else:
-                    # Print debug info if index is out of bounds
-                    print(
-                        f"IndexError: global_tau_idx={global_tau_idx}, global_t_idx={global_t_idx}, shape={global_data_time.shape}"
-                    )
-        if len(times_T) > 1:
-            plot_positive_color_map(
-                (ts, taus, data),
-                times_T[i],
-                type="real",  # or imag, if data *= 1j?
-                use_custom_colormap=True,
-            )
-
-            plot_positive_color_map(
-                (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
-            )
-
-    # Normalize by number of T_waits
-    global_data_time /= len(averaged_results)
-    global_data_freq /= len(averaged_results)
-
-    # Plot the global results
-    plot_positive_color_map(
-        (global_ts, global_taus, global_data_time),
-        type="imag",  # TODO REAL or imag, if data *= 1j
-        use_custom_colormap=True,
-    )
-
-    plot_positive_color_map(
-        (global_nu_ts, global_nu_taus, global_data_freq),
-        **plot_args_freq,
-    )
 
 
 def batch_process_all_combinations_with_inhomogeneity(
@@ -2570,8 +2170,6 @@ def batch_process_all_combinations_with_inhomogeneity(
     list
         List of averaged 2D data arrays for each T_wait.
     """
-    from concurrent.futures import ProcessPoolExecutor, as_completed
-    import multiprocessing as mp
 
     # Set default max_workers
     if max_workers is None:
@@ -2608,7 +2206,7 @@ def batch_process_all_combinations_with_inhomogeneity(
             all_results.append(None)
             continue
 
-        # Pre-allocate accumulation array
+        # Pre-allocate accumulation array of real polarization data
         accumulated_data = np.zeros(
             (len(tau_coh_vals), len(t_det_vals)), dtype=np.float32
         )
@@ -2637,8 +2235,7 @@ def batch_process_all_combinations_with_inhomogeneity(
                 try:
                     data_result = future.result()
                     if data_result is not None:
-                        # Accumulate data (extract real part since data is 1j * real)
-                        accumulated_data += data_result  # data itself is real
+                        accumulated_data += data_result
                         total_count += 1
 
                     completed_count += 1
@@ -2720,3 +2317,419 @@ def _process_single_combination(
             f"Error in _process_single_combination: omega={omega_at}, phi1={phi1}, phi2={phi2}: {str(e)}"
         )
         return None
+
+
+# ##########################
+# function for post-processing and plotting
+# ##########################
+def plot_positive_color_map(
+    datas: tuple,
+    T_wait: float = np.inf,
+    space: str = "real",
+    type: str = "real",
+    output_dir: str = None,
+    ODE_Solver: str = None,
+    positive: bool = False,
+    safe: bool = False,
+    use_custom_colormap: bool = False,
+    section: tuple = None,  # (x_min, x_max, y_min, y_max)
+    system: SystemParameters = None,
+):
+    """
+    Create a color plot of 2D functional data for positive x and y values only.
+
+    Parameters:
+        datas (tuple): (x, y, data) where x and y are 1D arrays and data is a 2D array.
+        T_wait (float): waiting time to include in plot title and file name.
+        space (str): Either 'real' or 'freq' specifying the space of the data.
+        type (str): Type of data ('real', 'imag', 'abs', or 'phase'). Used only if space="freq".
+        output_dir (str, optional): Directory to save the plot.
+        ODE_Solver (str, optional): Solver name for filename.
+        positive (bool): Whether to use ONLY positive values of x and y.
+        safe (bool): If True, saves the plot to a file.
+        use_custom_colormap (bool): Use custom colormap with white at zero.
+        section (tuple, optional): (x_min, x_max, y_min, y_max) to zoom in.
+
+    Returns:
+        None
+    """
+    # =============================
+    # Validate input
+    # =============================
+    if not isinstance(datas, tuple) or len(datas) != 3:
+        raise ValueError("datas must be a tuple of (x, y, data)")
+
+    x, y, data = datas
+
+    x = np.real(x)
+    y = np.real(y)
+
+    data = np.array(data, dtype=np.complex128)
+    if np.abs(data).max() == 0:
+        raise ValueError("Data array is all zeros, cannot normalize.")
+    data = data / np.abs(data).max()  # normalize
+
+    if data.shape[1] != len(x):
+        raise ValueError(
+            f"Length of x ({len(x)}) must match the number of columns in data ({data.shape[1]})."
+        )
+    if data.shape[0] != len(y):
+        raise ValueError(
+            f"Length of y ({len(y)}) must match the number of rows in data ({data.shape[0]})."
+        )
+
+    # =============================
+    # Set plot labels and colormap
+    # =============================
+    if space not in ("real", "freq"):
+        raise ValueError("Invalid space. Must be 'real' or 'freq'.")
+    if space == "real":
+        colormap = "viridis"
+        title = r"$\text{Real space}$"
+        x_title = r"$t_{\text{det}}$ [fs]"
+        y_title = r"$\tau_{\text{coh}}$ [fs]"
+    else:
+        colormap = "plasma"
+        title = r"$\text{Freq space}$"
+        x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
+        y_title = r"$\omega_{\tau_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
+
+    if type not in ("real", "imag", "abs", "phase"):
+        raise ValueError("Invalid Type. Must be 'real', 'imag', 'abs', or 'phase'.")
+    if type == "real":
+        title += r"$\text{, Real 2D Spectrum}$"
+        data = np.real(data)
+    elif type == "imag":
+        title += r"$\text{, Imag 2D Spectrum}$"
+        data = np.imag(data)
+    elif type == "abs":
+        title += r"$\text{, Abs 2D Spectrum}$"
+        data = np.abs(data)
+        use_custom_colormap = False
+    elif type == "phase":
+        title += r"$\text{, Phase 2D Spectrum}$"
+        data = np.angle(data)
+
+    if T_wait != np.inf:
+        title += rf"$\ \text{{at }} T = {T_wait:.2f}$"
+
+    # =============================
+    # Restrict to positive quadrant if requested
+    # =============================
+    if positive:
+        rows, cols = data.shape
+        if rows % 2 != 0:
+            data = data[:-1, :]
+            y = y[:-1]
+        if cols % 2 != 0:
+            data = data[:, :-1]
+            x = x[:-1]
+        mid_x = len(x) // 2
+        mid_y = len(y) // 2
+        """ TODO implement quadrant averaging
+        q1 = data[mid_y:, mid_x:]
+        q3 = data[:mid_y, :mid_x]
+        data = (q1 + np.flip(q3, axis=(0, 1))) / 2 # average over the quadrants
+        """
+        x = x[mid_x:]
+        y = y[mid_y:]
+        data = data[mid_y:, mid_x:]
+
+    # =============================
+    # Section cropping
+    # =============================
+    if section is not None:
+        x_min, x_max, y_min, y_max = section
+
+        # Validate coordinates are within data range
+        x_min = max(x_min, np.min(x))
+        x_max = min(x_max, np.max(x))
+        y_min = max(y_min, np.min(y))
+        y_max = min(y_max, np.max(y))
+
+        x_indices = np.where((x >= x_min) & (x <= x_max))[0]
+        y_indices = np.where((y >= y_min) & (y <= y_max))[0]
+
+        x_indices = x_indices[x_indices < data.shape[1]]
+        y_indices = y_indices[y_indices < data.shape[0]]
+
+        data = data[np.ix_(y_indices, x_indices)]
+        x = x[x_indices]
+        y = y[y_indices]
+
+    # =============================
+    # Custom colormap for zero-centered data
+    # =============================
+    norm = None
+    if use_custom_colormap:
+        vmin = np.min(data)
+        vmax = np.max(data)
+        vcenter = 0
+        cmap = plt.get_cmap("bwr")
+        colors = cmap(np.linspace(0, 1, 256))
+        mid = 128
+        colors[mid] = [1, 1, 1, 1]  # white at center
+        colormap = LinearSegmentedColormap.from_list("white_centered", colors)
+        if vmin < vcenter < vmax:
+            norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
+        else:
+            print(
+                f"Warning: Cannot use TwoSlopeNorm with vmin={vmin}, vcenter={vcenter}, vmax={vmax}. Using default normalization."
+            )
+
+    cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
+
+    # =============================
+    # Plotting
+    # =============================
+    plt.figure(figsize=(10, 8))
+    plt.pcolormesh(
+        x,
+        y,
+        data,
+        shading="auto",
+        cmap=colormap,
+        norm=norm,
+    )
+    plt.colorbar(label=cbarlabel)
+    plt.title(title)
+    plt.xlabel(x_title)
+    plt.ylabel(y_title)
+
+    # =============================
+    # Save or show
+    # =============================
+
+    if safe and output_dir and system is not None:
+        if not os.path.isdir(output_dir):
+            raise ValueError(f"Output directory {output_dir} does not exist.")
+        filename_parts = [
+            f"N={system.N_atoms}",
+            f"mua={system.mu_A:.0f}",
+            f"E0={system.E0:.2e}",
+            f"wa={system.omega_A:.2f}",
+            f"wL={system.omega_laser / system.omega_A:.1f}wa",
+            f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
+            f"pos={positive}",
+            f"space={space}",
+        ]
+        if ODE_Solver == "Paper_eqs":
+            filename_parts.append(f"Paper_eqs")
+        if space == "freq":
+            filename_parts.append(f"type_{type}")
+        file_name_combined = "_".join(filename_parts) + ".svg"
+        save_path_combined = os.path.join(output_dir, file_name_combined)
+        plt.savefig(save_path_combined)
+    else:
+        print("Plot not saved. Ensure 'safe' is True and 'output_dir' is specified.")
+    plt.show()
+
+
+def extend_time_tau_axes(
+    ts: np.ndarray,
+    taus: np.ndarray,
+    data: np.ndarray,
+    pad_rows: tuple[int, int] = (0, 0),
+    pad_cols: tuple[int, int] = (0, 0),
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Extend the ts and taus axes and pad the data array accordingly.
+
+    Parameters:
+        ts (np.ndarray): Time axis (t).
+        taus (np.ndarray): Tau axis (coherence time).
+        data (np.ndarray): 2D data array.
+        pad_rows (tuple): Padding for rows (before, after) along taus axis.
+        pad_cols (tuple): Padding for columns (before, after) along ts axis.
+
+    Returns:
+        tuple: (extended_ts, extended_taus, padded_data)
+    """
+    # print(f"Pad rows: {pad_rows}, Pad cols: {pad_cols}", data.shape, flush=True)
+    # Pad the data array
+    padded_data = np.pad(data, (pad_rows, pad_cols), mode="constant", constant_values=0)
+
+    # Compute steps
+    dt = ts[1] - ts[0]
+    dtau = taus[1] - taus[0]
+
+    # Extend axes
+    extended_ts = np.linspace(
+        ts[0] - pad_cols[0] * dt, ts[-1] + pad_cols[1] * dt, padded_data.shape[1]
+    )
+    extended_taus = np.linspace(
+        taus[0] - pad_rows[0] * dtau,
+        taus[-1] + pad_rows[1] * dtau,
+        padded_data.shape[0],
+    )
+
+    return extended_ts, extended_taus, padded_data
+
+
+def compute_2d_fft_wavenumber(ts, taus, data):
+    """
+    Compute the 2D FFT of the data and convert axes to wavenumber units.
+
+    Parameters:
+        ts (np.ndarray): Time axis for detection.
+        taus (np.ndarray): Time axis for coherence.
+        data (np.ndarray): 2D data array.
+
+    Returns:
+        tuple: (nu_ts, nu_taus, s2d) where
+            nu_ts (np.ndarray): Wavenumber axis for detection.
+            nu_taus (np.ndarray): Wavenumber axis for coherence.
+            s2d (np.ndarray): 2D FFT of the input data.
+    """
+
+    # Calculate frequency axes (cycle/fs)
+    taufreqs = -np.fft.fftfreq(len(taus), d=(taus[1] - taus[0]))
+    tfreqs = -np.fft.fftfreq(len(ts), d=(ts[1] - ts[0]))
+
+    # Convert to wavenumber units [10^4 cm⁻¹]
+    nu_taus = taufreqs / 2.998 * 10
+    nu_ts = tfreqs / 2.998 * 10
+
+    # 2D FFT: first over tau (axis=1), then over t (axis=0)
+    s2d_raw = np.fft.fft(np.fft.fft(data, axis=1), axis=0)
+    s2d = s2d_raw
+    """
+    # Calculate frequency axes (cycle/fs)
+    taufreqs = np.fft.fftfreq(
+        len(taus), d=(taus[1] - taus[0])
+    )  # TO get the - sign in the formula right
+    tfreqs = np.fft.fftfreq(len(ts), d=(ts[1] - ts[0]))
+
+    # Convert to wavenumber units [10^4 cm⁻¹]
+    nu_taus = taufreqs / 2.998 * 10
+    nu_ts = tfreqs / 2.998 * 10
+
+    # 2D FFT: first over tau (axis=1), then over t (axis=0)
+    s2d = np.fft.fft(np.fft.ifft(data, axis=1), axis=0) * len(taus)
+    """
+
+    return nu_ts, nu_taus, s2d
+
+
+def extend_and_plot_results(
+    averaged_results: list[np.ndarray],
+    times_T: np.ndarray,
+    times: np.ndarray,
+    extend_for: tuple[int, int] = None,
+    **plot_args_freq: dict,
+) -> None:
+    """
+    Extend and plot the results for a set of 2D spectra averaged over phase/inhomogeneous broadening.
+
+    Parameters
+    ----------
+    averaged_results : list of np.ndarray
+        List of 2D arrays (each shape: [len(taus), len(ts)]) for each T_wait.
+    times_T : np.ndarray
+        Array of T_wait values.
+    times : np.ndarray
+        Time grid used for simulation.
+    extend_for : tuple[int, int], optional
+        Padding for (rows, columns) as (before, after) for both axes.
+    **plot_args_freq : dict
+        Additional keyword arguments for frequency-domain plotting.
+
+    Returns
+    -------
+    None
+    """
+    if not averaged_results:
+        print("No results to plot")
+        return
+
+    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
+    global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
+
+    if extend_for is not None:
+        global_ts, global_taus, global_data_time = extend_time_tau_axes(
+            global_ts,
+            global_taus,
+            global_data_time,
+            pad_rows=extend_for,
+            pad_cols=extend_for,
+        )
+
+    global_nu_ts, global_nu_taus, _ = compute_2d_fft_wavenumber(
+        global_ts, global_taus, np.zeros((len(global_ts), len(global_taus)))
+    )
+    global_data_freq = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
+
+    # =============================
+    # Combine all data arrays into global arrays for time and frequency domains
+    # =============================
+
+    # Initialize global arrays with zeros
+    # global_ts and global_taus are the largest axes (from the first T_wait)
+    # global_data_time and global_data_freq are already initialized above
+
+    def find_closest_index(local_vals, global_vals):
+        """Find indices in global_vals closest to each value in local_vals."""
+        return [np.argmin(np.abs(global_vals - v)) for v in local_vals]
+
+    for i, data in enumerate(averaged_results):
+        data = data.astype(np.complex64)
+        data = 1j * data  # because E ~ i*P TODO check
+
+        T_wait = times_T[i]
+        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+
+        if extend_for is not None:
+            ts, taus, data = extend_time_tau_axes(
+                ts, taus, data, pad_rows=extend_for, pad_cols=extend_for
+            )
+
+        nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
+
+        # Map local data into the global arrays
+        tau_indices = find_closest_index(taus, global_taus)
+        t_indices = find_closest_index(ts, global_ts)
+        for local_tau_idx, global_tau_idx in enumerate(tau_indices):
+            for local_t_idx, global_t_idx in enumerate(t_indices):
+                # Check bounds before assignment to avoid IndexError
+                if (
+                    global_tau_idx < global_data_time.shape[0]
+                    and global_t_idx < global_data_time.shape[1]
+                ):
+                    global_data_time[global_tau_idx, global_t_idx] += data[
+                        local_tau_idx, local_t_idx
+                    ]
+                    global_data_freq[global_tau_idx, global_t_idx] += data_freq[
+                        local_tau_idx, local_t_idx
+                    ]
+                else:
+                    # Print debug info if index is out of bounds
+                    print(
+                        f"IndexError: global_tau_idx={global_tau_idx}, global_t_idx={global_t_idx}, shape={global_data_time.shape}"
+                    )
+        if len(times_T) > 1:
+            plot_positive_color_map(
+                (ts, taus, data),
+                times_T[i],
+                type="imag",
+                use_custom_colormap=True,
+            )
+
+            plot_positive_color_map(
+                (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
+            )
+
+    # Normalize by number of T_waits
+    global_data_time /= len(averaged_results)
+    global_data_freq /= len(averaged_results)
+
+    # Plot the global results
+    plot_positive_color_map(
+        (global_ts, global_taus, global_data_time),
+        type="imag",
+        use_custom_colormap=True,
+    )
+
+    plot_positive_color_map(
+        (global_nu_ts, global_nu_taus, global_data_freq),
+        **plot_args_freq,
+    )

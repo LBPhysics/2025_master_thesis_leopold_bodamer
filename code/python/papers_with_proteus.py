@@ -20,7 +20,7 @@ def main():
     # SIMULATION PARAMETERS
     # =============================
     n_times_T = 1  # Number of T_wait values (pump-probe separation)
-    n_phases = 2  # Number of phases for phase cycling
+    n_phases = 4  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
 
     phases = [k * np.pi / 2 for k in range(n_phases)]
@@ -47,8 +47,8 @@ def main():
         N_atoms=1,
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
-        t_max=100.0,
-        dt=0.1,
+        t_max=50.0,  # determines Δω
+        dt=0.1,  # determines ωₘₐₓ
         Delta_cm=200 if n_freqs > 1 else 0,
     )
 
@@ -97,7 +97,7 @@ def main():
         max_workers=max_workers,
         **kwargs,
     )
-
+    print(two_d_datas[0])
     # =============================
     # SAVE RESULTS
     # =============================
@@ -160,9 +160,9 @@ def main():
     print()
     print(f"Performance:")
     print(f"  Execution time: {hours}h {minutes}m {seconds:.1f}s")
-    print(f"  Data saved to: {save_path}")
-    print()
     print(f"  Estimated memory usage: {estimated_memory_usage:.2f} MB")
+    print()
+    print(f"  Data saved to: {save_path}")
     print("=" * 60)
 
 
