@@ -1387,14 +1387,14 @@ def compute_2d_fft_wavenumber(ts, taus, data):
     nu_ts = tfreqs / 2.998 * 10
 
     # 2D FFT: first over tau (axis=1), then over t (axis=0), take imaginary part
-
+    """ TODO check
     if np.any(np.imag(data)):
-        data_for_fft = np.imag(data)
+        data = np.imag(data)
     else:
-        data_for_fft = np.real(data)
-
+        data = np.real(data)
+    """
     # 2D FFT: first over tau (axis=1), then over t (axis=0)
-    s2d = np.fft.fftshift(np.fft.fft(np.fft.fft(data_for_fft, axis=1), axis=0))
+    s2d = np.fft.fftshift(np.fft.fft(np.fft.fft(data, axis=1), axis=0))
 
     return nu_ts, nu_taus, s2d
 
@@ -1665,7 +1665,7 @@ def _matrix_ODE_paper_2atom(
     )
     L[14, 14] = term  # ρ₃₂ ← ρ₃₂
     L[14, 10] = 1j * Et * system.Dip_op[3, 2]  # ρ₃₂ ← ρ₂₂
-    L[14, 6] = 1j * Et * system.D
+    L[14, 6] = 1j * Et * system.Dip_op[3, 1]  # ρ₃₂ ← ρ₁₂
     L[14, 12] = -1j * Et_conj * system.Dip_op[2, 0]  # ρ₃₂ ← ρ₃₀
 
     # --- d/dt rho_23 ---
@@ -2062,6 +2062,7 @@ def check_the_solver(
     # =============================
     strg = ""
     omega = system.omega_laser
+    global time_cut
     time_cut = np.inf  # time after which the checks failed
     for index, state in enumerate(result.states):
         # Apply RWA phase factors if needed
@@ -2246,8 +2247,8 @@ def compute_two_dimensional_polarization(
     return (
         t_det_vals,
         tau_coh_vals,
-        1j * data,  # (data itself is real)
-    )  # because E ~ i*P
+        data,  # (data itself is real)
+    )
 
 
 # ##########################
@@ -2471,6 +2472,9 @@ def extend_and_plot_results(
         return [np.argmin(np.abs(global_vals - v)) for v in local_vals]
 
     for i, data in enumerate(averaged_results):
+        data = data.astype(np.complex64)  # or np.complex128 for higher precision
+        data = 1j * data  # because E ~ i*P TODO check
+
         T_wait = times_T[i]
         ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
 
@@ -2502,31 +2506,29 @@ def extend_and_plot_results(
                     print(
                         f"IndexError: global_tau_idx={global_tau_idx}, global_t_idx={global_t_idx}, shape={global_data_time.shape}"
                     )
-        """plot_positive_color_map(
-            (ts, taus, data), 
-            times_T[i], 
-            type="imag",
-            use_custom_colormap=True,
+        if len(times_T) > 1:
+            plot_positive_color_map(
+                (ts, taus, data),
+                times_T[i],
+                type="real",  # or imag, if data *= 1j?
+                use_custom_colormap=True,
             )
 
-        plot_positive_color_map(
-            (nu_ts, nu_taus, data_freq),
-            times_T[i],
-            **plot_args_freq
-        )"""
+            plot_positive_color_map(
+                (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
+            )
 
     # Normalize by number of T_waits
     global_data_time /= len(averaged_results)
     global_data_freq /= len(averaged_results)
 
     # Plot the global results
-    """
     plot_positive_color_map(
         (global_ts, global_taus, global_data_time),
-        type="imag",
+        type="imag",  # TODO REAL or imag, if data *= 1j
         use_custom_colormap=True,
     )
-    """
+
     plot_positive_color_map(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,
@@ -2543,7 +2545,7 @@ def batch_process_all_combinations_with_inhomogeneity(
     **kwargs: dict,
 ) -> list:
     """
-    Compute 2D spectra using batch processing with parallelization of parameter combinations.
+    Compute 2D REAL polarization using batch processing with parallelization of parameter combinations.
     Pre-computes all parameter combinations, processes them in parallel for each T_wait.
 
     Parameters
@@ -2636,7 +2638,7 @@ def batch_process_all_combinations_with_inhomogeneity(
                     data_result = future.result()
                     if data_result is not None:
                         # Accumulate data (extract real part since data is 1j * real)
-                        accumulated_data += np.real(data_result / 1j)
+                        accumulated_data += data_result  # data itself is real
                         total_count += 1
 
                     completed_count += 1
@@ -2651,9 +2653,7 @@ def batch_process_all_combinations_with_inhomogeneity(
 
         # Average the accumulated data for this T_wait
         if total_count > 0:
-            averaged_data = 1j * (accumulated_data / total_count)
-        else:
-            averaged_data = 1j * accumulated_data
+            averaged_data = accumulated_data / total_count
 
         all_results.append(averaged_data)
         print(

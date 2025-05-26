@@ -20,7 +20,7 @@ def main():
     # SIMULATION PARAMETERS
     # =============================
     n_times_T = 1  # Number of T_wait values (pump-probe separation)
-    n_phases = 4  # Number of phases for phase cycling
+    n_phases = 2  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
 
     phases = [k * np.pi / 2 for k in range(n_phases)]
@@ -29,12 +29,15 @@ def main():
     print("=" * 60)
     print("2D ELECTRONIC SPECTROSCOPY SIMULATION")
     print("=" * 60)
-    print(f"Simulation parameters:")
-    print(f"  T_wait values: {n_times_T}")
-    print(f"  Phase values:  {n_phases}")
-    print(f"  Frequencies:   {n_freqs}")
-    print(f"  Total combinations: {n_times_T * n_phases * n_phases * n_freqs}")
-    print(f"  Parallel workers: {max_workers}")
+    print(f"Configuration:")
+    print(
+        f"  Parameters: #T_wait={n_times_T}, #phases={n_phases}, #frequencies={n_freqs}"
+    )
+    print(
+        f"  Total combinations processed: {n_times_T * n_phases * n_phases * n_freqs}"
+    )
+    print(f"  Parallel workers used: {max_workers}")
+
     print()
 
     # =============================
@@ -44,7 +47,7 @@ def main():
         N_atoms=1,
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
-        t_max=200.0,
+        t_max=100.0,
         dt=0.1,
         Delta_cm=200 if n_freqs > 1 else 0,
     )
@@ -67,7 +70,7 @@ def main():
     test_system.dt = 10 * system.dt
     times_test = np.arange(-Delta_ts[0], test_system.t_max, test_system.dt)
 
-    global time_cut  # SOMEHOW THIS MAKES A PROBLEM NOW!!!!! TODO
+    global time_cut  # SOMEHOW THIS Variable MAKES A PROBLEM NOW!!!!! TODO
     _, time_cut = check_the_solver(times_test, test_system)
     print(f"Evolution remains physical until: {time_cut:.1f} fs")
 
@@ -82,9 +85,6 @@ def main():
     # RUN SIMULATION
     # =============================
     print(f"\nStarting 2D spectroscopy calculation...")
-    print(
-        f"Processing {len(omega_ats) * len(phases)**2} combinations across {len(times_T)} T_wait values"
-    )
 
     kwargs = {"plot_example": False}
 
@@ -146,15 +146,12 @@ def main():
         if data is not None:
             max_data_size = max(max_data_size, data.size)
 
+    # Estimate memory usage in MB
+    estimated_memory_usage = 2 * max_data_size * n_times_T * 8 / (1024**2)
+
     print("\n" + "=" * 60)
     print("SIMULATION COMPLETED SUCCESSFULLY")
     print("=" * 60)
-    print(f"Configuration:")
-    print(f"  Parameters: T_wait={n_times_T}, phases={n_phases}, frequencies={n_freqs}")
-    print(
-        f"  Total combinations processed: {n_times_T * n_phases * n_phases * n_freqs}"
-    )
-    print(f"  Parallel workers used: {max_workers}")
     print()
     print(f"Data characteristics:")
     print(f"  Time parameters: t_max={system.t_max:.1f} fs, dt={system.dt:.1f} fs")
@@ -164,6 +161,8 @@ def main():
     print(f"Performance:")
     print(f"  Execution time: {hours}h {minutes}m {seconds:.1f}s")
     print(f"  Data saved to: {save_path}")
+    print()
+    print(f"  Estimated memory usage: {estimated_memory_usage:.2f} MB")
     print("=" * 60)
 
 
