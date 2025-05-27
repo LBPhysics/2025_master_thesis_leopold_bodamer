@@ -164,7 +164,7 @@ class SystemParameters:
             self.Delta_cm = 200.0
 
         # Store frequency values in fs units # Not needed!
-        self._fs_values = {}  # TODO TEST THIS!! might be the wrong position
+        self._fs_values = {}
 
         # Find all attributes ending with '_cm' and convert them
         for attr_name in dir(self):
@@ -1929,7 +1929,11 @@ def compute_two_dimensional_polarization(
                 value = expect(system.Dip_op, rho_f)
                 data[tau_idx, t_idx] = np.real(value)
 
-                if t_idx == 0 and tau_idx == len(tau_coh_vals) // 3 and plot_example:
+                if (
+                    t_idx == 0
+                    and tau_idx == 0
+                    and plot_example  # len(tau_coh_vals) // 3
+                ):
                     # print(system.RWA_laser)
                     data_1_expects = get_expect_vals_with_RWA(
                         data_0.states[: idx_start_pulse1 + 1],
@@ -1965,7 +1969,7 @@ def compute_two_dimensional_polarization(
                         T_wait,
                         system=system,
                     )
-    print(data[0, 0])
+
     return (
         t_det_vals,
         tau_coh_vals,
@@ -2325,28 +2329,28 @@ def _process_single_combination(
 def plot_positive_color_map(
     datas: tuple,
     T_wait: float = np.inf,
-    space: str = "real",
+    domain: str = "time",
     type: str = "real",
     output_dir: str = None,
     ODE_Solver: str = None,
     positive: bool = False,
-    safe: bool = False,
+    save: bool = False,
     use_custom_colormap: bool = False,
     section: tuple = None,  # (x_min, x_max, y_min, y_max)
     system: SystemParameters = None,
 ):
     """
-    Create a color plot of 2D functional data for positive x and y values only.
+    Create a color plot of 2D functional data for positive x and y values.
 
     Parameters:
         datas (tuple): (x, y, data) where x and y are 1D arrays and data is a 2D array.
         T_wait (float): waiting time to include in plot title and file name.
-        space (str): Either 'real' or 'freq' specifying the space of the data.
-        type (str): Type of data ('real', 'imag', 'abs', or 'phase'). Used only if space="freq".
+        domain (str): Either 'time' or 'freq' specifying the domain of the data.
+        type (str): Type of data ('real', 'imag', 'abs', or 'phase'). Used only if domain="freq".
         output_dir (str, optional): Directory to save the plot.
         ODE_Solver (str, optional): Solver name for filename.
         positive (bool): Whether to use ONLY positive values of x and y.
-        safe (bool): If True, saves the plot to a file.
+        save (bool): If True, saves the plot to a file.
         use_custom_colormap (bool): Use custom colormap with white at zero.
         section (tuple, optional): (x_min, x_max, y_min, y_max) to zoom in.
 
@@ -2381,16 +2385,16 @@ def plot_positive_color_map(
     # =============================
     # Set plot labels and colormap
     # =============================
-    if space not in ("real", "freq"):
-        raise ValueError("Invalid space. Must be 'real' or 'freq'.")
-    if space == "real":
+    if domain not in ("time", "freq"):
+        raise ValueError("Invalid domain. Must be 'time' or 'freq'.")
+    if domain == "time":
         colormap = "viridis"
-        title = r"$\text{Real space}$"
+        title = r"$\text{Real domain}$"
         x_title = r"$t_{\text{det}}$ [fs]"
         y_title = r"$\tau_{\text{coh}}$ [fs]"
     else:
         colormap = "plasma"
-        title = r"$\text{Freq space}$"
+        title = r"$\text{Freq domain}$"
         x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
         y_title = r"$\omega_{\tau_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
 
@@ -2499,29 +2503,57 @@ def plot_positive_color_map(
     # =============================
     # Save or show
     # =============================
-
-    if safe and output_dir and system is not None:
+    if save and output_dir and system is not None:
         if not os.path.isdir(output_dir):
             raise ValueError(f"Output directory {output_dir} does not exist.")
+
         filename_parts = [
-            f"N={system.N_atoms}",
-            f"mua={system.mu_A:.0f}",
-            f"E0={system.E0:.2e}",
-            f"wa={system.omega_A:.2f}",
-            f"wL={system.omega_laser / system.omega_A:.1f}wa",
-            f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
-            f"pos={positive}",
-            f"space={space}",
+            f"{domain}_domain",
         ]
-        if ODE_Solver == "Paper_eqs":
-            filename_parts.append(f"Paper_eqs")
-        if space == "freq":
-            filename_parts.append(f"type_{type}")
-        file_name_combined = "_".join(filename_parts) + ".svg"
+        if domain == "freq":
+            filename_parts.append(f"{type}_2D_spectrum")
+        else:  # domain == "time":
+            filename_parts.append("2D_polarization")
+
+        ### System-specific parameters
+        filename_parts.extend(
+            [
+                f"N={system.N_atoms}",
+                f"wA={system.omega_A:.2f}",
+                f"muA={system.mu_A:.0f}",
+            ]
+        )
+
+        ### Add N_atoms=2 specific parameters
+        if system.N_atoms == 2:
+            filename_parts.extend(
+                [
+                    f"wb={system.omega_B/system.omega_Ayy:.2f}wA",
+                    f"J={system.J:.2f}",
+                    f"mub={system.mu_B/system.mu_A:.0f}muA",
+                ]
+            )
+
+        ### Common parameters for both N_atoms=1 and N_atoms=2
+        filename_parts.extend(
+            [
+                f"wL={system.omega_laser / system.omega_A:.1f}wA",
+                f"E0={system.E0:.2e}",
+                f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
+            ]
+        )
+
+        ### Add solver information to filename
+        if ODE_Solver is not None:
+            filename_parts.append(f"with_{ODE_Solver}")
+
+        file_name_combined = (
+            "_".join(filename_parts) + ".png"
+        )  # TODO CHANGE TO svg for final result
         save_path_combined = os.path.join(output_dir, file_name_combined)
         plt.savefig(save_path_combined)
     else:
-        print("Plot not saved. Ensure 'safe' is True and 'output_dir' is specified.")
+        print("Plot not saved. Ensure 'save' is True and 'output_dir' is specified.")
     plt.show()
 
 
@@ -2529,8 +2561,8 @@ def extend_time_tau_axes(
     ts: np.ndarray,
     taus: np.ndarray,
     data: np.ndarray,
-    pad_rows: tuple[int, int] = (0, 0),
-    pad_cols: tuple[int, int] = (0, 0),
+    pad_rows: tuple[int, int] = (1, 1),
+    pad_cols: tuple[int, int] = (1, 1),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extend the ts and taus axes and pad the data array accordingly.
@@ -2539,15 +2571,31 @@ def extend_time_tau_axes(
         ts (np.ndarray): Time axis (t).
         taus (np.ndarray): Tau axis (coherence time).
         data (np.ndarray): 2D data array.
-        pad_rows (tuple): Padding for rows (before, after) along taus axis.
-        pad_cols (tuple): Padding for columns (before, after) along ts axis.
+        pad_rows (tuple): Multipliers for rows (before, after) along taus axis.
+                         Values >= 1, where 1 means no padding, 2 means add original length, etc.
+        pad_cols (tuple): Multipliers for columns (before, after) along ts axis.
+                         Values >= 1, where 1 means no padding, 2 means add original length, etc.
 
     Returns:
         tuple: (extended_ts, extended_taus, padded_data)
     """
-    # print(f"Pad rows: {pad_rows}, Pad cols: {pad_cols}", data.shape, flush=True)
+    # Validate input multipliers
+    if any(val < 1 for val in pad_rows + pad_cols):
+        raise ValueError("All padding multipliers must be >= 1")
+    
+    # Convert multipliers to actual padding values
+    original_rows, original_cols = data.shape
+    pad_rows_actual = (
+        (pad_rows[0] - 1) * original_rows,  # before
+        (pad_rows[1] - 1) * original_rows   # after
+    )
+    pad_cols_actual = (
+        (pad_cols[0] - 1) * original_cols,  # before
+        (pad_cols[1] - 1) * original_cols   # after
+    )
+    
     # Pad the data array
-    padded_data = np.pad(data, (pad_rows, pad_cols), mode="constant", constant_values=0)
+    padded_data = np.pad(data, (pad_rows_actual, pad_cols_actual), mode="constant", constant_values=0)
 
     # Compute steps
     dt = ts[1] - ts[0]
@@ -2555,11 +2603,11 @@ def extend_time_tau_axes(
 
     # Extend axes
     extended_ts = np.linspace(
-        ts[0] - pad_cols[0] * dt, ts[-1] + pad_cols[1] * dt, padded_data.shape[1]
+        ts[0] - pad_cols_actual[0] * dt, ts[-1] + pad_cols_actual[1] * dt, padded_data.shape[1]
     )
     extended_taus = np.linspace(
-        taus[0] - pad_rows[0] * dtau,
-        taus[-1] + pad_rows[1] * dtau,
+        taus[0] - pad_rows_actual[0] * dtau,
+        taus[-1] + pad_rows_actual[1] * dtau,
         padded_data.shape[0],
     )
 
@@ -2673,7 +2721,7 @@ def extend_and_plot_results(
 
     for i, data in enumerate(averaged_results):
         data = data.astype(np.complex64)
-        data = 1j * data  # because E ~ i*P TODO check
+        data = 1j * data  # because E ~ i*P
 
         T_wait = times_T[i]
         ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
@@ -2723,12 +2771,16 @@ def extend_and_plot_results(
     global_data_freq /= len(averaged_results)
 
     # Plot the global results
+    """
     plot_positive_color_map(
         (global_ts, global_taus, global_data_time),
         type="imag",
+        save=True,  # CHANGE TO False for no plotting the Time domain
+        output_dir=plot_args_freq.get("output_dir", None),
+        system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
     )
-
+    """
     plot_positive_color_map(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,

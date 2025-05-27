@@ -214,6 +214,8 @@
 \NewDocumentCommand{\addresses}{m}{\newcommand{\addressname}{#1}}
 \NewDocumentCommand{\universityone}{m}{\newcommand{\univone}{#1}}
 \NewDocumentCommand{\universitytwo}{m}{\newcommand{\univtwo}{#1}}
+\newcommand{\univname}{\univone} % Reference the defined content, not the command
+% \newcommand{\univname}{\univone\\ \univtwo} % Alternative for both universities
 
 \NewDocumentCommand{\department}{m}{\newcommand{\deptname}{#1}}
 

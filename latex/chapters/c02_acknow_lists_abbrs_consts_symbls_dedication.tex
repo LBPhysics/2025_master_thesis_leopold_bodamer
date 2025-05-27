@@ -1,6 +1,7 @@
 %----------------------------------------------------------------------------------------
 %	ACKNOWLEDGEMENTS
 %----------------------------------------------------------------------------------------
+
 \iffalse
 	\begin{acknowledgements}
 		\addchaptertocentry{\acknowledgementname}
@@ -25,6 +26,7 @@
 
 	\end{acknowledgements}
 \fi
+
 %----------------------------------------------------------------------------------------
 %	LIST OF CONTENTS/FIGURES/TABLES PAGES
 %----------------------------------------------------------------------------------------
@@ -38,57 +40,61 @@
 %	ABBREVIATIONS
 %----------------------------------------------------------------------------------------
 
-%\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
-%
-%\textbf{LAH} & \textbf{L}ist \textbf{A}bbreviations \textbf{H}ere\\
-%\textbf{WSF} & \textbf{W}hat (it) \textbf{S}tands \textbf{F}
-%
-%\end{abbreviations}
+\iffalse
+	\begin{abbreviations}{ll} % Include a list of abbreviations (a table of two columns)
+
+		\textbf{2DES} & \textbf{2D}imensional \textbf{E}lectronic \textbf{S}pectroscopy\\
+		\textbf{NIR} & \textbf{N}ear \textbf{I}nfrared\\
+		\textbf{IR} & \textbf{I}nfrared\\
+		\textbf{UV} & \textbf{U}ltraviolet\\
+		\textbf{NP} & \textbf{N}on\text{P}erturbative\\
+		\textbf{FWM} & \textbf{F}our \textbf{W}ave \textbf{M}ixing\\
+		\textbf{DM} & \textbf{D}ensity \textbf{M}atrix\\
+
+	\end{abbreviations}
+\fi
 
 %----------------------------------------------------------------------------------------
 %	PHYSICAL CONSTANTS/OTHER DEFINITIONS
 %----------------------------------------------------------------------------------------
 
-%\begin{constants}{lr@{${}={}$}l} % The list of physical constants is a three column table
-%
-%% The \SI{}{} command is provided by the siunitx package, see its documentation for instructions on how to use it
-%
-%Speed of Light & $c_{0}$ & \SI{2.99792458e8}{\meter\per\second} (exact)\\
-%%Constant Name & $Symbol$ & $Constant Value$ with units\\
-%
-%\end{constants}
+\iffalse
+	\begin{constants}{lr@{${}={}$}l} % The list of physical constants is a three column table
+
+		Constant Name & $Symbol$ & $Constant Value$ with units\\
+		% The \SI{}{} command is provided by the siunitx package, see its documentation for instructions on how to use it
+		% The \SI units
+		Speed of Light & $c_{0}$ & \SI{2.99792458e8}{\meter\per\second}\\
+		Planck's Constant & $\hbar$ & \SI{1.0545718e-34}{\joule\second}\\
+		% The Natural units
+		Speed of Light & $c$ & $1$\\ % Natural units where $c = 1$
+		Planck's Constant & $\hbar$ & \SI{1}{\electronvolt\second}\\
+
+	\end{constants}
+\fi
 
 %----------------------------------------------------------------------------------------
 %	SYMBOLS
 %----------------------------------------------------------------------------------------
 
-%\begin{symbols}{lll} % Include a list of Symbols (a three column table)
-%
-%$a$ & distance & \si{\meter} \\
-%$P$ & power & \si{\watt} (\si{\joule\per\second}) \\
-%%Symbol & Name & Unit \\
-%
-%\addlinespace % Gap to separate the Roman symbols from the Greek
-%
-%$\omega$ & angular frequency & \si{\radian} \\
-%
-%\end{symbols}
+\iffalse
+	\begin{symbols}{lll} % Include a list of Symbols (a three column table)
 
+		$a$ & distance & \si{\meter} \\
+		$P$ & power & \si{\watt} (\si{\joule\per\second}) \\
+		%Symbol & Name & Unit \\
 
+		\addlinespace % Gap to separate the Roman symbols from the Greek
 
+		$\omega$ & angular frequency & \si{\radian} \\
 
-
-
-
-
-
-
-
-
+	\end{symbols}
+\fi
 
 
 %----------------------------------------------------------------------------------------
 %	DEDICATION
 %----------------------------------------------------------------------------------------
-
-%  \dedicatory{For/Dedicated to/To my\ldots}
+\iffalse
+	\dedicatory{For/Dedicated to/To my\ldots}
+\fi

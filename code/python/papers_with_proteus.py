@@ -20,10 +20,12 @@ def main():
     # SIMULATION PARAMETERS
     # =============================
     n_times_T = 1  # Number of T_wait values (pump-probe separation)
-    n_phases = 4  # Number of phases for phase cycling
+    n_phases = 2  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
 
-    phases = [k * np.pi / 2 for k in range(n_phases)]
+    # Generate random subset of phases from the full set
+    all_phases = [k * np.pi / 2 for k in range(4)]  # [0, π/2, π, 3π/2]
+    phases = np.random.choice(all_phases, size=n_phases, replace=False).tolist()
     max_workers = psutil.cpu_count(logical=True)
 
     print("=" * 60)
@@ -47,7 +49,7 @@ def main():
         N_atoms=1,
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
-        t_max=50.0,  # determines Δω
+        t_max=100.0,  # determines Δω
         dt=0.1,  # determines ωₘₐₓ
         Delta_cm=200 if n_freqs > 1 else 0,
     )
@@ -121,7 +123,7 @@ def main():
         )
         counter += 1
 
-    with open(save_path, "wb") as f:
+    with open(save_path, "wb") as f:  # TODO CHANGE THIS TO h5py?
         pickle.dump(
             {
                 "system": system,
