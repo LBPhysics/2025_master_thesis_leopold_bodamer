@@ -2582,20 +2582,22 @@ def extend_time_tau_axes(
     # Validate input multipliers
     if any(val < 1 for val in pad_rows + pad_cols):
         raise ValueError("All padding multipliers must be >= 1")
-    
+
     # Convert multipliers to actual padding values
     original_rows, original_cols = data.shape
     pad_rows_actual = (
         (pad_rows[0] - 1) * original_rows,  # before
-        (pad_rows[1] - 1) * original_rows   # after
+        (pad_rows[1] - 1) * original_rows,  # after
     )
     pad_cols_actual = (
         (pad_cols[0] - 1) * original_cols,  # before
-        (pad_cols[1] - 1) * original_cols   # after
+        (pad_cols[1] - 1) * original_cols,  # after
     )
-    
+
     # Pad the data array
-    padded_data = np.pad(data, (pad_rows_actual, pad_cols_actual), mode="constant", constant_values=0)
+    padded_data = np.pad(
+        data, (pad_rows_actual, pad_cols_actual), mode="constant", constant_values=0
+    )
 
     # Compute steps
     dt = ts[1] - ts[0]
@@ -2603,7 +2605,9 @@ def extend_time_tau_axes(
 
     # Extend axes
     extended_ts = np.linspace(
-        ts[0] - pad_cols_actual[0] * dt, ts[-1] + pad_cols_actual[1] * dt, padded_data.shape[1]
+        ts[0] - pad_cols_actual[0] * dt,
+        ts[-1] + pad_cols_actual[1] * dt,
+        padded_data.shape[1],
     )
     extended_taus = np.linspace(
         taus[0] - pad_rows_actual[0] * dtau,
@@ -2760,6 +2764,9 @@ def extend_and_plot_results(
                 times_T[i],
                 type="imag",
                 use_custom_colormap=True,
+                save=True,  # CHANGE TO False for no plotting the Time domain
+                output_dir=plot_args_freq.get("output_dir", None),
+                system=plot_args_freq.get("system", None),
             )
 
             plot_positive_color_map(
@@ -2771,7 +2778,6 @@ def extend_and_plot_results(
     global_data_freq /= len(averaged_results)
 
     # Plot the global results
-    """
     plot_positive_color_map(
         (global_ts, global_taus, global_data_time),
         type="imag",
@@ -2780,7 +2786,6 @@ def extend_and_plot_results(
         system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
     )
-    """
     plot_positive_color_map(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,

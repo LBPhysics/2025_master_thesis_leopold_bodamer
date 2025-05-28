@@ -8,7 +8,7 @@
 /dataSources.local.xml
 
 # My ignored files
-/figures/figures_from_python/
+# /figures/figures_from_python/
 latex/test/
 .idea/
 
@@ -349,3 +349,7 @@ TSWLatexianTemp*
 #*Notes.bib
 latex/main.pdf
 README.md
+
+
+# all error filed from suptercomputer proteus
+**/.err
