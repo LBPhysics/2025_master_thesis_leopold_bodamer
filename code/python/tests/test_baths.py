@@ -1,4 +1,8 @@
 import numpy as np
+from baths.bath_fcts import *
+from qutip import BosonicEnvironment
+import matplotlib.pyplot as plt
+import os
 
 """
     This file contains constants and parameters for the bath models.
@@ -7,11 +11,9 @@ import numpy as np
     The constants are used there and also in the main code.
 """
 # Define constants
-global Boltzmann, hbar
 Boltzmann = 1.0  # Boltzmann constant in J/K
 hbar = 1.0  # Reduced Planck's constant in J·s
 
-global Temp, eta, cutoff
 Temp = 1e2  # Temperature in Kelvin
 eta = 1e-2  # dim.less Coupling strength
 cutoff = 1e2  # Cutoff frequency
@@ -24,145 +26,14 @@ args_paper = {
     "hbar": hbar,
     "Temp": Temp,
 }
-args_ohmic = {"eta": eta, "cutoff": cutoff, "s": 1.0}
+args_ohmic = {
+    "eta": eta,
+    "cutoff": cutoff,
+    "s": 1.0,
+    "Boltzmann": Boltzmann,
+    "Temp": Temp,
+}
 args_drude_lorentz = {"lambda": eta * cutoff / 2, "cutoff": cutoff}
-
-
-from qutip import BosonicEnvironment
-import matplotlib.pyplot as plt
-import os
-
-plt.rcParams.update(
-    {
-        "text.usetex": True,  # Enable LaTeX for text rendering
-        "font.family": "serif",  # Use a serif font family
-        "font.serif": [],  #'Palatino' or []  Set Palatino or standard latex font
-        "text.latex.preamble": r"\usepackage{amsmath}",
-        "font.size": 20,  # Font size for general text
-        "axes.titlesize": 20,  # Font size for axis titles
-        "axes.labelsize": 20,  # Font size for axis labels
-        "xtick.labelsize": 20,  # Font size for x-axis tick labels
-        "ytick.labelsize": 20,  # Font size for y-axis tick labels
-        "legend.fontsize": 20,  # Font size for legends
-        "figure.figsize": [8, 6],  # Size of the plot (width x height)
-        "figure.autolayout": True,  # Automatic layout adjustment
-        "savefig.format": "svg",  # Default format for saving figures
-        "figure.facecolor": "none",  # Make the figure face color transparent
-        "axes.facecolor": "none",  # Make the axes face color transparent
-        "savefig.transparent": True,  # Save figures with transparent background
-    }
-)
-# Define the output directory relative to the main directory of the repository
-repo_root_dir = os.path.abspath(
-    os.path.join(os.getcwd(), "../../")
-)  # Navigate to the main directory
-output_dir = os.path.join(
-    repo_root_dir, "figures", "figures_from_python"
-)  # Define the output folder path
-os.makedirs(output_dir, exist_ok=True)
-
-
-# =============================
-# TEST OUT BOSONIC BATHS
-# =============================
-def spectral_density_func_drude_lorentz(w, args):
-    """
-    Spectral density function for a Drude-Lorentz bath.
-    """
-    lambda_ = args["lambda"]  # Reorganization energy (coupling strength)
-    gamma = args["cutoff"]  # Drude decay rate (cutoff frequency)
-
-    return (2 * lambda_ * gamma * w) / (w**2 + gamma**2)
-
-
-def spectral_density_func_ohmic(w, args):
-    """
-    Spectral density function for an ohmic bath.
-    """
-    wc = args["cutoff"]
-    eta = args["eta"]
-    s = args["s"]
-    return eta * w**s / wc ** (s - 1) * np.exp(-w / wc) * (w > 0)
-
-
-def Power_spectrum_func_ohmic(w, args):
-    """
-    Power spectrum function in the frequency domain for an ohmic bath.
-    Handles both positive and negative frequencies.
-    """
-    coth_term = 1 / np.tanh(w / (2 * Boltzmann * Temp))
-    return np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
-
-
-# =============================
-# BATH FUNCTIONS
-# =============================
-
-
-def n(w, Boltzmann, hbar, Temp):
-    """
-    Bose-Einstein distribution function for scalar inputs.
-    """
-    if w == 0:
-        return 0  # Avoid division by zero for w == 0
-
-    # Avoid overflow for large values of hbar * w / (Boltzmann * Temp)
-    if (hbar * w / (Boltzmann * Temp)) > 700:
-        return 0  # Approximate the result as 0 for large values
-
-    # Compute the Bose-Einstein distribution
-    exp_term = np.exp(hbar * w / (Boltzmann * Temp))
-    return 1 / (exp_term - 1)
-
-
-def spectral_density_func_paper(w, args):
-    """
-    Spectral density function for a bath as given in the paper.
-    """
-    g = args["g"]
-    cutoff = args["cutoff"]
-    return g**2 * (w / cutoff) * np.exp(-w / cutoff) * (w > 0)
-
-
-def Power_spectrum_func_paper(w, args):
-    """
-    Power spectrum function in the frequency domain as given in the paper.
-    Handles only float inputs for w.
-    """
-    # Extract constants from args
-    Boltzmann = args["Boltzmann"]
-    hbar = args["hbar"]
-    Temp = args["Temp"]
-    g = args["g"]
-    cutoff = args["cutoff"]
-
-    if w > 0:
-        # Positive frequency
-        return spectral_density_func_paper(w, args) * n(w, Boltzmann, hbar, Temp)
-    elif w < 0:
-        # Negative frequency
-        return spectral_density_func_paper(-w, args) * (
-            1 + n(-w, Boltzmann, hbar, Temp)
-        )
-    else:
-        # Zero frequency
-        return g**2 * Boltzmann * Temp / cutoff
-
-
-def Power_spectrum_func_paper_array(w_array, args):
-    """
-    Wrapper for Power_spectrum_func_paper to handle array-like inputs.
-    Calls Power_spectrum_func_paper for each element in the array.
-
-    Parameters:
-        w_array (array-like): Array of frequency values.
-        args (dict): Arguments for the power spectrum function.
-
-    Returns:
-        np.ndarray: Array of power spectrum values.
-    """
-    w_array = np.asarray(w_array, dtype=float)  # Ensure input is a NumPy array
-    return np.array([Power_spectrum_func_paper(w, args) for w in w_array])
 
 
 # =============================

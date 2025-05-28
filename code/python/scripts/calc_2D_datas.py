@@ -1,5 +1,10 @@
 # Import the outsourced settings / functions
-from functions2DES import *
+from src.spectroscopy.post_processing import *
+from src.core.system_parameters import SystemParameters
+from src.spectroscopy.calculations import (
+    batch_process_all_combinations_with_inhomogeneity,
+)
+from src.spectroscopy.inhomogenity import sample_from_sigma, check_the_solver
 
 import numpy as np
 import psutil
@@ -17,7 +22,7 @@ def main():
     start_time = time.time()
 
     # =============================
-    # SIMULATION PARAMETERS
+    # SIMULATION PARAMETERS -> determines the number of combinations -> number of processors needed to optimally perform the simulation -> Time of the simulation
     # =============================
     n_times_T = 1  # Number of T_wait values (pump-probe separation)
     n_phases = 2  # Number of phases for phase cycling
@@ -49,8 +54,8 @@ def main():
         N_atoms=1,
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
-        t_max=100.0,  # determines Δω
-        dt=0.1,  # determines ωₘₐₓ
+        t_max=10.0,  # determines Δω
+        dt=0.2,  # determines ωₘₐₓ
         Delta_cm=200 if n_freqs > 1 else 0,
     )
 

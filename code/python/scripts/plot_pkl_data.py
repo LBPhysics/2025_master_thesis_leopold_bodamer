@@ -6,7 +6,7 @@ import numpy as np
 import pickle
 import os
 from plot_settings import *
-from functions2DES import *
+from code.python.scripts.post_processing import *
 
 
 def main():

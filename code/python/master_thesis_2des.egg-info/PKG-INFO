@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: master_thesis_2des
+Version: 0.1.0
+Summary: 2D Electronic Spectroscopy simulation package
+Author: Leopold
+Requires-Python: >=3.8
+Requires-Dist: numpy
+Requires-Dist: qutip
+Requires-Dist: matplotlib
+Requires-Dist: dataclasses; python_version < "3.7"

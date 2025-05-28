@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import os
 
 # Matplotlib settings according to LaTeX caption formatting
 plt.rcParams.update(
@@ -23,15 +22,6 @@ plt.rcParams.update(
         "savefig.transparent": True,  # Save figures with transparent background
     }
 )
-
-# Define the output directory relative to the main directory of the repository
-repo_root_dir = os.path.abspath(
-    os.path.join(os.getcwd(), "../../")
-)  # Navigate to the main directory
-output_dir = os.path.join(
-    repo_root_dir, "figures", "figures_from_python"
-)  # Define the output folder path
-os.makedirs(output_dir, exist_ok=True)
 
 # mpl.use("Agg")  # Use a non-interactive backend / SAVE figures to svg files
 mpl.use(
