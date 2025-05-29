@@ -97,7 +97,7 @@ def main():
 
     kwargs = {"plot_example": False}
 
-    two_d_datas = batch_process_all_combinations_with_inhomogeneity(
+    two_d_datas = batch_process_all_combinations_with_inhomogeneity(  # TODO CHANGE TO calc_fixed_tau_T!
         omega_ats=omega_ats,
         phases=phases,
         times_T=times_T,

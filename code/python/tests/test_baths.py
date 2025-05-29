@@ -1,14 +1,17 @@
 import numpy as np
-from baths.bath_fcts import *
+from src.baths.bath_fcts import *
 from qutip import BosonicEnvironment
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-import os
+from src.visualization import mpl_tex_settings
+
+mpl.use("TkAgg")  # Force interactive backend
 
 """
     This file contains constants and parameters for the bath models.
     The different baths are modelled to agree as much as possible.
     The defining functions are found and tested in test_baths
-    The constants are used there and also in the main code.
+    The constants are used there            TODO NOT TRUE: and also in the main code.
 """
 # Define constants
 Boltzmann = 1.0  # Boltzmann constant in J/K

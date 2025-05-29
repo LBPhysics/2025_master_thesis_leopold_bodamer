@@ -1,3 +1,17 @@
+"""
+Interaction Hamiltonian function for the 2DES simulation.
+
+This module contains functions for constructing interaction Hamiltonian
+and other utilities using a Rotating Wave Approximation.
+"""
+
+import numpy as np
+from qutip import Qobj
+from src.core.system_parameters import SystemParameters
+from src.core.pulse_sequences import PulseSequence
+from src.core.pulse_functions import E_pulse, Epsilon_pulse
+
+
 def H_int(
     t: float,
     pulse_seq: PulseSequence,
@@ -135,7 +149,7 @@ def _apply_RWA_phase_factors_2atom(rho: Qobj, t: float, omega: float) -> Qobj:
 
 
 def get_expect_vals_with_RWA(
-    states: list[qutip.Qobj], times: np.array, system: SystemParameters
+    states: list[Qobj], times: np.array, system: SystemParameters
 ):
     """
     Calculate the expectation values in the result with RWA phase factors.

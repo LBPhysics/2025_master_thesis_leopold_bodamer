@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-# TODO REALLY change the structure to match pulse_peak_time
+
 import copy
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
-from qutip import Qobj, mesolve, brmesolve, expect, qutip
+from qutip import Qobj, Result, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
 from src.core.system_parameters import SystemParameters
 from src.core.pulse_functions import *
@@ -13,10 +13,9 @@ from src.core.solver_fcts import (
     matrix_ODE_paper,
     R_paper,
     apply_RWA_phase_factors,
-    get_expect_vals_with_RWA,  # TODO where did I put this? and where should it go?
 )
 from src.spectroscopy.inhomogenity import sample_from_sigma
-from src.core.hamiltonians import H_int
+from src.core.functions_with_rwa import H_int, get_expect_vals_with_RWA
 
 
 def get_tau_cohs_and_t_dets_for_T_wait(
@@ -79,7 +78,7 @@ def compute_pulse_evolution(
     times: np.ndarray,
     pulse_seq: PulseSequence,
     system: SystemParameters = None,
-) -> qutip.Result:
+) -> Result:
     """
     Compute the evolution of the system for a given pulse sequence.
 
@@ -90,7 +89,7 @@ def compute_pulse_evolution(
         system (SystemParameters): System parameters.
 
     Returns:
-        qutip.Result: Result of the evolution.
+        Result: Result of the evolution.
     """
     # =============================
     # Validate input parameters
@@ -209,11 +208,113 @@ def compute_pulse_evolution(
     return result
 
 
+def check_the_solver(
+    times: np.ndarray, system: SystemParameters
+) -> tuple[Result, float]:
+    """
+    Checks the solver within the compute_pulse_evolution function
+    with the provided psi_ini, times, and system.
+
+    Parameters:
+        times (np.ndarray): Time array for the evolution.
+        system (System): System object containing all relevant parameters, including e_ops_list.
+        PulseSequence (type): The PulseSequence class to construct pulse sequences.
+
+    Returns:
+        Result: The result object from compute_pulse_evolution.
+    """
+    print(f"Checking '{system.ODE_Solver}' solver ")
+
+    # =============================
+    # INPUT VALIDATION
+    # =============================
+    if not hasattr(system, "ODE_Solver"):
+        raise AttributeError("system must have attribute 'ODE_Solver'")
+    if not hasattr(system, "e_ops_list"):
+        raise AttributeError("system must have attribute 'e_ops_list'")
+    if not isinstance(system.psi_ini, Qobj):
+        raise TypeError("psi_ini must be a Qobj")
+    if not isinstance(times, np.ndarray):
+        raise TypeError("times must be a numpy.ndarray")
+    if not isinstance(system.e_ops_list, list) or not all(
+        isinstance(op, Qobj) for op in system.e_ops_list
+    ):
+        raise TypeError("system.e_ops_list must be a list of Qobj")
+    if len(times) < 2:
+        raise ValueError("times must have at least two elements")
+
+    # =============================
+    # CONSTRUCT PULSE SEQUENCE (refactored)
+    # =============================
+
+    # Define pulse parameters
+    phi_0 = np.pi / 2
+    phi_1 = np.pi / 4
+    phi_2 = 0
+    t_start_pulse0 = times[0]
+    t_start_pulse1 = times[-1] / 2
+    t_start_2 = times[-1] / 1.1
+
+    # Use the from_args static method to construct the sequence
+    pulse_seq = PulseSequence.from_args(
+        system=system,
+        curr=(t_start_2, phi_2),
+        prev=(t_start_pulse1, phi_1),
+        preprev=(t_start_pulse0, phi_0),
+    )
+
+    result = compute_pulse_evolution(system.psi_ini, times, pulse_seq, system=system)
+    # =============================
+    # CHECK THE RESULT
+    # =============================
+    if not isinstance(result, Result):
+        raise TypeError("Result must be a Result object")
+    if list(result.times) != list(times):
+        raise ValueError("Result times do not match input times")
+    if len(result.states) != len(times):
+        raise ValueError("Number of output states does not match number of time points")
+
+    # =============================
+    # CHECK DENSITY MATRIX PROPERTIES
+    # =============================
+    strg = ""
+    omega = system.omega_laser
+    global time_cut
+    time_cut = np.inf  # time after which the checks failed
+    for index, state in enumerate(result.states):
+        # Apply RWA phase factors if needed
+        if getattr(system, "RWA_laser", False):
+            state = apply_RWA_phase_factors(state, times[index], omega, system)
+        time = times[index]
+        if not state.isherm:
+            strg += f"Density matrix is not Hermitian after t = {time}.\n"
+            print(state)
+        eigvals = state.eigenenergies()
+        if not np.all(
+            eigvals >= -1e-3
+        ):  # allow for small numerical negative eigenvalues
+            strg += f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {eigvals.min()}.\n"
+            time_cut = time
+        if not np.isclose(state.tr(), 1.0):
+            strg += f"Density matrix is not trace-preserving after t = {time}: The trace is {state.tr()}.\n"
+            time_cut = time
+        if strg:
+            strg += "Adjust your parameters!"
+            print(strg)
+            break
+    else:
+        print(
+            "Checks passed. Solver appears to be called correctly, and density matrix remains Hermitian and positive."
+        )
+
+    return result, time_cut
+
+
 def compute_two_dimensional_polarization(
     T_wait: float,
     phi_0: float,
     phi_1: float,
-    times: np.ndarray,  # ACTURALLY a list -> qutip needs a list ?
+    times: np.ndarray,  # TODO ACTURALLY a list -> qutip needs a list ?
     system: SystemParameters,
     time_cut: float = np.inf,  # to avoid numerical issues
     **kwargs: dict,
@@ -602,7 +703,7 @@ def _process_single_combination(
 ) -> np.ndarray:
     """
     Process a single parameter combination for parallel execution.
-    This function runs in a separate process to avoid QUTIP thread safety issues.
+    This function runs in a separate process to avoid QUTIP thread safety issues. TODO <- is this actually a problem?
 
     Parameters
     ----------
