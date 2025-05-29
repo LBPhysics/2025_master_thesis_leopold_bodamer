@@ -25,7 +25,7 @@ def main():
     # SIMULATION PARAMETERS -> determines the number of combinations -> number of processors needed to optimally perform the simulation -> Time of the simulation
     # =============================
     n_times_T = 1  # Number of T_wait values (pump-probe separation)
-    n_phases = 2  # Number of phases for phase cycling
+    n_phases = 1  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
 
     # Generate random subset of phases from the full set
@@ -60,8 +60,8 @@ def main():
     )
 
     # Create time arrays
-    Delta_ts = system.Delta_ts
-    times = np.arange(-Delta_ts[0], system.t_max, system.dt)
+    FWHMs = system.FWHMs
+    times = np.arange(-FWHMs[0], system.t_max, system.dt)
     T_wait_max = times[-1] / 10
     times_T = np.linspace(0, T_wait_max, n_times_T)
 
@@ -75,14 +75,14 @@ def main():
     test_system = copy.deepcopy(system)
     test_system.t_max = 10 * system.t_max
     test_system.dt = 10 * system.dt
-    times_test = np.arange(-Delta_ts[0], test_system.t_max, test_system.dt)
+    times_test = np.arange(-FWHMs[0], test_system.t_max, test_system.dt)
 
     global time_cut  # SOMEHOW THIS Variable MAKES A PROBLEM NOW!!!!! TODO
     _, time_cut = check_the_solver(times_test, test_system)
     print(f"Evolution remains physical until: {time_cut:.1f} fs")
 
     # =============================
-    # FREQUENCY SAMPLING
+    # FREQUENCY SAMPLING -> introduces inhomogeneous broadening
     # =============================
     omega_ats = sample_from_sigma(
         n_freqs, system.Delta_cm, system.omega_A_cm, E_range=3

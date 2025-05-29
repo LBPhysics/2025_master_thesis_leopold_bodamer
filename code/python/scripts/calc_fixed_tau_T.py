@@ -62,8 +62,8 @@ def main():
     )
 
     # Create time arrays
-    Delta_ts = system.Delta_ts
-    times = np.arange(-Delta_ts[0], system.t_max, system.dt)
+    FWHMs = system.FWHMs
+    times = np.arange(-FWHMs[0], system.t_max, system.dt)
     T_wait_max = times[-1] / 10
     times_T = np.linspace(0, T_wait_max, n_times_T)
 
@@ -77,7 +77,7 @@ def main():
     test_system = copy.deepcopy(system)
     test_system.t_max = 10 * system.t_max
     test_system.dt = 10 * system.dt
-    times_test = np.arange(-Delta_ts[0], test_system.t_max, test_system.dt)
+    times_test = np.arange(-FWHMs[0], test_system.t_max, test_system.dt)
 
     global time_cut  # SOMEHOW THIS Variable MAKES A PROBLEM NOW!!!!! TODO
     _, time_cut = check_the_solver(times_test, test_system)

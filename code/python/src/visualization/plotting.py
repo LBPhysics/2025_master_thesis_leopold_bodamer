@@ -161,19 +161,19 @@ def Plot_example_evo(
         label=r"$\mathrm{Im}[E(t)]$",
     )
     plt.axvline(
-        times_0[0] + system.Delta_ts[0],
+        times_0[0] + system.FWHMs[0],
         color="C2",
         linestyle="dashed",
         label=r"Pulse 1",
     )
     plt.axvline(
-        times_1[0] + system.Delta_ts[1],
+        times_1[0] + system.FWHMs[1],
         color="C3",
         linestyle="dashdot",
         label=r"Pulse 2",
     )
     plt.axvline(
-        times_2[0] + system.Delta_ts[2],
+        times_2[0] + system.FWHMs[2],
         color="C4",
         linestyle="dotted",
         label=r"Pulse 3",
@@ -195,9 +195,9 @@ def Plot_example_evo(
         else:
             label = r"$\mathrm{Re}\langle \mu \rangle$"
         plt.plot(times_plot, data, color=f"C{(idx+5)%10}", linestyle="solid")
-        plt.axvline(times_0[0] + system.Delta_ts[0], color="C2", linestyle="dashed")
-        plt.axvline(times_1[0] + system.Delta_ts[1], color="C3", linestyle="dashdot")
-        plt.axvline(times_2[0] + system.Delta_ts[2], color="C4", linestyle="dotted")
+        plt.axvline(times_0[0] + system.FWHMs[0], color="C2", linestyle="dashed")
+        plt.axvline(times_1[0] + system.FWHMs[1], color="C3", linestyle="dashdot")
+        plt.axvline(times_2[0] + system.FWHMs[2], color="C4", linestyle="dotted")
         plt.ylabel(label)
         # plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 

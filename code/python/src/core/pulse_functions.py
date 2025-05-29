@@ -74,7 +74,9 @@ def pulse_envelope_gaussian(t: float, pulse_seq: PulseSequence) -> float:
         boundary_val = np.exp(-boundary_distance_sq / (2 * sigma**2))
 
         ### Shift envelope to be Continuous at boundaries
-        envelope += max(0.0, gaussian_val - boundary_val)
+        envelope += max(
+            0.0, gaussian_val
+        )  # - boundary_val) # TODO Check the effect of this discontinuity
 
     return envelope
 

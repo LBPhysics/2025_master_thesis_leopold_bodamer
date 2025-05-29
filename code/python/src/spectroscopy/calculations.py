@@ -56,6 +56,7 @@ def get_tau_cohs_and_t_dets_for_T_wait(
     # =============================
     tau_coh_max = t_max - T_wait
     if tau_coh_max < 0:
+        # TODO check if this case ever happens
         return np.array([]), np.array([])
 
     tau_coh = np.arange(
@@ -253,12 +254,12 @@ def check_the_solver(
     phi_2 = 0
     t_start_pulse0 = times[0]
     t_start_pulse1 = times[-1] / 2
-    t_start_2 = times[-1] / 1.1
+    t_start_pulse2 = times[-1] / 1.1
 
     # Use the from_args static method to construct the sequence
     pulse_seq = PulseSequence.from_args(
         system=system,
-        curr=(t_start_2, phi_2),
+        curr=(t_start_pulse2, phi_2),
         prev=(t_start_pulse1, phi_1),
         preprev=(t_start_pulse0, phi_0),
     )
@@ -344,7 +345,15 @@ def compute_two_dimensional_polarization(  # TODO review
     # initialize the time domain Spectroscopy data tr(Dip_op * rho_final(tau_coh, t_det))
     data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.float32)
 
+    # information about the first pulse
+    # idx_start_pulse0 = 0 #t_start_pulse0 = times[idx_start_pulse0]
     t_peak_pulse0 = 0
+    pulse_0 = (t_peak_pulse0, phi_0)
+    pulse_seq_0 = PulseSequence.from_args(
+        system=system,
+        curr=pulse_0,
+    )
+
     idx_pulse1_max_peak = np.abs(
         times - (tau_coh_vals[-1])
     ).argmin()  # the last possible coherence time
@@ -352,16 +361,8 @@ def compute_two_dimensional_polarization(  # TODO review
     times_0 = times[: idx_pulse1_max_peak + 1]
     if times_0.size == 0:
         # TODO check if this case ever happens
-        idx_end_pulse0 = np.abs(times - (system.Delta_ts[0])).argmin()
+        idx_end_pulse0 = np.abs(times - (system.FWHMs[0])).argmin()
         times_0 = times[: idx_end_pulse0 + 1]
-
-    # First pulse
-    pulse_0 = (t_peak_pulse0, phi_0)
-    # Instead of directly constructing PulseSequence, use from_args:
-    pulse_seq_0 = PulseSequence.from_args(
-        system=system,
-        curr=pulse_0,
-    )
 
     data_0 = compute_pulse_evolution(
         system.psi_ini, times_0, pulse_seq_0, system=system
@@ -369,23 +370,19 @@ def compute_two_dimensional_polarization(  # TODO review
 
     for tau_idx, tau_coh in enumerate(tau_coh_vals):
         idx_start_pulse1 = np.abs(
-            times - (tau_coh - system.Delta_ts[1])
+            times - (tau_coh - system.FWHMs[1])
         ).argmin()  # from which point to start the next pulse
         rho_1 = data_0.states[idx_start_pulse1]
 
-        idx_start_pulse2 = np.abs(
-            times - (tau_coh + T_wait - system.Delta_ts[2])
-        ).argmin()
-        idx_end_pulse2 = np.abs(
-            times - (tau_coh + T_wait + system.Delta_ts[2])
-        ).argmin()
-        t_start_2 = times[idx_start_pulse2]
+        idx_start_pulse2 = np.abs(times - (tau_coh + T_wait - system.FWHMs[2])).argmin()
+        idx_end_pulse2 = np.abs(times - (tau_coh + T_wait + system.FWHMs[2])).argmin()
+        t_start_pulse2 = times[idx_start_pulse2]
         t_peak_pulse2 = tau_coh + T_wait
 
         times_1 = times[idx_start_pulse1 : idx_start_pulse2 + 1]
         if times_1.size == 0:
             # TODO check if this case ever happens
-            idx_end_pulse1 = np.abs(times - (tau_coh + system.Delta_ts[1])).argmin()
+            idx_end_pulse1 = np.abs(times - (tau_coh + system.FWHMs[1])).argmin()
             times_1 = times[idx_start_pulse1 : idx_end_pulse1 + 1]
 
         t_peak_pulse1 = tau_coh
@@ -398,13 +395,14 @@ def compute_two_dimensional_polarization(  # TODO review
         data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
 
         idx_start_pulse2_in_times_1 = np.abs(
-            times_1 - t_start_2
+            times_1 - t_start_pulse2
         ).argmin()  # TODO Check this should be equal to (idx_start_pulse2 - idx_start_pulse1)!!!
 
         rho_2 = data_1.states[idx_start_pulse2_in_times_1]
 
         times_2 = times[idx_start_pulse2:]
         if times_2.size == 0:
+            # TODO check if this case ever happens
             times_2 = times[idx_start_pulse2 : idx_end_pulse2 + 1]
 
         phi_2 = 0
@@ -793,8 +791,8 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     plot_example = kwargs.get("plot_example", False)
 
     t_peak_pulse0 = 0
-    idx_end_0 = np.abs(times - (system.Delta_ts[0])).argmin()
-    idx_start_1 = np.abs(times - (tau_coh - system.Delta_ts[1])).argmin()
+    idx_end_0 = np.abs(times - (system.FWHMs[0])).argmin()
+    idx_start_1 = np.abs(times - (tau_coh - system.FWHMs[1])).argmin()
 
     t_start_1 = times[idx_start_1]  # Start time of the second pulse
 
@@ -820,17 +818,17 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     rho_1 = data_0.states[idx_start_1]
 
     idx_end_1 = np.abs(
-        times - (tau_coh + system.Delta_ts[1])
+        times - (tau_coh + system.FWHMs[1])
     ).argmin()  # index at which the second pulse ends
     # Take the state (after / also during) the first pulse and evolve it with the second (and potentially overlaped first) pulse
 
     # select range  ->  to reduce computation time
-    idx_start_2 = np.abs(times - (tau_coh + T_wait - system.Delta_ts[2])).argmin()
-    t_start_2 = times[idx_start_2]  # the time at which the third pulse starts
+    idx_start_2 = np.abs(times - (tau_coh + T_wait - system.FWHMs[2])).argmin()
+    t_start_pulse2 = times[idx_start_2]  # the time at which the third pulse starts
     idx_end_2 = np.abs(
-        times - (tau_coh + T_wait + system.Delta_ts[2])
+        times - (tau_coh + T_wait + system.FWHMs[2])
     ).argmin()  # end of the third pulse
-    # idx_start_2_0 = np.abs(times - (T_wait - Delta_ts[2])).argmin() # the first time at which the third pulse starts
+    # idx_start_2_0 = np.abs(times - (T_wait - FWHMs[2])).argmin() # the first time at which the third pulse starts
 
     times_1 = times[
         idx_start_1 : idx_start_2 + 1
@@ -848,7 +846,7 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     )
     data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
 
-    idx_start_2_in_times_1 = np.abs(times_1 - (t_start_2)).argmin()
+    idx_start_2_in_times_1 = np.abs(times_1 - (t_start_pulse2)).argmin()
 
     rho_2 = data_1.states[
         idx_start_2_in_times_1
@@ -862,7 +860,7 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
         times_2 = [times[idx_start_2]]
     # If the second pulse starts before the first pulse ends, combine their contributions
     phi_2 = 0  # FIXED PHASE!
-    pulse_f = (t_start_2, phi_2)
+    pulse_f = (t_start_pulse2, phi_2)
     pulse_seq_f = PulseSequence.from_args(
         system=system,
         curr=pulse_f,
@@ -872,7 +870,7 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 
     t_det_start_idx_in_times_2 = np.abs(
-        times_2 - (times_2[0] + system.Delta_ts[2])
+        times_2 - (times_2[0] + system.FWHMs[2])
     ).argmin()  # detection time index in times_2
     t_last_pulse_peak = times_2[t_det_start_idx_in_times_2]
     # only if we are still in the physical regime
@@ -1094,11 +1092,12 @@ def compute_average_fixed_tau_T_over_omega_ats(
     return t_det_vals, data_avg_over_omega
 
 
+"""
 # Test the function and plot the data
 t_max_test = 1900
 dt_test = 20
 times_test = np.arange(
-    -test_params.Delta_ts[0], t_max_test, dt_test
+    -test_params.FWHMs[0], t_max_test, dt_test
 )  # High-resolution times array to do the evolutions
 tau_coh_test = 300
 T_wait_test = 1000
@@ -1128,3 +1127,5 @@ plt.title(
 )
 plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 plt.show()
+
+"""

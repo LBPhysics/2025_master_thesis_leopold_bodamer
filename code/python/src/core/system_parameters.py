@@ -300,7 +300,7 @@ class SystemParameters:
         return 2 * np.pi / self.rabi_gen if self.rabi_gen != 0 else 0.0
 
     @property
-    def Delta_ts(self):
+    def FWHMs(self):
         return [self.pulse_duration / 2] * 3
 
     @property

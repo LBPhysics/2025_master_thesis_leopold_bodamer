@@ -41,7 +41,8 @@ class PulseSequence:
             PulseSequence: An instance containing up to three pulses
         """
         pulse_freq = system.omega_laser
-        Delta_ts = system.Delta_ts
+        # TODO a bit bat coding style to get FWHMs and E_amps (which describe the pulse shape) from the system parameters
+        FWHMs = system.FWHMs
         E_amps = system.E_amps
 
         pulses = []
@@ -53,7 +54,7 @@ class PulseSequence:
                 Pulse(
                     pulse_peak_time=t0_preprev,
                     pulse_phase=phi_preprev,
-                    pulse_FWHM=Delta_ts[0],
+                    pulse_FWHM=FWHMs[0],
                     pulse_amplitude=E_amps[0],
                     pulse_freq=pulse_freq,
                 )
@@ -67,7 +68,7 @@ class PulseSequence:
                 Pulse(
                     pulse_peak_time=t0_prev,
                     pulse_phase=phi_prev,
-                    pulse_FWHM=Delta_ts[1],
+                    pulse_FWHM=FWHMs[1],
                     pulse_amplitude=E_amps[idx],
                     pulse_freq=pulse_freq,
                 )
@@ -85,7 +86,7 @@ class PulseSequence:
             Pulse(
                 pulse_peak_time=t0_curr,
                 pulse_phase=phi_curr,
-                pulse_FWHM=Delta_ts[idx],
+                pulse_FWHM=FWHMs[idx],
                 pulse_amplitude=E_amps[idx],
                 pulse_freq=pulse_freq,
             )
