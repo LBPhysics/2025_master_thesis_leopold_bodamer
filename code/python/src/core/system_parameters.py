@@ -434,14 +434,17 @@ class SystemParameters:
 
     @property
     def a_ops_list(self):
+        env = BosonicEnvironment.from_spectral_density(
+            lambda w: spectral_density_func_paper(w, self.args_bath),
+            wMax=10 * self.cutoff,
+            T=self.Temp,
+        )
         if self.N_atoms == 1:
-            a_ops_list = [self.Deph_op]
+            a_ops_list = [
+                [self.Deph_op, env.power_spectrum],
+            ]  # TODO THIS WAS NOT IN THE PAPER!!!!
+
         elif self.N_atoms == 2:
-            env = BosonicEnvironment.from_spectral_density(
-                lambda w: spectral_density_func_paper(w, self.args_bath),
-                wMax=10 * self.cutoff,
-                T=self.Temp,
-            )
             cplng_ops_to_env = [
                 ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
                 ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B

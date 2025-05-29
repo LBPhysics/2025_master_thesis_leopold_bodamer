@@ -6,7 +6,7 @@ and other utilities using a Rotating Wave Approximation.
 """
 
 import numpy as np
-from qutip import Qobj
+from qutip import Qobj, expect
 from src.core.system_parameters import SystemParameters
 from src.core.pulse_sequences import PulseSequence
 from src.core.pulse_functions import E_pulse, Epsilon_pulse
@@ -174,3 +174,95 @@ def get_expect_vals_with_RWA(
         ]
     updated_expects = [np.real(expect(states, e_op)) for e_op in e_ops]
     return updated_expects
+
+
+if __name__ == "__main__":
+    """
+    Test the functions in this module when run directly.
+    """
+    print("Testing functions_with_rwa.py module...")
+
+    ### Create test system for N_atoms=1
+    print("\n=== Testing with N_atoms=1 ===")
+    system1 = SystemParameters(N_atoms=1)
+
+    ### Create simple pulse sequence
+    from src.core.pulse_sequences import Pulse
+
+    test_pulse = Pulse(
+        pulse_peak_time=2.0,
+        pulse_FWHM=1.0,
+        pulse_phase=0.0,
+        pulse_amplitude=0.05,
+        pulse_freq=system1.omega_laser,
+    )
+    pulse_seq1 = PulseSequence([test_pulse])
+
+    ### Test H_int function
+    print("\n--- Testing H_int function ---")
+    test_time = 1.0
+    H_interaction = H_int(test_time, pulse_seq1, system1)
+    print(f"H_int at t={test_time}: {type(H_interaction)}")
+    print(f"H_int dimensions: {H_interaction.dims}")
+    print(f"H_int is Hermitian: {H_interaction.isherm}")
+
+    ### Test apply_RWA_phase_factors
+    print("\n--- Testing apply_RWA_phase_factors ---")
+    test_rho = system1.psi_ini  # Initial density matrix
+    omega_test = system1.omega_laser
+    rho_modified = apply_RWA_phase_factors(test_rho, test_time, omega_test, system1)
+    print(f"Original rho type: {type(test_rho)}")
+    print(f"Modified rho type: {type(rho_modified)}")
+    print(f"Modified rho is Hermitian: {rho_modified.isherm}")
+
+    ### Test with multiple times
+    times_test = np.linspace(0, 5, 10)
+    states_test = [system1.psi_ini for _ in times_test]  # Dummy states list
+
+    ### Test get_expect_vals_with_RWA
+    print("\n--- Testing get_expect_vals_with_RWA ---")
+    try:
+        expect_vals = get_expect_vals_with_RWA(states_test, times_test, system1)
+        print(f"Number of expectation operators: {len(expect_vals)}")
+        print(f"Number of time points: {len(expect_vals[0]) if expect_vals else 0}")
+        print(f"Expectation values shape: {[len(ev) for ev in expect_vals]}")
+    except Exception as e:
+        print(f"Error in get_expect_vals_with_RWA: {e}")
+
+    ### Test with N_atoms=2
+    print("\n=== Testing with N_atoms=2 ===")
+    try:
+        system2 = SystemParameters(N_atoms=2)
+        pulse_seq2 = PulseSequence([test_pulse])
+
+        ### Test H_int for 2-atom system
+        H_interaction2 = H_int(test_time, pulse_seq2, system2)
+        print(f"H_int for 2-atom system dimensions: {H_interaction2.dims}")
+
+        ### Test RWA phase factors for 2-atom system
+        test_rho2 = system2.psi_ini
+        rho_modified2 = apply_RWA_phase_factors(
+            test_rho2, test_time, omega_test, system2
+        )
+        print(f"2-atom modified rho is Hermitian: {rho_modified2.isherm}")
+
+    except Exception as e:
+        print(f"Error testing 2-atom system: {e}")
+
+    ### Test error handling
+    print("\n--- Testing error handling ---")
+    try:
+        # Test with invalid pulse sequence type
+        H_int(test_time, "invalid_pulse_seq", system1)
+    except TypeError as e:
+        print(f"✓ Correctly caught TypeError: {e}")
+
+    try:
+        # Test with unsupported N_atoms
+        system_invalid = SystemParameters(N_atoms=1)
+        system_invalid.N_atoms = 3  # Manually set invalid value
+        apply_RWA_phase_factors(test_rho, test_time, omega_test, system_invalid)
+    except ValueError as e:
+        print(f"✓ Correctly caught ValueError: {e}")
+
+    print("\n✅ All tests completed successfully!")

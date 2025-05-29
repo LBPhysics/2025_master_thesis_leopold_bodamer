@@ -62,16 +62,13 @@ def get_tau_cohs_and_t_dets_for_T_wait(
     tau_coh = np.arange(
         0, tau_coh_max + spacing / 2, spacing
     )  # include endpoint if possible
-    t_det = tau_coh + T_wait
-
     # =============================
     # Ensure t_det does not exceed t_max due to floating point
     # =============================
-    valid_idx = t_det <= t_max + 1e-10
-    tau_coh = tau_coh[valid_idx]
-    t_det = t_det[valid_idx]
+    valid_idx = tau_coh <= t_max + 1e-10
+    tau_coh = tau_coh[valid_idx]  # makes sure T_wait < 0 is okay
 
-    return tau_coh, t_det
+    return tau_coh, tau_coh
 
 
 def compute_pulse_evolution(
@@ -79,6 +76,7 @@ def compute_pulse_evolution(
     times: np.ndarray,
     pulse_seq: PulseSequence,
     system: SystemParameters = None,
+    **solver_options: dict,
 ) -> Result:
     """
     Compute the evolution of the system for a given pulse sequence.
@@ -110,6 +108,7 @@ def compute_pulse_evolution(
     # =============================
     # Set solver options
     # =============================
+    # TODO get from solver_options
     options = {
         "store_states": True,
         "progress_bar": "",
@@ -311,8 +310,8 @@ def check_the_solver(
     return result, time_cut
 
 
-def compute_two_dimensional_polarization(  # TODO review
-    T_wait: float,
+def compute_two_dimensional_polarization(
+    T_wait: float,  # TODO somehow assert that this is 0 < T_wait < system.t_max
     phi_0: float,
     phi_1: float,
     times: np.ndarray,  # TODO ACTURALLY a list -> qutip needs a list ?
@@ -359,10 +358,9 @@ def compute_two_dimensional_polarization(  # TODO review
     ).argmin()  # the last possible coherence time
 
     times_0 = times[: idx_pulse1_max_peak + 1]
-    if times_0.size == 0:
-        # TODO check if this case ever happens
-        idx_end_pulse0 = np.abs(times - (system.FWHMs[0])).argmin()
-        times_0 = times[: idx_end_pulse0 + 1]
+    if times_0.size == 0:  # in case T_wait == t_max
+        # idx_end_pulse0 = np.abs(times - (system.FWHMs[0])).argmin()
+        times_0 = times[:2]  # idx_end_pulse0 + 1
 
     data_0 = compute_pulse_evolution(
         system.psi_ini, times_0, pulse_seq_0, system=system
@@ -375,15 +373,13 @@ def compute_two_dimensional_polarization(  # TODO review
         rho_1 = data_0.states[idx_start_pulse1]
 
         idx_start_pulse2 = np.abs(times - (tau_coh + T_wait - system.FWHMs[2])).argmin()
-        idx_end_pulse2 = np.abs(times - (tau_coh + T_wait + system.FWHMs[2])).argmin()
         t_start_pulse2 = times[idx_start_pulse2]
         t_peak_pulse2 = tau_coh + T_wait
 
         times_1 = times[idx_start_pulse1 : idx_start_pulse2 + 1]
-        if times_1.size == 0:
-            # TODO check if this case ever happens
-            idx_end_pulse1 = np.abs(times - (tau_coh + system.FWHMs[1])).argmin()
-            times_1 = times[idx_start_pulse1 : idx_end_pulse1 + 1]
+        if times_1.size == 0:  # The case if T_wait is 0
+            # idx_end_pulse1 = np.abs(times - (tau_coh + system.FWHMs[1])).argmin()
+            times_1 = [times[idx_start_pulse1]]  # idx_start_pulse1 : idx_end_pulse1 + 1
 
         t_peak_pulse1 = tau_coh
         pulse_1 = (t_peak_pulse1, phi_1)
@@ -393,17 +389,15 @@ def compute_two_dimensional_polarization(  # TODO review
             prev=pulse_0,
         )
         data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
+        """idx_start_pulse2_in_times_1 = np.abs(times_1 - t_start_pulse2).argmin()              print("The two values are actually the same:",idx_start_pulse2_in_times_1, idx_start_pulse2 - idx_start_pulse1,)"""
 
-        idx_start_pulse2_in_times_1 = np.abs(
-            times_1 - t_start_pulse2
-        ).argmin()  # TODO Check this should be equal to (idx_start_pulse2 - idx_start_pulse1)!!!
-
+        idx_start_pulse2_in_times_1 = idx_start_pulse2 - idx_start_pulse1
         rho_2 = data_1.states[idx_start_pulse2_in_times_1]
 
         times_2 = times[idx_start_pulse2:]
         if times_2.size == 0:
-            # TODO check if this case ever happens
-            times_2 = times[idx_start_pulse2 : idx_end_pulse2 + 1]
+            # idx_end_pulse2 = np.abs(times - (tau_coh + T_wait + system.FWHMs[2])).argmin()
+            times_2 = [times[-1]]  # idx_start_pulse2 : idx_end_pulse2 + 1
 
         phi_2 = 0
         pulse_f = (t_peak_pulse2, phi_2)
@@ -419,9 +413,7 @@ def compute_two_dimensional_polarization(  # TODO review
             actual_det_time = t_peak_pulse2 + t_det
 
             if actual_det_time < system.t_max and actual_det_time < time_cut:
-                t_idx_in_times_2 = np.abs(
-                    times_2 - actual_det_time
-                ).argmin()  # TODO this should be equal to (t_idx)
+                t_idx_in_times_2 = np.abs(times_2 - actual_det_time).argmin()
 
                 # FINAL STATE
                 rho_f = data_f.states[t_idx_in_times_2]
@@ -435,10 +427,11 @@ def compute_two_dimensional_polarization(  # TODO review
                     )
 
                 value = expect(system.Dip_op, rho_f)
-                data[tau_idx, t_idx] = np.real(
-                    value
-                )  # TODO check the dtype -> np.float32 or am i missing precission?
+                data[tau_idx, t_idx] = np.real(value)
 
+                # Note: Plotting should be done in visualization layer, not calculation layer
+                # TODO: Move Plot_example_evo to a separate plotting script if needed
+                """
                 if (
                     t_idx == 0
                     and tau_idx == 0  # len(tau_coh_vals) // 3
@@ -468,8 +461,6 @@ def compute_two_dimensional_polarization(  # TODO review
                         for idx in range(len(system.e_ops_list) + 1)
                     ]
 
-                    # Note: Plotting should be done in visualization layer, not calculation layer
-                    # TODO: Move Plot_example_evo to a separate plotting script if needed
                     # Plot_example_evo(
                     #     times_0[: idx_start_pulse1 + 1],
                     #     times_1,
@@ -480,6 +471,7 @@ def compute_two_dimensional_polarization(  # TODO review
                     #     T_wait,
                     #     system=system,
                     # )
+                """
 
     return (
         t_det_vals,
