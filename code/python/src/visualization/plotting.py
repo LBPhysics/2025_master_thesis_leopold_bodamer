@@ -43,7 +43,7 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     # Plot individual envelopes and annotations
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
         t_peak = pulse.pulse_peak_time  # Now interpreted as peak time
-        Delta_width = pulse.pulse_half_width
+        Delta_width = pulse.pulse_FWHM
 
         # Compute individual pulse envelope using new logic
         individual_envelope = [

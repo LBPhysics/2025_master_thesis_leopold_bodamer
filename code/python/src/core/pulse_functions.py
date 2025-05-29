@@ -7,7 +7,7 @@ def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
     Calculate the combined envelope of multiple pulses at time t using PulseSequence.
 
     Now uses pulse_peak_time as t_peak (peak time) where cos² is maximal.
-    Pulse is zero outside [t_peak - Delta, t_peak + Delta].
+    Pulse is zero outside [t_peak - Delta, t_peak + Delta] == outside of 2 FWHM.
     """
     if not isinstance(pulse_seq, PulseSequence):
         raise TypeError("pulse_seq must be a PulseSequence instance.")
@@ -15,7 +15,7 @@ def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
     envelope = 0.0
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time  # Now interpreted as peak time
-        Delta_width = pulse.pulse_half_width
+        Delta_width = pulse.pulse_FWHM
         if Delta_width is None or Delta_width <= 0:
             continue
         if t_peak is None:
@@ -31,13 +31,12 @@ def pulse_envelope_gaussian(t: float, pulse_seq: PulseSequence) -> float:
     """
     Calculate the combined Gaussian envelope of multiple pulses at time t using PulseSequence.
 
-    Gaussian envelope centered at t_peak with Delta as FWHM, shifted so that:
-    - The Gaussian is zero at t_peak ± 2*Delta
-    - The pulse is zero outside [t_peak - 2*Delta, t_peak + 2*Delta]
+    Gaussian envelope centered at t_peak with FWHM parameter, shifted so that:
+    - The Gaussian is zero at t_peak ± FWHM boundaries
+    - The pulse is zero outside [t_peak - FWHM, t_peak + FWHM]
 
-    The envelope is: exp(-(t-t_peak)^2/(2*sigma^2)) - exp(-2) for |t-t_peak| <= 2*Delta
-    where sigma = Delta / (2*sqrt(2*ln(2))) to make Delta the FWHM.
-    This ensures the envelope is exactly zero at the boundaries.
+    The envelope is: exp(-(t-t_peak)^2/(2*sigma^2)) - boundary_val for |t-t_peak| <= FWHM
+    where sigma = FWHM / (2*sqrt(2*ln(2))) and boundary_val ensures zero at boundaries.
 
     Args:
         t (float): Time value
@@ -52,23 +51,30 @@ def pulse_envelope_gaussian(t: float, pulse_seq: PulseSequence) -> float:
     envelope = 0.0
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time
-        Delta = pulse.pulse_half_width  # Now interpreted as FWHM
-        if Delta is None or Delta <= 0:
+        FWHM = pulse.pulse_FWHM
+
+        if FWHM is None or FWHM <= 0:
             continue
         if t_peak is None:
             continue
 
-        # Convert FWHM to standard deviation: sigma = FWHM / (2*sqrt(2*ln(2)))
-        sigma = Delta / (2 * np.sqrt(2 * np.log(2)))
+        # Pulse exists only in [t_peak - FWHM, t_peak + FWHM]
+        if not (t_peak - FWHM <= t <= t_peak + FWHM):
+            continue
 
-        # Pulse exists only in [t_peak - 2*Delta, t_peak + 2*Delta]
-        if t_peak - 2 * Delta <= t <= t_peak + 2 * Delta:
-            # Gaussian with sigma derived from FWHM, shifted to be zero at boundaries
-            gaussian_val = np.exp(-((t - t_peak) ** 2) / (2 * sigma**2))
-            boundary_val = np.exp(-2)  # Value at t_peak ± 2*Delta
+        ### Convert FWHM to standard deviation
+        sigma = FWHM / (2 * np.sqrt(2 * np.log(2)))
 
-            # Shift so that envelope is zero at boundaries
-            envelope += max(0, gaussian_val - boundary_val)
+        ### Calculate Gaussian value at time t
+        gaussian_val = np.exp(-((t - t_peak) ** 2) / (2 * sigma**2))
+
+        ### Calculate boundary value (at t = t_peak ± FWHM)
+        # At boundary: |t - t_peak| = FWHM
+        boundary_distance_sq = FWHM**2
+        boundary_val = np.exp(-boundary_distance_sq / (2 * sigma**2))
+
+        ### Shift envelope to be Continuous at boundaries
+        envelope += max(0.0, gaussian_val - boundary_val)
 
     return envelope
 

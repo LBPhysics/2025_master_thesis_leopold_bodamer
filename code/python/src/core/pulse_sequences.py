@@ -8,7 +8,7 @@ from dataclasses import dataclass, field  # for the class definiton
 @dataclass
 class Pulse:
     pulse_peak_time: float
-    pulse_half_width: float
+    pulse_FWHM: float
     pulse_phase: float
     pulse_amplitude: float
     pulse_freq: float
@@ -53,7 +53,7 @@ class PulseSequence:
                 Pulse(
                     pulse_peak_time=t0_preprev,
                     pulse_phase=phi_preprev,
-                    pulse_half_width=Delta_ts[0],
+                    pulse_FWHM=Delta_ts[0],
                     pulse_amplitude=E_amps[0],
                     pulse_freq=pulse_freq,
                 )
@@ -67,7 +67,7 @@ class PulseSequence:
                 Pulse(
                     pulse_peak_time=t0_prev,
                     pulse_phase=phi_prev,
-                    pulse_half_width=Delta_ts[1],
+                    pulse_FWHM=Delta_ts[1],
                     pulse_amplitude=E_amps[idx],
                     pulse_freq=pulse_freq,
                 )
@@ -85,7 +85,7 @@ class PulseSequence:
             Pulse(
                 pulse_peak_time=t0_curr,
                 pulse_phase=phi_curr,
-                pulse_half_width=Delta_ts[idx],
+                pulse_FWHM=Delta_ts[idx],
                 pulse_amplitude=E_amps[idx],
                 pulse_freq=pulse_freq,
             )

@@ -310,7 +310,7 @@ def check_the_solver(
     return result, time_cut
 
 
-def compute_two_dimensional_polarization(
+def compute_two_dimensional_polarization(  # TODO review
     T_wait: float,
     phi_0: float,
     phi_1: float,
@@ -749,3 +749,382 @@ def _process_single_combination(
             f"Error in _process_single_combination: omega={omega_at}, phi1={phi1}, phi2={phi2}: {str(e)}"
         )
         return None
+
+
+# ##########################
+# calculate the data for fixed_tau_T
+# ##########################
+# TODO EXPORT The visualization of the data to the visualization -> plotting module
+
+
+def compute_fixed_tau_T(  # TODO update to new pulse definitions
+    tau_coh: float,
+    T_wait: float,
+    phi_0: float,
+    phi_1: float,
+    times: np.ndarray,
+    system: SystemParameters,
+    **kwargs,
+):
+    """
+    Compute the data for a fixed tau_coh and T_wait.
+
+    Parameters
+    ----------
+    tau_coh : float
+        Coherence time.
+    T_wait : float
+        Waiting time.
+    phi_0 : float
+        Phase of the first pulse.
+    phi_1 : float
+        Phase of the second pulse.
+    times : np.ndarray
+        Time array for the simulation.
+    system : SystemParameters
+        System parameters object.
+
+    Returns
+    -------
+    tuple
+        (t_det_vals, data) where t_det_vals are the detection times (shifted to start at zero)
+        and data is the corresponding computed observable.
+    """
+    plot_example = kwargs.get("plot_example", False)
+
+    t_peak_pulse0 = 0
+    idx_end_0 = np.abs(times - (system.Delta_ts[0])).argmin()
+    idx_start_1 = np.abs(times - (tau_coh - system.Delta_ts[1])).argmin()
+
+    t_start_1 = times[idx_start_1]  # Start time of the second pulse
+
+    times_0 = times[
+        : idx_start_1 + 1
+    ]  # definetly not empty except for when T_wait >= t_max
+    if times_0.size == 0:
+        times_0 = times[: idx_end_0 + 1]
+
+    # calculate the evolution of the first pulse in the desired range for tau_coh
+
+    # First pulse
+    pulse_0 = (t_peak_pulse0, phi_0)
+    # Instead of directly constructing PulseSequence, use from_args:
+    pulse_seq_0 = PulseSequence.from_args(
+        system=system,
+        curr=pulse_0,
+    )
+    data_0 = compute_pulse_evolution(
+        system.psi_ini, times_0, pulse_seq_0, system=system
+    )
+
+    rho_1 = data_0.states[idx_start_1]
+
+    idx_end_1 = np.abs(
+        times - (tau_coh + system.Delta_ts[1])
+    ).argmin()  # index at which the second pulse ends
+    # Take the state (after / also during) the first pulse and evolve it with the second (and potentially overlaped first) pulse
+
+    # select range  ->  to reduce computation time
+    idx_start_2 = np.abs(times - (tau_coh + T_wait - system.Delta_ts[2])).argmin()
+    t_start_2 = times[idx_start_2]  # the time at which the third pulse starts
+    idx_end_2 = np.abs(
+        times - (tau_coh + T_wait + system.Delta_ts[2])
+    ).argmin()  # end of the third pulse
+    # idx_start_2_0 = np.abs(times - (T_wait - Delta_ts[2])).argmin() # the first time at which the third pulse starts
+
+    times_1 = times[
+        idx_start_1 : idx_start_2 + 1
+    ]  # like this: also take the overlap into account;
+
+    if times_1.size == 0:
+        times_1 = times[idx_start_1 : idx_end_1 + 1]
+
+    # Handle overlapping pulses: If the second pulse starts before the first pulse ends, combine their contributions
+    pulse_1 = (t_start_1, phi_1)
+    pulse_seq_1 = PulseSequence.from_args(
+        system=system,
+        curr=pulse_1,
+        prev=pulse_0,
+    )
+    data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
+
+    idx_start_2_in_times_1 = np.abs(times_1 - (t_start_2)).argmin()
+
+    rho_2 = data_1.states[
+        idx_start_2_in_times_1
+    ]  # == state where the third pulse starts
+
+    times_2 = times[
+        idx_start_2:
+    ]  # the rest of the evolution (third pulse, potentially overlapped with previouses) # can be empty, if tau_coh + T_wait >= t_max
+    # print(len(times), len(times_0), len(times_1), len(times_2))
+    if times_2.size == 0:
+        times_2 = [times[idx_start_2]]
+    # If the second pulse starts before the first pulse ends, combine their contributions
+    phi_2 = 0  # FIXED PHASE!
+    pulse_f = (t_start_2, phi_2)
+    pulse_seq_f = PulseSequence.from_args(
+        system=system,
+        curr=pulse_f,
+        prev=pulse_1,
+        preprev=pulse_0,
+    )
+    data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
+
+    t_det_start_idx_in_times_2 = np.abs(
+        times_2 - (times_2[0] + system.Delta_ts[2])
+    ).argmin()  # detection time index in times_2
+    t_last_pulse_peak = times_2[t_det_start_idx_in_times_2]
+    # only if we are still in the physical regime
+    states = data_f.states[t_det_start_idx_in_times_2:]
+    t_det_vals = data_f.times[t_det_start_idx_in_times_2:]
+    data = np.zeros(
+        (len(t_det_vals)), dtype=np.complex64
+    )  # might get uncontrollable big!TODO
+
+    # print(t_det_vals[0], t_det_vals[1], t_det_vals[-1], len(t_det_vals))
+
+    if system.RWA_laser:
+        states = [
+            apply_RWA_phase_factors(state, time, omega=system.omega_laser)
+            for state, time in zip(states, t_det_vals)
+        ]
+
+    for t_idx, t_det in enumerate(t_det_vals):
+        if t_det < time_cut:
+            data[:] = np.real(expect(system.Dip_op, states[:]))
+    return np.array(t_det_vals) - t_det_vals[0], data
+
+
+# Plot the data for a fixed tau_coh and T_wait
+def plot_fixed_tau_T(
+    tau_coh: float,
+    T_wait: float,
+    phi_0: float,
+    phi_1: float,
+    times: np.ndarray,
+    system: SystemParameters,
+):
+    """
+    Plot the data for a fixed tau_coh and T.
+
+    Parameters
+    ----------
+    tau_coh : float
+        Coherence time.
+    T_wait : float
+        Waiting time.
+    phi_0 : float
+        Phase of the first pulse.
+    phi_1 : float
+        Phase of the second pulse.
+    times : np.ndarray
+        Time array for the simulation.
+    system : SystemParameters
+        System parameters object.
+    """
+    t_det_vals, data = compute_fixed_tau_T(
+        tau_coh, T_wait, phi_0, phi_1, times, system=system
+    )
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        t_det_vals,
+        np.real(data),
+        label=r"$|\langle \mu \rangle|$",
+        color="C0",
+        linestyle="solid",
+    )
+    plt.xlabel(r"$t \, [\text{fs}]$")
+    plt.ylabel(r"$|\langle \mu \rangle|$")
+    plt.title(
+        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh}$ and $T={T_wait}$"
+    )
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.show()
+
+
+def compute_average_fixed_tau_T(
+    tau_coh: float,
+    T_wait: float,
+    times: np.ndarray,
+    phases: list,
+    system: SystemParameters,
+):
+    """
+    Compute the average data for a fixed tau_coh and T_wait over all phase combinations.
+
+    Parameters
+    ----------
+    tau_coh : float
+        Coherence time.
+    T_wait : float
+        Waiting time.
+    times : np.ndarray
+        Time array for the simulation.
+    phases : list
+        List of phase values.
+    system : SystemParameters
+        System parameters object.
+
+    Returns
+    -------
+    tuple
+        (t_det_vals, data_avg)
+    """
+    results = []
+    for phi_0 in phases:
+        for phi_1 in phases:
+            try:
+                result = compute_fixed_tau_T(
+                    tau_coh, T_wait, phi_0, phi_1, times=times, system=system
+                )
+                results.append(result)
+            except Exception as e:
+                print(f"Error in computation for phi_0={phi_0}, phi_1={phi_1}: {e}")
+                raise
+
+    t_det_vals = results[0][0]  # Time values are the same for all computations
+    data_sum = np.zeros_like(results[0][1], dtype=complex)
+    for _, data in results:
+        data_sum += data
+    data_avg = data_sum / len(results)
+
+    return t_det_vals, data_avg
+
+
+def plot_average_fixed_tau_T(
+    tau_coh: float,
+    T_wait: float,
+    times: np.ndarray,
+    phases: list,
+    system: SystemParameters,
+):
+    """
+    Plot the averaged data for a fixed tau_coh and T_wait over all phase combinations.
+
+    Parameters
+    ----------
+    tau_coh : float
+        Coherence time.
+    T_wait : float
+        Waiting time.
+    times : np.ndarray
+        Time array for the simulation.
+    phases : list
+        List of phase values.
+    system : SystemParameters
+        System parameters object.
+
+    Returns
+    -------
+    None
+    """
+    t_det_vals, data_avg = compute_average_fixed_tau_T(
+        tau_coh, T_wait, times, phases, system=system
+    )
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        t_det_vals,
+        np.abs(data_avg),
+        label=r"$|\langle \mu \rangle|$",
+        color="C0",
+        linestyle="solid",
+    )
+    plt.xlabel(r"$t \, [\text{fs}]$")
+    plt.ylabel(r"$|\langle \mu \rangle|$")
+    plt.title(
+        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh}$ and $T={T_wait}$ (averaged over phases)"
+    )
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.show()
+
+
+def compute_average_fixed_tau_T_over_omega_ats(
+    tau_coh: float,
+    T_wait: float,
+    times: np.ndarray,
+    phases: list,
+    omega_ats: list,
+    system: SystemParameters,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute the average data for a fixed tau_coh and T_wait over all phase combinations
+    and a list of omega_ats (inhomogeneous broadening).
+
+    Parameters
+    ----------
+    tau_coh : float
+        Coherence time.
+    T_wait : float
+        Waiting time.
+    times : np.ndarray
+        Time array for the simulation.
+    phases : list
+        List of phase values.
+    omega_ats : list
+        List of omega_A_cm values to average over.
+    system : SystemParameters
+        System parameters object.
+
+    Returns
+    -------
+    tuple
+        (t_det_vals, data_avg) where data_avg is averaged over all omega_ats and phase combinations.
+    """
+    all_results = []
+
+    # =============================
+    # Loop over all omega_ats
+    # =============================
+    for omega_at in omega_ats:
+        system_new = copy.deepcopy(system)
+        system_new.omega_A_cm = omega_at
+        t_det_vals, data_avg = compute_average_fixed_tau_T(
+            tau_coh, T_wait, times, phases, system=system_new
+        )
+        all_results.append(data_avg)
+
+    # =============================
+    # Average over all omega_ats
+    # =============================
+    data_avg_over_omega = np.mean(np.stack(all_results), axis=0)
+
+    return t_det_vals, data_avg_over_omega
+
+
+# Test the function and plot the data
+t_max_test = 1900
+dt_test = 20
+times_test = np.arange(
+    -test_params.Delta_ts[0], t_max_test, dt_test
+)  # High-resolution times array to do the evolutions
+tau_coh_test = 300
+T_wait_test = 1000
+
+# plot_fixed_tau_T(tau_coh_test, T_wait_test, phases[0], phases[1], times=times_test)
+# plot_average_fixed_tau_T(
+#    tau_coh_test, T_wait_test, times_test, phases, system=test_params
+# )
+
+omega_ats = sample_from_sigma(N=10, Delta=test_params.Delta, E0=test_params.omega_A)
+t_det_vals, data_avg = compute_average_fixed_tau_T_over_omega_ats(
+    tau_coh_test, T_wait_test, times_test, phases, omega_ats, system=test_params
+)
+
+plt.figure(figsize=(10, 6))
+plt.plot(
+    t_det_vals,
+    np.abs(data_avg),
+    label=r"$|\langle \mu \rangle|$ (avg over $\omega_A$)",
+    color="C1",
+    linestyle="dashed",
+)
+plt.xlabel(r"$t \, [\text{fs}]$")
+plt.ylabel(r"$|\langle \mu \rangle|$")
+plt.title(
+    rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh_test}$ and $T={T_wait_test}$ (avg over $\omega_A$ and phases)"
+)
+plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+plt.show()
