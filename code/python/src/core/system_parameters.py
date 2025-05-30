@@ -51,7 +51,7 @@ class SystemParameters:
     # =============================
     # Pulse and time grid parameters
     # =============================
-    pulse_duration: float = 15.0  # in fs
+    pulse_FWHM: float = 15.0  # in fs
     t_max: float = 10.0  # in fs
     dt: float = 1.0  # in fs
     envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
@@ -302,7 +302,7 @@ class SystemParameters:
 
     @property
     def FWHMs(self):
-        return [self.pulse_duration / 2] * 3
+        return [self.pulse_FWHM] * 3
 
     @property
     def E_freqs(self):
@@ -564,7 +564,7 @@ class SystemParameters:
         print("\n# With parameters for the SIMULATION:")
         print(f"    {'t_max':<20}: {self.t_max} fs")
         print(f"    {'dt':<20}: {self.dt} fs")
-        print(f"    {'pulse_duration':<20}: {self.pulse_duration} fs")
+        print(f"    {'pulse_FWHM':<20}: {self.pulse_FWHM} fs")
         print(f"    {'omega_laser':<20}: {self.omega_laser_cm} cm^-1")
         print(f"    {'E0':<20}: {self.E0} (mu*E0, such that excitation is < 1%!)")
 

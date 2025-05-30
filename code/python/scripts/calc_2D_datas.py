@@ -2,7 +2,7 @@
 from src.spectroscopy.post_processing import *
 from src.core.system_parameters import SystemParameters
 from src.spectroscopy.calculations import (
-    batch_process_all_combinations_with_inhomogeneity,
+    parallel_compute_2d_polarization_with_inhomogenity,
 )
 from src.spectroscopy.inhomogenity import sample_from_sigma, check_the_solver
 
@@ -84,9 +84,7 @@ def main():
     # =============================
     # FREQUENCY SAMPLING -> introduces inhomogeneous broadening
     # =============================
-    omega_ats = sample_from_sigma(
-        n_freqs, system.Delta_cm, system.omega_A_cm, E_range=3
-    )
+    omega_ats = sample_from_sigma(n_freqs, FWHM=system.Delta_cm, mu=system.omega_A_cm)
 
     # =============================
     # RUN SIMULATION
@@ -95,7 +93,7 @@ def main():
 
     kwargs = {"plot_example": False}
 
-    two_d_datas = batch_process_all_combinations_with_inhomogeneity(
+    two_d_datas = parallel_compute_2d_polarization_with_inhomogenity(
         omega_ats=omega_ats,
         phases=phases,
         times_T=times_T,

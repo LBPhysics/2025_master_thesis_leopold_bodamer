@@ -1,5 +1,5 @@
 from src.core.pulse_functions import *
-from src.visualization.plotting import plot_positive_color_map
+from src.visualization.plotting import Plot_polarization_2d_spectrum
 from src.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
 from qutip import basis, ket2dm, tensor, Qobj, mesolve, brmesolve, expect
 import numpy as np
@@ -8,27 +8,60 @@ import numpy as np
 # ##########################
 # functions for post-processing and plotting
 # ##########################
-def extend_time_tau_axes(  # TODO update docstring -> dtypes are unchanged
+def extend_time_tau_axes(
     ts: np.ndarray,
     taus: np.ndarray,
     data: np.ndarray,
     pad_rows: tuple[int, int] = (1, 1),
-    pad_cols: tuple[int, int] = (1, 1),  # -> individual padding actually not used
+    pad_cols: tuple[int, int] = (1, 1),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Extend the ts and taus axes and pad the data array accordingly.
+    Extend the time and tau axes by padding and correspondingly extend the data array.
 
-    Parameters:
-        ts (np.ndarray): Time axis (t).
-        taus (np.ndarray): Tau axis (coherence time).
-        data (np.ndarray): 2D data array.
-        pad_rows (tuple): Multipliers for rows (before, after) along taus axis.
-                         Values >= 1, where 1 means no padding, 2 means add original length, etc.
-        pad_cols (tuple): Multipliers for columns (before, after) along ts axis.
-                         Values >= 1, where 1 means no padding, 2 means add original length, etc.
+    This function takes 2D spectroscopy data and extends both time axes by padding
+    with zeros. The padding is specified as multipliers, where values >= 1 indicate
+    how much to extend each axis. Data types are preserved during the operation.
 
-    Returns:
-        tuple: (extended_ts, extended_taus, padded_data)
+    Parameters
+    ----------
+    ts : np.ndarray
+        Time axis for detection (t_det). Shape: (N_t,)
+    taus : np.ndarray
+        Time axis for coherence (tau_coh). Shape: (N_tau,)
+    data : np.ndarray
+        2D spectroscopy data array. Shape: (N_tau, N_t)
+        Data type is preserved in the output.
+    pad_rows : tuple[int, int], default=(1, 1)
+        Padding multipliers for rows (taus axis) as (before, after).
+        Values >= 1, where 1 means no padding, 2 means add original length, etc.
+    pad_cols : tuple[int, int], default=(1, 1)
+        Padding multipliers for columns (ts axis) as (before, after).
+        Values >= 1, where 1 means no padding, 2 means add original length, etc.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray]
+        extended_ts : np.ndarray
+            Extended time axis for detection. Same dtype as input ts.
+        extended_taus : np.ndarray
+            Extended time axis for coherence. Same dtype as input taus.
+        padded_data : np.ndarray
+            Zero-padded data array. Same dtype as input data.
+
+    Raises
+    ------
+    ValueError
+        If any padding multiplier is < 1.
+
+    Examples
+    --------
+    >>> ts = np.linspace(0, 100, 51)  # 0 to 100 fs, 51 points
+    >>> taus = np.linspace(0, 50, 26)  # 0 to 50 fs, 26 points
+    >>> data = np.random.rand(26, 51)
+    >>> ext_ts, ext_taus, ext_data = extend_time_tau_axes(ts, taus, data,
+    ...                                                   pad_rows=(2, 2),
+    ...                                                   pad_cols=(1, 3))
+    >>> # Result: taus axis doubled on both sides, ts axis tripled after
     """
     # Validate input multipliers
     if any(val < 1 for val in pad_rows + pad_cols):
@@ -69,20 +102,58 @@ def extend_time_tau_axes(  # TODO update docstring -> dtypes are unchanged
     return extended_ts, extended_taus, padded_data
 
 
-def compute_2d_fft_wavenumber(ts, taus, data):  # TODO update docstring+
+def compute_2d_fft_wavenumber(
+    ts: np.ndarray, taus: np.ndarray, data: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Compute the 2D FFT of the data and convert axes to wavenumber units.
+    Compute 2D real FFT of spectroscopy data and convert frequency axes to wavenumber units.
 
-    Parameters:
-        ts (np.ndarray): Time axis for detection.
-        taus (np.ndarray): Time axis for coherence.
-        data (np.ndarray): 2D data array.
+    This function performs a 2D real-valued FFT on the input data and converts the
+    resulting frequency axes from cycles/fs to wavenumber units (10^4 cm⁻¹). The
+    output spectrum is multiplied by 1j to account for the relationship E ~ i*P
+    between electric field and polarization.
 
-    Returns:
-        tuple: (nu_ts, nu_taus, s2d) where
-            nu_ts (np.ndarray): Wavenumber axis for detection.
-            nu_taus (np.ndarray): Wavenumber axis for coherence.
-            s2d (np.ndarray): 2D FFT of the input data.
+    Parameters
+    ----------
+    ts : np.ndarray
+        Time axis for detection (t_det) in femtoseconds. Shape: (N_t,)
+        Must be evenly spaced for accurate FFT.
+    taus : np.ndarray
+        Time axis for coherence (tau_coh) in femtoseconds. Shape: (N_tau,)
+        Must be evenly spaced for accurate FFT.
+    data : np.ndarray
+        2D spectroscopy data array, typically real-valued polarization.
+        Shape: (N_tau, N_t). Data should be real for rfft2 to be appropriate.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray]
+        nu_ts : np.ndarray
+            Wavenumber axis for detection in units of 10^4 cm⁻¹.
+            Shape: (N_t//2 + 1,) due to rfft.
+        nu_taus : np.ndarray
+            Wavenumber axis for coherence in units of 10^4 cm⁻¹.
+            Shape: (N_tau//2 + 1,) due to rfft.
+        s2d : np.ndarray
+            2D FFT spectrum with dtype np.complex64.
+            Shape: (N_tau//2 + 1, N_t//2 + 1).
+            Includes factor of 1j to represent E ~ i*P relationship.
+
+    Notes
+    -----
+    - Uses np.fft.rfft2() which assumes real input data and returns only positive frequencies
+    - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
+      * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
+      * Wavenumber = frequency / c, scaled by 10^4
+    - The 1j factor accounts for the physical relationship between electric field and polarization
+
+    Examples
+    --------
+    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt = 1 fs
+    >>> taus = np.linspace(0, 50, 51)  # 0-50 fs, dtau = 1 fs
+    >>> data = np.random.rand(51, 101)  # Real polarization data
+    >>> nu_ts, nu_taus, spectrum = compute_2d_fft_wavenumber(ts, taus, data)
+    >>> # nu_ts and nu_taus in 10^4 cm⁻¹, spectrum is complex
     """
 
     # Calculate only the positivew frequency axes (cycle/fs), because data is real
@@ -191,7 +262,7 @@ def extend_and_plot_results(
                         f"IndexError: global_tau_idx={global_tau_idx}, global_t_idx={global_t_idx}, shape={global_data_time.shape}"
                     )
         if len(times_T) > 1:
-            plot_positive_color_map(
+            Plot_polarization_2d_spectrum(
                 (ts, taus, data),
                 times_T[i],
                 use_custom_colormap=True,
@@ -200,7 +271,7 @@ def extend_and_plot_results(
                 system=plot_args_freq.get("system", None),
             )
 
-            plot_positive_color_map(
+            Plot_polarization_2d_spectrum(
                 (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
             )
 
@@ -209,7 +280,7 @@ def extend_and_plot_results(
     global_data_freq /= len(averaged_results)
 
     # Plot the global results
-    plot_positive_color_map(
+    Plot_polarization_2d_spectrum(
         (global_ts, global_taus, global_data_time),
         type="imag",
         save=True,  # CHANGE TO False for no plotting the Time domain
@@ -217,7 +288,7 @@ def extend_and_plot_results(
         system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
     )
-    plot_positive_color_map(
+    Plot_polarization_2d_spectrum(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,
     )

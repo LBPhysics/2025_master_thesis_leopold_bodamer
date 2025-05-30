@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import os
 
 
-def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def Plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     """
     Plot the combined pulse envelope over time for up to three pulses using PulseSequence.
 
@@ -96,21 +96,188 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     return ax
 
 
+def Plot_E_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+    """
+    Plot the RWA electric field (envelope only) over time for pulses using PulseSequence.
+
+    Parameters:
+        times (np.ndarray): Array of time values.
+        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
+
+    Returns:
+        ax (matplotlib.axes.Axes): Axes object with the plot.
+    """
+    # Calculate the RWA electric field over time
+    E_field = np.array([E_pulse(t, pulse_seq) for t in times])
+
+    # Create figure and axis if not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot real and imaginary parts
+    ax.plot(
+        times,
+        np.real(E_field),
+        label=r"$\mathrm{Re}[E(t)]$",
+        linestyle="solid",
+        color="C0",
+    )
+    ax.plot(
+        times,
+        np.imag(E_field),
+        label=r"$\mathrm{Im}[E(t)]$",
+        linestyle="dashed",
+        color="C1",
+    )
+    ax.plot(
+        times,
+        np.abs(E_field),
+        label=r"$|E(t)|$",
+        linestyle="dashdot",
+        color="C2",
+    )
+
+    # Final plot labeling
+    ax.set_xlabel(r"Time $t$")
+    ax.set_ylabel(r"Electric Field (RWA)")
+    ax.set_title(r"RWA Electric Field $E(t)$ (Envelope Only)")
+    ax.legend()
+    return ax
+
+
+def Plot_Epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+    """
+    Plot the full electric field (with carrier) over time for pulses using PulseSequence.
+
+    Parameters:
+        times (np.ndarray): Array of time values.
+        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
+
+    Returns:
+        ax (matplotlib.axes.Axes): Axes object with the plot.
+    """
+    # Calculate the full electric field over time
+    Epsilon_field = np.array([Epsilon_pulse(t, pulse_seq) for t in times])
+
+    # Create figure and axis if not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Plot real and imaginary parts
+    ax.plot(
+        times,
+        np.real(Epsilon_field),
+        label=r"$\mathrm{Re}[\varepsilon(t)]$",
+        linestyle="solid",
+        color="C3",
+    )
+    ax.plot(
+        times,
+        np.imag(Epsilon_field),
+        label=r"$\mathrm{Im}[\varepsilon(t)]$",
+        linestyle="dashed",
+        color="C4",
+    )
+    ax.plot(
+        times,
+        np.abs(Epsilon_field),
+        label=r"$|\varepsilon(t)|$",
+        linestyle="dashdot",
+        color="C5",
+    )
+
+    # Final plot labeling
+    ax.set_xlabel(r"Time $t$")
+    ax.set_ylabel(r"Electric Field (Full)")
+    ax.set_title(r"Full Electric Field $\varepsilon(t)$ (With Carrier)")
+    ax.legend()
+    return ax
+
+
+def Plot_all_pulse_components(
+    times: np.ndarray, pulse_seq: PulseSequence, figsize=(15, 12)
+):
+    """
+    Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
+
+    Parameters:
+        times (np.ndarray): Array of time values.
+        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        figsize (tuple): Figure size. Defaults to (15, 12).
+
+    Returns:
+        fig (matplotlib.figure.Figure): Figure object with all plots.
+    """
+    # Create figure with subplots
+    fig, axes = plt.subplots(3, 1, figsize=figsize)
+
+    # Plot pulse envelope
+    Plot_pulse_envelope(times, pulse_seq, ax=axes[0])
+
+    # Plot RWA electric field
+    Plot_E_pulse(times, pulse_seq, ax=axes[1])
+
+    # Plot full electric field
+    Plot_Epsilon_pulse(times, pulse_seq, ax=axes[2])
+
+    # Add overall title
+    fig.suptitle(
+        f"Comprehensive Pulse Analysis - {len(pulse_seq.pulses)} Pulse(s)",
+        fontsize=16,
+        y=0.98,
+    )
+
+    plt.tight_layout()
+    return fig
+
+
+def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
+    """
+    Plot the data for a fixed tau_coh and T.
+
+    Parameters
+    ----------
+    t_det_vals : array-like
+        The time delay values for the x-axis.
+    data : array-like
+        The data to plot on the y-axis, typically the expectation value of the polarization.
+
+    """
+    tau_coh = kwargs.get("tau_coh", 300.0)
+    T_wait = kwargs.get("T_wait", 1000.0)
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        t_det_vals,
+        np.abs(data),
+        label=r"$|\langle \mu \rangle|$",
+        color="C0",
+        linestyle="solid",
+    )
+    plt.xlabel(r"$t \, [\text{fs}]$")
+    plt.ylabel(r"$|\langle \mu \rangle|$")
+    plt.title(
+        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh}$ and $T={T_wait}$"
+    )
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.show()
+
+
 def Plot_example_evo(
-    times_0: np.ndarray,
-    times_1: np.ndarray,
-    times_2: np.ndarray,
+    times_plot: np.ndarray,
     datas: list,
     pulse_seq_f: PulseSequence,
     tau_coh: float,
     T_wait: float,
     system: SystemParameters,
+    **additional_info: dict,
 ):
     """
     Plot the evolution of the electric field and expectation values for a given tau_coh and T_wait.
 
     Parameters:
-        times_0, times_1, times_2 (np.ndarray): Time ranges for the three pulses.
+        times_plot (np.ndarray): Time axis for the plot. Comprised of three time ranges for the three pulses.
         datas (list): List of arrays of expectation values to plot.
         pulse_seq_f: PulseSequence object for the final pulse sequence.
         tau_coh (float): Coherence time.
@@ -123,8 +290,6 @@ def Plot_example_evo(
     # =============================
     # PREPARE TIME AXIS AND FIELD
     # =============================
-    times_plot = np.concatenate([times_0, times_1, times_2])
-
     # Choose field function depending on RWA
     if getattr(system, "RWA_laser", False):
         field_func = E_pulse
@@ -142,48 +307,31 @@ def Plot_example_evo(
     # =============================
     # PLOTTING
     # =============================
-    plt.figure(figsize=(14, 2 + 2 * len(datas)))
+    fig, axes = plt.subplots(
+        len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True
+    )
 
     # Plot electric field
-    plt.subplot(len(datas) + 1, 1, 1)
-    plt.plot(
+    axes[0].plot(
         times_plot,
         np.real(E_total),
         color="C0",
         linestyle="solid",
         label=r"$\mathrm{Re}[E(t)]$",
     )
-    plt.plot(
+    axes[0].plot(
         times_plot,
         np.imag(E_total),
         color="C1",
         linestyle="dashed",
         label=r"$\mathrm{Im}[E(t)]$",
     )
-    plt.axvline(
-        times_0[0] + system.FWHMs[0],
-        color="C2",
-        linestyle="dashed",
-        label=r"Pulse 1",
-    )
-    plt.axvline(
-        times_1[0] + system.FWHMs[1],
-        color="C3",
-        linestyle="dashdot",
-        label=r"Pulse 2",
-    )
-    plt.axvline(
-        times_2[0] + system.FWHMs[2],
-        color="C4",
-        linestyle="dotted",
-        label=r"Pulse 3",
-    )
-    plt.ylabel(r"$E(t) / E_0$")
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    axes[0].set_ylabel(r"$E(t) / E_0$")
+    axes[0].legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     # Plot expectation values
     for idx, data in enumerate(datas):
-        plt.subplot(len(datas) + 1, 1, idx + 2)
+        ax = axes[idx + 1]
         if hasattr(system, "e_ops_labels") and idx < len(system.e_ops_labels):
             label = (
                 r"$\mathrm{Re}\langle"
@@ -194,14 +342,16 @@ def Plot_example_evo(
             )
         else:
             label = r"$\mathrm{Re}\langle \mu \rangle$"
-        plt.plot(times_plot, data, color=f"C{(idx+5)%10}", linestyle="solid")
-        plt.axvline(times_0[0] + system.FWHMs[0], color="C2", linestyle="dashed")
-        plt.axvline(times_1[0] + system.FWHMs[1], color="C3", linestyle="dashdot")
-        plt.axvline(times_2[0] + system.FWHMs[2], color="C4", linestyle="dotted")
-        plt.ylabel(label)
-        # plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        ax.plot(times_plot, data, color=f"C{(idx+5)%10}", linestyle="solid")
+        ax.axvline(0, color="C2", linestyle="dashed", label="Pulse0")
+        ax.axvline(tau_coh, color="C3", linestyle="dashdot", label="Pulse1")
+        ax.axvline(tau_coh + T_wait, color="C4", linestyle="dotted", label="Pulse2")
+        ax.set_ylabel(label)
 
-    plt.xlabel(r"$t\,/\,\mathrm{fs}$")
+    # Set x-label only on the bottom subplot
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
+
     plt.suptitle(
         rf"$\tau = {tau_coh:.2f}\,\mathrm{{fs}},\quad T = {T_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {system.ODE_Solver}"
     )
@@ -209,7 +359,7 @@ def Plot_example_evo(
     plt.show()
 
 
-def plot_positive_color_map(
+def Plot_polarization_2d_spectrum(
     datas: tuple,
     T_wait: float = np.inf,
     domain: str = "time",
@@ -415,140 +565,3 @@ def plot_positive_color_map(
     else:
         print("Plot not saved. Ensure 'save' is True and 'output_dir' is specified.")
     plt.show()
-
-
-def plot_E_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
-    """
-    Plot the RWA electric field (envelope only) over time for pulses using PulseSequence.
-
-    Parameters:
-        times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
-        ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
-
-    Returns:
-        ax (matplotlib.axes.Axes): Axes object with the plot.
-    """
-    # Calculate the RWA electric field over time
-    E_field = np.array([E_pulse(t, pulse_seq) for t in times])
-
-    # Create figure and axis if not provided
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot real and imaginary parts
-    ax.plot(
-        times,
-        np.real(E_field),
-        label=r"$\mathrm{Re}[E(t)]$",
-        linestyle="solid",
-        color="C0",
-    )
-    ax.plot(
-        times,
-        np.imag(E_field),
-        label=r"$\mathrm{Im}[E(t)]$",
-        linestyle="dashed",
-        color="C1",
-    )
-    ax.plot(
-        times,
-        np.abs(E_field),
-        label=r"$|E(t)|$",
-        linestyle="dashdot",
-        color="C2",
-    )
-
-    # Final plot labeling
-    ax.set_xlabel(r"Time $t$")
-    ax.set_ylabel(r"Electric Field (RWA)")
-    ax.set_title(r"RWA Electric Field $E(t)$ (Envelope Only)")
-    ax.legend()
-    return ax
-
-
-def plot_Epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
-    """
-    Plot the full electric field (with carrier) over time for pulses using PulseSequence.
-
-    Parameters:
-        times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
-        ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
-
-    Returns:
-        ax (matplotlib.axes.Axes): Axes object with the plot.
-    """
-    # Calculate the full electric field over time
-    Epsilon_field = np.array([Epsilon_pulse(t, pulse_seq) for t in times])
-
-    # Create figure and axis if not provided
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot real and imaginary parts
-    ax.plot(
-        times,
-        np.real(Epsilon_field),
-        label=r"$\mathrm{Re}[\varepsilon(t)]$",
-        linestyle="solid",
-        color="C3",
-    )
-    ax.plot(
-        times,
-        np.imag(Epsilon_field),
-        label=r"$\mathrm{Im}[\varepsilon(t)]$",
-        linestyle="dashed",
-        color="C4",
-    )
-    ax.plot(
-        times,
-        np.abs(Epsilon_field),
-        label=r"$|\varepsilon(t)|$",
-        linestyle="dashdot",
-        color="C5",
-    )
-
-    # Final plot labeling
-    ax.set_xlabel(r"Time $t$")
-    ax.set_ylabel(r"Electric Field (Full)")
-    ax.set_title(r"Full Electric Field $\varepsilon(t)$ (With Carrier)")
-    ax.legend()
-    return ax
-
-
-def plot_all_pulse_components(
-    times: np.ndarray, pulse_seq: PulseSequence, figsize=(15, 12)
-):
-    """
-    Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
-
-    Parameters:
-        times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
-        figsize (tuple): Figure size. Defaults to (15, 12).
-
-    Returns:
-        fig (matplotlib.figure.Figure): Figure object with all plots.
-    """
-    # Create figure with subplots
-    fig, axes = plt.subplots(3, 1, figsize=figsize)
-
-    # Plot pulse envelope
-    plot_pulse_envelope(times, pulse_seq, ax=axes[0])
-
-    # Plot RWA electric field
-    plot_E_pulse(times, pulse_seq, ax=axes[1])
-
-    # Plot full electric field
-    plot_Epsilon_pulse(times, pulse_seq, ax=axes[2])
-
-    # Add overall title
-    fig.suptitle(
-        f"Comprehensive Pulse Analysis - {len(pulse_seq.pulses)} Pulse(s)",
-        fontsize=16,
-        y=0.98,
-    )
-
-    plt.tight_layout()
-    return fig
