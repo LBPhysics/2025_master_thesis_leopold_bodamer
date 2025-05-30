@@ -54,6 +54,7 @@ class SystemParameters:
     pulse_duration: float = 15.0  # in fs
     t_max: float = 10.0  # in fs
     dt: float = 1.0  # in fs
+    envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
     omega_laser_cm: float = 16000.0
     # in cm-1
 

@@ -12,6 +12,7 @@ class Pulse:
     pulse_phase: float
     pulse_amplitude: float
     pulse_freq: float
+    envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
 
 
 @dataclass
@@ -44,6 +45,7 @@ class PulseSequence:
         # TODO a bit bat coding style to get FWHMs and E_amps (which describe the pulse shape) from the system parameters
         FWHMs = system.FWHMs
         E_amps = system.E_amps
+        envelope_type = system.envelope_type
 
         pulses = []
 
@@ -57,6 +59,7 @@ class PulseSequence:
                     pulse_FWHM=FWHMs[0],
                     pulse_amplitude=E_amps[0],
                     pulse_freq=pulse_freq,
+                    envelope_type=envelope_type,
                 )
             )
 
@@ -71,6 +74,7 @@ class PulseSequence:
                     pulse_FWHM=FWHMs[1],
                     pulse_amplitude=E_amps[idx],
                     pulse_freq=pulse_freq,
+                    envelope_type=envelope_type,
                 )
             )
 
@@ -89,6 +93,7 @@ class PulseSequence:
                 pulse_FWHM=FWHMs[idx],
                 pulse_amplitude=E_amps[idx],
                 pulse_freq=pulse_freq,
+                envelope_type=envelope_type,
             )
         )
 

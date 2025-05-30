@@ -2,6 +2,64 @@ from src.core.pulse_sequences import PulseSequence
 import numpy as np
 
 
+def pulse_envelope_unified(t: float, pulse_seq: PulseSequence) -> float:
+    """
+    Calculate the combined envelope of multiple pulses at time t using PulseSequence.
+
+    Uses the envelope_type from each pulse to determine which envelope function to use:
+    - 'cos2': cosine squared envelope
+    - 'gaussian': Gaussian envelope
+
+    Args:
+        t (float): Time value
+        pulse_seq (PulseSequence): The pulse sequence
+
+    Returns:
+        float: Combined envelope value
+    """
+    if not isinstance(pulse_seq, PulseSequence):
+        raise TypeError("pulse_seq must be a PulseSequence instance.")
+
+    envelope = 0.0
+    for pulse in pulse_seq.pulses:
+        t_peak = pulse.pulse_peak_time
+        FWHM = pulse.pulse_FWHM
+        envelope_type = getattr(
+            pulse, "envelope_type", "cos2"
+        )  # Default to cos2 for backward compatibility
+
+        if FWHM is None or FWHM <= 0:
+            continue
+        if t_peak is None:
+            continue
+
+        # Pulse exists only in [t_peak - FWHM, t_peak + FWHM]
+        if not (t_peak - FWHM <= t <= t_peak + FWHM):
+            continue
+
+        if envelope_type == "cos2":
+            ### Cosine squared envelope
+            arg = np.pi * (t - t_peak) / (2 * FWHM)
+            envelope += np.cos(arg) ** 2
+
+        elif envelope_type == "gaussian":
+            ### Gaussian envelope
+            sigma = FWHM / (2 * np.sqrt(2 * np.log(2)))
+            gaussian_val = np.exp(-((t - t_peak) ** 2) / (2 * sigma**2))
+            boundary_distance_sq = FWHM**2
+            boundary_val = np.exp(-boundary_distance_sq / (2 * sigma**2))
+            envelope += max(
+                0.0, gaussian_val
+            )  # - boundary_val for continuity if needed
+
+        else:
+            raise ValueError(
+                f"Unknown envelope_type: {envelope_type}. Use 'cos2' or 'gaussian'."
+            )
+
+    return envelope
+
+
 def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
     """
     Calculate the combined envelope of multiple pulses at time t using PulseSequence.
@@ -15,14 +73,14 @@ def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
     envelope = 0.0
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time  # Now interpreted as peak time
-        Delta_width = pulse.pulse_FWHM
-        if Delta_width is None or Delta_width <= 0:
+        FWHM = pulse.pulse_FWHM
+        if FWHM is None or FWHM <= 0:
             continue
         if t_peak is None:
             continue
         # Pulse exists only in [t_peak - Delta, t_peak + Delta]
-        if t_peak - Delta_width <= t <= t_peak + Delta_width:
-            arg = np.pi * (t - t_peak) / (2 * Delta_width)
+        if t_peak - FWHM <= t <= t_peak + FWHM:
+            arg = np.pi * (t - t_peak) / (2 * FWHM)
             envelope += np.cos(arg) ** 2
     return envelope
 

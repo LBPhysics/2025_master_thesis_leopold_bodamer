@@ -357,7 +357,9 @@ def compute_two_dimensional_polarization(
         times - (tau_coh_vals[-1])
     ).argmin()  # the last possible coherence time
 
-    times_0 = times[: idx_pulse1_max_peak + 1]
+    times_0 = times[
+        : idx_pulse1_max_peak + 1
+    ]  # definetly not empty except for when T_wait >= t_max
     if times_0.size == 0:  # in case T_wait == t_max
         # idx_end_pulse0 = np.abs(times - (system.FWHMs[0])).argmin()
         times_0 = times[:2]  # idx_end_pulse0 + 1
@@ -754,6 +756,7 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     phi_1: float,
     times: np.ndarray,
     system: SystemParameters,
+    time_cut: float = np.inf,  # to avoid numerical issues
     **kwargs,
 ):
     """
@@ -780,19 +783,18 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
         (t_det_vals, data) where t_det_vals are the detection times (shifted to start at zero)
         and data is the corresponding computed observable.
     """
-    plot_example = kwargs.get("plot_example", False)
+    # plot_example = kwargs.get("plot_example", False)
 
     t_peak_pulse0 = 0
-    idx_end_0 = np.abs(times - (system.FWHMs[0])).argmin()
-    idx_start_1 = np.abs(times - (tau_coh - system.FWHMs[1])).argmin()
+    idx_start_pulse1 = np.abs(times - (tau_coh - system.FWHMs[1])).argmin()
 
-    t_start_1 = times[idx_start_1]  # Start time of the second pulse
+    t_start_1 = times[idx_start_pulse1]  # Start time of the second pulse
 
     times_0 = times[
-        : idx_start_1 + 1
+        : idx_start_pulse1 + 1
     ]  # definetly not empty except for when T_wait >= t_max
     if times_0.size == 0:
-        times_0 = times[: idx_end_0 + 1]
+        times_0 = times[:2]  # idx_end_pulse0 + 1
 
     # calculate the evolution of the first pulse in the desired range for tau_coh
 
@@ -807,7 +809,7 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
         system.psi_ini, times_0, pulse_seq_0, system=system
     )
 
-    rho_1 = data_0.states[idx_start_1]
+    rho_1 = data_0.states[idx_start_pulse1]
 
     idx_end_1 = np.abs(
         times - (tau_coh + system.FWHMs[1])
@@ -815,19 +817,17 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     # Take the state (after / also during) the first pulse and evolve it with the second (and potentially overlaped first) pulse
 
     # select range  ->  to reduce computation time
-    idx_start_2 = np.abs(times - (tau_coh + T_wait - system.FWHMs[2])).argmin()
-    t_start_pulse2 = times[idx_start_2]  # the time at which the third pulse starts
-    idx_end_2 = np.abs(
-        times - (tau_coh + T_wait + system.FWHMs[2])
-    ).argmin()  # end of the third pulse
-    # idx_start_2_0 = np.abs(times - (T_wait - FWHMs[2])).argmin() # the first time at which the third pulse starts
+    idx_start_pulse2 = np.abs(times - (tau_coh + T_wait - system.FWHMs[2])).argmin()
+    t_start_pulse2 = times[idx_start_pulse2]  # the time at which the third pulse starts
+
+    # idx_start_pulse2_0 = np.abs(times - (T_wait - FWHMs[2])).argmin() # the first time at which the third pulse starts
 
     times_1 = times[
-        idx_start_1 : idx_start_2 + 1
+        idx_start_pulse1 : idx_start_pulse2 + 1
     ]  # like this: also take the overlap into account;
 
     if times_1.size == 0:
-        times_1 = times[idx_start_1 : idx_end_1 + 1]
+        times_1 = [times[idx_start_pulse1]]  # idx_start_pulse1 : idx_end_pulse1 + 1
 
     # Handle overlapping pulses: If the second pulse starts before the first pulse ends, combine their contributions
     pulse_1 = (t_start_1, phi_1)
@@ -838,18 +838,18 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     )
     data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
 
-    idx_start_2_in_times_1 = np.abs(times_1 - (t_start_pulse2)).argmin()
+    idx_start_pulse2_in_times_1 = np.abs(times_1 - (t_start_pulse2)).argmin()
 
     rho_2 = data_1.states[
-        idx_start_2_in_times_1
+        idx_start_pulse2_in_times_1
     ]  # == state where the third pulse starts
 
     times_2 = times[
-        idx_start_2:
+        idx_start_pulse2:
     ]  # the rest of the evolution (third pulse, potentially overlapped with previouses) # can be empty, if tau_coh + T_wait >= t_max
     # print(len(times), len(times_0), len(times_1), len(times_2))
     if times_2.size == 0:
-        times_2 = [times[idx_start_2]]
+        times_2 = [times[-1]]  # idx_start_pulse2 : idx_end_pulse2 + 1
     # If the second pulse starts before the first pulse ends, combine their contributions
     phi_2 = 0  # FIXED PHASE!
     pulse_f = (t_start_pulse2, phi_2)
@@ -861,77 +861,31 @@ def compute_fixed_tau_T(  # TODO update to new pulse definitions
     )
     data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 
+    t_peak_pulse2 = tau_coh + T_wait
     t_det_start_idx_in_times_2 = np.abs(
-        times_2 - (times_2[0] + system.FWHMs[2])
+        times_2 - (t_peak_pulse2)
     ).argmin()  # detection time index in times_2
-    t_last_pulse_peak = times_2[t_det_start_idx_in_times_2]
+
     # only if we are still in the physical regime
     states = data_f.states[t_det_start_idx_in_times_2:]
-    t_det_vals = data_f.times[t_det_start_idx_in_times_2:]
-    data = np.zeros(
-        (len(t_det_vals)), dtype=np.complex64
-    )  # might get uncontrollable big!TODO
+    actual_det_times = data_f.times[t_det_start_idx_in_times_2:]
+    data = np.zeros((len(actual_det_times)), dtype=np.float32)
 
     # print(t_det_vals[0], t_det_vals[1], t_det_vals[-1], len(t_det_vals))
 
     if system.RWA_laser:
         states = [
-            apply_RWA_phase_factors(state, time, omega=system.omega_laser)
-            for state, time in zip(states, t_det_vals)
+            apply_RWA_phase_factors(
+                state, time, omega=system.omega_laser, system=system
+            )
+            for state, time in zip(states, actual_det_times)
         ]
 
-    for t_idx, t_det in enumerate(t_det_vals):
+    for t_idx, t_det in enumerate(actual_det_times):
+        # only if we are still in the physical regime
         if t_det < time_cut:
-            data[:] = np.real(expect(system.Dip_op, states[:]))
-    return np.array(t_det_vals) - t_det_vals[0], data
-
-
-# Plot the data for a fixed tau_coh and T_wait
-def plot_fixed_tau_T(
-    tau_coh: float,
-    T_wait: float,
-    phi_0: float,
-    phi_1: float,
-    times: np.ndarray,
-    system: SystemParameters,
-):
-    """
-    Plot the data for a fixed tau_coh and T.
-
-    Parameters
-    ----------
-    tau_coh : float
-        Coherence time.
-    T_wait : float
-        Waiting time.
-    phi_0 : float
-        Phase of the first pulse.
-    phi_1 : float
-        Phase of the second pulse.
-    times : np.ndarray
-        Time array for the simulation.
-    system : SystemParameters
-        System parameters object.
-    """
-    t_det_vals, data = compute_fixed_tau_T(
-        tau_coh, T_wait, phi_0, phi_1, times, system=system
-    )
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(
-        t_det_vals,
-        np.real(data),
-        label=r"$|\langle \mu \rangle|$",
-        color="C0",
-        linestyle="solid",
-    )
-    plt.xlabel(r"$t \, [\text{fs}]$")
-    plt.ylabel(r"$|\langle \mu \rangle|$")
-    plt.title(
-        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh}$ and $T={T_wait}$"
-    )
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.show()
+            data[t_idx] = np.real(expect(system.Dip_op, states[t_idx]))
+    return np.array(actual_det_times) - actual_det_times[0], data
 
 
 def compute_average_fixed_tau_T(
