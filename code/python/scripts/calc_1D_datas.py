@@ -88,8 +88,6 @@ def main():
     print(f"Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f}")
     print("Parallel computation completed successfully!")
 
-    return t_det_vals, data_avg
-
 
 if __name__ == "__main__":
     main()
