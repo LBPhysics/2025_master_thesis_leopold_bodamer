@@ -641,6 +641,7 @@ def compute_two_dimensional_polarization(
 
                 value = expect(system.Dip_op, rho_f)
                 data[tau_idx, t_idx] = np.real(value)
+                # AXIS 0: tau_coh, AXIS 1: t_det
 
     return (
         t_det_vals,

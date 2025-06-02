@@ -40,8 +40,8 @@ class SimulationConfig:
     N_atoms: int = 1
     ODE_Solver: str = "Paper_eqs"
     RWA_laser: bool = True
-    t_max: float = 10.0  # determines Δω
-    dt: float = 0.2  # determines ωₘₐₓ
+    t_max: float = 100.0  # determines Δω
+    dt: float = 0.1  # determines ωₘₐₓ
 
     # Output configuration
     save_raw_data: bool = True

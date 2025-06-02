@@ -64,17 +64,17 @@ def main():
 
     # Load data
     two_d_datas, times_T, times, system_data = load_pkl_data(file_path)
-
+    print(f"System data: {system_data}")
     # Create output directory
     output_dir = FIGURES_DIR / "2d_spectroscopy"
     os.makedirs(output_dir, exist_ok=True)
 
     # Plot each type
-    types = ["imag", "real", "abs", "phase"]
+    types = ["imag", "real", "abs"]
 
     for type_ in types:
         print(f"Plotting {type_}...")
-        for idx, T_wait in enumerate(times_T):
+        """for idx, T_wait in enumerate(times_T):
             print(f"Processing T_wait = {T_wait:.2f} fs")
             ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
             Plot_polarization_2d_spectrum(
@@ -83,14 +83,15 @@ def main():
                 save=True,
                 output_dir=output_dir,
                 use_custom_colormap=True,
-            )
+                system=system_data,
+            )"""
         plot_args_freq = {
             "domain": "freq",
             "type": type_,
             "save": True,
             "output_dir": output_dir,
-            "positive": False,
-            "use_custom_colormap": True,
+            # "use_custom_colormap": True,
+            # "section": (0, 2, 0, 2),  # Plot the first section
             "system": system_data,
         }
 
@@ -99,7 +100,7 @@ def main():
                 two_d_datas,
                 times_T=times_T,
                 times=times,
-                extend_for=(1, 1),
+                # extend_for=(1, 1),
                 **plot_args_freq,
             )
             plt.close("all")

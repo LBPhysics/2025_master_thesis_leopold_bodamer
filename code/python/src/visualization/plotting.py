@@ -372,6 +372,7 @@ def Plot_polarization_2d_spectrum(
     system: SystemParameters = None,
 ):
     """
+    x == t_det, y == tau_coh, data == polarization expectation value
     Create a color plot of 2D functional data for positive x and y values.
 
     Parameters:
@@ -498,9 +499,9 @@ def Plot_polarization_2d_spectrum(
     # =============================
     plt.figure(figsize=(10, 8))
     plt.pcolormesh(
-        x,
-        y,
-        data,
+        x,  # <- ts
+        y,  # <- taus
+        data,  # <- data[taus, ts]
         shading="auto",
         cmap=colormap,
         norm=norm,

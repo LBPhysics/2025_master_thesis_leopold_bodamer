@@ -156,22 +156,31 @@ def compute_2d_fft_wavenumber(
     >>> # nu_ts and nu_taus in 10^4 cm⁻¹, spectrum is complex
     """
 
-    # Calculate only the positivew frequency axes (cycle/fs), because data is real
-    taufreqs = np.fft.rfftfreq(len(taus), d=(taus[1] - taus[0]))
-    tfreqs = np.fft.rfftfreq(len(ts), d=(ts[1] - ts[0]))
+    # Calculate only the positive frequency axes (cycle/fs), because data is real
+    dτ = taus[1] - taus[0]
+    dt = ts[1] - ts[0]
+
+    tfreqs = np.fft.rfftfreq(
+        len(ts), d=dt
+    )  # this is for axis 1 (t) (because data is real)
+    taufreqs = np.fft.fftfreq(len(taus), d=dτ)  # axis 0 → is treated normal
+
+    # Optional: Shift zero-frequency component to center (only along taus)
+    # s2d = np.fft.rfft2(data)  # axis 0 (tau) → fft, axis 1 (t) → rfft
+    s2d = np.fft.rfft(data, axis=1)  # axis 1 (t) → rfft
+    s2d = np.fft.ifft(s2d, axis=0) * len(taus)  # axis 0 (tau) → ifft
+    s2d = np.fft.ifftshift(s2d, axes=0)  # axis 0 (tau) → ifft
+    taufreqs = np.fft.ifftshift(taufreqs)
+    data_freq = 1j * s2d  # because E ~ i*P
 
     # Convert to wavenumber units [10^4 cm⁻¹]
     nu_taus = taufreqs / 2.998 * 10
     nu_ts = tfreqs / 2.998 * 10
 
-    # 2D FFT: first over tau (axis=1), then over t (axis=0)
-    s2d_raw = np.fft.rfft2(data)
-    s2d = 1j * s2d_raw  # because E ~ i*P
-
     return (
         nu_ts,
         nu_taus,
-        s2d,
+        data_freq,
     )  # s2d has both real and imaginary parts -> dtype np.complex64
 
 
@@ -179,7 +188,7 @@ def extend_and_plot_results(
     averaged_results: list[np.ndarray],
     times_T: np.ndarray,
     times: np.ndarray,
-    extend_for: tuple[int, int] = None,
+    extend_for: tuple[float, float] = None,
     **plot_args_freq: dict,
 ) -> None:
     """
@@ -193,7 +202,7 @@ def extend_and_plot_results(
         Array of T_wait values.
     times : np.ndarray
         Time grid used for simulation.
-    extend_for : tuple[int, int], optional
+    extend_for : tuple[float, float], optional
         Padding for (rows, columns) as (before, after) for both axes.
     **plot_args_freq : dict
         Additional keyword arguments for frequency-domain plotting.
@@ -224,10 +233,9 @@ def extend_and_plot_results(
             pad_cols=extend_for,
         )
 
-    global_nu_ts, global_nu_taus, _ = compute_2d_fft_wavenumber(
-        global_ts, global_taus, np.zeros((len(global_ts), len(global_taus)))
+    global_nu_ts, global_nu_taus, global_data_freq = compute_2d_fft_wavenumber(
+        global_ts, global_taus, global_data_time
     )
-    global_data_freq = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
 
     for i, data in enumerate(averaged_results):
         T_wait = times_T[i]
@@ -240,27 +248,30 @@ def extend_and_plot_results(
 
         nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
 
-        # Map local data into the global arrays
-        tau_indices = [np.argmin(np.abs(global_taus - v)) for v in taus]
-        t_indices = [np.argmin(np.abs(global_ts - v)) for v in ts]
+        # Map local data into the global arrays with safe index mapping
+        tau_indices = np.array([np.argmin(np.abs(global_taus - v)) for v in taus])
+        t_indices = np.array([np.argmin(np.abs(global_ts - v)) for v in ts])
+        nu_tau_indices = np.array(
+            [np.argmin(np.abs(global_nu_taus - v)) for v in nu_taus]
+        )
+        nu_t_indices = np.array([np.argmin(np.abs(global_nu_ts - v)) for v in nu_ts])
+
+        # Map time domain data using time indices
         for local_tau_idx, global_tau_idx in enumerate(tau_indices):
             for local_t_idx, global_t_idx in enumerate(t_indices):
-                # Check bounds before assignment to avoid IndexError
-                if (
-                    global_tau_idx < global_data_time.shape[0]
-                    and global_t_idx < global_data_time.shape[1]
-                ):
-                    global_data_time[global_tau_idx, global_t_idx] += data[
-                        local_tau_idx, local_t_idx
-                    ]
-                    global_data_freq[global_tau_idx, global_t_idx] += data_freq[
-                        local_tau_idx, local_t_idx
-                    ]
-                else:
-                    # Print debug info if index is out of bounds
-                    print(
-                        f"IndexError: global_tau_idx={global_tau_idx}, global_t_idx={global_t_idx}, shape={global_data_time.shape}"
-                    )
+                # Safe assignment with verified bounds for time domain
+                global_data_time[global_tau_idx, global_t_idx] += data[
+                    local_tau_idx, local_t_idx
+                ]
+
+        # Map frequency domain data using frequency indices
+        for local_nu_tau_idx, global_nu_tau_idx in enumerate(nu_tau_indices):
+            for local_nu_t_idx, global_nu_t_idx in enumerate(nu_t_indices):
+                # Safe assignment with verified bounds for frequency domain
+                global_data_freq[global_nu_tau_idx, global_nu_t_idx] += data_freq[
+                    local_nu_tau_idx, local_nu_t_idx
+                ]
+
         if len(times_T) > 1:
             Plot_polarization_2d_spectrum(
                 (ts, taus, data),
@@ -282,12 +293,15 @@ def extend_and_plot_results(
     # Plot the global results
     Plot_polarization_2d_spectrum(
         (global_ts, global_taus, global_data_time),
-        type="imag",
         save=True,  # CHANGE TO False for no plotting the Time domain
         output_dir=plot_args_freq.get("output_dir", None),
         system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
     )
+    print("shape of global_data_freq:", global_data_freq.shape)
+    print("shape of global_nu_ts:", global_nu_ts.shape)
+    print("shape of global_nu_taus:", global_nu_taus.shape)
+
     Plot_polarization_2d_spectrum(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,

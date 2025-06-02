@@ -8,7 +8,7 @@ src/__init__.py
 src/baths/__init__.py
 src/baths/bath_fcts.py
 src/core/__init__.py
-src/core/hamiltonians.py
+src/core/functions_with_rwa.py
 src/core/pulse_functions.py
 src/core/pulse_sequences.py
 src/core/solver_fcts.py
@@ -21,5 +21,3 @@ src/visualization/__init__.py
 src/visualization/mpl_tex_settings.py
 src/visualization/plotting.py
 tests/test_baths.py
-tests/test_calculations.py
-tests/test_plotting.py
