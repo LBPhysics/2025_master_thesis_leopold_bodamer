@@ -51,7 +51,8 @@ Use these following instructions only for python files .py and .ipynb in my mast
     - If possible, only return me the corrected code of a very specific part of the whole code, I dont need the whole thing everytime!
     - Try to break down big problems into smaller ones and use functions.
     - Use a consistent coding style.
-    - Follow best coding practices.
+    - Follow best coding practices!
+    - functions should now rely on parts out of the functions -> example in the parameters, dont let there be variables; USE types
     - please for "if..., else" statements always write the exceptions first for better readability 
     - Ensure code is efficient and optimized.
     - Avoid using deprecated functions or methods.
@@ -90,8 +91,6 @@ Use these following instructions only for python files .py and .ipynb in my mast
     plt.subplot(2, 1, 1)
     max_abs_val = np.max(np.abs(correlation_vals))
     plt.plot(normalized_times, np.real(correlation_vals) / max_abs_val, label=r"$\mathrm{Re}[C(t)]$", color='C1')
-    plt.plot(normalized_times, np.imag(correlation_vals) / max_abs_val, label=r"$\mathrm{Im}[C(t)]$", color='C2')
-    plt.plot(normalized_times, np.abs(correlation_vals)  / max_abs_val, label=r"$|C(t)|$", color='C3')
     plt.xlabel(r'Time $t \omega_c$')
     plt.ylabel(r'$C(t) / C(0)$')
     plt.title(r"Correlation Function")
