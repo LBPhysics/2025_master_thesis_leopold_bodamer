@@ -272,7 +272,7 @@ def extend_and_plot_results(
                     local_nu_tau_idx, local_nu_t_idx
                 ]
 
-        if len(times_T) > 1:
+        """if len(times_T) > 1:
             Plot_polarization_2d_spectrum(
                 (ts, taus, data),
                 times_T[i],
@@ -284,23 +284,20 @@ def extend_and_plot_results(
 
             Plot_polarization_2d_spectrum(
                 (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
-            )
+            )"""
 
     # Normalize by number of T_waits
     global_data_time /= len(averaged_results)
     global_data_freq /= len(averaged_results)
 
     # Plot the global results
-    Plot_polarization_2d_spectrum(
+    """Plot_polarization_2d_spectrum(
         (global_ts, global_taus, global_data_time),
         save=True,  # CHANGE TO False for no plotting the Time domain
         output_dir=plot_args_freq.get("output_dir", None),
         system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
-    )
-    """print("shape of global_data_freq:", global_data_freq.shape)
-    print("shape of global_nu_ts:", global_nu_ts.shape)
-    print("shape of global_nu_taus:", global_nu_taus.shape)"""
+    )"""
 
     Plot_polarization_2d_spectrum(
         (global_nu_ts, global_nu_taus, global_data_freq),
