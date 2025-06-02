@@ -31,14 +31,15 @@ def get_simulation_config():
     """Get default simulation configuration for 1D spectroscopy."""
     return {
         "n_phases": 4,  # Number of phases for phase cycling
-        "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
+        "n_freqs": 100,  # Number of frequencies for inhomogeneous broadening
         "tau_coh": 300.0,  # Coherence time [fs]
         "T_wait": 1000.0,  # Waiting time [fs]
-        "t_max_buffer": 600.0,  # Additional time buffer [fs]
+        "t_det_max": 600.0,  # Additional time buffer [fs]
         "dt": 2.0,  # Time step [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
         "envelope_type": "gaussian",
         "output_subdir": "1d_spectroscopy",
+        "E0": 0.5,
     }
 
 
@@ -93,6 +94,7 @@ def save_1d_data(
         "how_many_omega_ats": how_many_omega_ats,
         "n_phases": config["n_phases"],
         "n_freqs": config["n_freqs"],
+        "E0": config["E0"],
     }
 
     ### Save as pickle file
@@ -143,7 +145,7 @@ def main():
     system = SystemParameters(
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
-        t_max=config["tau_coh"] + config["T_wait"] + config["t_max_buffer"],
+        t_max=config["tau_coh"] + config["T_wait"] + config["t_det_max"],
         dt=config["dt"],
         Delta_cm=config["Delta_cm"] if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
