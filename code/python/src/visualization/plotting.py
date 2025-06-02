@@ -245,8 +245,13 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
         The data to plot on the y-axis, typically the expectation value of the polarization.
 
     """
+    # Extract main parameters for title
     tau_coh = kwargs.get("tau_coh", 300.0)
     T_wait = kwargs.get("T_wait", 1000.0)
+
+    # Collect all other kwargs for text display
+    other_kwargs = {k: v for k, v in kwargs.items() if k not in ["tau_coh", "T_wait"]}
+
     plt.figure(figsize=(10, 6))
     plt.plot(
         t_det_vals,
@@ -258,8 +263,34 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     plt.xlabel(r"$t \, [\text{fs}]$")
     plt.ylabel(r"$|\langle \mu \rangle|$")
     plt.title(
-        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh}$ and $T={T_wait}$"
+        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh:.1f}$ fs and $T={T_wait:.1f}$ fs"
     )
+
+    # Add other parameters as text box if any exist
+    if other_kwargs:
+        # Format additional parameters
+        text_lines = []
+        for key, value in other_kwargs.items():
+            if isinstance(value, (int, float)):
+                if isinstance(value, float):
+                    text_lines.append(f"{key}: {value:.3g}")
+                else:
+                    text_lines.append(f"{key}: {value}")
+            else:
+                text_lines.append(f"{key}: {value}")
+
+        # Add text box with small font
+        info_text = "\n".join(text_lines)
+        plt.text(
+            1.02,
+            0.98,
+            info_text,
+            transform=plt.gca().transAxes,
+            fontsize=12,
+            verticalalignment="top",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.7),
+        )
+
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.show()
 

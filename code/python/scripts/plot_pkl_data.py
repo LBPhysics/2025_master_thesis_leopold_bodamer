@@ -21,7 +21,9 @@ from src.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
 def find_latest_pkl_file():
     """Find the most recent pickle file in the data directory."""
     data_dir = DATA_DIR / "raw" / "2d_spectroscopy"
-    pkl_files = list(data_dir.glob("*.pkl"))
+
+    # Look for both .pkl and .pkl.gz files
+    pkl_files = list(data_dir.glob("*.pkl")) + list(data_dir.glob("*.pkl.gz"))
 
     if not pkl_files:
         print("No pickle files found in", data_dir)
@@ -33,19 +35,34 @@ def find_latest_pkl_file():
 
 
 def load_pkl_data(filepath):
-    """Load data from pickle file."""
+    """Load data from pickle file (supports both .pkl and .pkl.gz)."""
     print(f"Loading data from: {filepath}")
 
-    with open(filepath, "rb") as f:
-        data = pickle.load(f)
+    filepath = Path(filepath)
 
-    two_d_datas = data["two_d_datas"]
-    times_T = data["times_T"]
-    times = data["times"]
-    system_data = data["system"]
+    try:
+        if filepath.suffix == ".gz":
+            # Handle compressed pickle files
+            import gzip
 
-    print(f"Loaded {len(two_d_datas)} datasets")
-    return two_d_datas, times_T, times, system_data
+            with gzip.open(filepath, "rb") as f:
+                data = pickle.load(f)
+        else:
+            # Handle regular pickle files
+            with open(filepath, "rb") as f:
+                data = pickle.load(f)
+
+        two_d_datas = data["two_d_datas"]
+        times_T = data["times_T"]
+        times = data["times"]
+        system_data = data["system"]
+
+        print(f"Loaded {len(two_d_datas)} datasets")
+        return two_d_datas, times_T, times, system_data
+
+    except Exception as e:
+        print(f"Error loading file: {e}")
+        return None, None, None, None
 
 
 def main():
@@ -90,8 +107,8 @@ def main():
             "type": type_,
             "save": True,
             "output_dir": output_dir,
-            # "use_custom_colormap": True,
-            # "section": (0, 2, 0, 2),  # Plot the first section
+            "use_custom_colormap": True,
+            "section": (0, 2, 0, 2),  # Plot the first section
             "system": system_data,
         }
 

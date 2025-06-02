@@ -163,13 +163,13 @@ def compute_2d_fft_wavenumber(
     tfreqs = np.fft.rfftfreq(
         len(ts), d=dt
     )  # this is for axis 1 (t) (because data is real)
-    taufreqs = np.fft.fftfreq(len(taus), d=dτ)  # axis 0 → is treated normal
+    taufreqs = -np.fft.fftfreq(len(taus), d=dτ)  # axis 0 → is treated normal
 
     # Optional: Shift zero-frequency component to center (only along taus)
     # s2d = np.fft.rfft2(data)  # axis 0 (tau) → fft, axis 1 (t) → rfft
     s2d = np.fft.rfft(data, axis=1)  # axis 1 (t) → rfft
     s2d = np.fft.ifft(s2d, axis=0) * len(taus)  # axis 0 (tau) → ifft
-    s2d = np.fft.ifftshift(s2d, axes=0)  # axis 0 (tau) → ifft
+    s2d = np.fft.ifftshift(s2d, axes=0)
     taufreqs = np.fft.ifftshift(taufreqs)
     data_freq = 1j * s2d  # because E ~ i*P
 
@@ -298,9 +298,9 @@ def extend_and_plot_results(
         system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
     )
-    print("shape of global_data_freq:", global_data_freq.shape)
+    """print("shape of global_data_freq:", global_data_freq.shape)
     print("shape of global_nu_ts:", global_nu_ts.shape)
-    print("shape of global_nu_taus:", global_nu_taus.shape)
+    print("shape of global_nu_taus:", global_nu_taus.shape)"""
 
     Plot_polarization_2d_spectrum(
         (global_nu_ts, global_nu_taus, global_data_freq),

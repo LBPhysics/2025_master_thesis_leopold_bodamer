@@ -131,7 +131,7 @@ dmypy.json
 *.npz
 
 # Matplotlib
-*.png
+#*.png
 *.jpg
 *.jpeg
 *.gif
@@ -139,9 +139,6 @@ dmypy.json
 *.tiff
 *.pdf
 
-# HDF5 files
-*.h5
-*.hdf5
 
 # Data files (but keep small example datasets)
 data/processed/*
@@ -154,7 +151,7 @@ data/raw/*
 # Results and output directories
 results/
 output/
-figures/figures_from_python/
+# figures/figures_from_python/
 plots/
 
 # Temporary files
@@ -536,7 +533,7 @@ code/python/config/local.py
 code/python/config/local_*.py
 
 # Figure outputs from Python scripts
-figures/figures_from_python/
+#figures/figures_from_python/
 figures/figures_in_development_svg/
 
 # Mathematica-specific

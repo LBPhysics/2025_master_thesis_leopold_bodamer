@@ -33,8 +33,8 @@ class SimulationConfig:
 
     # Simulation parameters
     n_times_T: int = 1  # Number of T_wait values
-    n_phases: int = 2  # Number of phases for phase cycling
-    n_freqs: int = 2  # Number of frequencies for inhomogeneous broadening
+    n_phases: int = 4  # Number of phases for phase cycling
+    n_freqs: int = 1  # Number of frequencies for inhomogeneous broadening
 
     # System parameters
     N_atoms: int = 1
