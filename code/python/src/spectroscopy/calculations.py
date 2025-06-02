@@ -459,7 +459,7 @@ def compute_fixed_tau_T(
     # only if we are still in the physical regime
     states = data_f.states[t_det_start_idx_in_times_2:]
     actual_det_times = data_f.times[t_det_start_idx_in_times_2:]
-    data = np.zeros((len(actual_det_times)), dtype=np.float32)
+    data = np.zeros((len(actual_det_times)), dtype=np.complex64)
 
     # print(t_det_vals[0], t_det_vals[1], t_det_vals[-1], len(t_det_vals))
 
@@ -475,7 +475,9 @@ def compute_fixed_tau_T(
         # only if we are still in the physical regime
         time_cut = kwargs.get("time_cut", np.inf)
         if t_det < time_cut:
-            data[t_idx] = np.real(expect(system.Dip_op, states[t_idx]))
+            # data[t_idx] = np.real(expect(system.Dip_op, states[t_idx]))
+            data[t_idx] = system.Dip_op[1, 0] * states[t_idx][0, 1]
+
     return np.array(actual_det_times) - actual_det_times[0], data
 
 
@@ -509,7 +511,7 @@ def compute_two_dimensional_polarization(
     tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
 
     # initialize the time domain Spectroscopy data tr(Dip_op * rho_final(tau_coh, t_det))
-    data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.float32)
+    data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64)
 
     # information about the first pulse
     t_peak_pulse0 = 0
@@ -846,7 +848,7 @@ def parallel_compute_2d_polarization_with_inhomogenity(
 
         # Pre-allocate accumulation array of real polarization data
         accumulated_data = np.zeros(
-            (len(tau_coh_vals), len(t_det_vals)), dtype=np.float32
+            (len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64
         )
         total_count = 0
 
@@ -989,7 +991,9 @@ def parallel_compute_1d_polarization_with_inhomogenity(
                     # Initialize accumulation array on first successful result
                     if accumulated_data is None:
                         t_det_vals = t_det_result
-                        accumulated_data = np.zeros_like(data_result, dtype=np.float32)
+                        accumulated_data = np.zeros_like(
+                            data_result, dtype=np.complex64
+                        )
 
                     accumulated_data += data_result
                     total_count += 1

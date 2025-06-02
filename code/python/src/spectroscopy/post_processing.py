@@ -160,17 +160,17 @@ def compute_2d_fft_wavenumber(
     dτ = taus[1] - taus[0]
     dt = ts[1] - ts[0]
 
-    tfreqs = np.fft.rfftfreq(
-        len(ts), d=dt
-    )  # this is for axis 1 (t) (because data is real)
-    taufreqs = -np.fft.fftfreq(len(taus), d=dτ)  # axis 0 → is treated normal
+    tfreqs = np.fft.fftfreq(len(ts), d=dt)
+    taufreqs = -np.fft.fftfreq(len(taus), d=dτ)
 
     # Optional: Shift zero-frequency component to center (only along taus)
     # s2d = np.fft.rfft2(data)  # axis 0 (tau) → fft, axis 1 (t) → rfft
-    s2d = np.fft.rfft(data, axis=1)  # axis 1 (t) → rfft
+    s2d = np.fft.fft(data, axis=1)  # axis 1 (t) → rfft
     s2d = np.fft.ifft(s2d, axis=0) * len(taus)  # axis 0 (tau) → ifft
+    s2d = np.fft.fftshift(s2d, axes=1)
     s2d = np.fft.ifftshift(s2d, axes=0)
     taufreqs = np.fft.ifftshift(taufreqs)
+    tfreqs = np.fft.ifftshift(tfreqs)
     data_freq = 1j * s2d  # because E ~ i*P
 
     # Convert to wavenumber units [10^4 cm⁻¹]
@@ -222,7 +222,7 @@ def extend_and_plot_results(
     # global_ts and global_taus are the largest axes (from the first T_wait)
 
     global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-    global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.float32)
+    global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
 
     if extend_for is not None:
         global_ts, global_taus, global_data_time = extend_time_tau_axes(
