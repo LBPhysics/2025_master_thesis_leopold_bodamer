@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=2d_spectroscopy
-#SBATCH --output=logs/job_%j.out
-#SBATCH --error=logs/job_%j.err
+#SBATCH --job-name=1d_data
+#SBATCH --output=job_%j.out
+#SBATCH --error=job_%j.err
 
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
@@ -12,13 +12,12 @@
 #SBATCH -c 8
 
 # =============================
-# SLURM JOB SCRIPT FOR 2D SPECTROSCOPY
+# SLURM JOB SCRIPT FOR 1D SPECTROSCOPY
 # =============================
 
 echo "Job started at: $(date)"
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
-echo "CPUs allocated: $SLURM_CPUS_PER_TASK"
 
 # Activate conda environment (no need for modules since conda provides Python)
 source ~/.bashrc
@@ -28,10 +27,10 @@ conda activate master_env
 mkdir -p logs
 
 # Navigate to scripts directory
-cd code/python/scripts/
+cd /home/lbodamer/Master_thesis/code/python/scripts/
 
 # Run the HPC-optimized simulation
-echo "Starting 2D spectroscopy simulation..."
-python3 calc_2D_datas_hpc.py --config test # TODO change this to the actual config file
+echo "Starting 1D spectroscopy simulation..."
+python3 calc_1D_datas.py
 
 echo "Job completed at: $(date)"
