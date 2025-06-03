@@ -69,7 +69,7 @@ def get_tau_cohs_and_t_dets_for_T_wait(
     return tau_coh, tau_coh
 
 
-def compute_pulse_evolution(
+def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during compute_two_dimensional_polarization: cannot access local variable 'region_start' where it is not associated with a value
     psi_ini: Qobj,
     times: np.ndarray,
     pulse_seq: PulseSequence,
@@ -117,54 +117,55 @@ def compute_pulse_evolution(
     }
 
     # =============================
-    # Split evolution by pulse regions for Paper_eqs
-    # =============================
-
-    # Find pulse regions in the time array
-    pulse_regions = []
-    for i, pulse in enumerate(pulse_seq.pulses):
-        pulse_peak_time = pulse.pulse_peak_time
-        pulse_width = (
-            system.FWHMs[i]
-            if hasattr(system, "FWHMs") and i < len(system.FWHMs)
-            else system.FWHM
-        )
-
-        # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
-        start_time = pulse_peak_time - pulse_width
-        end_time = pulse_peak_time + pulse_width
-
-        start_idx = np.abs(times - (start_time)).argmin()
-        end_idx = np.abs(times - (end_time)).argmin()
-
-        # Ensure indices are within bounds
-        start_idx = max(0, start_idx)
-        end_idx = min(len(times), end_idx)
-
-        if start_idx < end_idx:  # Valid region
-            pulse_regions.append((start_idx, end_idx, i))
-
-    # Sort pulse regions by start time
-    pulse_regions.sort(key=lambda x: x[0])
-
-    # Initialize result storage
-    all_states = []
-    all_times = []
-    current_state = psi_ini
-    current_time_idx = 0
-    evolution_results = []  # Store individual evolution results
-
-    # =============================
     # Choose solver and compute the evolution
     # =============================
     if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
 
     else:
+        # =============================
+        # Split evolution by pulse regions for Paper_eqs
+        # =============================
+
+        # Find pulse regions in the time array
+        pulse_regions = []
+        for i, pulse in enumerate(pulse_seq.pulses):
+            pulse_peak_time = pulse.pulse_peak_time
+            pulse_width = (
+                system.FWHMs[i]
+                if hasattr(system, "FWHMs") and i < len(system.FWHMs)
+                else system.FWHM
+            )
+
+            # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
+            start_time = pulse_peak_time - pulse_width
+            end_time = pulse_peak_time + pulse_width
+
+            start_idx = np.abs(times - (start_time)).argmin()
+            end_idx = np.abs(times - (end_time)).argmin()
+
+            # Ensure indices are within bounds
+            start_idx = max(0, start_idx)
+            end_idx = min(len(times), end_idx)
+
+            if start_idx < end_idx:  # Valid region
+                pulse_regions.append((start_idx, end_idx, i))
+
+        # Sort pulse regions by start time
+        pulse_regions.sort(key=lambda x: x[0])
+
+        # Initialize result storage
+        all_states = []
+        all_times = []
+        current_state = psi_ini
+        current_time_idx = 0
+        evolution_results = []  # Store individual evolution results
+
         # Build Hamiltonian components
         H_free = system.H0_diagonalized  # already includes the RWA, if present!
         if H_free is None or not isinstance(H_free, Qobj):
             raise ValueError(f"Invalid H0_diagonalized: {H_free}")
+        H_int_evo = H_free + QobjEvo(lambda t, args=None: H_int(t, pulse_seq, system))
 
         # Set up collapse operators based on solver type
         c_ops = []
@@ -184,10 +185,7 @@ def compute_pulse_evolution(
                     lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system)
                 )
                 H_int_evo = Liouville_full
-            else:
-                H_int_evo = H_free + QobjEvo(
-                    lambda t, args=None: H_int(t, pulse_seq, system)
-                )
+
         elif system.ODE_Solver == "ME":
             c_ops = system.c_ops_list
             if not all(isinstance(op, Qobj) for op in c_ops):
@@ -231,50 +229,50 @@ def compute_pulse_evolution(
                 if len(evolution_results) == 0:
                     evolution_results.append(free_result)
 
-            # =============================
-            # Evolve with H_int_evo during pulse region
-            # =============================
-            pulse_times = times[region_start : region_end + 1]
+        # =============================
+        # Evolve with H_int_evo during pulse region
+        # =============================
+        pulse_times = times[region_start : region_end + 1]
 
-            if system.ODE_Solver == "BR":
-                pulse_result = brmesolve(
-                    H_int_evo,
-                    current_state,
-                    pulse_times,
-                    a_ops=system.a_ops_list,
-                    options=options,
-                )
-            elif system.ODE_Solver == "Paper_eqs":
-                pulse_result = mesolve(
-                    H_int_evo,  # Liouville includes the decay channels
-                    current_state,
-                    pulse_times,
-                    options=options,
-                )
-            else:
-                pulse_result = mesolve(
-                    H_int_evo,
-                    current_state,
-                    pulse_times,
-                    c_ops=c_ops,
-                    options=options,
-                )
+        if system.ODE_Solver == "BR":
+            pulse_result = brmesolve(
+                H_int_evo,
+                current_state,
+                pulse_times,
+                a_ops=system.a_ops_list,
+                options=options,
+            )
+        elif system.ODE_Solver == "Paper_eqs":
+            pulse_result = mesolve(
+                H_int_evo,  # Liouville includes the decay channels
+                current_state,
+                pulse_times,
+                options=options,
+            )
+        else:
+            pulse_result = mesolve(
+                H_int_evo,
+                current_state,
+                pulse_times,
+                c_ops=c_ops,
+                options=options,
+            )
 
-            # Store all pulse evolution states
-            if region_end < len(times) - 1:  # Not the last region
-                all_states.extend(pulse_result.states[:-1])
-                all_times.extend(pulse_result.times[:-1])
-                current_state = pulse_result.states[-1]
-            else:  # Last region, include final state
-                all_states.extend(pulse_result.states)
-                all_times.extend(pulse_result.times)
-                current_state = pulse_result.states[-1]
+        # Store all pulse evolution states
+        if region_end < len(times) - 1:  # Not the last region
+            all_states.extend(pulse_result.states[:-1])
+            all_times.extend(pulse_result.times[:-1])
+            current_state = pulse_result.states[-1]
+        else:  # Last region, include final state
+            all_states.extend(pulse_result.states)
+            all_times.extend(pulse_result.times)
+            current_state = pulse_result.states[-1]
 
-            # Store the result for combining later
-            if len(evolution_results) == 0:
-                evolution_results.append(pulse_result)
+        # Store the result for combining later
+        if len(evolution_results) == 0:
+            evolution_results.append(pulse_result)
 
-            current_time_idx = region_end
+        current_time_idx = region_end
 
         # =============================
         # Evolve with H_free after last pulse region
@@ -320,10 +318,6 @@ def compute_pulse_evolution(
             print(
                 "Warning: Pulse region splitting failed, falling back to full evolution"
             )
-            H_int_evo = H_free + QobjEvo(
-                lambda t, args=None: H_int(t, pulse_seq, system)
-            )
-
             if system.ODE_Solver == "BR":
                 result = brmesolve(
                     H_int_evo,
@@ -602,8 +596,6 @@ def compute_fixed_tau_T(
         psi_0, times, pulse_seq_just0, system=system
     )
 
-    signal_only_pulse0 = data_only_pulse0.states[t_det_start_idx_in_times:]
-
     # JUST SECOND PULSE
     pulse_seq_just1 = PulseSequence.from_args(
         system=system,
@@ -612,7 +604,6 @@ def compute_fixed_tau_T(
     data_only_pulse1 = compute_pulse_evolution(
         psi_0, times, pulse_seq_just1, system=system
     )
-    signal_only_pulse1 = data_only_pulse1.states[t_det_start_idx_in_times:]
 
     # JUST THIRD PULSE
     pulse_seq_just2 = PulseSequence.from_args(
@@ -622,15 +613,17 @@ def compute_fixed_tau_T(
     data_only_pulse2 = compute_pulse_evolution(
         psi_0, times, pulse_seq_just2, system=system
     )
-    signal_only_pulse2 = data_only_pulse2.states[t_det_start_idx_in_times:]
 
-    states_full = data_f.states[t_det_start_idx_in_times_2:]
+    actual_det_times = data_f.times[t_det_start_idx_in_times_2:]
+    states_full = data_f.states[t_det_start_idx_in_times_2:]  # whole numerical signal
     states_only_pulse0 = data_only_pulse0.states[t_det_start_idx_in_times:]
     states_only_pulse1 = data_only_pulse1.states[t_det_start_idx_in_times:]
     states_only_pulse2 = data_only_pulse2.states[t_det_start_idx_in_times:]
 
-    actual_det_times = data_f.times[t_det_start_idx_in_times_2:]
-    data = np.zeros((len(actual_det_times)), dtype=np.complex64)
+    P_full = np.zeros((len(actual_det_times)), dtype=np.complex64)
+    P_only0 = np.zeros((len(actual_det_times)), dtype=np.complex64)
+    P_only1 = np.zeros((len(actual_det_times)), dtype=np.complex64)
+    P_only2 = np.zeros((len(actual_det_times)), dtype=np.complex64)
 
     # Apply RWA phase factors to the states at detection time t_det
     if system.RWA_laser:
@@ -665,12 +658,23 @@ def compute_fixed_tau_T(
         if t_det < time_cut:
 
             # complex Polarization calculation -> only extract the third order into data
-            P_full = system.Dip_op[1, 0] * states_full[t_idx][0, 1]
-            P_only0 = system.Dip_op[1, 0] * states_only_pulse0[t_idx][0, 1]
-            P_only1 = system.Dip_op[1, 0] * states_only_pulse1[t_idx][0, 1]
-            P_only2 = system.Dip_op[1, 0] * states_only_pulse2[t_idx][0, 1]
+            P_full[t_idx] = system.Dip_op[1, 0] * states_full[t_idx][0, 1]
+            P_only0[t_idx] = system.Dip_op[1, 0] * states_only_pulse0[t_idx][0, 1]
+            P_only1[t_idx] = system.Dip_op[1, 0] * states_only_pulse1[t_idx][0, 1]
+            P_only2[t_idx] = system.Dip_op[1, 0] * states_only_pulse2[t_idx][0, 1]
 
-            data[t_idx] = P_full - (P_only0 + P_only1 + P_only2)
+    # If plot_example_Polarization is True, return the full data for plotting
+    plot_example_P = kwargs.get("plot_example_Polarization", False)
+    if plot_example_P:
+        return (
+            actual_det_times - actual_det_times[0],
+            P_full,
+            P_only0,
+            P_only1,
+            P_only2,
+        )
+
+    data = P_full - (P_only0 + P_only1 + P_only2)
 
     return np.array(actual_det_times) - actual_det_times[0], data
 

@@ -292,7 +292,7 @@ def Plot_example_evo(
     tau_coh: float,
     T_wait: float,
     system: SystemParameters,
-    **additional_info: dict,
+    **kwargs: dict,
 ):
     """
     Plot the evolution of the electric field and expectation values for a given tau_coh and T_wait.
@@ -372,6 +372,30 @@ def Plot_example_evo(
     # Set x-label only on the bottom subplot
     ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
+
+    if kwargs:
+        # Format additional parameters
+        text_lines = []
+        for key, value in kwargs.items():
+            if isinstance(value, (int, float)):
+                if isinstance(value, float):
+                    text_lines.append(f"{key}: {value:.3g}")
+                else:
+                    text_lines.append(f"{key}: {value}")
+            else:
+                text_lines.append(f"{key}: {value}")
+
+        # Add text box with small font
+        info_text = "\n".join(text_lines)
+        plt.text(
+            0.8,
+            0.98,
+            info_text,
+            transform=plt.gca().transAxes,
+            fontsize=12,
+            verticalalignment="top",
+            bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
+        )
 
     plt.suptitle(
         rf"$\tau = {tau_coh:.2f}\,\mathrm{{fs}},\quad T = {T_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {system.ODE_Solver}"
@@ -586,4 +610,81 @@ def Plot_polarization_2d_spectrum(
         plt.savefig(save_path_combined)
     else:
         print("Plot not saved. Ensure 'save' is True and 'output_dir' is specified.")
+    plt.show()
+
+
+def Plot_example_Polarization(
+    times: np.ndarray,
+    P_full: np.ndarray,
+    P_only0: np.ndarray,
+    P_only1: np.ndarray,
+    P_only2: np.ndarray,
+    title: str = "Example Polarization Components",
+    **kwargs,
+):
+    """
+    Plot the full and individual polarization components as a function of time.
+
+    Parameters:
+        times (np.ndarray): Time axis (e.g., detection times).
+        P_full (np.ndarray): Full polarization (complex).
+        P_only0 (np.ndarray): Polarization from only the first pulse.
+        P_only1 (np.ndarray): Polarization from only the second pulse.
+        P_only2 (np.ndarray): Polarization from only the third pulse.
+        title (str): Plot title.
+        **kwargs: Additional keyword arguments for annotation.
+
+    Returns:
+        None
+    """
+    plt.figure(figsize=(10, 6))
+    plt.plot(
+        times,
+        np.abs(P_full),
+        label=r"$|P_{\mathrm{full}}(t)|$",
+        color="C0",
+        linestyle="solid",
+    )
+    plt.plot(
+        times, np.abs(P_only0), label=r"$|P_0(t)|$", color="C1", linestyle="dashed"
+    )
+    plt.plot(
+        times, np.abs(P_only1), label=r"$|P_1(t)|$", color="C2", linestyle="dashdot"
+    )
+    plt.plot(
+        times, np.abs(P_only2), label=r"$|P_2(t)|$", color="C3", linestyle="dotted"
+    )
+    plt.plot(
+        times,
+        np.abs(P_full - P_only0 - P_only1 - P_only2),
+        label=r"$|P^{3}(t)|$",
+        color="C0",
+        linestyle="solid",
+    )
+    plt.xlabel(r"$t_{\mathrm{det}}$ [fs]")
+    plt.ylabel(r"$|P(t)|$")
+    plt.title(title)
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+    # Add additional parameters as a text box if provided
+    if kwargs:
+        text_lines = []
+        for key, value in kwargs.items():
+            if isinstance(value, float):
+                text_lines.append(f"{key}: {value:.3g}")
+            else:
+                text_lines.append(f"{key}: {value}")
+        info_text = "\n".join(text_lines)
+        plt.text(
+            0.98,
+            0.98,
+            info_text,
+            transform=plt.gca().transAxes,
+            fontsize=11,
+            verticalalignment="top",
+            horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
+        )
+
+    plt.tight_layout()
     plt.show()
