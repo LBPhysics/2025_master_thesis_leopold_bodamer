@@ -19,7 +19,6 @@ from datetime import datetime
 from src.spectroscopy.calculations import (
     parallel_compute_1d_polarization_with_inhomogenity,
 )
-from src.spectroscopy.inhomogenity import sample_from_sigma
 from src.core.system_parameters import SystemParameters
 from config.paths import DATA_DIR
 
@@ -32,16 +31,17 @@ def get_simulation_config():
     return {
         "N_atoms": 1,  # Number of atoms in the system
         "n_phases": 4,  # Number of phases for phase cycling
-        "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
+        "n_freqs": 10,  # Number of frequencies for inhomogeneous broadening
         "tau_coh": 300.0,  # Coherence time [fs]
         "T_wait": 1000.0,  # Waiting time [fs]
         "t_det_max": 600.0,  # Additional time buffer [fs]
         "dt": 2.0,  # Time step [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
-        "envelope_type": "gaussian",
+        "envelope_type": "gaussian",  # 'cos2' or 'gaussian'
         "output_subdir": "1d_spectroscopy",
-        "E0": 0.5,
+        "E0": 0.05,
         "ODE_Solver": "Paper_eqs",  # ODE solver type
+        "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
     }
 
 
@@ -144,6 +144,7 @@ def main():
         dt=config["dt"],
         Delta_cm=config["Delta_cm"] if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
+        pulse_FWHM=config["pulse_FWHM"] if "pulse_FWHM" in config else 100.0,
         E0=config["E0"],
     )
 
