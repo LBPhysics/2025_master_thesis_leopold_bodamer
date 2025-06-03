@@ -40,7 +40,7 @@ def get_simulation_config():
         "T_wait_max": 10.0,  # Maximum waiting time [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
         "envelope_type": "gaussian",
-        "output_subdir": "raw/2d_spectroscopy",
+        "output_subdir": "2d_spectroscopy",
     }
 
 
