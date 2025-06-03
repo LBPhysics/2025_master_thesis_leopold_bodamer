@@ -117,44 +117,48 @@ def compute_pulse_evolution(
     }
 
     # =============================
+    # Split evolution by pulse regions for Paper_eqs
+    # =============================
+
+    # Find pulse regions in the time array
+    pulse_regions = []
+    for i, pulse in enumerate(pulse_seq.pulses):
+        pulse_peak_time = pulse.pulse_peak_time
+        pulse_width = (
+            system.FWHMs[i]
+            if hasattr(system, "FWHMs") and i < len(system.FWHMs)
+            else system.FWHM
+        )
+
+        # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
+        start_time = pulse_peak_time - pulse_width
+        end_time = pulse_peak_time + pulse_width
+
+        start_idx = np.abs(times - (start_time)).argmin()
+        end_idx = np.abs(times - (end_time)).argmin()
+
+        # Ensure indices are within bounds
+        start_idx = max(0, start_idx)
+        end_idx = min(len(times), end_idx)
+
+        if start_idx < end_idx:  # Valid region
+            pulse_regions.append((start_idx, end_idx, i))
+
+    # Sort pulse regions by start time
+    pulse_regions.sort(key=lambda x: x[0])
+
+    # Initialize result storage
+    all_states = []
+    all_times = []
+    current_state = psi_ini
+    current_time_idx = 0
+    evolution_results = []  # Store individual evolution results
+
+    # =============================
     # Choose solver and compute the evolution
     # =============================
     if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
-
-    if system.ODE_Solver == "Paper_eqs":
-        # Check for time discontinuities (another common source of errors)
-        if len(times) > 1:
-            dt = np.diff(times)
-            if not np.allclose(dt, dt[0], rtol=1e-5):
-                jumps = np.where(np.abs(dt - dt[0]) > 1e-5 * dt[0])[0]
-                print(
-                    f"WARNING: Time step discontinuities detected at indices: {jumps[:10]}..."
-                )
-                print(f"  Time steps: {dt[jumps[:5]]}")
-
-        # Check pulse timing relative to time array
-        """
-        for i, pulse in enumerate(pulse_seq.pulses):
-            start_idx = np.argmin(np.abs(times - pulse.pulse_peak_time))
-            if abs(times[start_idx] - pulse.pulse_peak_time) > 1e-5:
-                print(
-                    f"WARNING: Pulse {i} start time {pulse.pulse_peak_time:.6f} "
-                    f"doesn't align with time grid (closest: {times[start_idx]:.6f})"
-                )
-        """
-        if not system.RWA_laser:
-            raise ValueError("The equations of the paper only make sense with RWA")
-
-        # You need to adapt Liouville to accept pulse_seq and system if needed
-        Liouville = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
-
-        result = mesolve(
-            Liouville,
-            psi_ini,
-            times,
-            options=options,
-        )
 
     else:
         # Build Hamiltonian components
@@ -164,10 +168,26 @@ def compute_pulse_evolution(
 
         # Set up collapse operators based on solver type
         c_ops = []
-        if system.ODE_Solver == "Paper_BR":
+
+        if system.ODE_Solver == "Paper_BR" or system.ODE_Solver == "Paper_eqs":
             c_ops = [R_paper(system)]
             if not all(isinstance(op, Qobj) for op in c_ops):
                 raise ValueError(f"Invalid Redfield tensor: {c_ops}")
+            if system.ODE_Solver == "Paper_eqs":
+                if not system.RWA_laser:
+                    raise ValueError(
+                        "The equations of the paper only make sense with RWA"
+                    )
+
+                # For Paper_eqs, we need to define the full Liouville operator
+                Liouville_full = QobjEvo(
+                    lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system)
+                )
+                H_int_evo = Liouville_full
+            else:
+                H_int_evo = H_free + QobjEvo(
+                    lambda t, args=None: H_int(t, pulse_seq, system)
+                )
         elif system.ODE_Solver == "ME":
             c_ops = system.c_ops_list
             if not all(isinstance(op, Qobj) for op in c_ops):
@@ -175,49 +195,6 @@ def compute_pulse_evolution(
         elif system.ODE_Solver == "BR":
             if not hasattr(system, "a_ops_list") or system.a_ops_list is None:
                 raise ValueError("Missing a_ops_list for BR solver")
-
-        # =============================
-        # Split evolution by pulse regions
-        # =============================
-
-        # Find pulse regions in the time array
-        pulse_regions = []
-        for i, pulse in enumerate(pulse_seq.pulses):
-            pulse_peak_time = pulse.pulse_peak_time
-            pulse_width = (
-                system.FWHMs[
-                    i
-                ]  # TODO THIS IS NOT most general, because i doesnt match for different number of pulses
-                if hasattr(system, "FWHMs") and i < len(system.FWHMs)
-                else system.FWHM
-            )
-
-            # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
-            start_time = pulse_peak_time - pulse_width
-            end_time = pulse_peak_time + pulse_width
-
-            start_idx = np.abs(times - (start_time)).argmin()
-            end_idx = np.abs(times - (end_time)).argmin()
-
-            # Ensure indices are within bounds
-            start_idx = max(0, start_idx)
-            end_idx = min(len(times), end_idx)
-
-            if start_idx < end_idx:  # Valid region
-                pulse_regions.append((start_idx, end_idx, i))
-
-        # Sort pulse regions by start time
-        pulse_regions.sort(key=lambda x: x[0])
-
-        # Initialize result storage
-        all_states = []
-        all_times = []
-        current_state = psi_ini
-        current_time_idx = 0
-        evolution_results = []  # Store individual evolution results
-
-        # Get expectation operators for Result object creation
-        e_ops = system.e_ops_list if hasattr(system, "e_ops_list") else []
 
         for region_start, region_end, pulse_idx in pulse_regions:
             # =============================
@@ -258,9 +235,6 @@ def compute_pulse_evolution(
             # Evolve with H_int_evo during pulse region
             # =============================
             pulse_times = times[region_start : region_end + 1]
-            H_int_evo = H_free + QobjEvo(
-                lambda t, args=None: H_int(t, pulse_seq, system)
-            )
 
             if system.ODE_Solver == "BR":
                 pulse_result = brmesolve(
@@ -268,6 +242,13 @@ def compute_pulse_evolution(
                     current_state,
                     pulse_times,
                     a_ops=system.a_ops_list,
+                    options=options,
+                )
+            elif system.ODE_Solver == "Paper_eqs":
+                pulse_result = mesolve(
+                    H_int_evo,  # Liouville includes the decay channels
+                    current_state,
+                    pulse_times,
                     options=options,
                 )
             else:
@@ -328,36 +309,10 @@ def compute_pulse_evolution(
         # =============================
         # Create combined result object using first result as base
         # =============================
-        if not evolution_results:
-            # Fallback: use full H_int_evo evolution if no segments were created
-            print(
-                "Warning: No evolution segments created, falling back to full evolution"
-            )
-            H_int_evo = H_free + QobjEvo(
-                lambda t, args=None: H_int(t, pulse_seq, system)
-            )
-
-            if system.ODE_Solver == "BR":
-                result = brmesolve(
-                    H_int_evo,
-                    psi_ini,
-                    times,
-                    a_ops=system.a_ops_list,
-                    options=options,
-                )
-            else:
-                result = mesolve(
-                    H_int_evo,
-                    psi_ini,
-                    times,
-                    c_ops=c_ops,
-                    options=options,
-                )
-        else:
-            # Use the first result as a template and modify its data
-            result = evolution_results[0]
-            result.states = all_states
-            result.times = np.array(all_times)
+        # Use the first result as a template and modify its data
+        result = evolution_results[0]
+        result.states = all_states
+        result.times = np.array(all_times)
 
         # Ensure we have the correct number of states
         if len(result.states) != len(times):
