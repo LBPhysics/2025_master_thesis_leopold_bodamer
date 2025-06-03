@@ -245,32 +245,23 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
         The data to plot on the y-axis, typically the expectation value of the polarization.
 
     """
-    # Extract main parameters for title
-    tau_coh = kwargs.get("tau_coh", 300.0)
-    T_wait = kwargs.get("T_wait", 1000.0)
-
-    # Collect all other kwargs for text display
-    other_kwargs = {k: v for k, v in kwargs.items() if k not in ["tau_coh", "T_wait"]}
 
     plt.figure(figsize=(10, 6))
     plt.plot(
         t_det_vals,
         np.abs(data),
-        label=r"$|\langle \mu \rangle|$",
         color="C0",
         linestyle="solid",
     )
     plt.xlabel(r"$t \, [\text{fs}]$")
-    plt.ylabel(r"$|\langle \mu \rangle|$")
-    plt.title(
-        rf"Expectation Value of $|\langle \mu \rangle|$ for fixed $\tau={tau_coh:.1f}$ fs and $T={T_wait:.1f}$ fs"
-    )
+    plt.ylabel(r"$|P(t)|$")
+    plt.title(rf"Polarization for fixed $\tau$ and $T$")
 
     # Add other parameters as text box if any exist
-    if other_kwargs:
+    if kwargs:
         # Format additional parameters
         text_lines = []
-        for key, value in other_kwargs.items():
+        for key, value in kwargs.items():
             if isinstance(value, (int, float)):
                 if isinstance(value, float):
                     text_lines.append(f"{key}: {value:.3g}")
@@ -282,16 +273,15 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
         # Add text box with small font
         info_text = "\n".join(text_lines)
         plt.text(
-            1.02,
+            0.8,
             0.98,
             info_text,
             transform=plt.gca().transAxes,
             fontsize=12,
             verticalalignment="top",
-            bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.7),
+            bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
         )
 
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.show()
 
 
@@ -570,7 +560,7 @@ def Plot_polarization_2d_spectrum(
         if system.N_atoms == 2:
             filename_parts.extend(
                 [
-                    f"wb={system.omega_B/system.omega_Ayy:.2f}wA",
+                    f"wb={system.omega_B/system.omega_A:.2f}wA",
                     f"J={system.J:.2f}",
                     f"mub={system.mu_B/system.mu_A:.0f}muA",
                 ]

@@ -30,8 +30,9 @@ from config.paths import DATA_DIR
 def get_simulation_config():
     """Get default simulation configuration for 1D spectroscopy."""
     return {
+        "N_atoms": 1,  # Number of atoms in the system
         "n_phases": 4,  # Number of phases for phase cycling
-        "n_freqs": 100,  # Number of frequencies for inhomogeneous broadening
+        "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
         "tau_coh": 300.0,  # Coherence time [fs]
         "T_wait": 1000.0,  # Waiting time [fs]
         "t_det_max": 600.0,  # Additional time buffer [fs]
@@ -40,6 +41,7 @@ def get_simulation_config():
         "envelope_type": "gaussian",
         "output_subdir": "1d_spectroscopy",
         "E0": 0.5,
+        "ODE_Solver": "Paper_eqs",  # ODE solver type
     }
 
 
@@ -74,7 +76,6 @@ def save_1d_data(
     data_avg: np.ndarray,
     config: dict,
     system,
-    how_many_omega_ats: int,
 ) -> Path:
     """Save 1D polarization simulation data to a pickle file."""
     ### Create output directory
@@ -91,7 +92,6 @@ def save_1d_data(
         "tau_coh": config["tau_coh"],
         "T_wait": config["T_wait"],
         "system": system,
-        "how_many_omega_ats": how_many_omega_ats,
         "n_phases": config["n_phases"],
         "n_freqs": config["n_freqs"],
         "E0": config["E0"],
@@ -119,12 +119,6 @@ def main():
     config = get_simulation_config()
     max_workers = psutil.cpu_count(logical=True)
 
-    ### Phase cycling setup
-    all_phases = [k * np.pi / 2 for k in range(4)]  # [0, π/2, π, 3π/2]
-    phases = np.random.choice(
-        all_phases, size=config["n_phases"], replace=False
-    ).tolist()
-
     # =============================
     # SIMULATION PARAMETERS
     # =============================
@@ -143,12 +137,14 @@ def main():
     # SYSTEM PARAMETERS
     # =============================
     system = SystemParameters(
-        ODE_Solver="Paper_eqs",
+        N_atoms=config["N_atoms"],
+        ODE_Solver=config["ODE_Solver"],
         RWA_laser=True,
         t_max=config["tau_coh"] + config["T_wait"] + config["t_det_max"],
         dt=config["dt"],
         Delta_cm=config["Delta_cm"] if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
+        E0=config["E0"],
     )
 
     print(f"System configuration:")
@@ -158,19 +154,14 @@ def main():
     FWHMs = system.FWHMs
     times = np.arange(-FWHMs[0], system.t_max, system.dt)
 
-    ### Inhomogeneous broadening
-    omega_ats = sample_from_sigma(
-        config["n_freqs"], FWHM=system.Delta_cm, mu=system.omega_A_cm
-    )
-
     # =============================
     # RUN SIMULATION
     # =============================
     print("Computing 1D polarization with parallel processing...")
     try:
         t_det_vals, data_avg = parallel_compute_1d_polarization_with_inhomogenity(
-            omega_ats=omega_ats,
-            phases=phases,
+            n_freqs=config["n_freqs"],
+            n_phases=config["n_phases"],
             tau_coh=config["tau_coh"],
             T_wait=config["T_wait"],
             times=times,
@@ -193,7 +184,6 @@ def main():
         data_avg=data_avg,
         config=config,
         system=system,
-        how_many_omega_ats=config["n_freqs"],
     )
 
     # =============================

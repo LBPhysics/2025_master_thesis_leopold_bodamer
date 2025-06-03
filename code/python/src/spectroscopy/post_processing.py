@@ -156,10 +156,9 @@ def compute_2d_fft_wavenumber(
     >>> # nu_ts and nu_taus in 10^4 cm⁻¹, spectrum is complex
     """
 
-    # Calculate only the positive frequency axes (cycle/fs), because data is real
+    # Calculate only the frequency axes (cycle/fs)
     dτ = taus[1] - taus[0]
     dt = ts[1] - ts[0]
-
     tfreqs = np.fft.fftfreq(len(ts), d=dt)
     taufreqs = -np.fft.fftfreq(len(taus), d=dτ)
 
@@ -181,7 +180,7 @@ def compute_2d_fft_wavenumber(
         nu_ts,
         nu_taus,
         data_freq,
-    )  # s2d has both real and imaginary parts -> dtype np.complex64
+    )
 
 
 def extend_and_plot_results(

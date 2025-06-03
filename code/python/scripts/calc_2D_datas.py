@@ -32,10 +32,11 @@ from config.paths import DATA_DIR
 def get_simulation_config():
     """Get default simulation configuration for 2D spectroscopy."""
     return {
+        "N_atoms": 2,  # Number of atoms in the system
         "n_times_T": 1,  # Number of T_wait values
         "n_phases": 4,  # Number of phases for phase cycling
         "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
-        "t_max": 100.0,  # Maximum time [fs]
+        "t_max": 5.0,  # Maximum time [fs]
         "dt": 0.1,  # Time step [fs]
         "T_wait_max": 10.0,  # Maximum waiting time [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
@@ -116,12 +117,6 @@ def main():
     config = get_simulation_config()
     max_workers = psutil.cpu_count(logical=True)
 
-    ### Phase cycling setup
-    all_phases = [k * np.pi / 2 for k in range(4)]  # [0, π/2, π, 3π/2]
-    phases = np.random.choice(
-        all_phases, size=config["n_phases"], replace=False
-    ).tolist()
-
     # =============================
     # SIMULATION PARAMETERS
     # =============================
@@ -142,6 +137,7 @@ def main():
     # SYSTEM PARAMETERS
     # =============================
     system = SystemParameters(
+        N_atoms=config["N_atoms"],
         ODE_Solver="Paper_eqs",
         RWA_laser=True,
         t_max=config["t_max"],
@@ -172,11 +168,6 @@ def main():
         print(f"⚠️  WARNING: Solver validation failed: {e}")
         time_cut = 0
 
-    ### Inhomogeneous broadening
-    omega_ats = sample_from_sigma(
-        config["n_freqs"], FWHM=system.Delta_cm, mu=system.omega_A_cm
-    )
-
     # =============================
     # RUN SIMULATION
     # =============================
@@ -185,8 +176,8 @@ def main():
 
     try:
         two_d_datas = parallel_compute_2d_polarization_with_inhomogenity(
-            omega_ats=omega_ats,
-            phases=phases,
+            n_freqs=config["n_freqs"],
+            n_phases=config["n_phases"],
             times_T=times_T,
             times=times,
             system=system,
