@@ -7,7 +7,7 @@ from qutip import Qobj, Result, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
 from src.core.system_parameters import SystemParameters
 from src.core.pulse_sequences import PulseSequence, identify_pulse_regions
-from src.core.pulse_functions import identify_non_zero_pulse_regions
+from src.core.pulse_functions import identify_non_zero_pulse_regions, split_by_active_regions
 from src.core.pulse_functions import *
 from src.core.solver_fcts import (
     matrix_ODE_paper,
@@ -93,7 +93,8 @@ def compute_pulse_evolution(
 
         # Find pulse regions in the time array using the dedicated function
         pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
-        # BASED ON THIS split the time range into regions where the pulse envelope is zero, -> there apply the free evolution, and where its non-zero, where we apply the H_int_evo evolution
+        # BASED ON THIS split the time range into regions where the pulse envelope is zero
+        split_times = split_by_active_regions(times, pulse_seq)
 
         # Build Hamiltonian components
         H_free = system.H0_diagonalized  # already includes the RWA, if present!
@@ -128,11 +129,15 @@ def compute_pulse_evolution(
             if not hasattr(system, "a_ops_list") or system.a_ops_list is None:
                 raise ValueError("Missing a_ops_list for BR solver")
 
-        for region_start, region_end, pulse_idx in pulse_regions:
+        for times_ in times_split:
+
+
+
             # =============================
             # Evolve with H_free before pulse region
             # =============================
-            if current_time_idx < region_start:
+            # TODO
+            if :
                 free_times = times[
                     current_time_idx : region_start + 1
                 ]  # Include connection point
