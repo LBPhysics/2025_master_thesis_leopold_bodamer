@@ -170,7 +170,7 @@ def compute_2d_fft_wavenumber(
     s2d = np.fft.ifftshift(s2d, axes=0)
     taufreqs = np.fft.ifftshift(taufreqs)
     tfreqs = np.fft.ifftshift(tfreqs)
-    data_freq = 1j * s2d  # because E ~ i*P
+    data_freq = s2d
 
     # Convert to wavenumber units [10^4 cm⁻¹]
     nu_taus = taufreqs / 2.998 * 10
@@ -181,6 +181,78 @@ def compute_2d_fft_wavenumber(
         nu_taus,
         data_freq,
     )
+
+
+def compute_1d_fft_wavenumber(
+    ts: np.ndarray, data: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute 1D real FFT of spectroscopy data and convert frequency axis to wavenumber units.
+
+    This function performs a 1D real-valued FFT on the input data and converts the
+    resulting frequency axis from cycles/fs to wavenumber units (10^4 cm⁻¹). The
+    output spectrum is multiplied by 1j to account for the relationship E ~ i*P
+    between electric field and polarization.
+
+    Parameters
+    ----------
+    ts : np.ndarray
+        Time axis for detection (t_det) in femtoseconds. Shape: (N_t,)
+        Must be evenly spaced for accurate FFT.
+    data : np.ndarray
+        1D spectroscopy data array, typically real-valued polarization.
+        Shape: (N_t,). Data should be real for rfft to be appropriate.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        nu_ts : np.ndarray
+            Wavenumber axis for detection in units of 10^4 cm⁻¹.
+            Shape: (N_t//2 + 1,) due to rfft.
+        s1d : np.ndarray
+            1D FFT spectrum with dtype np.complex64.
+            Shape: (N_t//2 + 1,).
+            Includes factor of 1j to represent E ~ i*P relationship.
+
+    Notes
+    -----
+    - Uses np.fft.rfft() which assumes real input data and returns only positive frequencies
+    - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
+      * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
+      * Wavenumber = frequency / c, scaled by 10^4
+    - The 1j factor accounts for the physical relationship between electric field and polarization
+
+    Examples
+    --------
+    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt = 1 fs
+    >>> data = np.random.rand(101)  # Real polarization data
+    >>> nu_ts, spectrum = compute_1d_fft_wavenumber(ts, data)
+    >>> # nu_ts in 10^4 cm⁻¹, spectrum is complex
+    """
+    # Calculate sampling rates and perform FFT
+    dt = ts[1] - ts[0]  # Sampling interval in fs
+    N_t = len(ts)
+
+    # Perform FFT
+    # Option 1: Real FFT (assuming data is real)
+    # s1d = np.fft.rfft(data)
+    # freq_t = np.fft.rfftfreq(N_t, d=dt)
+
+    # Option 2: Full FFT with shift (similar to 2D implementation)
+    s1d = np.fft.fft(data)
+    s1d = np.fft.fftshift(s1d)
+    freq_t = np.fft.fftshift(np.fft.fftfreq(N_t, d=dt))
+
+    # Convert to wavenumber (10^4 cm^-1)
+    # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-5 cm/fs
+    # Wavenumber = frequency / c, scaled by 10^4
+    c_factor = 10 / 2.998  # Convert from cycles/fs to 10^4 cm^-1
+    nu_ts = freq_t * c_factor
+
+    # Apply 1j factor to represent E ~ i*P relationship
+    s1d = 1j * s1d
+
+    return nu_ts, s1d
 
 
 def extend_and_plot_results(
@@ -197,6 +269,7 @@ def extend_and_plot_results(
     ----------
     averaged_results : list of np.ndarray
         List of 2D arrays (each shape: [len(taus), len(ts)]) for each T_wait.
+        Can contain None values for invalid T_wait values.
     times_T : np.ndarray
         Array of T_wait values.
     times : np.ndarray
@@ -210,17 +283,33 @@ def extend_and_plot_results(
     -------
     None
     """
-    if not averaged_results:
-        print("No results to plot")
+    # Filter out None values from averaged_results
+    valid_results = [res for res in averaged_results if res is not None]
+    valid_T_waits = [
+        times_T[i] for i, res in enumerate(averaged_results) if res is not None
+    ]
+
+    if not valid_results:
+        print("No valid results to plot")
+        return
+
+    # Find the first valid T_wait index to initialize global arrays
+    first_valid_idx = next(
+        (i for i, res in enumerate(averaged_results) if res is not None), None
+    )
+    if first_valid_idx is None:
+        print("No valid results found in averaged_results")
         return
 
     # =============================
     # Combine all data arrays into global arrays for time and frequency domains
     # =============================
     # Initialize global arrays with zeros
-    # global_ts and global_taus are the largest axes (from the first T_wait)
+    # global_ts and global_taus are the largest axes (from the first valid T_wait)
 
-    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
+    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(
+        times, times_T[first_valid_idx]
+    )
     global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
 
     if extend_for is not None:
@@ -236,8 +325,8 @@ def extend_and_plot_results(
         global_ts, global_taus, global_data_time
     )
 
-    for i, data in enumerate(averaged_results):
-        T_wait = times_T[i]
+    for i, data in enumerate(valid_results):
+        T_wait = valid_T_waits[i]
         ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
 
         if extend_for is not None:
@@ -285,9 +374,10 @@ def extend_and_plot_results(
                 (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
             )"""
 
-    # Normalize by number of T_waits
-    global_data_time /= len(averaged_results)
-    global_data_freq /= len(averaged_results)
+    # Normalize by number of valid results
+    if len(valid_results) > 0:
+        global_data_time /= len(valid_results)
+        global_data_freq /= len(valid_results)
 
     # Plot the global results
     """Plot_polarization_2d_spectrum(

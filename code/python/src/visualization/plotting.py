@@ -246,18 +246,39 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
 
     """
 
+    f = kwargs.get("function", "P")
+    # Set label and title based on f
+    y_label = rf"${f}(t)$"
+    plot_title = rf"{f} for fixed $\tau$ and $T$"
+
     plt.figure(figsize=(10, 6))
+    plt.plot(
+        t_det_vals,
+        np.real(data),
+        color="C1",
+        linestyle="dashed",
+        linewidth=0.75,
+        label=rf"$\mathrm{{Re}}[{f}(t)]$",
+    )
+    plt.plot(
+        t_det_vals,
+        np.imag(data),
+        color="C2",
+        linestyle="dotted",
+        linewidth=0.75,
+        label=rf"$\mathrm{{Im}}[{f}(t)]$",
+    )
     plt.plot(
         t_det_vals,
         np.abs(data),
         color="C0",
         linestyle="solid",
+        label=rf"$|{f}(t)|$",
     )
-    plt.xlabel(r"$t \, [\text{fs}]$")
-    plt.ylabel(r"$|P(t)|$")
-    plt.title(rf"Polarization for fixed $\tau$ and $T$")
 
-    # Add other parameters as text box if any exist
+    plt.xlabel(r"$t \, [\text{fs}]$")
+    plt.ylabel(ylabel=y_label)
+    plt.title(plot_title)
     if kwargs:
         # Format additional parameters
         text_lines = []
@@ -267,8 +288,19 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
                     text_lines.append(f"{key}: {value:.3g}")
                 else:
                     text_lines.append(f"{key}: {value}")
+            elif isinstance(value, np.ndarray):
+                # Handle numpy arrays safely - show shape instead of content
+                text_lines.append(f"{key}: array(shape={value.shape})")
             else:
-                text_lines.append(f"{key}: {value}")
+                # Convert to string and ensure it doesn't have LaTeX special characters
+                safe_str = (
+                    str(value)
+                    .replace("_", "\\_")
+                    .replace("^", "\\^")
+                    .replace("{", "\\{")
+                    .replace("}", "\\}")
+                )
+                text_lines.append(f"{key}: {safe_str}")
 
         # Add text box with small font
         info_text = "\n".join(text_lines)
@@ -281,7 +313,7 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
             verticalalignment="top",
             bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
         )
-
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.show()
 
 
@@ -658,7 +690,7 @@ def Plot_example_Polarization(
         times,
         np.abs(P_full - P_only0 - P_only1 - P_only2),
         label=r"$|P^{3}(t)|$",
-        color="C0",
+        color="C4",
         linestyle="solid",
     )
     plt.xlabel(r"$t_{\mathrm{det}}$ [fs]")
@@ -687,4 +719,152 @@ def Plot_example_Polarization(
         )
 
     plt.tight_layout()
+    plt.show()
+
+
+def Plot_1d_frequency_spectrum(
+    nu_vals: np.ndarray,
+    spectrum_data: np.ndarray,
+    type: str = "abs",
+    title: str = "1D Frequency Spectrum",
+    output_dir: str = None,
+    save: bool = False,
+    system: SystemParameters = None,
+    **kwargs,
+):
+    """
+    Plot the 1D frequency spectrum from Fourier-transformed polarization data.
+
+    Parameters:
+        nu_vals (np.ndarray): Frequency values in wavenumber units (10^4 cm^-1).
+        spectrum_data (np.ndarray): Complex spectrum data from FFT.
+        type (str): Type of data to plot - 'abs', 'real', 'imag', or 'phase'. Defaults to 'abs'.
+        title (str): Plot title. Defaults to '1D Frequency Spectrum'.
+        output_dir (str): Directory to save the plot. Defaults to None.
+        save (bool): If True, saves the plot to a file. Defaults to False.
+        system (SystemParameters): System parameters object for filename. Defaults to None.
+        **kwargs: Additional keyword arguments for annotation.
+
+    Returns:
+        None
+    """
+    plt.figure(figsize=(10, 6))
+
+    # Plot different representations based on type
+    if type == "abs":
+        plt.plot(
+            nu_vals,
+            np.abs(spectrum_data),
+            label=r"$|S(\omega)|$",
+            color="C0",
+            linestyle="solid",
+        )
+        ylabel = r"$|S(\omega)|$"
+    elif type == "real":
+        plt.plot(
+            nu_vals,
+            np.real(spectrum_data),
+            label=r"$\mathrm{Re}[S(\omega)]$",
+            color="C1",
+            linestyle="solid",
+        )
+        ylabel = r"$\mathrm{Re}[S(\omega)]$"
+    elif type == "imag":
+        plt.plot(
+            nu_vals,
+            np.imag(spectrum_data),
+            label=r"$\mathrm{Im}[S(\omega)]$",
+            color="C2",
+            linestyle="solid",
+        )
+        ylabel = r"$\mathrm{Im}[S(\omega)]$"
+    elif type == "phase":
+        plt.plot(
+            nu_vals,
+            np.angle(spectrum_data),
+            label=r"$\mathrm{Arg}[S(\omega)]$",
+            color="C3",
+            linestyle="solid",
+        )
+        ylabel = r"$\mathrm{Arg}[S(\omega)]$ [rad]"
+    else:
+        plt.plot(
+            nu_vals,
+            np.abs(spectrum_data),
+            label=r"$|S(\omega)|$",
+            color="C0",
+            linestyle="solid",
+        )
+        ylabel = r"$|S(\omega)|$"
+
+    plt.xlabel(r"$\omega$ [$10^4$ cm$^{-1}$]")
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.legend()
+
+    # Add additional parameters as a text box if provided
+    if kwargs:
+        text_lines = []
+        for key, value in kwargs.items():
+            if isinstance(value, float):
+                text_lines.append(f"{key}: {value:.3g}")
+            else:
+                text_lines.append(f"{key}: {value}")
+        info_text = "\n".join(text_lines)
+        plt.text(
+            0.98,
+            0.98,
+            info_text,
+            transform=plt.gca().transAxes,
+            fontsize=11,
+            verticalalignment="top",
+            horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
+        )
+
+    # =============================
+    # Save or show
+    # =============================
+    if save and output_dir and system is not None:
+        if not os.path.isdir(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+
+        filename_parts = [
+            f"freq_domain",
+            f"{type}_1D_spectrum",
+        ]
+
+        ### System-specific parameters
+        filename_parts.extend(
+            [
+                f"N={system.N_atoms}",
+                f"wA={system.omega_A:.2f}",
+                f"muA={system.mu_A:.0f}",
+            ]
+        )
+
+        ### Add N_atoms=2 specific parameters
+        if system.N_atoms == 2:
+            filename_parts.extend(
+                [
+                    f"wb={system.omega_B/system.omega_A:.2f}wA",
+                    f"J={system.J:.2f}",
+                    f"mub={system.mu_B/system.mu_A:.0f}muA",
+                ]
+            )
+
+        ### Common parameters
+        filename_parts.extend(
+            [
+                f"wL={system.omega_laser / system.omega_A:.1f}wA",
+                f"E0={system.E0:.2e}",
+                f"rabigen={system.rabi_gen:.2f}",
+            ]
+        )
+
+        file_name = "_".join(filename_parts) + ".png"
+        save_path = os.path.join(output_dir, file_name)
+        plt.savefig(save_path)
+    else:
+        print("Plot not saved. Ensure 'save' is True and 'output_dir' is specified.")
     plt.show()

@@ -6,8 +6,8 @@ import numpy as np
 from qutip import Qobj, Result, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
 from src.core.system_parameters import SystemParameters
-from src.core.pulse_functions import *
 from src.core.pulse_sequences import PulseSequence
+from src.core.pulse_functions import *
 from src.core.solver_fcts import (
     matrix_ODE_paper,
     R_paper,
@@ -17,59 +17,7 @@ from src.spectroscopy.inhomogenity import sample_from_sigma
 from src.core.functions_with_rwa import H_int, get_expect_vals_with_RWA
 
 
-def get_tau_cohs_and_t_dets_for_T_wait(
-    times: np.ndarray, T_wait: float
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Calculate the time arrays for tau_coh and t_det based on the waiting time T_wait and the time grid.
-
-    Parameters:
-        times (np.ndarray): 1D array of time points (must be sorted and equally spaced).
-        T_wait (float): Waiting time.
-
-    Returns:
-        tuple: Arrays for coherence and detection times (tau_coh, t_det).
-               Both have the same length.
-    """
-    # =============================
-    # Validate input
-    # =============================
-    if times.size == 0:
-        raise ValueError("Input 'times' array must not be empty.")
-    if times.size == 1:
-        return np.array([0.0]), np.array([0.0])
-    spacing = times[1] - times[0]
-    t_max = times[-1]
-
-    # =============================
-    # Check T_wait validity
-    # =============================
-    if T_wait > t_max:
-        print("Warning: T_wait >= t_max, no valid tau_coh/t_det values.")
-        return np.array([]), np.array([])
-    if np.isclose(T_wait, t_max):
-        return np.array([0.0]), np.array([0.0])
-
-    # =============================
-    # Calculate tau_coh and t_det arrays
-    # =============================
-    tau_coh_max = t_max - T_wait
-    if tau_coh_max < 0:
-        return np.array([]), np.array([])
-
-    tau_coh = np.arange(
-        0, tau_coh_max + spacing / 2, spacing
-    )  # include endpoint if possible
-    # =============================
-    # Ensure t_det does not exceed t_max due to floating point
-    # =============================
-    valid_idx = tau_coh <= t_max + 1e-10
-    tau_coh = tau_coh[valid_idx]  # makes sure T_wait < 0 is okay
-
-    return tau_coh, tau_coh
-
-
-def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during compute_two_dimensional_polarization: cannot access local variable 'region_start' where it is not associated with a value
+def compute_pulse_evolution(
     psi_ini: Qobj,
     times: np.ndarray,
     pulse_seq: PulseSequence,
@@ -88,6 +36,7 @@ def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during co
     Returns:
         Result: Result of the evolution.
     """
+    """
     # =============================
     # Validate input parameters
     # =============================
@@ -101,20 +50,28 @@ def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during co
         raise ValueError(f"Invalid times array: {times}")
 
     if not isinstance(pulse_seq, PulseSequence) or len(pulse_seq.pulses) == 0:
-        raise ValueError("Invalid or empty pulse sequence")
+        raise ValueError("Invalid or empty pulse sequence")"""
 
     # =============================
     # Set solver options
     # =============================
-    # TODO get from solver_options
-    options = {
+    # Initialize with provided solver_options or empty dict
+    options = solver_options.copy() if solver_options else {}
+
+    # Add default options if not already present
+    default_options = {
         "store_states": True,
         "progress_bar": "",
         # Increasing max steps and atol/rtol for better stability
-        #        "nsteps": 20000,
-        #        "atol": 1e-8,
-        #        "rtol": 1e-6,
+        # "nsteps": 20000,
+        # "atol": 1e-8,
+        # "rtol": 1e-6,
     }
+
+    # Update options with defaults only if not already set
+    for key, value in default_options.items():
+        if key not in options:
+            options[key] = value
 
     # =============================
     # Choose solver and compute the evolution
@@ -132,7 +89,9 @@ def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during co
         for i, pulse in enumerate(pulse_seq.pulses):
             pulse_peak_time = pulse.pulse_peak_time
             pulse_width = (
-                system.FWHMs[i]
+                system.FWHMs[
+                    i
+                ]  # TODO this doesnt work for unique pulse-FWHMS, because i can be matched wrong
                 if hasattr(system, "FWHMs") and i < len(system.FWHMs)
                 else system.FWHM
             )
@@ -143,10 +102,6 @@ def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during co
 
             start_idx = np.abs(times - (start_time)).argmin()
             end_idx = np.abs(times - (end_time)).argmin()
-
-            # Ensure indices are within bounds
-            start_idx = max(0, start_idx)
-            end_idx = min(len(times), end_idx)
 
             if start_idx < end_idx:  # Valid region
                 pulse_regions.append((start_idx, end_idx, i))
@@ -229,80 +184,80 @@ def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during co
                 if len(evolution_results) == 0:
                     evolution_results.append(free_result)
 
-        # =============================
-        # Evolve with H_int_evo during pulse region
-        # =============================
-        pulse_times = times[region_start : region_end + 1]
-
-        if system.ODE_Solver == "BR":
-            pulse_result = brmesolve(
-                H_int_evo,
-                current_state,
-                pulse_times,
-                a_ops=system.a_ops_list,
-                options=options,
-            )
-        elif system.ODE_Solver == "Paper_eqs":
-            pulse_result = mesolve(
-                H_int_evo,  # Liouville includes the decay channels
-                current_state,
-                pulse_times,
-                options=options,
-            )
-        else:
-            pulse_result = mesolve(
-                H_int_evo,
-                current_state,
-                pulse_times,
-                c_ops=c_ops,
-                options=options,
-            )
-
-        # Store all pulse evolution states
-        if region_end < len(times) - 1:  # Not the last region
-            all_states.extend(pulse_result.states[:-1])
-            all_times.extend(pulse_result.times[:-1])
-            current_state = pulse_result.states[-1]
-        else:  # Last region, include final state
-            all_states.extend(pulse_result.states)
-            all_times.extend(pulse_result.times)
-            current_state = pulse_result.states[-1]
-
-        # Store the result for combining later
-        if len(evolution_results) == 0:
-            evolution_results.append(pulse_result)
-
-        current_time_idx = region_end
-
-        # =============================
-        # Evolve with H_free after last pulse region
-        # =============================
-        if current_time_idx < len(times) - 1:
-            final_times = times[current_time_idx:]
+            # =============================
+            # Evolve with H_int_evo during pulse region
+            # =============================
+            pulse_times = times[region_start : region_end + 1]
 
             if system.ODE_Solver == "BR":
-                final_result = brmesolve(
-                    H_free,
+                pulse_result = brmesolve(
+                    H_int_evo,
                     current_state,
-                    final_times,
+                    pulse_times,
                     a_ops=system.a_ops_list,
                     options=options,
                 )
-            else:
-                final_result = mesolve(
-                    H_free,
+            elif system.ODE_Solver == "Paper_eqs":
+                pulse_result = mesolve(
+                    H_int_evo,  # Liouville includes the decay channels
                     current_state,
-                    final_times,
+                    pulse_times,
+                    options=options,
+                )
+            else:
+                pulse_result = mesolve(
+                    H_int_evo,
+                    current_state,
+                    pulse_times,
                     c_ops=c_ops,
                     options=options,
                 )
 
-            all_states.extend(final_result.states)
-            all_times.extend(final_result.times)
+            # Store all pulse evolution states
+            if region_end < len(times) - 1:  # Not the last region
+                all_states.extend(pulse_result.states[:-1])
+                all_times.extend(pulse_result.times[:-1])
+                current_state = pulse_result.states[-1]
+            else:  # Last region, include final state
+                all_states.extend(pulse_result.states)
+                all_times.extend(pulse_result.times)
+                current_state = pulse_result.states[-1]
 
             # Store the result for combining later
             if len(evolution_results) == 0:
-                evolution_results.append(final_result)
+                evolution_results.append(pulse_result)
+
+            current_time_idx = region_end
+
+            # =============================
+            # Evolve with H_free after last pulse region
+            # =============================
+            if current_time_idx < len(times) - 1:
+                final_times = times[current_time_idx:]
+
+                if system.ODE_Solver == "BR":
+                    final_result = brmesolve(
+                        H_free,
+                        current_state,
+                        final_times,
+                        a_ops=system.a_ops_list,
+                        options=options,
+                    )
+                else:
+                    final_result = mesolve(
+                        H_free,
+                        current_state,
+                        final_times,
+                        c_ops=c_ops,
+                        options=options,
+                    )
+
+                all_states.extend(final_result.states)
+                all_times.extend(final_result.times)
+
+                # Store the result for combining later
+                if len(evolution_results) == 0:
+                    evolution_results.append(final_result)
 
         # =============================
         # Create combined result object using first result as base
@@ -324,6 +279,13 @@ def compute_pulse_evolution(  # TODO PROBLEM HERE WITH ALIGNMENT Error during co
                     psi_ini,
                     times,
                     a_ops=system.a_ops_list,
+                    options=options,
+                )
+            elif system.ODE_Solver == "Paper_eqs":
+                result = mesolve(
+                    H_int_evo,
+                    psi_ini,
+                    times,
                     options=options,
                 )
             else:
@@ -439,8 +401,8 @@ def check_the_solver(
     return result, time_cut
 
 
-# cal one dimensional polarization data for fixed tau_coh and T_wait
-def compute_fixed_tau_T(
+# 1D polarization calculation for given tau_coh, T_wait, varialbe t_det
+def compute_1d_polarization(
     tau_coh: float,
     T_wait: float,
     phi_0: float,
@@ -541,7 +503,7 @@ def compute_fixed_tau_T(
 
     # Just in case I want to plot an example evolution
     plot_example = kwargs.get("plot_example", False)
-    if plot_example:  # TODO ALSO INCLUDE THE - P_only_one_pulse
+    if plot_example:
         data_1_expects = get_expect_vals_with_RWA(
             data_0.states[: idx_start_pulse1 + 1],
             data_0.times[: idx_start_pulse1 + 1],
@@ -553,6 +515,7 @@ def compute_fixed_tau_T(
             system,
         )
         data_f_expects = get_expect_vals_with_RWA(data_f.states, data_f.times, system)
+
         data_expectations = [
             np.concatenate(
                 [
@@ -563,12 +526,19 @@ def compute_fixed_tau_T(
             )
             for idx in range(len(system.e_ops_list) + 1)
         ]
-        times_plot = np.concatenate([times_0[: idx_start_pulse1 + 1], times_1, times_2])
+        times_plot = np.concatenate(
+            [
+                times_0[: idx_start_pulse1 + 1],
+                times_1[: idx_start_pulse2_in_times_1 + 1],
+                times_2,
+            ]
+        )
+
         additional_info = {
             "phases": (phi_0, phi_1, phi_2),
             "tau_coh": tau_coh,
             "T_wait": T_wait,
-            "system": system,
+            # "system": system,
         }
         # Return the data to create a plot with Plot_example_evo(res)!!
         return (
@@ -654,18 +624,23 @@ def compute_fixed_tau_T(
 
     for t_idx, t_det in enumerate(actual_det_times):
         # only if we are still in the physical regime
-        time_cut = kwargs.get("time_cut", np.inf)
-        if t_det < time_cut:
+        if t_det < kwargs.get("time_cut", np.inf):
 
             # complex Polarization calculation -> only extract the third order into data
             P_full[t_idx] = system.Dip_op[1, 0] * states_full[t_idx][0, 1]
             P_only0[t_idx] = system.Dip_op[1, 0] * states_only_pulse0[t_idx][0, 1]
             P_only1[t_idx] = system.Dip_op[1, 0] * states_only_pulse1[t_idx][0, 1]
             P_only2[t_idx] = system.Dip_op[1, 0] * states_only_pulse2[t_idx][0, 1]
+            """
+            # real Polarization:
+            P_full[t_idx] = np.real(expect(system.Dip_op, states_full[t_idx]))
+            P_only0[t_idx] = np.real(expect(system.Dip_op, states_only_pulse0[t_idx]))
+            P_only1[t_idx] = np.real(expect(system.Dip_op, states_only_pulse1[t_idx]))
+            P_only2[t_idx] = np.real(expect(system.Dip_op, states_only_pulse2[t_idx]))
+            """
 
     # If plot_example_Polarization is True, return the full data for plotting
-    plot_example_P = kwargs.get("plot_example_Polarization", False)
-    if plot_example_P:
+    if kwargs.get("plot_example_Polarization", False):
         return (
             actual_det_times - actual_det_times[0],
             P_full,
@@ -679,8 +654,60 @@ def compute_fixed_tau_T(
     return np.array(actual_det_times) - actual_det_times[0], data
 
 
-# 2D polarization calculation
-def compute_two_dimensional_polarization(
+def get_tau_cohs_and_t_dets_for_T_wait(
+    times: np.ndarray, T_wait: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Calculate the time arrays for tau_coh and t_det based on the waiting time T_wait and the time grid.
+
+    Parameters:
+        times (np.ndarray): 1D array of time points (must be sorted and equally spaced).
+        T_wait (float): Waiting time.
+
+    Returns:
+        tuple: Arrays for coherence and detection times (tau_coh, t_det).
+               Both have the same length.
+    """
+    # =============================
+    # Validate input
+    # =============================
+    if times.size == 0:
+        raise ValueError("Input 'times' array must not be empty.")
+    if times.size == 1:
+        return np.array([0.0]), np.array([0.0])
+    spacing = times[1] - times[0]
+    t_max = times[-1]
+
+    # =============================
+    # Check T_wait validity
+    # =============================
+    if T_wait > t_max:
+        print("Warning: T_wait >= t_max, no valid tau_coh/t_det values.")
+        return np.array([]), np.array([])
+    if np.isclose(T_wait, t_max):
+        return np.array([0.0]), np.array([0.0])
+
+    # =============================
+    # Calculate tau_coh and t_det arrays
+    # =============================
+    tau_coh_max = t_max - T_wait
+    if tau_coh_max < 0:
+        return np.array([]), np.array([])
+
+    tau_coh = np.arange(
+        0, tau_coh_max + spacing / 2, spacing
+    )  # include endpoint if possible
+    # =============================
+    # Ensure t_det does not exceed t_max due to floating point
+    # =============================
+    valid_idx = tau_coh <= t_max + 1e-10
+    tau_coh = tau_coh[valid_idx]  # makes sure T_wait < 0 is okay
+
+    return tau_coh, tau_coh
+
+
+# 2D polarization calculation for given T_wait, varialbe tau_coh and t_det
+def compute_2d_polarization(
     T_wait: float,  # TODO somehow assert that this is 0 < T_wait < system.t_max
     phi_0: float,
     phi_1: float,
@@ -890,7 +917,7 @@ def _process_single_1d_combination(
     """
     try:
         # Compute the 1D polarization for this specific phase combination
-        t_det_vals, data = compute_fixed_tau_T(
+        t_det_vals, data = compute_1d_polarization(
             tau_coh=tau_coh,
             T_wait=T_wait,
             phi_0=phi1,
@@ -907,7 +934,7 @@ def _process_single_1d_combination(
         return None
 
 
-def parallel_compute_1d_polarization_with_inhomogenity(
+def parallel_compute_1d_E_with_inhomogenity(
     n_freqs: int,  # Number of frequencies for inhomogeneous broadening
     n_phases: int,  # Number of phases for phase cycling
     tau_coh: float,
@@ -937,9 +964,8 @@ def parallel_compute_1d_polarization_with_inhomogenity(
     system : SystemParameters
         System parameters object.
     max_workers : int, optional
-        Number of workers for parallel processing (default: CPU count).
-    **kwargs : dict
-        Additional keyword arguments for compute_fixed_tau_T.
+        Number of workers for parallel processing (default: CPU count).    **kwargs : dict
+        Additional keyword arguments for compute_1d_polarization.
 
     Returns
     -------
@@ -1002,7 +1028,7 @@ def parallel_compute_1d_polarization_with_inhomogenity(
         # PARALLELIZE PHASE COMBINATIONS FOR THIS FREQUENCY
         # =============================
         # Initialize results matrix for this frequency: [phi1_idx, phi2_idx]
-        results_matrix = np.zeros((len(phases), len(phases)), dtype=object)
+        results_matrix = np.zeros((n_phases, n_phases), dtype=object)
 
         # Process phase combinations in parallel
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -1052,7 +1078,7 @@ def parallel_compute_1d_polarization_with_inhomogenity(
         # =============================
         # PERFORM INVERSE FOURIER TRANSFORM FOR THIS FREQUENCY
         # =============================
-        print(f"  Performing IFT for frequency {omega_idx + 1}")
+        print(f"  Performing IFT for frequency {omega_idx + 1}/{n_freqs}...")
 
         # Extract photon echo component P_{-1,1}(t) using discrete IFT
         # P_{-1,1}(t) = Σ_{m1=0}^3 Σ_{m2=0}^3 P_{m1,m2}(t) * exp(-i(-1*m1*π/2 + 1*m2*π/2))
@@ -1060,17 +1086,16 @@ def parallel_compute_1d_polarization_with_inhomogenity(
         if t_det_vals is not None:
             photon_echo_signal = np.zeros_like(t_det_vals, dtype=np.complex64)
 
-            for m1 in range(4):  # phi1 index
-                for m2 in range(4):  # phi2 index
-                    if results_matrix[m1, m2] is not None:
-                        # IFT phase factor for photon echo (-1, 1) component
-                        phase_factor = np.exp(
-                            -1j * (-1 * m1 * np.pi / 2 + 1 * m2 * np.pi / 2)
-                        )
-                        photon_echo_signal += results_matrix[m1, m2] * phase_factor
+            for phi1_idx, phi_1 in enumerate(phases):  # phi1 index
+                for phi2_idx, phi_2 in enumerate(phases):  # phi2 index
+                    # IFT phase factor for photon echo (-1, 1(, 1; but the third phase is set to 0)) component
+                    phase_factor = np.exp(-1j * (-1 * phi_1 + 1 * phi_2))
+                    photon_echo_signal += (
+                        results_matrix[phi1_idx, phi2_idx] * phase_factor
+                    )
 
             # Normalize by number of phase combinations
-            photon_echo_signal /= 16  # 4×4 = 16 combinations
+            photon_echo_signal /= n_phases * n_phases  # 4×4 = 16 combinations
 
             omega_frequency_results.append(photon_echo_signal)
             print(f"  ✅ IFT completed for frequency {omega_idx + 1}")
@@ -1092,7 +1117,7 @@ def parallel_compute_1d_polarization_with_inhomogenity(
             f"✅ Successfully averaged {len(valid_results)}/{n_freqs} frequency results"
         )
 
-        return t_det_vals, final_averaged_data
+        return t_det_vals, final_averaged_data * 1j  # because E ~ iP
     else:
         print("❌ No valid frequency results to average")
         return np.array([]), np.array([])
@@ -1130,9 +1155,8 @@ def _process_single_2d_combination(
     tuple or None
         (t_det_vals, tau_coh_vals, data) for the computed 2D polarization data, or None if failed.
     """
-    try:
-        # Compute the 2D polarization for this specific phase combination
-        t_det_vals, tau_coh_vals, data = compute_two_dimensional_polarization(
+    try:  # Compute the 2D polarization for this specific phase combination
+        t_det_vals, tau_coh_vals, data = compute_2d_polarization(
             T_wait=T_wait,
             phi_0=phi1,
             phi_1=phi2,
@@ -1148,7 +1172,7 @@ def _process_single_2d_combination(
         return None
 
 
-def parallel_compute_2d_polarization_with_inhomogenity(
+def parallel_compute_2d_E_with_inhomogenity(
     n_freqs: int,  # Number of frequencies for inhomogeneous broadening
     n_phases: int,  # Number of phases for phase cycling
     times_T: np.ndarray,
@@ -1175,9 +1199,8 @@ def parallel_compute_2d_polarization_with_inhomogenity(
     system : SystemParameters
         System parameters object.
     max_workers : int, optional
-        Number of workers for parallel processing (default: CPU count).
-    **kwargs : dict
-        Additional keyword arguments for compute_two_dimensional_polarization.
+        Number of workers for parallel processing (default: CPU count).    **kwargs : dict
+        Additional keyword arguments for compute_2d_polarization.
 
     Returns
     -------
@@ -1260,10 +1283,9 @@ def parallel_compute_2d_polarization_with_inhomogenity(
                 )
 
             # =============================
-            # PARALLELIZE PHASE COMBINATIONS FOR THIS FREQUENCY
             # =============================
             # Initialize results matrix for this frequency: [phi1_idx, phi2_idx]
-            results_matrix = np.zeros((len(phases), len(phases)), dtype=object)
+            results_matrix = np.zeros((n_phases, n_phases), dtype=object)
 
             # Process phase combinations in parallel
             with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -1311,30 +1333,29 @@ def parallel_compute_2d_polarization_with_inhomogenity(
             print(f"    Performing IFT for frequency {omega_idx + 1}")
 
             # Extract photon echo component P_{-1,1}(t) using discrete IFT
-            # P_{-1,1}(τ,t) = Σ_{m1=0}^3 Σ_{m2=0}^3 P_{m1,m2}(τ,t) * exp(-i(-1*m1*π/2 + 1*m2*π/2))
+            # P_{-1,1}(t) = Σ_{m1=0}^3 Σ_{m2=0}^3 P_{m1,m2}(t) * exp(-i(-1*m1*π/2 + 1*m2*π/2))
 
             # Check if we have valid results
             valid_results = [
                 results_matrix[m1, m2]
-                for m1 in range(4)
-                for m2 in range(4)
+                for m1 in range(n_phases)
+                for m2 in range(n_phases)
                 if results_matrix[m1, m2] is not None
             ]
 
             if len(valid_results) > 0:
                 photon_echo_signal = np.zeros_like(valid_results[0], dtype=np.complex64)
 
-                for m1 in range(4):  # phi1 index
-                    for m2 in range(4):  # phi2 index
-                        if results_matrix[m1, m2] is not None:
-                            # IFT phase factor for photon echo (-1, 1) component
-                            phase_factor = np.exp(
-                                -1j * (-1 * m1 * np.pi / 2 + 1 * m2 * np.pi / 2)
-                            )
-                            photon_echo_signal += results_matrix[m1, m2] * phase_factor
+                for phi1_idx, phi_1 in enumerate(phases):  # phi1 index
+                    for phi2_idx, phi_2 in enumerate(phases):  # phi2 index
+                        # IFT phase factor for photon echo (-1, 1(, 1; but the third phase is set to 0)) component
+                        phase_factor = np.exp(-1j * (-1 * phi_1 + 1 * phi_2))
+                        photon_echo_signal += (
+                            results_matrix[phi1_idx, phi2_idx] * phase_factor
+                        )
 
                 # Normalize by number of phase combinations
-                photon_echo_signal /= 16  # 4×4 = 16 combinations
+                photon_echo_signal /= n_phases * n_phases  # 4×4 = 16 combinations
 
                 omega_frequency_results.append(photon_echo_signal)
                 print(f"    ✅ IFT completed for frequency {omega_idx + 1}")
@@ -1357,7 +1378,7 @@ def parallel_compute_2d_polarization_with_inhomogenity(
             print(
                 f"  ✅ Successfully averaged {len(valid_results)}/{n_freqs} frequency results"
             )
-            all_results.append(final_averaged_data)
+            all_results.append(final_averaged_data * 1j)  # because E ~ iP
         else:
             print(f"  ❌ No valid frequency results to average for T_wait={T_wait}")
             all_results.append(None)

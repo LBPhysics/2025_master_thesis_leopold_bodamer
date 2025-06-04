@@ -172,7 +172,18 @@ def get_expect_vals_with_RWA(
             apply_RWA_phase_factors(state, time, omega, system)
             for state, time in zip(states, times)
         ]
-    updated_expects = [np.real(expect(states, e_op)) for e_op in e_ops]
+
+    # Calculate expectation values for each state and each operator
+    # This should return a list where each element corresponds to an operator
+    # and contains an array of expectation values (one for each state)
+    from qutip import expect as qutip_expect
+
+    updated_expects = []
+    for e_op in e_ops:
+        # Calculate expectation value for each state with this operator
+        expect_vals = np.array([np.real(qutip_expect(e_op, state)) for state in states])
+        updated_expects.append(expect_vals)
+
     return updated_expects
 
 
