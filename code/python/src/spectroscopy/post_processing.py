@@ -1,5 +1,5 @@
 from src.core.pulse_functions import *
-from src.visualization.plotting import Plot_polarization_2d_spectrum
+from src.visualization.plotting import Plot_2d_El_field
 from src.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
 from qutip import basis, ket2dm, tensor, Qobj, mesolve, brmesolve, expect
 import numpy as np
@@ -361,7 +361,7 @@ def extend_and_plot_results(
                 ]
 
         """if len(times_T) > 1:
-            Plot_polarization_2d_spectrum(
+            Plot_2d_El_field(
                 (ts, taus, data),
                 times_T[i],
                 use_custom_colormap=True,
@@ -370,7 +370,7 @@ def extend_and_plot_results(
                 system=plot_args_freq.get("system", None),
             )
 
-            Plot_polarization_2d_spectrum(
+            Plot_2d_El_field(
                 (nu_ts, nu_taus, data_freq), times_T[i], **plot_args_freq
             )"""
 
@@ -380,7 +380,7 @@ def extend_and_plot_results(
         global_data_freq /= len(valid_results)
 
     # Plot the global results
-    """Plot_polarization_2d_spectrum(
+    """Plot_2d_El_field(
         (global_ts, global_taus, global_data_time),
         save=True,  # CHANGE TO False for no plotting the Time domain
         output_dir=plot_args_freq.get("output_dir", None),
@@ -388,7 +388,7 @@ def extend_and_plot_results(
         use_custom_colormap=True,
     )"""
 
-    Plot_polarization_2d_spectrum(
+    Plot_2d_El_field(
         (global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,
     )

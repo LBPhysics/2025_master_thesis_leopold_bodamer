@@ -17,7 +17,7 @@ from datetime import datetime
 
 ### Project-specific imports
 from src.spectroscopy.calculations import (
-    parallel_compute_1d_polarization_with_inhomogenity,
+    parallel_compute_1d_E_with_inhomogenity,
 )
 from src.core.system_parameters import SystemParameters
 from config.paths import DATA_DIR
@@ -31,7 +31,7 @@ def get_simulation_config():
     return {
         "N_atoms": 1,  # Number of atoms in the system
         "n_phases": 4,  # Number of phases for phase cycling
-        "n_freqs": 10,  # Number of frequencies for inhomogeneous broadening
+        "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
         "tau_coh": 300.0,  # Coherence time [fs]
         "T_wait": 1000.0,  # Waiting time [fs]
         "t_det_max": 600.0,  # Additional time buffer [fs]
@@ -42,6 +42,7 @@ def get_simulation_config():
         "E0": 0.05,
         "ODE_Solver": "Paper_eqs",  # ODE solver type
         "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
+        "RWA_laser": True,  # Use RWA for laser interaction
     }
 
 
@@ -94,7 +95,6 @@ def save_1d_data(
         "system": system,
         "n_phases": config["n_phases"],
         "n_freqs": config["n_freqs"],
-        "E0": config["E0"],
     }
 
     ### Save as pickle file
@@ -139,13 +139,13 @@ def main():
     system = SystemParameters(
         N_atoms=config["N_atoms"],
         ODE_Solver=config["ODE_Solver"],
-        RWA_laser=True,
         t_max=config["tau_coh"] + config["T_wait"] + config["t_det_max"],
         dt=config["dt"],
         Delta_cm=config["Delta_cm"] if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
         pulse_FWHM=config["pulse_FWHM"] if "pulse_FWHM" in config else 100.0,
         E0=config["E0"],
+        RWA_laser=config["RWA_laser"],
     )
 
     print(f"System configuration:")
@@ -160,7 +160,7 @@ def main():
     # =============================
     print("Computing 1D polarization with parallel processing...")
     try:
-        t_det_vals, data_avg = parallel_compute_1d_polarization_with_inhomogenity(
+        t_det_vals, data_avg = parallel_compute_1d_E_with_inhomogenity(
             n_freqs=config["n_freqs"],
             n_phases=config["n_phases"],
             tau_coh=config["tau_coh"],

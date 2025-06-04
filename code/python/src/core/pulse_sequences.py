@@ -3,6 +3,8 @@
 # =============================
 from src.core.system_parameters import SystemParameters
 from dataclasses import dataclass, field  # for the class definiton
+from typing import List, Tuple
+import numpy as np
 
 
 @dataclass
@@ -107,3 +109,84 @@ class PulseSequence:
             dict: Dictionary with key "pulses" and a list of pulse parameter dicts
         """
         return {"pulses": [pulse.__dict__ for pulse in self.pulses]}
+
+
+"""
+Utility function for identifying pulse regions in time arrays.
+"""
+
+
+def identify_pulse_regions(
+    times: np.ndarray, pulse_seq: PulseSequence, system: SystemParameters = None
+) -> List[Tuple[int, int, int]]:
+    """
+    Identify time regions where pulses are active in a time array.
+
+    This function locates the time indices corresponding to the active regions of each
+    pulse in a pulse sequence. For each pulse, it calculates the start and end times
+    based on the pulse peak time and width (FWHM), finds the corresponding indices
+    in the time array, and returns the regions sorted by start time.
+
+    Parameters
+    ----------
+    times : np.ndarray
+        Time array for the evolution.
+    pulse_seq : PulseSequence
+        PulseSequence object containing pulse information.
+    system : SystemParameters, optional
+        System parameters containing FWHM information. If None, FWHM must be
+        available directly from pulse_seq.
+
+    Returns
+    -------
+    List[Tuple[int, int, int]]
+        List of tuples (start_idx, end_idx, pulse_idx) representing:
+        - start_idx: Index in times array where the pulse region starts
+        - end_idx: Index in times array where the pulse region ends
+        - pulse_idx: Index of the pulse in the pulse sequence
+
+    Notes
+    -----
+    The function defines pulse regions as t ∈ [peak_time - width, peak_time + width],
+    where width is the FWHM (Full Width at Half Maximum) of the pulse.
+    Regions are sorted chronologically by start time.
+    """
+    # Input validation
+    if not isinstance(times, np.ndarray) or len(times) == 0:
+        raise ValueError("Times must be a non-empty numpy array")
+    if not hasattr(pulse_seq, "pulses") or len(pulse_seq.pulses) == 0:
+        raise ValueError("PulseSequence must have at least one pulse")
+
+    # Find pulse regions in the time array
+    pulse_regions = []
+    for i, pulse in enumerate(pulse_seq.pulses):
+        pulse_peak_time = pulse.pulse_peak_time
+
+        # Determine pulse width from system or fallback
+        if system is not None and hasattr(system, "FWHMs") and i < len(system.FWHMs):
+            pulse_width = system.FWHMs[i]
+        elif system is not None and hasattr(system, "FWHM"):
+            pulse_width = system.pulse_FWHMs[i]
+        elif hasattr(pulse, "pulse_FWHM"):
+            pulse_width = pulse.pulse_FWHM
+        else:
+            raise ValueError(
+                f"Could not determine width for pulse {i}. "
+                "Either system must provide FWHM/FWHMs or "
+                "pulse must have a 'width' attribute."
+            )
+
+        # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
+        start_time = pulse_peak_time - pulse_width
+        end_time = pulse_peak_time + pulse_width
+
+        start_idx = np.abs(times - start_time).argmin()
+        end_idx = np.abs(times - end_time).argmin()
+
+        if start_idx < end_idx:  # Valid region
+            pulse_regions.append((start_idx, end_idx, i))
+
+    # Sort pulse regions by start time
+    pulse_regions.sort(key=lambda x: x[0])
+
+    return pulse_regions

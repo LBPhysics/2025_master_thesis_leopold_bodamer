@@ -6,7 +6,8 @@ import numpy as np
 from qutip import Qobj, Result, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
 from src.core.system_parameters import SystemParameters
-from src.core.pulse_sequences import PulseSequence
+from src.core.pulse_sequences import PulseSequence, identify_pulse_regions
+from src.core.pulse_functions import identify_non_zero_pulse_regions
 from src.core.pulse_functions import *
 from src.core.solver_fcts import (
     matrix_ODE_paper,
@@ -83,38 +84,16 @@ def compute_pulse_evolution(
         # =============================
         # Split evolution by pulse regions for Paper_eqs
         # =============================
-
-        # Find pulse regions in the time array
-        pulse_regions = []
-        for i, pulse in enumerate(pulse_seq.pulses):
-            pulse_peak_time = pulse.pulse_peak_time
-            pulse_width = (
-                system.FWHMs[
-                    i
-                ]  # TODO this doesnt work for unique pulse-FWHMS, because i can be matched wrong
-                if hasattr(system, "FWHMs") and i < len(system.FWHMs)
-                else system.FWHM
-            )
-
-            # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
-            start_time = pulse_peak_time - pulse_width
-            end_time = pulse_peak_time + pulse_width
-
-            start_idx = np.abs(times - (start_time)).argmin()
-            end_idx = np.abs(times - (end_time)).argmin()
-
-            if start_idx < end_idx:  # Valid region
-                pulse_regions.append((start_idx, end_idx, i))
-
-        # Sort pulse regions by start time
-        pulse_regions.sort(key=lambda x: x[0])
-
         # Initialize result storage
         all_states = []
         all_times = []
         current_state = psi_ini
         current_time_idx = 0
         evolution_results = []  # Store individual evolution results
+
+        # Find pulse regions in the time array using the dedicated function
+        pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
+        # BASED ON THIS split the time range into regions where the pulse envelope is zero, -> there apply the free evolution, and where its non-zero, where we apply the H_int_evo evolution
 
         # Build Hamiltonian components
         H_free = system.H0_diagonalized  # already includes the RWA, if present!
@@ -230,10 +209,22 @@ def compute_pulse_evolution(
             current_time_idx = region_end
 
             # =============================
-            # Evolve with H_free after last pulse region
+            # Evolve with H_free until the next pulse region (or end of times)
             # =============================
             if current_time_idx < len(times) - 1:
-                final_times = times[current_time_idx:]
+                # Check if there's another pulse region after this one
+                next_region_idx = (
+                    pulse_regions.index((region_start, region_end, pulse_idx)) + 1
+                )
+                if next_region_idx < len(pulse_regions):
+                    # Evolve only until the start of the next pulse region
+                    next_start_idx = pulse_regions[next_region_idx][0]
+                    final_times = times[
+                        current_time_idx : next_start_idx + 1
+                    ]  # Include connection point
+                else:
+                    # No more pulse regions, evolve until the end
+                    final_times = times[current_time_idx:]
 
                 if system.ODE_Solver == "BR":
                     final_result = brmesolve(
@@ -252,8 +243,15 @@ def compute_pulse_evolution(
                         options=options,
                     )
 
-                all_states.extend(final_result.states)
-                all_times.extend(final_result.times)
+                # Store states - if this connects to another pulse region, don't duplicate the connection point
+                if next_region_idx < len(pulse_regions):
+                    all_states.extend(final_result.states[:-1])
+                    all_times.extend(final_result.times[:-1])
+                else:
+                    all_states.extend(final_result.states)
+                    all_times.extend(final_result.times)
+
+                current_state = final_result.states[-1]
 
                 # Store the result for combining later
                 if len(evolution_results) == 0:
@@ -731,9 +729,20 @@ def compute_2d_polarization(
     Returns:
         tuple: (t_det_vals, tau_coh_vals, data)
     """
+    # Extra input validation
+    if not isinstance(times, np.ndarray):
+        raise TypeError(f"Expected times to be numpy.ndarray, got {type(times)}")
+    if len(times) < 2:
+        raise ValueError(f"Times array is too short: {len(times)} elements")
+    if not (0 < T_wait < system.t_max):
+        raise ValueError(f"T_wait={T_wait} must be between 0 and t_max={system.t_max}")
 
     # get the symmetric times, tau_coh, t_det
     tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait=T_wait)
+
+    # Check for empty arrays
+    if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
+        return np.array([0.0]), np.array([0.0]), np.zeros((1, 1), dtype=np.complex64)
 
     # initialize the time domain Spectroscopy data tr(Dip_op * rho_final(tau_coh, t_det))
     data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64)
@@ -851,9 +860,22 @@ def compute_2d_polarization(
             # Only compute polarization if:
             # 1. tau_coh + t_det <= t_max -> if the result is in the time range
             # 2. tau_coh + t_det < time_cut -> if the result is physically valid
+            # 3. We have enough elements in our data arrays
             time_cut = kwargs.get("time_cut", np.inf)
-            if actual_det_time < system.t_max and actual_det_time < time_cut:
+            if (
+                actual_det_time < system.t_max
+                and actual_det_time < time_cut
+                and len(times_2) > 0
+                and len(data_f.states) > 0
+            ):
+
+                # Safety check for index bounds
                 t_idx_in_times_2 = np.abs(times_2 - actual_det_time).argmin()
+                if t_idx_in_times_2 >= len(data_f.states):
+                    print(
+                        f"WARNING: Index {t_idx_in_times_2} out of bounds for states array of length {len(data_f.states)}"
+                    )
+                    continue
 
                 # FINAL STATE
                 rho_f = data_f.states[t_idx_in_times_2]
@@ -1084,18 +1106,14 @@ def parallel_compute_1d_E_with_inhomogenity(
         # P_{-1,1}(t) = Σ_{m1=0}^3 Σ_{m2=0}^3 P_{m1,m2}(t) * exp(-i(-1*m1*π/2 + 1*m2*π/2))
 
         if t_det_vals is not None:
-            photon_echo_signal = np.zeros_like(t_det_vals, dtype=np.complex64)
-
-            for phi1_idx, phi_1 in enumerate(phases):  # phi1 index
-                for phi2_idx, phi_2 in enumerate(phases):  # phi2 index
-                    # IFT phase factor for photon echo (-1, 1(, 1; but the third phase is set to 0)) component
-                    phase_factor = np.exp(-1j * (-1 * phi_1 + 1 * phi_2))
-                    photon_echo_signal += (
-                        results_matrix[phi1_idx, phi2_idx] * phase_factor
-                    )
-
-            # Normalize by number of phase combinations
-            photon_echo_signal /= n_phases * n_phases  # 4×4 = 16 combinations
+            # Extract photon echo component P_{-1,1}(t) using our new function
+            # with coefficients l=-1, m=1 for the photon echo signal
+            photon_echo_signal = extract_ift_signal_component(
+                results_matrix=results_matrix,
+                phases=phases,
+                l=-1,  # Coefficient for phi_1
+                m=1,  # Coefficient for phi_2
+            )
 
             omega_frequency_results.append(photon_echo_signal)
             print(f"  ✅ IFT completed for frequency {omega_idx + 1}")
@@ -1156,6 +1174,25 @@ def _process_single_2d_combination(
         (t_det_vals, tau_coh_vals, data) for the computed 2D polarization data, or None if failed.
     """
     try:  # Compute the 2D polarization for this specific phase combination
+        # Debug: Print dimensionality info before calling compute_2d_polarization
+        print(
+            f"DEBUG [phi1={phi1:.2f}, phi2={phi2:.2f}]: T_wait={T_wait}, times shape={times.shape}"
+        )
+
+        # Get expected dimensions for this T_wait
+        tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(
+            times, T_wait=T_wait
+        )
+        print(
+            f"DEBUG: Expected dimensions - tau_coh_vals={len(tau_coh_vals)}, t_det_vals={len(t_det_vals)}"
+        )
+
+        if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
+            print(
+                f"DEBUG: Invalid dimensions - skipping computation for T_wait={T_wait}"
+            )
+            return None
+
         t_det_vals, tau_coh_vals, data = compute_2d_polarization(
             T_wait=T_wait,
             phi_0=phi1,
@@ -1165,10 +1202,20 @@ def _process_single_2d_combination(
             **kwargs,
         )
 
+        # Debug: Print output dimensions
+        print(
+            f"DEBUG [phi1={phi1:.2f}, phi2={phi2:.2f}]: Result dimensions - "
+            f"t_det_vals={len(t_det_vals)}, tau_coh_vals={len(tau_coh_vals)}, data shape={data.shape}"
+        )
+
         return t_det_vals, tau_coh_vals, data
 
     except Exception as e:
+        import traceback
+
         print(f"Error in _process_single_2d_combination: {str(e)}")
+        print(f"Traceback for debugging:")
+        traceback.print_exc()
         return None
 
 
@@ -1323,7 +1370,7 @@ def parallel_compute_2d_E_with_inhomogenity(
 
                     except Exception as e:
                         print(
-                            f"    Error processing phase combination ({phi1_idx}, {phi2_idx}): {str(e)}"
+                            f"    Error processing phase combination ({phi1_idx}, phi2_idx): {str(e)}"
                         )
                         continue
 
@@ -1344,18 +1391,13 @@ def parallel_compute_2d_E_with_inhomogenity(
             ]
 
             if len(valid_results) > 0:
-                photon_echo_signal = np.zeros_like(valid_results[0], dtype=np.complex64)
-
-                for phi1_idx, phi_1 in enumerate(phases):  # phi1 index
-                    for phi2_idx, phi_2 in enumerate(phases):  # phi2 index
-                        # IFT phase factor for photon echo (-1, 1(, 1; but the third phase is set to 0)) component
-                        phase_factor = np.exp(-1j * (-1 * phi_1 + 1 * phi_2))
-                        photon_echo_signal += (
-                            results_matrix[phi1_idx, phi2_idx] * phase_factor
-                        )
-
-                # Normalize by number of phase combinations
-                photon_echo_signal /= n_phases * n_phases  # 4×4 = 16 combinations
+                # Extract photon echo component using our new function
+                photon_echo_signal = extract_ift_signal_component(
+                    results_matrix=results_matrix,
+                    phases=phases,
+                    l=-1,  # Coefficient for phi_1
+                    m=1,  # Coefficient for phi_2
+                )
 
                 omega_frequency_results.append(photon_echo_signal)
                 print(f"    ✅ IFT completed for frequency {omega_idx + 1}")
@@ -1384,3 +1426,66 @@ def parallel_compute_2d_E_with_inhomogenity(
             all_results.append(None)
 
     return all_results
+
+
+# ##########################
+# Helper functions for IFT processing
+# ##########################
+def extract_ift_signal_component(
+    results_matrix: np.ndarray, phases: list, l: int, m: int
+) -> np.ndarray:
+    """
+    Extract a specific signal component using inverse Fourier transform (IFT)
+    with custom phase coefficients. Works for both 1D and 2D signal arrays.
+
+    Computes the IFT signal component:
+    P_{l,m}(t) = Σ_{phi1} Σ_{phi2} P_{phi1,phi2}(t) * exp(-i(l*phi1 + m*phi2))
+
+    Parameters
+    ----------
+    results_matrix : np.ndarray
+        Matrix of results indexed by phase indices [phi1_idx, phi2_idx]
+        Each element can be a 1D or 2D array
+    phases : list
+        List of phase values used (typically [0, π/2, π, 3π/2])
+    l : int
+        Coefficient for the first phase in the IFT
+    m : int
+        Coefficient for the second phase in the IFT
+
+    Returns
+    -------
+    np.ndarray
+        Extracted signal component after IFT (same shape as input data elements)
+    """
+    n_phases = len(phases)
+
+    # Find first non-None result to determine output shape, should be the first one !
+    first_valid_result = None
+    for i in range(n_phases):
+        for j in range(n_phases):
+            if results_matrix[i, j] is not None:
+                first_valid_result = results_matrix[i, j]
+                break
+        if first_valid_result is not None:
+            break
+
+    if first_valid_result is None:
+        # No valid results found
+        return None
+
+    # Initialize output array based on the shape of the first valid result
+    signal = np.zeros_like(first_valid_result, dtype=np.complex64)
+
+    # Compute the IFT
+    for phi1_idx, phi_1 in enumerate(phases):
+        for phi2_idx, phi_2 in enumerate(phases):
+            if results_matrix[phi1_idx, phi2_idx] is not None:
+                # IFT phase factor with parameterized coefficients
+                phase_factor = np.exp(-1j * (l * phi_1 + m * phi_2))
+                signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
+
+    # Normalize by number of phase combinations
+    signal /= n_phases * n_phases
+
+    return signal

@@ -18,10 +18,9 @@ from datetime import datetime
 
 ### Project-specific imports
 from src.spectroscopy.calculations import (
-    parallel_compute_2d_polarization_with_inhomogenity,
+    parallel_compute_2d_E_with_inhomogenity,
     check_the_solver,
 )
-from src.spectroscopy.inhomogenity import sample_from_sigma
 from src.core.system_parameters import SystemParameters
 from config.paths import DATA_DIR
 
@@ -32,13 +31,13 @@ from config.paths import DATA_DIR
 def get_simulation_config():
     """Get default simulation configuration for 2D spectroscopy."""
     return {
-        "N_atoms": 2,  # Number of atoms in the system
+        "N_atoms": 1,  # Number of atoms in the system
         "n_times_T": 1,  # Number of T_wait values
-        "n_phases": 4,  # Number of phases for phase cycling
+        "n_phases": 2,  # Number of phases for phase cycling
         "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
         "t_max": 5.0,  # Maximum time [fs]
         "dt": 0.1,  # Time step [fs]
-        "T_wait_max": 10.0,  # Maximum waiting time [fs]
+        "T_wait_max": 0.0,  # Maximum waiting time [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
         "envelope_type": "gaussian",
         "output_subdir": "2d_spectroscopy",
@@ -175,7 +174,7 @@ def main():
     kwargs = {"plot_example": False, "time_cut": time_cut}
 
     try:
-        two_d_datas = parallel_compute_2d_polarization_with_inhomogenity(
+        two_d_datas = parallel_compute_2d_E_with_inhomogenity(
             n_freqs=config["n_freqs"],
             n_phases=config["n_phases"],
             times_T=times_T,

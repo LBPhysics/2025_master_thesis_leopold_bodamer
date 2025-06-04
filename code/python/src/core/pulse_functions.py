@@ -1,10 +1,14 @@
 from src.core.pulse_sequences import PulseSequence
+from typing import List, Tuple, Union
 import numpy as np
 
 
-def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
+def pulse_envelope(
+    t: Union[float, np.ndarray], pulse_seq: PulseSequence
+) -> Union[float, np.ndarray]:
     """
     Calculate the combined envelope of multiple pulses at time t using PulseSequence.
+    Works with both scalar and array time inputs.
 
     Now uses pulse_peak_time as t_peak (peak time) where cos²/gaussian is maximal.
     Pulse is zero outside [t_peak - FWHM, t_peak + FWHM] == outside of 2 FWHM.
@@ -15,15 +19,23 @@ def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
       - The Gaussian is zero at t_peak ± FWHM boundaries
 
     Args:
-        t (float): Time value
+        t (Union[float, np.ndarray]): Time value or array of time values
         pulse_seq (PulseSequence): The pulse sequence
 
     Returns:
-        float: Combined envelope value
+        Union[float, np.ndarray]: Combined envelope value(s)
     """
     if not isinstance(pulse_seq, PulseSequence):
         raise TypeError("pulse_seq must be a PulseSequence instance.")
 
+    # Handle array input
+    if isinstance(t, np.ndarray):
+        result = np.zeros_like(t, dtype=float)
+        for i in range(len(t)):
+            result[i] = pulse_envelope(float(t[i]), pulse_seq)
+        return result
+
+    # Handle scalar input (original functionality)
     envelope = 0.0
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time
@@ -64,13 +76,31 @@ def pulse_envelope(t: float, pulse_seq: PulseSequence) -> float:
     return envelope
 
 
-def E_pulse(t: float, pulse_seq: PulseSequence) -> complex:
+def E_pulse(
+    t: Union[float, np.ndarray], pulse_seq: PulseSequence
+) -> Union[complex, np.ndarray]:
     """
     Calculate the total electric field at time t for a set of pulses (envelope only, no carrier), using PulseSequence.
+    Works with both scalar and array time inputs.
+
+    Args:
+        t (Union[float, np.ndarray]): Time value or array of time values
+        pulse_seq (PulseSequence): The pulse sequence
+
+    Returns:
+        Union[complex, np.ndarray]: Electric field value(s)
     """
     if not isinstance(pulse_seq, PulseSequence):
         raise TypeError("pulse_seq must be a PulseSequence instance.")
 
+    # Handle array input
+    if isinstance(t, np.ndarray):
+        result = np.zeros_like(t, dtype=complex)
+        for i in range(len(t)):
+            result[i] = E_pulse(float(t[i]), pulse_seq)
+        return result
+
+    # Handle scalar input (original functionality)
     E_total = 0.0 + 0.0j
     for pulse in pulse_seq.pulses:
         phi = pulse.pulse_phase
@@ -84,13 +114,31 @@ def E_pulse(t: float, pulse_seq: PulseSequence) -> complex:
     return E_total  # TO make it into a cos: / 2.0
 
 
-def Epsilon_pulse(t: float, pulse_seq: PulseSequence) -> complex:
+def Epsilon_pulse(
+    t: Union[float, np.ndarray], pulse_seq: PulseSequence
+) -> Union[complex, np.ndarray]:
     """
     Calculate the total electric field at time t for a set of pulses, including carrier oscillation, using PulseSequence.
+    Works with both scalar and array time inputs.
+
+    Args:
+        t (Union[float, np.ndarray]): Time value or array of time values
+        pulse_seq (PulseSequence): The pulse sequence
+
+    Returns:
+        Union[complex, np.ndarray]: Electric field with carrier value(s)
     """
     if not isinstance(pulse_seq, PulseSequence):
         raise TypeError("pulse_seq must be a PulseSequence instance.")
 
+    # Handle array input
+    if isinstance(t, np.ndarray):
+        result = np.zeros_like(t, dtype=complex)
+        for i in range(len(t)):
+            result[i] = Epsilon_pulse(float(t[i]), pulse_seq)
+        return result
+
+    # Handle scalar input (original functionality)
     E_total = 0.0 + 0.0j
     for pulse in pulse_seq.pulses:
         omega = pulse.pulse_freq
@@ -99,3 +147,51 @@ def Epsilon_pulse(t: float, pulse_seq: PulseSequence) -> complex:
         E_field = E_pulse(t, PulseSequence([pulse]))  # use E_pulse for each pulse
         E_total += E_field * np.exp(-1j * (omega * t))
     return E_total
+
+
+def identify_non_zero_pulse_regions(
+    times: np.ndarray, pulse_seq: PulseSequence
+) -> np.ndarray:
+    """
+    Identify regions where the pulse envelope is non-zero across an array of time values.
+
+    Args:
+        times (np.ndarray): Array of time values to evaluate
+        pulse_seq (PulseSequence): The pulse sequence to evaluate
+
+    Returns:
+        np.ndarray: Boolean array where True indicates times where envelope is non-zero
+    """
+    if not isinstance(pulse_seq, PulseSequence):
+        raise TypeError("pulse_seq must be a PulseSequence instance.")
+
+    # Initialize an array of all False values
+    active_regions = np.zeros_like(times, dtype=bool)
+
+    # For each time point, check if it's in the active region of any pulse
+    for i, t in enumerate(times):
+        # A time is in an active region if any pulse contributes to the envelope
+        for pulse in pulse_seq.pulses:
+            t_peak = pulse.pulse_peak_time
+            FWHM = pulse.pulse_FWHM
+
+            # Skip pulses with invalid parameters
+            if FWHM is None or FWHM <= 0 or t_peak is None:
+                continue
+
+            # Check if time point falls within the pulse's active region
+            if t_peak - FWHM <= t <= t_peak + FWHM:
+                active_regions[i] = True
+                break  # Once we know this time point is active, we can move to the next
+
+    return active_regions
+
+def split_by_active_regions(times, active_regions):
+    # Find where the active_regions changes value
+    change_indices = np.where(np.diff(active_regions.astype(int)) != 0)[0] + 1
+
+    # Split the times at those change points
+    split_times = np.split(times, change_indices)
+
+    # Return list of (times, state) tuples
+    return [times for times in split_times]

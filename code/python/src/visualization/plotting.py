@@ -436,7 +436,7 @@ def Plot_example_evo(
     plt.show()
 
 
-def Plot_polarization_2d_spectrum(
+def Plot_2d_El_field(
     datas: tuple,
     T_wait: float = np.inf,
     domain: str = "time",
@@ -553,15 +553,19 @@ def Plot_polarization_2d_spectrum(
     # Custom colormap for zero-centered data
     # =============================
     norm = None
+    # For real and imag data, use red-white-blue colormap by default
+    if type in ("real", "imag", "phase"):
+        use_custom_colormap = True
+
     if use_custom_colormap:
         vmin = np.min(data)
         vmax = np.max(data)
         vcenter = 0
-        cmap = plt.get_cmap("bwr")
-        colors = cmap(np.linspace(0, 1, 256))
-        mid = 128
-        colors[mid] = [1, 1, 1, 1]  # white at center
-        colormap = LinearSegmentedColormap.from_list("white_centered", colors)
+
+        # Use the built-in 'RdBu_r' colormap - reversed to make red=positive, blue=negative
+        colormap = plt.get_cmap("RdBu_r")
+
+        # Center the colormap at zero for diverging data
         if vmin < vcenter < vmax:
             norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
         else:
@@ -575,7 +579,8 @@ def Plot_polarization_2d_spectrum(
     # Plotting
     # =============================
     plt.figure(figsize=(10, 8))
-    plt.pcolormesh(
+    # Create the pcolormesh plot for the 2D data
+    pcolor_plot = plt.pcolormesh(
         x,  # <- ts
         y,  # <- taus
         data,  # <- data[taus, ts]
@@ -583,10 +588,84 @@ def Plot_polarization_2d_spectrum(
         cmap=colormap,
         norm=norm,
     )
-    plt.colorbar(label=cbarlabel)
+
+    """
+    # Add contour lines with different styles for positive and negative values
+    if type in ("real", "imag", "phase"):
+        # Determine contour levels based on the data range
+        vmax = max(abs(np.min(data)), abs(np.max(data)))
+        vmin = -vmax
+
+        # Create evenly spaced levels for both positive and negative regions
+        level_count = 8  # Number of contour levels in each region (positive/negative)
+        if vmax > 0:
+            positive_levels = np.linspace(0.05 * vmax, 0.95 * vmax, level_count)
+            negative_levels = np.linspace(0.95 * vmin, 0.05 * vmin, level_count)
+
+            # Plot positive contours (solid lines)
+            pos_contour = plt.contour(
+                x,
+                y,
+                data,
+                levels=positive_levels,
+                colors="black",
+                linewidths=0.7,
+                alpha=0.8,
+            )
+
+            # Plot negative contours (dashed lines)
+            neg_contour = plt.contour(
+                x,
+                y,
+                data,
+                levels=negative_levels,
+                colors="black",
+                linewidths=0.7,
+                alpha=0.8,
+                linestyles="dashed",
+            )
+
+            # Optional: Add contour labels to every other contour line
+            # plt.clabel(pos_contour, inline=True, fontsize=8, fmt='%.2f', levels=positive_levels[::2])
+            # plt.clabel(neg_contour, inline=True, fontsize=8, fmt='%.2f', levels=negative_levels[::2])
+    else:
+        # For abs and phase, use standard contours
+        level_count = 8
+        contour_plot = plt.contour(
+            x,
+            y,
+            data,
+            levels=level_count,
+            colors="black",
+            linewidths=0.7,
+            alpha=0.8,
+        )
+        # Optional: Add contour labels
+        plt.clabel(
+            contour_plot,
+            inline=True,
+            fontsize=8,
+            fmt="%.2f",
+            levels=contour_plot.levels[::2],
+        )
+    """
+    # Add colorbar
+    cbar = plt.colorbar(label=cbarlabel)
+
+    # Improve overall plot appearance
     plt.title(title)
     plt.xlabel(x_title)
     plt.ylabel(y_title)
+
+    """# Add a border around the plot for better visual definition
+    plt.gca().spines["top"].set_visible(True)
+    plt.gca().spines["right"].set_visible(True)
+    plt.gca().spines["bottom"].set_visible(True)
+    plt.gca().spines["left"].set_visible(True)
+    plt.gca().spines["top"].set_linewidth(1.5)
+    plt.gca().spines["right"].set_linewidth(1.5)
+    plt.gca().spines["bottom"].set_linewidth(1.5)
+    plt.gca().spines["left"].set_linewidth(1.5)"""
 
     # =============================
     # Save or show
