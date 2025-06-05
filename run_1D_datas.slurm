@@ -23,9 +23,6 @@ echo "Job ID: $SLURM_JOB_ID"
 source ~/.bashrc
 conda activate master_env
 
-# Create logs directory
-mkdir -p logs
-
 # Navigate to scripts directory
 cd /home/lbodamer/Master_thesis/code/python/scripts/
 

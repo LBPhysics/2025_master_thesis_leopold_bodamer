@@ -39,8 +39,8 @@ def get_simulation_config():
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
         "envelope_type": "gaussian",  # 'cos2' or 'gaussian'
         "output_subdir": "1d_spectroscopy",
-        "E0": 0.05,
-        "ODE_Solver": "Paper_eqs",  # ODE solver type
+        "E0": 0.005,
+        "ODE_Solver": "Paper_BR",  # ODE solver type
         "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
         "RWA_laser": True,  # Use RWA for laser interaction
     }
@@ -141,7 +141,7 @@ def main():
         ODE_Solver=config["ODE_Solver"],
         t_max=config["tau_coh"] + config["T_wait"] + config["t_det_max"],
         dt=config["dt"],
-        Delta_cm=config["Delta_cm"] if config["n_freqs"] > 1 else 0,
+        Delta_cm=config["Delta_cm"],  #  if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
         pulse_FWHM=config["pulse_FWHM"] if "pulse_FWHM" in config else 100.0,
         E0=config["E0"],

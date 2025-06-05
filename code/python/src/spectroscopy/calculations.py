@@ -15,10 +15,13 @@ from src.core.pulse_functions import *
 from src.core.solver_fcts import (
     matrix_ODE_paper,
     R_paper,
-    apply_RWA_phase_factors,
 )
 from src.spectroscopy.inhomogenity import sample_from_sigma
-from src.core.functions_with_rwa import H_int, get_expect_vals_with_RWA
+from src.core.functions_with_rwa import (
+    H_int,
+    get_expect_vals_with_RWA,
+    apply_RWA_phase_factors,
+)
 
 
 def compute_pulse_evolution(
@@ -1060,6 +1063,12 @@ def parallel_compute_1d_E_with_inhomogenity(
         if t_det_vals is not None:
             # Extract photon echo component P_{-1,1}(t) using our new function
             # with coefficients l=-1, m=1 for the photon echo signal
+            """
+            photon_echo_signal = (
+                np.sum(results_matrix) / n_phases**2
+            )  # Average over all phase combinations
+
+            """
             photon_echo_signal = extract_ift_signal_component(
                 results_matrix=results_matrix,
                 phases=phases,
