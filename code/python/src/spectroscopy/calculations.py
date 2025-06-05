@@ -6,8 +6,11 @@ import numpy as np
 from qutip import Qobj, Result, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
 from src.core.system_parameters import SystemParameters
-from src.core.pulse_sequences import PulseSequence, identify_pulse_regions
-from src.core.pulse_functions import identify_non_zero_pulse_regions, split_by_active_regions
+from src.core.pulse_sequences import PulseSequence
+from src.core.pulse_functions import (
+    identify_non_zero_pulse_regions,
+    split_by_active_regions,
+)
 from src.core.pulse_functions import *
 from src.core.solver_fcts import (
     matrix_ODE_paper,
@@ -81,21 +84,6 @@ def compute_pulse_evolution(
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
 
     else:
-        # =============================
-        # Split evolution by pulse regions for Paper_eqs
-        # =============================
-        # Initialize result storage
-        all_states = []
-        all_times = []
-        current_state = psi_ini
-        current_time_idx = 0
-        evolution_results = []  # Store individual evolution results
-
-        # Find pulse regions in the time array using the dedicated function
-        pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
-        # BASED ON THIS split the time range into regions where the pulse envelope is zero
-        split_times = split_by_active_regions(times, pulse_seq)
-
         # Build Hamiltonian components
         H_free = system.H0_diagonalized  # already includes the RWA, if present!
         if H_free is None or not isinstance(H_free, Qobj):
@@ -129,138 +117,92 @@ def compute_pulse_evolution(
             if not hasattr(system, "a_ops_list") or system.a_ops_list is None:
                 raise ValueError("Missing a_ops_list for BR solver")
 
-        for times_ in times_split:
+        # =============================
+        # Split evolution by pulse regions for Paper_eqs
+        # =============================
+        # Find pulse regions in the time array using the dedicated function
+        pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
+        # BASED ON THIS split the time range into regions where the pulse envelope is zero
+        split_times = split_by_active_regions(times, pulse_regions)
 
+        # Initialize result storage for different regions
+        all_states = []
+        all_times = []
+        current_state = psi_ini
+        evolution_results = []  # Store individual evolution results
 
+        for i, times_ in enumerate(split_times):
+            if len(times_) == 0:
+                continue
 
-            # =============================
-            # Evolve with H_free before pulse region
-            # =============================
-            # TODO
-            if :
-                free_times = times[
-                    current_time_idx : region_start + 1
-                ]  # Include connection point
+            # Find the indices in the original times array for this split
+            start_idx = np.abs(times - times_[0]).argmin()
 
+            # Check if this region has an active pulse by looking at the first time point
+            has_pulse = pulse_regions[start_idx]
+
+            if has_pulse:
+                # =============================
+                # Evolve with H_int_evo during pulse region
+                # =============================
                 if system.ODE_Solver == "BR":
-                    free_result = brmesolve(
+                    result = brmesolve(
+                        H_int_evo,
+                        current_state,
+                        times_,
+                        a_ops=system.a_ops_list,
+                        options=options,
+                    )
+                elif system.ODE_Solver == "Paper_eqs":
+                    result = mesolve(
+                        H_int_evo,  # Liouville includes the decay channels
+                        current_state,
+                        times_,
+                        options=options,
+                    )
+                else:
+                    result = mesolve(
+                        H_int_evo,
+                        current_state,
+                        times_,
+                        c_ops=c_ops,
+                        options=options,
+                    )
+            else:
+                # =============================
+                # Evolve with H_free during non-pulse region
+                # =============================
+                if system.ODE_Solver == "BR":
+                    result = brmesolve(
                         H_free,
                         current_state,
-                        free_times,
+                        times_,
                         a_ops=system.a_ops_list,
                         options=options,
                     )
                 else:
-                    free_result = mesolve(
+                    result = mesolve(
                         H_free,
                         current_state,
-                        free_times,
+                        times_,
                         c_ops=c_ops,
                         options=options,
                     )
 
-                # Store states (excluding the last one to avoid duplication)
-                all_states.extend(free_result.states[:-1])
-                all_times.extend(free_result.times[:-1])
-                current_state = free_result.states[-1]
-
-                # Store the result for combining later
-                if len(evolution_results) == 0:
-                    evolution_results.append(free_result)
-
-            # =============================
-            # Evolve with H_int_evo during pulse region
-            # =============================
-            pulse_times = times[region_start : region_end + 1]
-
-            if system.ODE_Solver == "BR":
-                pulse_result = brmesolve(
-                    H_int_evo,
-                    current_state,
-                    pulse_times,
-                    a_ops=system.a_ops_list,
-                    options=options,
-                )
-            elif system.ODE_Solver == "Paper_eqs":
-                pulse_result = mesolve(
-                    H_int_evo,  # Liouville includes the decay channels
-                    current_state,
-                    pulse_times,
-                    options=options,
-                )
+            # Store states (excluding the last one to avoid duplication, unless this is the last region)
+            if i < len(split_times) - 1:
+                all_states.extend(result.states)
+                all_times.extend(result.times)
             else:
-                pulse_result = mesolve(
-                    H_int_evo,
-                    current_state,
-                    pulse_times,
-                    c_ops=c_ops,
-                    options=options,
-                )
+                all_states.extend(result.states)
+                all_times.extend(result.times)
 
-            # Store all pulse evolution states
-            if region_end < len(times) - 1:  # Not the last region
-                all_states.extend(pulse_result.states[:-1])
-                all_times.extend(pulse_result.times[:-1])
-                current_state = pulse_result.states[-1]
-            else:  # Last region, include final state
-                all_states.extend(pulse_result.states)
-                all_times.extend(pulse_result.times)
-                current_state = pulse_result.states[-1]
+            # Update current state for next evolution
+            current_state = result.states[-1]
 
             # Store the result for combining later
             if len(evolution_results) == 0:
-                evolution_results.append(pulse_result)
-
-            current_time_idx = region_end
-
-            # =============================
-            # Evolve with H_free until the next pulse region (or end of times)
-            # =============================
-            if current_time_idx < len(times) - 1:
-                # Check if there's another pulse region after this one
-                next_region_idx = (
-                    pulse_regions.index((region_start, region_end, pulse_idx)) + 1
-                )
-                if next_region_idx < len(pulse_regions):
-                    # Evolve only until the start of the next pulse region
-                    next_start_idx = pulse_regions[next_region_idx][0]
-                    final_times = times[
-                        current_time_idx : next_start_idx + 1
-                    ]  # Include connection point
-                else:
-                    # No more pulse regions, evolve until the end
-                    final_times = times[current_time_idx:]
-
-                if system.ODE_Solver == "BR":
-                    final_result = brmesolve(
-                        H_free,
-                        current_state,
-                        final_times,
-                        a_ops=system.a_ops_list,
-                        options=options,
-                    )
-                else:
-                    final_result = mesolve(
-                        H_free,
-                        current_state,
-                        final_times,
-                        c_ops=c_ops,
-                        options=options,
-                    )
-
-                # Store states - if this connects to another pulse region, don't duplicate the connection point
-                if next_region_idx < len(pulse_regions):
-                    all_states.extend(final_result.states[:-1])
-                    all_times.extend(final_result.times[:-1])
-                else:
-                    all_states.extend(final_result.states)
-                    all_times.extend(final_result.times)
-
-                current_state = final_result.states[-1]
-
-                # Store the result for combining later
-                if len(evolution_results) == 0:
-                    evolution_results.append(final_result)
+                evolution_results.append(result)
 
         # =============================
         # Create combined result object using first result as base
@@ -711,10 +653,10 @@ def get_tau_cohs_and_t_dets_for_T_wait(
 
 # 2D polarization calculation for given T_wait, varialbe tau_coh and t_det
 def compute_2d_polarization(
-    T_wait: float,  # TODO somehow assert that this is 0 < T_wait < system.t_max
+    T_wait: float,
     phi_0: float,
     phi_1: float,
-    times: np.ndarray,  # TODO ACTURALLY a list -> qutip needs a list ?
+    times: np.ndarray,
     system: SystemParameters,
     **kwargs: dict,
 ) -> tuple[np.array, np.array, np.ndarray]:  # (time axis` + 2d polarization)
@@ -735,6 +677,11 @@ def compute_2d_polarization(
         tuple: (t_det_vals, tau_coh_vals, data)
     """
     # Extra input validation
+    # ensure that this is 0 < T_wait < system.t_max
+    if T_wait < 0 or T_wait >= system.t_max:
+        raise ValueError(
+            f"T_wait={T_wait} must be greater than 0 and less than t_max={system.t_max}"
+        )
     if not isinstance(times, np.ndarray):
         raise TypeError(f"Expected times to be numpy.ndarray, got {type(times)}")
     if len(times) < 2:
@@ -1290,17 +1237,24 @@ def parallel_compute_2d_E_with_inhomogenity(
     all_results = []
 
     for T_wait_idx, T_wait in enumerate(times_T):
+        if T_wait < 0 or T_wait > system.t_max:
+            # Skip invalid T_wait values
+            print(
+                f"Skipping T_wait={T_wait} (must be >= 0 and <= t_max={system.t_max})"
+            )
+            all_results.append(None)
+            continue
+        if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
+            print(f"  ❌ Invalid T_wait={T_wait}, skipping")
+            all_results.append(None)
+            continue
+
         print(f"\nProcessing T_wait {T_wait_idx + 1}/{len(times_T)}: {T_wait}")
 
         # Get dimensions for this T_wait
         tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(
             times, T_wait=T_wait
         )
-
-        if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
-            print(f"  ❌ Invalid T_wait={T_wait}, skipping")
-            all_results.append(None)
-            continue
 
         # =============================
         # INITIALIZE STORAGE FOR FREQUENCY AVERAGING

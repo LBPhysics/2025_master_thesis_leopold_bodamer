@@ -186,12 +186,15 @@ def identify_non_zero_pulse_regions(
 
     return active_regions
 
+
 def split_by_active_regions(times, active_regions):
     # Find where the active_regions changes value
     change_indices = np.where(np.diff(active_regions.astype(int)) != 0)[0] + 1
 
     # Split the times at those change points
     split_times = np.split(times, change_indices)
-
+    assert (
+        np.concatenate(split_times).size == times.size
+    ), "Split times do not match original times size."
     # Return list of (times, state) tuples
     return [times for times in split_times]

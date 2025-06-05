@@ -233,12 +233,7 @@ def compute_1d_fft_wavenumber(
     dt = ts[1] - ts[0]  # Sampling interval in fs
     N_t = len(ts)
 
-    # Perform FFT
-    # Option 1: Real FFT (assuming data is real)
-    # s1d = np.fft.rfft(data)
-    # freq_t = np.fft.rfftfreq(N_t, d=dt)
-
-    # Option 2: Full FFT with shift (similar to 2D implementation)
+    # Full FFT with shift (similar to 2D implementation)
     s1d = np.fft.fft(data)
     s1d = np.fft.fftshift(s1d)
     freq_t = np.fft.fftshift(np.fft.fftfreq(N_t, d=dt))
@@ -246,11 +241,7 @@ def compute_1d_fft_wavenumber(
     # Convert to wavenumber (10^4 cm^-1)
     # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-5 cm/fs
     # Wavenumber = frequency / c, scaled by 10^4
-    c_factor = 10 / 2.998  # Convert from cycles/fs to 10^4 cm^-1
-    nu_ts = freq_t * c_factor
-
-    # Apply 1j factor to represent E ~ i*P relationship
-    s1d = 1j * s1d
+    nu_ts = freq_t / 2.998 * 10
 
     return nu_ts, s1d
 
