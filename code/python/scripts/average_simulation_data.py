@@ -237,9 +237,9 @@ if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Example for 1D data averaging
-    data_path = os.path.join(script_dir, "../data/1d_spectroscopy/average_eqs_RWA")
+    data_path = os.path.join(script_dir, "../data/1d_spectroscopy/average_BR_RWA_avg")
     output_path = os.path.join(
-        script_dir, "../data/1d_spectroscopy/", "1d_data_averaged_300.pkl"
+        script_dir, "../data/1d_spectroscopy/", "1d_data_averaged_501.pkl"
     )
     file_pattern = "1d_data_*.pkl"
 
