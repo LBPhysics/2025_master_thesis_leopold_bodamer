@@ -33,14 +33,18 @@ def get_simulation_config():
     return {
         "N_atoms": 1,  # Number of atoms in the system
         "n_times_T": 1,  # Number of T_wait values
-        "n_phases": 2,  # Number of phases for phase cycling
+        "n_phases": 4,  # Number of phases for phase cycling
         "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
-        "t_max": 5.0,  # Maximum time [fs]
+        "ODE_Solver": "Paper_eqs",  # ODE solver type
+        "RWA_laser": True,  # Use RWA for laser interaction
+        "t_max": 1.0,  # Maximum time [fs]
         "dt": 0.1,  # Time step [fs]
         "T_wait_max": 0.0,  # Maximum waiting time [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
         "envelope_type": "gaussian",
         "output_subdir": "2d_spectroscopy",
+        "E0": 0.005,
+        "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
     }
 
 
@@ -114,7 +118,16 @@ def main():
 
     ### Get simulation configuration
     config = get_simulation_config()
-    max_workers = psutil.cpu_count(logical=True)
+
+    # Use SLURM environment variable if available, otherwise detect automatically
+    import os
+
+    # take the max number of these 2:
+    slurm_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 0))
+    local_cpus = psutil.cpu_count(logical=True)
+    max_workers = max(slurm_cpus, local_cpus)
+    if max_workers < 1:
+        max_workers = 1
 
     # =============================
     # SIMULATION PARAMETERS
@@ -137,20 +150,21 @@ def main():
     # =============================
     system = SystemParameters(
         N_atoms=config["N_atoms"],
-        ODE_Solver="Paper_eqs",
-        RWA_laser=True,
+        ODE_Solver=config["ODE_Solver"],
+        RWA_laser=config["RWA_laser"],
         t_max=config["t_max"],
         dt=config["dt"],
-        Delta_cm=config["Delta_cm"] if config["n_freqs"] > 1 else 0,
+        Delta_cm=config["Delta_cm"],  #  if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
+        E0=config["E0"],
+        pulse_FWHM=config["pulse_FWHM"] if "pulse_FWHM" in config else 100.0,
     )
-
     print(f"System configuration:")
     system.summary()
 
     ### Create time arrays
     FWHMs = system.FWHMs
-    times = np.arange(-FWHMs[0], system.t_max, system.dt)
+    times = np.arange(-2 * FWHMs[0], system.t_max, system.dt)
     times_T = np.linspace(0, config["T_wait_max"], config["n_times_T"])
 
     # =============================

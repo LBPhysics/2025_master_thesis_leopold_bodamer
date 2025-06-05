@@ -371,13 +371,15 @@ def extend_and_plot_results(
         global_data_freq /= len(valid_results)
 
     # Plot the global results
-    """Plot_2d_El_field(
+    """
+    Plot_2d_El_field(
         (global_ts, global_taus, global_data_time),
         save=True,  # CHANGE TO False for no plotting the Time domain
         output_dir=plot_args_freq.get("output_dir", None),
         system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
-    )"""
+    )
+    """
 
     Plot_2d_El_field(
         (global_nu_ts, global_nu_taus, global_data_freq),

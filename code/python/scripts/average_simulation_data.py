@@ -12,8 +12,7 @@ import os
 import pickle
 import numpy as np
 import glob
-from pathlib import Path
-from typing import Tuple, Dict, List, Any, Union, Optional
+from typing import Tuple, Dict, List, Any
 
 
 def get_pkl_files(folder_path: str, pattern: str = "*.pkl") -> List[str]:
@@ -237,11 +236,11 @@ if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
     # Example for 1D data averaging
-    data_path = os.path.join(script_dir, "../data/1d_spectroscopy/average_BR_RWA_avg")
-    output_path = os.path.join(
-        script_dir, "../data/1d_spectroscopy/", "1d_data_averaged_501.pkl"
+    data_path = os.path.join(
+        script_dir, "../data/2d_spectroscopy/new_echo_signal/600fs"
     )
-    file_pattern = "1d_data_*.pkl"
+    output_path = os.path.join(data_path, "2d_data_averaged.pkl")
+    file_pattern = "2d_data_*.pkl"
 
     # Example for 2D data averaging
     # data_path = os.path.join(script_dir, "../data/2d_spectroscopy/multiple_runs")

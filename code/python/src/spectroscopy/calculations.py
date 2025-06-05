@@ -291,16 +291,15 @@ def check_the_solver(
     phi_0 = np.pi / 2
     phi_1 = np.pi / 4
     phi_2 = 0
-    t_start_pulse0 = times[0]
-    t_start_pulse1 = times[-1] / 2
-    t_start_pulse2 = times[-1] / 1.1
+    t_peak_pulse1 = times[-1] / 2
+    t_peak_pulse2 = times[-1] / 1.1
 
     # Use the from_args static method to construct the sequence
     pulse_seq = PulseSequence.from_args(
         system=system,
-        curr=(t_start_pulse2, phi_2),
-        prev=(t_start_pulse1, phi_1),
-        preprev=(t_start_pulse0, phi_0),
+        curr=(t_peak_pulse2, phi_2),
+        prev=(t_peak_pulse1, phi_1),
+        preprev=(0, phi_0),
     )
 
     result = compute_pulse_evolution(system.psi_ini, times, pulse_seq, system=system)
@@ -680,16 +679,11 @@ def compute_2d_polarization(
         tuple: (t_det_vals, tau_coh_vals, data)
     """
     # Extra input validation
-    # ensure that this is 0 < T_wait < system.t_max
-    if T_wait < 0 or T_wait >= system.t_max:
-        raise ValueError(
-            f"T_wait={T_wait} must be greater than 0 and less than t_max={system.t_max}"
-        )
     if not isinstance(times, np.ndarray):
         raise TypeError(f"Expected times to be numpy.ndarray, got {type(times)}")
     if len(times) < 2:
         raise ValueError(f"Times array is too short: {len(times)} elements")
-    if not (0 < T_wait < system.t_max):
+    if not (0 <= T_wait <= system.t_max):
         raise ValueError(f"T_wait={T_wait} must be between 0 and t_max={system.t_max}")
 
     # get the symmetric times, tau_coh, t_det
@@ -1135,17 +1129,9 @@ def _process_single_2d_combination(
         (t_det_vals, tau_coh_vals, data) for the computed 2D polarization data, or None if failed.
     """
     try:  # Compute the 2D polarization for this specific phase combination
-        # Debug: Print dimensionality info before calling compute_2d_polarization
-        print(
-            f"DEBUG [phi1={phi1:.2f}, phi2={phi2:.2f}]: T_wait={T_wait}, times shape={times.shape}"
-        )
-
         # Get expected dimensions for this T_wait
         tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(
             times, T_wait=T_wait
-        )
-        print(
-            f"DEBUG: Expected dimensions - tau_coh_vals={len(tau_coh_vals)}, t_det_vals={len(t_det_vals)}"
         )
 
         if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
@@ -1161,12 +1147,6 @@ def _process_single_2d_combination(
             times=times,
             system=system,
             **kwargs,
-        )
-
-        # Debug: Print output dimensions
-        print(
-            f"DEBUG [phi1={phi1:.2f}, phi2={phi2:.2f}]: Result dimensions - "
-            f"t_det_vals={len(t_det_vals)}, tau_coh_vals={len(tau_coh_vals)}, data shape={data.shape}"
         )
 
         return t_det_vals, tau_coh_vals, data
@@ -1253,17 +1233,18 @@ def parallel_compute_2d_E_with_inhomogenity(
             )
             all_results.append(None)
             continue
+
+        # Get dimensions for this T_wait
+        tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(
+            times, T_wait=T_wait
+        )
+
         if len(tau_coh_vals) == 0 or len(t_det_vals) == 0:
             print(f"  ❌ Invalid T_wait={T_wait}, skipping")
             all_results.append(None)
             continue
 
         print(f"\nProcessing T_wait {T_wait_idx + 1}/{len(times_T)}: {T_wait}")
-
-        # Get dimensions for this T_wait
-        tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(
-            times, T_wait=T_wait
-        )
 
         # =============================
         # INITIALIZE STORAGE FOR FREQUENCY AVERAGING

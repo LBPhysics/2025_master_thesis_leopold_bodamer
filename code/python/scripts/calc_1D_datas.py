@@ -40,7 +40,7 @@ def get_simulation_config():
         "envelope_type": "gaussian",  # 'cos2' or 'gaussian'
         "output_subdir": "1d_spectroscopy",
         "E0": 0.005,
-        "ODE_Solver": "Paper_BR",  # ODE solver type
+        "ODE_Solver": "Paper_eqs",  # ODE solver type
         "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
         "RWA_laser": True,  # Use RWA for laser interaction
     }
@@ -153,7 +153,7 @@ def main():
 
     ### Create time arrays
     FWHMs = system.FWHMs
-    times = np.arange(-FWHMs[0], system.t_max, system.dt)
+    times = np.arange(-2 * FWHMs[0], system.t_max, system.dt)
 
     # =============================
     # RUN SIMULATION

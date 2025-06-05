@@ -479,6 +479,29 @@ def Plot_2d_El_field(
     y = np.real(y)
 
     data = np.array(data, dtype=np.complex128)
+
+    # =============================
+    # Section cropping
+    # =============================
+    if section is not None:
+        x_min, x_max, y_min, y_max = section
+
+        # Validate coordinates are within data range
+        x_min = max(x_min, np.min(x))
+        x_max = min(x_max, np.max(x))
+        y_min = max(y_min, np.min(y))
+        y_max = min(y_max, np.max(y))
+
+        x_indices = np.where((x >= x_min) & (x <= x_max))[0]
+        y_indices = np.where((y >= y_min) & (y <= y_max))[0]
+
+        x_indices = x_indices[x_indices < data.shape[1]]
+        y_indices = y_indices[y_indices < data.shape[0]]
+
+        data = data[np.ix_(y_indices, x_indices)]
+        x = x[x_indices]
+        y = y[y_indices]
+
     if np.abs(data).max() == 0:
         raise ValueError("Data array is all zeros, cannot normalize.")
     data = data / np.abs(data).max()  # normalize
@@ -526,28 +549,6 @@ def Plot_2d_El_field(
 
     if T_wait != np.inf:
         title += rf"$\ \text{{at }} T = {T_wait:.2f}$"
-
-    # =============================
-    # Section cropping
-    # =============================
-    if section is not None:
-        x_min, x_max, y_min, y_max = section
-
-        # Validate coordinates are within data range
-        x_min = max(x_min, np.min(x))
-        x_max = min(x_max, np.max(x))
-        y_min = max(y_min, np.min(y))
-        y_max = min(y_max, np.max(y))
-
-        x_indices = np.where((x >= x_min) & (x <= x_max))[0]
-        y_indices = np.where((y >= y_min) & (y <= y_max))[0]
-
-        x_indices = x_indices[x_indices < data.shape[1]]
-        y_indices = y_indices[y_indices < data.shape[0]]
-
-        data = data[np.ix_(y_indices, x_indices)]
-        x = x[x_indices]
-        y = y[y_indices]
 
     # =============================
     # Custom colormap for zero-centered data
