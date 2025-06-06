@@ -12,8 +12,8 @@ def extend_time_tau_axes(
     ts: np.ndarray,
     taus: np.ndarray,
     data: np.ndarray,
-    pad_rows: tuple[int, int] = (1, 1),
-    pad_cols: tuple[int, int] = (1, 1),
+    pad_rows: tuple[float, float] = (1, 1),
+    pad_cols: tuple[float, float] = (1, 1),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Extend the time and tau axes by padding and correspondingly extend the data array.
@@ -31,10 +31,10 @@ def extend_time_tau_axes(
     data : np.ndarray
         2D spectroscopy data array. Shape: (N_tau, N_t)
         Data type is preserved in the output.
-    pad_rows : tuple[int, int], default=(1, 1)
+    pad_rows : tuple[float, float], default=(1, 1)
         Padding multipliers for rows (taus axis) as (before, after).
         Values >= 1, where 1 means no padding, 2 means add original length, etc.
-    pad_cols : tuple[int, int], default=(1, 1)
+    pad_cols : tuple[float, float], default=(1, 1)
         Padding multipliers for columns (ts axis) as (before, after).
         Values >= 1, where 1 means no padding, 2 means add original length, etc.
 
@@ -70,12 +70,12 @@ def extend_time_tau_axes(
     # Convert multipliers to actual padding values
     original_rows, original_cols = data.shape
     pad_rows_actual = (
-        (pad_rows[0] - 1) * original_rows,  # before
-        (pad_rows[1] - 1) * original_rows,  # after
+        int((pad_rows[0] - 1) * original_rows),  # before - convert to int for np.pad
+        int((pad_rows[1] - 1) * original_rows),  # after - convert to int for np.pad
     )
     pad_cols_actual = (
-        (pad_cols[0] - 1) * original_cols,  # before
-        (pad_cols[1] - 1) * original_cols,  # after
+        int((pad_cols[0] - 1) * original_cols),  # before - convert to int for np.pad
+        int((pad_cols[1] - 1) * original_cols),  # after - convert to int for np.pad
     )
 
     # Pad the data array

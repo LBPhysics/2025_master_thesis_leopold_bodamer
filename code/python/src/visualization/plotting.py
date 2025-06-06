@@ -243,7 +243,16 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
         The time delay values for the x-axis.
     data : array-like
         The data to plot on the y-axis, typically the expectation value of the polarization.
+    **kwargs : dict
+        Additional keyword arguments:
+        - function (str): Name of the function being plotted. Default is "P".
+        - show (bool): Whether to display the plot immediately. Default is True.
+           Set to False if you want to save the figure elsewhere before displaying.
 
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The figure object, which can be used for further customization or saving.
     """
 
     f = kwargs.get("function", "P")
@@ -251,7 +260,7 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     y_label = rf"${f}(t)$"
     plot_title = rf"{f} for fixed $\tau$ and $T$"
 
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))
     plt.plot(
         t_det_vals,
         np.real(data),
@@ -314,7 +323,14 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
             bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
         )
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.show()
+    plt.tight_layout()
+
+    # Only show the plot if not being saved elsewhere
+    show = kwargs.get("show", True)
+    if show:
+        plt.show()
+
+    return fig
 
 
 def Plot_example_evo(

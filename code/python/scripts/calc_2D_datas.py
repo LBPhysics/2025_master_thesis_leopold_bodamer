@@ -30,22 +30,55 @@ from config.paths import DATA_DIR
 # =============================
 def get_simulation_config():
     """Get default simulation configuration for 2D spectroscopy."""
-    return {
-        "N_atoms": 1,  # Number of atoms in the system
+    # Default number of atoms
+    N_atoms = 2
+
+    # =============================
+    # GENERAL SIMULATION PARAMETERS
+    # =============================
+    config = {}
+
+    # Time and output directory configuration
+    time_config = {
+        "t_max": 1,  # Maximum time [fs]
+        "dt": 0.1,  # Time step [fs]
+    }
+    config.update(time_config)
+
+    # =============================
+    # ATOM-SPECIFIC CONFIGURATION
+    # =============================
+    if N_atoms == 1:
+        system_config = {
+            "N_atoms": 1,  # Number of atoms in the system
+            "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
+            "output_subdir": "2d_spectroscopy/N_1/600fs",
+        }
+    elif N_atoms == 2:
+        system_config = {
+            "N_atoms": 2,  # Number of atoms in the system
+            "pulse_FWHM": 5.0,  # Pulse FWHM for Gaussian envelope [fs]
+            "output_subdir": "2d_spectroscopy/N_2/600fs",
+        }
+    config.update(system_config)
+
+    # =============================
+    # 2D SPECTROSCOPY PARAMETERS
+    # =============================
+    spectroscopy_config = {
+        "ODE_Solver": "Paper_eqs",  # ODE solver type
+        "RWA_laser": True,  # Use RWA for laser interaction
+        "T_wait_max": time_config["t_max"] / 2,  # Maximum waiting time [fs]
         "n_times_T": 1,  # Number of T_wait values
         "n_phases": 4,  # Number of phases for phase cycling
         "n_freqs": 1,  # Number of frequencies for inhomogeneous broadening
-        "ODE_Solver": "Paper_eqs",  # ODE solver type
-        "RWA_laser": True,  # Use RWA for laser interaction
-        "t_max": 1.0,  # Maximum time [fs]
-        "dt": 0.1,  # Time step [fs]
-        "T_wait_max": 0.0,  # Maximum waiting time [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
-        "envelope_type": "gaussian",
-        "output_subdir": "2d_spectroscopy",
-        "E0": 0.005,
-        "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
+        "envelope_type": "gaussian",  # Pulse envelope type
+        "E0": 0.005,  # Electric field amplitude
     }
+    config.update(spectroscopy_config)
+
+    return config
 
 
 # =============================
@@ -164,7 +197,7 @@ def main():
 
     ### Create time arrays
     FWHMs = system.FWHMs
-    times = np.arange(-2 * FWHMs[0], system.t_max, system.dt)
+    times = np.arange(-1 * FWHMs[0], system.t_max, system.dt)
     times_T = np.linspace(0, config["T_wait_max"], config["n_times_T"])
 
     # =============================
@@ -220,16 +253,12 @@ def main():
     # SIMULATION SUMMARY
     # =============================
     elapsed_time = time.time() - start_time
-    total_data_points = sum(
-        data.size if data is not None else 0 for data in two_d_datas
-    )
-    file_size_mb = save_path.stat().st_size / (1024**2) if save_path.exists() else 0
 
     print("\\n" + "=" * 60)
     print("SIMULATION COMPLETED")
     print("=" * 60)
     print(f"Total execution time: {elapsed_time:.2f} seconds")
-    print(f"Saved: {save_path.name} ({file_size_mb:.2f} MB)")
+    print(f"Data shape: {two_d_datas[0].shape}")
     print(f"Data saved to: {save_path}")
     print("=" * 60)
 

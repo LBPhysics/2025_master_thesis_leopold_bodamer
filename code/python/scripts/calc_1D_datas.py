@@ -38,7 +38,7 @@ def get_simulation_config():
         "dt": 2.0,  # Time step [fs]
         "Delta_cm": 200,  # Inhomogeneous broadening [cm⁻¹]
         "envelope_type": "gaussian",  # 'cos2' or 'gaussian'
-        "output_subdir": "1d_spectroscopy",
+        "output_subdir": "1d_spectroscopy/different_pulse_FWHMs",
         "E0": 0.005,
         "ODE_Solver": "Paper_eqs",  # ODE solver type
         "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]

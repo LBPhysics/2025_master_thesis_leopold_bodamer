@@ -42,6 +42,14 @@
 \usepackage{amsmath, amssymb, amsfonts}
 \usepackage{bbold}
 \usepackage{tikz}
+\usepackage[colorinlistoftodos,prependcaption,textsize=small]{todonotes}
+
+% Custom TODO commands with vibrant colors
+\newcommand{\todoimp}[1]{\todo[inline,color=red!70]{\textbf{IMPORTANT:} #1}}
+\newcommand{\todoidea}[1]{\todo[inline,color=green!60]{\textbf{IDEA:} #1}}
+\newcommand{\todoeq}[1]{\todo[inline,color=blue!50]{\textbf{EQUATION:} #1}}
+\newcommand{\todoref}[1]{\todo[inline,color=purple!50]{\textbf{REFERENCE:} #1}}
+\newcommand{\todofix}[1]{\todo[inline,color=orange!70]{\textbf{FIX:} #1}}
 
 
 %----------------------------------------------------------------------------------------
@@ -110,6 +118,7 @@
 \include{chapters/c22_Rabi_osci}
 \include{chapters/c30_numerical_implementation}
 \include{chapters/c40_spectroscopy}
+\include{chapters/todo_example}
 
 %----------------------------------------------------------------------------------------
 %	APPENDICES
