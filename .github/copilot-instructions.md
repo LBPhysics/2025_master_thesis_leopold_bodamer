@@ -26,7 +26,8 @@ If I want help with python, ignore them and use the instruductions at the bottom
     6. Properly structure sections and subsections
     7. Use appropriate math environments for equations
     8. Handle figures and tables with proper floating placement
-    9. Include references and citations if needed
+    9. Never write a scientific statement without Reference (cite)    
+    10. You find the Bibliography in: /Master_thesis/latex/bib/my_bibliography.bib
 
     Remember to follow these additional guidelines:
     1. Use consistent indentation and spacing in your LaTeX source

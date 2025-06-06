@@ -41,7 +41,6 @@
 \usepackage[autostyle=true]{csquotes}
 \usepackage{amsmath, amssymb, amsfonts}
 \usepackage{bbold}
-\usepackage{tikz}
 
 
 %----------------------------------------------------------------------------------------
@@ -81,19 +80,19 @@
 %----------------------------------------------------------------------------------------
 
 \begin{abstract}
-	\addchaptertocentry{\abstractname}
-	This thesis investigates the directional routing of excitations in atomic systems using subradiant states.
-	Building on Bottarelli's quantum router
-	%\cite{Startingpoint}
-	, this thesis adapts the model to atomic systems,
-	addressing the challenges of controlling interactions in fully connected systems.
-	Atom light interactions have been heavily studied for atomic lattices
-	%\cite{Masson2022, Asenjo-Garcia2017, Needham2019, Cech2023, Jen2016}
-	.
-	In this thesis three chains, that are connected by an equilateral triangle and an isosceles triangle are studied.
-	By allowing different dipole orientations on each chain, three distinct topologies are considered.
-	The results show that controlling the topology and the initial state enables directional routing,
-	where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
+    \addchaptertocentry{\abstractname}
+    This thesis investigates the directional routing of excitations in atomic systems using subradiant states.
+    Building on Bottarelli's quantum router
+    %\cite{Startingpoint}
+    , this thesis adapts the model to atomic systems,
+    addressing the challenges of controlling interactions in fully connected systems.
+    Atom light interactions have been heavily studied for atomic lattices
+    %\cite{Masson2022, Asenjo-Garcia2017, Needham2019, Cech2023, Jen2016}
+    .
+    In this thesis three chains, that are connected by an equilateral triangle and an isosceles triangle are studied.
+    By allowing different dipole orientations on each chain, three distinct topologies are considered.
+    The results show that controlling the topology and the initial state enables directional routing,
+    where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
 \end{abstract}
 
 %----------------------------------------------------------------------------------------
