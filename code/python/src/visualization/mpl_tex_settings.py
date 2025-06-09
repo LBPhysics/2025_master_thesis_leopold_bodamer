@@ -23,8 +23,24 @@ plt.rcParams.update(
     }
 )
 
-# mpl.use("Agg")  # Use a non-interactive backend / SAVE figures to svg files
-mpl.use(
-    "module://matplotlib_inline.backend_inline"
-)  # Use inline backend for Jupyter notebooks
-# mpl.use('TkAgg')  # open each plot in interactive window
+# =============================
+# BACKEND SELECTION
+# =============================
+import os
+import sys
+
+# Check if running in a headless environment (like SLURM/HPC)
+if "DISPLAY" not in os.environ or os.environ.get("SLURM_JOB_ID"):
+    # Use non-interactive backend for HPC/SLURM environments
+    mpl.use("Agg")
+else:
+    # Check if running in Jupyter notebook
+    try:
+        if "ipykernel" in sys.modules:
+            mpl.use("module://matplotlib_inline.backend_inline")
+        else:
+            # Use TkAgg for interactive environments
+            mpl.use("TkAgg")
+    except (ImportError, ValueError):
+        # Fallback to Agg if inline backend is not available
+        mpl.use("Agg")
