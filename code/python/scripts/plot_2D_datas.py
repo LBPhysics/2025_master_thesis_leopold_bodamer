@@ -110,7 +110,7 @@ def create_output_directory(subdir: str) -> Path:
 # MAIN PLOTTING FUNCTION
 # =============================
 def plot_2d_spectroscopy_data(
-    data_subdir: str = "2d_spectroscopy/new_echo_signal/600fs/",
+    data_subdir: str = "2d_spectroscopy/N_1/600fs/",
     file_pattern: str = "*.pkl",
     output_subdir: str = "2d_spectroscopy/extended",
     plot_types: list = None,
@@ -236,7 +236,7 @@ def get_plotting_config():
         Dictionary with default plotting parameters
     """
     return {
-        "data_subdir": "2d_spectroscopy/new_echo_signal/600fs/",
+        "data_subdir": "2d_spectroscopy/N_1/600fs/",
         "file_pattern": "*.pkl",
         "output_subdir": "2d_spectroscopy/extended",
         "plot_types": ["imag", "abs", "real", "phase"],

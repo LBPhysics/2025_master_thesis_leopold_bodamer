@@ -446,22 +446,17 @@ class SystemParameters:
             ]  # TODO THIS WAS NOT IN THE PAPER!!!!
 
         elif self.N_atoms == 2:
-            cplng_ops_to_env = [
-                ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
-                ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B
-                ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
-            ]
             a_ops_list = [
                 [
-                    cplng_ops_to_env[0],
+                    ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
                     env.power_spectrum,
                 ],  # atom A with ohmic_spectrum
                 [
-                    cplng_ops_to_env[1],
+                    ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B
                     env.power_spectrum,
                 ],  # atom B with ohmic_spectrum
                 [
-                    cplng_ops_to_env[2],
+                    ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
                     lambda w: env.power_spectrum(2 * w),
                 ],  # double excited state with 2 * ohmic_spectrum
             ]

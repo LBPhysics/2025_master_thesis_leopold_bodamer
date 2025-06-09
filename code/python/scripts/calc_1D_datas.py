@@ -129,7 +129,9 @@ def main():
     print(
         f"  Parameters: #phases={config['n_phases']}, #frequencies={config['n_freqs']}"
     )
-    print(f"  Total combinations processed: {config['n_phases'] * config['n_freqs']}")
+    print(
+        f"  Total combinations processed: {config['n_times_T'] * config['n_phases'] * config['n_phases'] * config['n_freqs']}"
+    )
     print(f"  Parallel workers used: {max_workers}")
     print()
 

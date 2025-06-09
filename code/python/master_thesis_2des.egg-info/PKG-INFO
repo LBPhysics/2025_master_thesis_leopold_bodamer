@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: master_thesis_2des
 Version: 0.1.0
 Summary: 2D Electronic Spectroscopy simulation package
@@ -8,3 +8,7 @@ Requires-Dist: numpy
 Requires-Dist: qutip
 Requires-Dist: matplotlib
 Requires-Dist: dataclasses; python_version < "3.7"
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

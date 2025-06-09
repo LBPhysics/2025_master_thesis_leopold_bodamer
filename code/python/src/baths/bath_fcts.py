@@ -11,68 +11,115 @@ for various types of bosonic baths, including Drude-Lorentz and ohmic baths.
 def spectral_density_func_drude_lorentz(w, args):
     """
     Spectral density function for a Drude-Lorentz bath.
+    Compatible with scalar and array inputs.
     """
     lambda_ = args["lambda"]  # Reorganization energy (coupling strength)
     gamma = args["cutoff"]  # Drude decay rate (cutoff frequency)
 
-    return (2 * lambda_ * gamma * w) / (w**2 + gamma**2)
+    w_input = w  # Store original input
+    w = np.asarray(w, dtype=float)
+    result = (2 * lambda_ * gamma * w) / (w**2 + gamma**2)
+
+    # Return scalar if input was scalar
+    if np.isscalar(w_input):
+        return float(result)
+    return result
 
 
 def spectral_density_func_ohmic(w, args):
     """
     Spectral density function for an ohmic bath.
+    Compatible with scalar and array inputs.
     """
     wc = args["cutoff"]
     eta = args["eta"]
     s = args["s"]
-    return eta * w**s / wc ** (s - 1) * np.exp(-w / wc) * (w > 0)
+
+    w_input = w  # Store original input
+    w = np.asarray(w, dtype=float)
+    result = eta * w**s / wc ** (s - 1) * np.exp(-w / wc) * (w > 0)
+
+    # Return scalar if input was scalar
+    if np.isscalar(w_input):
+        return float(result)
+    return result
 
 
 def Power_spectrum_func_ohmic(w, args):
     """
     Power spectrum function in the frequency domain for an ohmic bath.
-    Handles both positive and negative frequencies.
+    Handles both positive and negative frequencies, compatible with arrays.
     """
     Boltzmann = args["Boltzmann"]
     Temp = args["Temp"]
-    coth_term = 1 / np.tanh(w / (2 * Boltzmann * Temp))
-    return np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
+
+    w_input = w  # Store original input
+    w = np.asarray(w, dtype=float)
+
+    # Avoid division by zero in tanh
+    w_safe = np.where(w == 0, 1e-10, w)
+    coth_term = 1 / np.tanh(w_safe / (2 * Boltzmann * Temp))
+
+    result = np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
+
+    # Return scalar if input was scalar
+    if np.isscalar(w_input):
+        return float(result)
+    return result
 
 
 # =============================
-# BATH FUNCTIONS
+# BATH FUNCTIONS defined in the paper
 # =============================
 
 
 def n(w, Boltzmann, hbar, Temp):
     """
-    Bose-Einstein distribution function for scalar inputs.
+    Bose-Einstein distribution function for scalar and array inputs.
     """
-    if w == 0:
-        return 0  # Avoid division by zero for w == 0
+    w_input = w  # Store original input
+    w = np.asarray(w, dtype=float)
+
+    # Avoid division by zero for w == 0
+    result = np.zeros_like(w)
 
     # Avoid overflow for large values of hbar * w / (Boltzmann * Temp)
-    if (hbar * w / (Boltzmann * Temp)) > 700:
-        return 0  # Approximate the result as 0 for large values
+    ratio = hbar * w / (Boltzmann * Temp)
+    mask = (w != 0) & (ratio <= 700)
 
-    # Compute the Bose-Einstein distribution
-    exp_term = np.exp(hbar * w / (Boltzmann * Temp))
-    return 1 / (exp_term - 1)
+    # Compute the Bose-Einstein distribution where valid
+    exp_term = np.exp(ratio[mask])
+    result[mask] = 1 / (exp_term - 1)
+
+    # Return scalar if input was scalar
+    if np.isscalar(w_input) or (hasattr(w, "ndim") and w.ndim == 0):
+        return float(result)
+    return result
 
 
 def spectral_density_func_paper(w, args):
     """
     Spectral density function for a bath as given in the paper.
+    Compatible with scalar and array inputs.
     """
     g = args["g"]
     cutoff = args["cutoff"]
-    return g**2 * (w / cutoff) * np.exp(-w / cutoff) * (w > 0)
+
+    w_input = w  # Store original input
+    w = np.asarray(w, dtype=float)
+
+    result = g**2 * (w / cutoff) * np.exp(-w / cutoff) * (w > 0)
+
+    # Return scalar if input was scalar
+    if np.isscalar(w_input):
+        return float(result)
+    return result
 
 
 def Power_spectrum_func_paper(w, args):
     """
     Power spectrum function in the frequency domain as given in the paper.
-    Handles only float inputs for w.
+    Compatible with scalar and array inputs.
     """
     # Extract constants from args
     Boltzmann = args["Boltzmann"]
@@ -81,30 +128,27 @@ def Power_spectrum_func_paper(w, args):
     g = args["g"]
     cutoff = args["cutoff"]
 
-    if w > 0:
-        # Positive frequency
-        return spectral_density_func_paper(w, args) * n(w, Boltzmann, hbar, Temp)
-    elif w < 0:
-        # Negative frequency
-        return spectral_density_func_paper(-w, args) * (
-            1 + n(-w, Boltzmann, hbar, Temp)
-        )
-    else:
-        # Zero frequency
-        return g**2 * Boltzmann * Temp / cutoff
+    w_input = w  # Store original input
+    w = np.asarray(w, dtype=float)
+    result = np.zeros_like(w)
 
+    # Positive frequency
+    pos_mask = w > 0
+    neg_mask = w < 0
+    result[pos_mask] = spectral_density_func_paper(w[pos_mask], args) * n(
+        w[pos_mask], Boltzmann, hbar, Temp
+    )
 
-def Power_spectrum_func_paper_array(w_array, args):
-    """
-    Wrapper for Power_spectrum_func_paper to handle array-like inputs.
-    Calls Power_spectrum_func_paper for each element in the array.
+    # Negative frequency
+    result[neg_mask] = spectral_density_func_paper(-w[neg_mask], args) * (
+        1 + n(-w[neg_mask], Boltzmann, hbar, Temp)
+    )
 
-    Parameters:
-        w_array (array-like): Array of frequency values.
-        args (dict): Arguments for the power spectrum function.
+    # Zero frequency
+    zero_mask = w == 0
+    result[zero_mask] = g**2 * Boltzmann * Temp / cutoff
 
-    Returns:
-        np.ndarray: Array of power spectrum values.
-    """
-    w_array = np.asarray(w_array, dtype=float)  # Ensure input is a NumPy array
-    return np.array([Power_spectrum_func_paper(w, args) for w in w_array])
+    # Return scalar if input was scalar
+    if np.isscalar(w_input):
+        return float(result)
+    return result

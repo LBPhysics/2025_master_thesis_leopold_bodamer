@@ -13,6 +13,7 @@ import psutil
 import time
 import pickle
 import copy
+import sys
 from pathlib import Path
 from datetime import datetime
 
@@ -40,7 +41,7 @@ def get_simulation_config():
 
     # Time and output directory configuration
     time_config = {
-        "t_max": 1,  # Maximum time [fs]
+        "t_max": 6,  # Maximum time [fs]
         "dt": 0.1,  # Time step [fs]
     }
     config.update(time_config)
@@ -52,7 +53,7 @@ def get_simulation_config():
         system_config = {
             "N_atoms": 1,  # Number of atoms in the system
             "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
-            "output_subdir": "2d_spectroscopy/N_1/600fs",
+            "output_subdir": "2d_spectroscopy/N_1/BR/600fs",
         }
     elif N_atoms == 2:
         system_config = {
@@ -66,7 +67,7 @@ def get_simulation_config():
     # 2D SPECTROSCOPY PARAMETERS
     # =============================
     spectroscopy_config = {
-        "ODE_Solver": "Paper_eqs",  # ODE solver type
+        "ODE_Solver": "BR",  # ODE solver type
         "RWA_laser": True,  # Use RWA for laser interaction
         "T_wait_max": time_config["t_max"] / 2,  # Maximum waiting time [fs]
         "n_times_T": 1,  # Number of T_wait values

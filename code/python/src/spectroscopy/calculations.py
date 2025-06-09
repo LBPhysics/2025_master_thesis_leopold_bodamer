@@ -70,9 +70,9 @@ def compute_pulse_evolution(
         "store_states": True,
         "progress_bar": "",
         # Increasing max steps and atol/rtol for better stability
-        # "nsteps": 20000,
-        # "atol": 1e-8,
-        # "rtol": 1e-6,
+        "nsteps": 200000,
+        "atol": 1e-6,
+        "rtol": 1e-4,
     }
 
     # Update options with defaults only if not already set
@@ -85,6 +85,8 @@ def compute_pulse_evolution(
     # =============================
     if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
+
+    # elif system.ODE_Solver == "BR": # TODO added THIS CASE, because i couldnt run with 2 atoms
 
     else:
         # Build Hamiltonian components

@@ -1,4 +1,6 @@
 setup.py
+config/__init__.py
+config/paths.py
 master_thesis_2des.egg-info/PKG-INFO
 master_thesis_2des.egg-info/SOURCES.txt
 master_thesis_2des.egg-info/dependency_links.txt
