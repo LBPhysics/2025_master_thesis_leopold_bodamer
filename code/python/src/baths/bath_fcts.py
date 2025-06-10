@@ -54,13 +54,15 @@ def Power_spectrum_func_ohmic(w, args):
     """
     Boltzmann = args["Boltzmann"]
     Temp = args["Temp"]
+    hbar = args["hbar"]
 
     w_input = w  # Store original input
     w = np.asarray(w, dtype=float)
 
     # Avoid division by zero in tanh
     w_safe = np.where(w == 0, 1e-10, w)
-    coth_term = 1 / np.tanh(w_safe / (2 * Boltzmann * Temp))
+    w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
+    coth_term = 1 / np.tanh(w_safe / (2 * w_th))
 
     result = np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
 
@@ -129,4 +131,4 @@ def Power_spectrum_func_paper(w, args):
     # Return scalar if input was scalar
     if np.isscalar(w_input):
         return float(result)
-    return result
+    return 2 * result
