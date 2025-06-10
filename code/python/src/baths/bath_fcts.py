@@ -34,12 +34,12 @@ def spectral_density_func_ohmic(w, args):
     Qutip handles w as angular frequency!
     """
     wc = args["cutoff"]
-    eta = args["eta"]
+    alpha = args["alpha"]
     s = args["s"]
 
     w_input = w  # Store original input
     w = np.asarray(w, dtype=float)
-    result = eta * w**s / wc ** (s - 1) * np.exp(-w / wc) * (w > 0)
+    result = alpha * w**s / wc ** (s - 1) * np.exp(-w / wc) * (w > 0)
 
     # Return scalar if input was scalar
     if np.isscalar(w_input):
@@ -113,13 +113,13 @@ def Power_spectrum_func_paper(w, args):
     # Positive frequency
     pos_mask = w > 0
     neg_mask = w < 0
-    result[pos_mask] = spectral_density_func_paper(w[pos_mask], args) * n_thermal(
-        w[pos_mask], w_th
+    result[pos_mask] = spectral_density_func_paper(w[pos_mask], args) * (
+        1 + n_thermal(w[pos_mask], w_th)
     )
 
     # Negative frequency
-    result[neg_mask] = spectral_density_func_paper(-w[neg_mask], args) * (
-        1 + n_thermal(-w[neg_mask], w_th)
+    result[neg_mask] = spectral_density_func_paper(-w[neg_mask], args) * n_thermal(
+        -w[neg_mask], w_th
     )
 
     # Zero frequency C(0)
