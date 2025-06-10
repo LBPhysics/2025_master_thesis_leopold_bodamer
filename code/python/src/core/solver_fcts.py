@@ -12,7 +12,11 @@ from src.core.functions_with_rwa import apply_RWA_phase_factors
 def matrix_ODE_paper(
     t: float, pulse_seq: PulseSequence, system: SystemParameters
 ) -> Qobj:
-    """Dispatches to the appropriate implementation based on N_atoms."""
+    """
+    Dispatches to the appropriate implementation based on N_atoms.
+    Solves the equation drho_dt = L(t) * rho,
+    in natural units: L = -i/hbar(Hrho - rho H) + R * rho,  with [hbar] = 1 and [R] = [1] = [Power Spectrum S(w)] = [all the Gammas: like gamma_phi].
+    """
     if system.N_atoms == 1:
         return _matrix_ODE_paper_1atom(t, pulse_seq, system)
     elif system.N_atoms == 2:
