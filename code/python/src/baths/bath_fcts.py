@@ -80,13 +80,13 @@ def spectral_density_func_paper(w, args):
     Spectral density function for a bath as given in the paper.
     Compatible with scalar and array inputs.
     """
-    g = args["g"]
+    alpha = args["alpha"]
     cutoff = args["cutoff"]
 
     w_input = w  # Store original input
     w = np.asarray(w, dtype=float)
 
-    result = g**2 * (w / cutoff) * np.exp(-w / cutoff) * (w > 0)
+    result = alpha**2 * (w / cutoff) * np.exp(-w / cutoff) * (w > 0)
 
     # Return scalar if input was scalar
     if np.isscalar(w_input):
@@ -103,7 +103,7 @@ def Power_spectrum_func_paper(w, args):
     Boltzmann = args["Boltzmann"]
     hbar = args["hbar"]
     Temp = args["Temp"]
-    g = args["g"]
+    alpha = args["alpha"]
     cutoff = args["cutoff"]
 
     w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
@@ -126,7 +126,7 @@ def Power_spectrum_func_paper(w, args):
 
     # Zero frequency C(0)
     zero_mask = w == 0
-    result[zero_mask] = g**2 * Boltzmann * Temp / (cutoff * hbar)
+    result[zero_mask] = alpha**2 * Boltzmann * Temp / (cutoff * hbar)
 
     # Return scalar if input was scalar
     if np.isscalar(w_input):
