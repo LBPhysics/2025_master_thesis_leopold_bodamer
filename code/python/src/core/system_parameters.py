@@ -238,6 +238,7 @@ class SystemParameters:
     def H0_diagonalized(self):
         """
         Diagonalize the Hamiltonian and return the eigenvalues and eigenstates.
+        WITH RWA
 
         Returns:
             tuple: Eigenvalues and eigenstates of the Hamiltonian.
@@ -365,7 +366,7 @@ class SystemParameters:
     def e_ops_list(self):
         if self.N_atoms == 1:
             e_ops_list = [
-                ket2dm(self.atom_g),
+                # ket2dm(self.atom_g), TODO
                 self.atom_g * self.atom_e.dag(),
                 self.atom_e * self.atom_g.dag(),
                 ket2dm(self.atom_e),
@@ -391,7 +392,7 @@ class SystemParameters:
     @property
     def e_ops_labels(self):
         if self.N_atoms == 1:
-            e_ops_labels = ["gg", "ge", "eg", "ee"]
+            e_ops_labels = ["ge", "eg", "ee"]  # "gg", TODO
         elif self.N_atoms == 2:
             # e_ops_labels1 = [f"{i}" for i in range(len(self.eigenstates[1]))]
             e_ops_labels2 = ["0", "A", "B", "AB"]
@@ -403,16 +404,30 @@ class SystemParameters:
         return e_ops_labels
 
     @property
-    def c_ops_list(self):  # TODO not including temperature!
+    def c_ops_list(self):
         Gamma = self.Gamma
         gamma_phi = self.gamma_phi
 
+        w_th = self.Boltzmann * self.Temp / self.hbar
+        from qutip.utilities import n_thermal
+
+        n_th_at = n_thermal(self.omega_A, w_th)
+
         if self.N_atoms == 1:
             c_ops_list = [
-                np.sqrt(Gamma) * self.SM_op,
-                np.sqrt(gamma_phi) * self.Deph_op,
+                self.SM_op.dag()
+                * np.sqrt(Gamma * n_th_at),  # Collapse operator for thermal excitation
+                self.SM_op
+                * np.sqrt(
+                    Gamma * (n_th_at) + 1
+                ),  # Collapse operator for spontaneous and thermal relaxation
+                self.Deph_op
+                * np.sqrt(
+                    gamma_phi * (2 * n_th_at + 1)
+                ),  # Collapse operator for dephasing
             ]
-        elif self.N_atoms == 2:
+
+        elif self.N_atoms == 2:  # TODO include the (temperature and THE DECAY?)!
             c_ops_list = [self.Deph_op]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
@@ -442,22 +457,26 @@ class SystemParameters:
         )
         if self.N_atoms == 1:
             a_ops_list = [
-                [self.Deph_op, env.power_spectrum],
+                # [self.Deph_op, env.power_spectrum],
+                [self.Deph_op, lambda w: Power_spectrum_func_paper(w, self.args_bath)],
             ]  # TODO THIS WAS NOT IN THE PAPER!!!!
 
         elif self.N_atoms == 2:
             a_ops_list = [
                 [
                     ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
-                    env.power_spectrum,
+                    lambda w: Power_spectrum_func_paper(w, self.args_bath),
+                    # env.power_spectrum,
                 ],  # atom A with ohmic_spectrum
                 [
                     ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B
-                    env.power_spectrum,
+                    lambda w: Power_spectrum_func_paper(w, self.args_bath),
+                    # env.power_spectrum,
                 ],  # atom B with ohmic_spectrum
                 [
                     ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
-                    lambda w: env.power_spectrum(2 * w),
+                    lambda w: Power_spectrum_func_paper(2 * w, self.args_bath),
+                    # lambda w: env.power_spectrum(2 * w),
                 ],  # double excited state with 2 * ohmic_spectrum
             ]
         else:

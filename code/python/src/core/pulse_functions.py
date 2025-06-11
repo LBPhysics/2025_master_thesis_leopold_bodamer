@@ -16,7 +16,7 @@ def pulse_envelope(
     Uses the envelope_type from each pulse to determine which envelope function to use:
     - 'cos2': cosine squared envelope
     - 'gaussian': Gaussian envelope, shifted so that:
-      - The Gaussian is zero at t_peak ± FWHM boundaries
+      - The Gaussian is zero at t_peak ± FWHM boundaries: (actually about <= 1%)
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
@@ -66,7 +66,7 @@ def pulse_envelope(
             boundary_val = np.exp(-boundary_distance_sq / (2 * sigma**2))
             envelope += (
                 max(0.0, gaussian_val) - boundary_val
-            )  # TODO Check the effect of this (dis)continuity
+            )  # TODO Check the effect of this (dis)continuity -> minumal
 
         else:
             raise ValueError(
@@ -111,7 +111,7 @@ def E_pulse(
             t, PulseSequence([pulse])
         )  # use pulse_envelope for each pulse
         E_total += E0 * envelope * np.exp(-1j * phi)
-    return E_total  # TO make it into a cos: / 2.0
+    return E_total  # TODO make it into a cos: / 2.0
 
 
 def Epsilon_pulse(

@@ -43,7 +43,9 @@ def H_int(
         )  # RWA interaction Hamiltonian
     else:
         E_field = Epsilon_pulse(t, pulse_seq)  # Combined electric field with carrier
-        H_int = -Dip_op * (E_field + np.conj(E_field))  # Full interaction Hamiltonian
+        H_int = (
+            -Dip_op * (E_field + np.conj(E_field)) / 2
+        )  # Full interaction Hamiltonian
 
     return H_int
 
@@ -149,7 +151,7 @@ def _apply_RWA_phase_factors_2atom(rho: Qobj, t: float, omega: float) -> Qobj:
 
 
 def get_expect_vals_with_RWA(
-    states: list[Qobj], times: np.array, system: SystemParameters
+    states: list[Qobj], times: np.array, system: SystemParameters, add_Dip: bool = True
 ):
     """
     Calculate the expectation values in the result with RWA phase factors.
@@ -164,7 +166,9 @@ def get_expect_vals_with_RWA(
         list of lists: Expectation values for each operator of len(states).
     """
     omega = system.omega_laser
-    e_ops = system.e_ops_list + [system.Dip_op]
+    e_ops = system.e_ops_list
+    if add_Dip:
+        e_ops += [system.Dip_op]
 
     if system.RWA_laser:
         # Apply RWA phase factors to each state
@@ -176,12 +180,11 @@ def get_expect_vals_with_RWA(
     # Calculate expectation values for each state and each operator
     # This should return a list where each element corresponds to an operator
     # and contains an array of expectation values (one for each state)
-    from qutip import expect as qutip_expect
 
     updated_expects = []
     for e_op in e_ops:
         # Calculate expectation value for each state with this operator
-        expect_vals = np.array([np.real(qutip_expect(e_op, state)) for state in states])
+        expect_vals = np.array([np.real(expect(e_op, state)) for state in states])
         updated_expects.append(expect_vals)
 
     return updated_expects

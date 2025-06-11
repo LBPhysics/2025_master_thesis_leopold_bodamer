@@ -126,7 +126,7 @@ def Power_spectrum_func_paper(w, args):
 
     # Zero frequency C(0)
     zero_mask = w == 0
-    result[zero_mask] = g**2 * Boltzmann * Temp / cutoff
+    result[zero_mask] = g**2 * Boltzmann * Temp / (cutoff * hbar)
 
     # Return scalar if input was scalar
     if np.isscalar(w_input):
