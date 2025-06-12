@@ -14,9 +14,10 @@ def spectral_density_func_drude_lorentz(w, args):
     Spectral density function for a Drude-Lorentz bath.
     Compatible with scalar and array inputs.
     """
-    lambda_ = args["lambda"]  # Reorganization energy (coupling strength)
-    gamma = args["cutoff"]  # Drude decay rate (cutoff frequency)
-
+    alpha = args["alpha"]
+    cutoff = args["cutoff"]
+    lambda_ = alpha * cutoff / 2  # Reorganization energy (coupling strength)
+    gamma = cutoff  # Drude decay rate (cutoff frequency)
     w_input = w  # Store original input
     w = np.asarray(w, dtype=float)
     result = (2 * lambda_ * gamma * w) / (w**2 + gamma**2)
@@ -27,7 +28,7 @@ def spectral_density_func_drude_lorentz(w, args):
     return result
 
 
-def power_spectrum_func_drude_lorentz(w, args):
+def power_spectrum_func_drude_lorentz(w, args):  # TODO CHECK, its just a guess
     """
     power spectrum (symmetrized correlation function) for a Drude-Lorentz bath.
 
@@ -36,25 +37,28 @@ def power_spectrum_func_drude_lorentz(w, args):
             Frequency (can be scalar or array).
         args : dict
             Dictionary containing:
-                - "lambda": Reorganization energy (coupling strength)
+                - "alpha": Reorganization energy (coupling strength)
                 - "cutoff": Drude decay rate (cutoff frequency)
                 - "beta": Inverse temperature (1 / (k_B * T))
 
     Returns:
         float or ndarray: power spectrum value(s)
     """
-    lambda_ = args["lambda"]
-    gamma = args["cutoff"]
-    beta = args["beta"]
+    alpha = args["alpha"]
+    cutoff = args["cutoff"]
+    Boltzmann = args["Boltzmann"]
+    Temp = args["Temp"]
+    hbar = args["hbar"]
+    beta = 1 / (Boltzmann * Temp)  # Inverse temperature
 
     w_input = w
     w = np.asarray(w, dtype=float)
 
-    J = (2 * lambda_ * gamma * w) / (w**2 + gamma**2)
-    S = (1 / np.pi) * J * np.coth(0.5 * beta * w)
+    J = (2 * alpha * cutoff * w) / (w**2 + cutoff**2)
+    S = (1 / np.pi) * J * np.tanh(0.5 * beta * w)
 
     # Handle zero frequency (avoid division by zero in coth)
-    S = np.where(w == 0, (1 / np.pi) * (2 * lambda_ * gamma / gamma) * (2 / beta), S)
+    S = np.where(w == 0, (1 / np.pi) * (2 * alpha * cutoff / cutoff) * (2 / beta), S)
 
     return float(S) if np.isscalar(w_input) else S
 
