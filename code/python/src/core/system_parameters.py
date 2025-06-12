@@ -9,7 +9,7 @@ from qutip import basis, ket2dm, tensor, Qobj, BosonicEnvironment
 # bath functions
 from src.baths.bath_fcts import (
     spectral_density_func_paper,
-    Power_spectrum_func_paper,
+    power_spectrum_func_paper,
 )
 
 
@@ -458,24 +458,24 @@ class SystemParameters:
         if self.N_atoms == 1:
             a_ops_list = [
                 # [self.Deph_op, env.power_spectrum],
-                [self.Deph_op, lambda w: Power_spectrum_func_paper(w, self.args_bath)],
+                [self.Deph_op, lambda w: power_spectrum_func_paper(w, self.args_bath)],
             ]  # TODO THIS WAS NOT IN THE PAPER!!!!
 
         elif self.N_atoms == 2:
             a_ops_list = [
                 [
                     ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
-                    lambda w: Power_spectrum_func_paper(w, self.args_bath),
+                    lambda w: power_spectrum_func_paper(w, self.args_bath),
                     # env.power_spectrum,
                 ],  # atom A with ohmic_spectrum
                 [
                     ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B
-                    lambda w: Power_spectrum_func_paper(w, self.args_bath),
+                    lambda w: power_spectrum_func_paper(w, self.args_bath),
                     # env.power_spectrum,
                 ],  # atom B with ohmic_spectrum
                 [
                     ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
-                    lambda w: Power_spectrum_func_paper(2 * w, self.args_bath),
+                    lambda w: power_spectrum_func_paper(2 * w, self.args_bath),
                     # lambda w: env.power_spectrum(2 * w),
                 ],  # double excited state with 2 * ohmic_spectrum
             ]
@@ -510,7 +510,7 @@ class SystemParameters:
         """
 
         w_ij = self.omega_ij(i, j)
-        return np.sin(2 * self.theta) ** 2 * Power_spectrum_func_paper(
+        return np.sin(2 * self.theta) ** 2 * power_spectrum_func_paper(
             w_ij, self.args_bath
         )
 
@@ -526,7 +526,7 @@ class SystemParameters:
             float: Pure dephasing rate.
         """
         # Pure dephasing rates helper
-        P_0 = Power_spectrum_func_paper(0, self.args_bath)
+        P_0 = power_spectrum_func_paper(0, self.args_bath)
         Gamma_t_ab = 2 * np.cos(2 * self.theta) ** 2 * P_0  # tilde
         Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.theta) ** 2) * P_0
         Gamma_11 = self.gamma_small_ij(2, 1)

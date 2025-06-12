@@ -15,7 +15,7 @@ def matrix_ODE_paper(
     """
     Dispatches to the appropriate implementation based on N_atoms.
     Solves the equation drho_dt = L(t) * rho,
-    in natural units: L = -i/hbar(Hrho - rho H) + R * rho,  with [hbar] = 1 and [R] = [1] = [Power Spectrum S(w)] = [all the Gammas: like gamma_phi].
+    in natural units: L = -i/hbar(Hrho - rho H) + R * rho,  with [hbar] = 1 and [R] = [1] = [power Spectrum S(w)] = [all the Gammas: like gamma_phi].
     """
     if system.N_atoms == 1:
         return _matrix_ODE_paper_1atom(t, pulse_seq, system)

@@ -27,6 +27,38 @@ def spectral_density_func_drude_lorentz(w, args):
     return result
 
 
+def power_spectrum_func_drude_lorentz(w, args):
+    """
+    power spectrum (symmetrized correlation function) for a Drude-Lorentz bath.
+
+    Parameters:
+        w : float or ndarray
+            Frequency (can be scalar or array).
+        args : dict
+            Dictionary containing:
+                - "lambda": Reorganization energy (coupling strength)
+                - "cutoff": Drude decay rate (cutoff frequency)
+                - "beta": Inverse temperature (1 / (k_B * T))
+
+    Returns:
+        float or ndarray: power spectrum value(s)
+    """
+    lambda_ = args["lambda"]
+    gamma = args["cutoff"]
+    beta = args["beta"]
+
+    w_input = w
+    w = np.asarray(w, dtype=float)
+
+    J = (2 * lambda_ * gamma * w) / (w**2 + gamma**2)
+    S = (1 / np.pi) * J * np.coth(0.5 * beta * w)
+
+    # Handle zero frequency (avoid division by zero in coth)
+    S = np.where(w == 0, (1 / np.pi) * (2 * lambda_ * gamma / gamma) * (2 / beta), S)
+
+    return float(S) if np.isscalar(w_input) else S
+
+
 def spectral_density_func_ohmic(w, args):
     """
     Spectral density function for an ohmic bath.
@@ -47,9 +79,9 @@ def spectral_density_func_ohmic(w, args):
     return result
 
 
-def Power_spectrum_func_ohmic(w, args):
+def power_spectrum_func_ohmic(w, args):
     """
-    Power spectrum function in the frequency domain for an ohmic bath.
+    power spectrum function in the frequency domain for an ohmic bath.
     Handles both positive and negative frequencies, compatible with arrays.
     """
     Boltzmann = args["Boltzmann"]
@@ -94,9 +126,9 @@ def spectral_density_func_paper(w, args):
     return result
 
 
-def Power_spectrum_func_paper(w, args):
+def power_spectrum_func_paper(w, args):
     """
-    Power spectrum function in the frequency domain as given in the paper.
+    power spectrum function in the frequency domain as given in the paper.
     Compatible with scalar and array inputs.
     """
     # Extract constants from args
