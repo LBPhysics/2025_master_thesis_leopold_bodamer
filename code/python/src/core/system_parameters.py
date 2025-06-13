@@ -441,11 +441,12 @@ class SystemParameters:
     @property
     def args_bath(self):
         return {
-            "g": self.gamma_phi,
+            "alpha": self.gamma_phi,
             "cutoff": self.cutoff,
             "Boltzmann": self.Boltzmann,
             "hbar": self.hbar,
             "Temp": self.Temp,
+            "s": 1.0,  # ohmic spectrum
         }
 
     @property
