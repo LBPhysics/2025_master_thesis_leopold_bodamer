@@ -41,7 +41,7 @@ def get_simulation_config():
 
     # Time and output directory configuration
     time_config = {
-        "t_max": 60,  # Maximum time [fs]
+        "t_max": 100,  # Maximum time [fs]
         "dt": 0.1,  # Time step [fs]
     }
     config.update(time_config)
@@ -53,7 +53,7 @@ def get_simulation_config():
         system_config = {
             "N_atoms": 1,  # Number of atoms in the system
             "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
-            "output_subdir": "2d_spectroscopy/N_1/BR/600fs",
+            "output_subdir": "2d_spectroscopy/N_1/paper_eqs/100fs",
         }
     elif N_atoms == 2:
         system_config = {
