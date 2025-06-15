@@ -1,6 +1,8 @@
-from src.core.pulse_functions import *
-from src.visualization.plotting import Plot_2d_El_field
-from src.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
+from qspectro2d.core.pulse_functions import *
+from qspectro2d.visualization.plotting import Plot_2d_El_field
+from qspectro2d.spectroscopy.calculations import (
+    get_tau_cohs_and_t_dets_for_T_wait,
+)
 from qutip import basis, ket2dm, tensor, Qobj, mesolve, brmesolve, expect
 import numpy as np
 

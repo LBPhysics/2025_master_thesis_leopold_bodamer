@@ -1,4 +1,4 @@
-from src.core.pulse_sequences import PulseSequence
+from qspectro2d.core.pulse_sequences import PulseSequence
 from typing import List, Tuple, Union
 import numpy as np
 

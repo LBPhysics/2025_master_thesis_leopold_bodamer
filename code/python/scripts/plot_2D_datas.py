@@ -21,10 +21,10 @@ from typing import Dict, Any, Optional
 
 ### Project-specific imports
 from config.paths import DATA_DIR, FIGURES_DIR
-from src.spectroscopy.post_processing import extend_and_plot_results
-from src.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
-from src.visualization.plotting import Plot_2d_El_field
-from src.visualization import mpl_tex_settings
+from qspectro2d.spectroscopy.post_processing import extend_and_plot_results
+from qspectro2d.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
+from qspectro2d.visualization.plotting import Plot_2d_El_field
+from qspectro2d.visualization import mpl_tex_settings
 
 
 # =============================

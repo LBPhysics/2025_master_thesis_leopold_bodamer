@@ -1,8 +1,8 @@
 from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
 import numpy as np
-from src.core.system_parameters import SystemParameters
-from src.core.pulse_functions import *
-from src.core.pulse_sequences import PulseSequence
+from qspectro2d.core.system_parameters import SystemParameters
+from qspectro2d.core.pulse_functions import *
+from qspectro2d.core.pulse_sequences import PulseSequence
 import matplotlib.pyplot as plt
 import os
 

@@ -5,19 +5,19 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 from qutip import Qobj, Result, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
-from src.core.system_parameters import SystemParameters
-from src.core.pulse_sequences import PulseSequence
-from src.core.pulse_functions import (
+from qspectro2d.core.system_parameters import SystemParameters
+from qspectro2d.core.pulse_sequences import PulseSequence
+from qspectro2d.core.pulse_functions import (
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
-from src.core.pulse_functions import *
-from src.core.solver_fcts import (
+from qspectro2d.core.pulse_functions import *
+from qspectro2d.core.solver_fcts import (
     matrix_ODE_paper,
     R_paper,
 )
-from src.spectroscopy.inhomogenity import sample_from_sigma
-from src.core.functions_with_rwa import (
+from qspectro2d.spectroscopy.inhomogenity import sample_from_sigma
+from qspectro2d.core.functions_with_rwa import (
     H_int,
     get_expect_vals_with_RWA,
     apply_RWA_phase_factors,
@@ -296,12 +296,14 @@ def check_the_solver(
     t_peak_pulse1 = times[-1] / 2
     t_peak_pulse2 = times[-1] / 1.1
 
-    # Use the from_args static method to construct the sequence
-    pulse_seq = PulseSequence.from_args(
+    # Use the from_pulse_specs static method to construct the sequence
+    pulse_seq = PulseSequence.from_pulse_specs(
         system=system,
-        curr=(t_peak_pulse2, phi_2),
-        prev=(t_peak_pulse1, phi_1),
-        preprev=(0, phi_0),
+        pulse_specs=[
+            (0, 0, phi_0),  # preprev: pulse 0 at t=0
+            (1, t_peak_pulse1, phi_1),  # prev: pulse 1 at middle time
+            (2, t_peak_pulse2, phi_2),  # curr: pulse 2 at end time
+        ],
     )
 
     result = compute_pulse_evolution(system.psi_ini, times, pulse_seq, system=system)
@@ -396,11 +398,12 @@ def compute_1d_polarization(
 
     # First pulse
     t_peak_pulse0 = 0
-    pulse_0 = (t_peak_pulse0, phi_0)
-    # Instead of directly constructing PulseSequence, use from_args:
-    pulse_seq_0 = PulseSequence.from_args(
-        system=system,
-        curr=pulse_0,
+    pulse_0 = (
+        t_peak_pulse0,
+        phi_0,
+    )  # Instead of directly constructing PulseSequence, use from_pulse_specs:
+    pulse_seq_0 = PulseSequence.from_pulse_specs(
+        system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
     )
     data_0 = compute_pulse_evolution(
         system.psi_ini, times_0, pulse_seq_0, system=system
@@ -417,15 +420,17 @@ def compute_1d_polarization(
     ]  # like this: also take the overlap into account;
 
     if times_1.size == 0:
-        times_1 = [times[idx_start_pulse1]]
-
-    # Handle overlapping pulses: If the second pulse starts before the first pulse ends, combine their contributions
+        times_1 = [
+            times[idx_start_pulse1]
+        ]  # Handle overlapping pulses: If the second pulse starts before the first pulse ends, combine their contributions
     t_peak_pulse1 = tau_coh
     pulse_1 = (t_peak_pulse1, phi_1)
-    pulse_seq_1 = PulseSequence.from_args(
+    pulse_seq_1 = PulseSequence.from_pulse_specs(
         system=system,
-        curr=pulse_1,
-        prev=pulse_0,
+        pulse_specs=[
+            (0, t_peak_pulse0, phi_0),  # prev: pulse 0
+            (1, t_peak_pulse1, phi_1),  # curr: pulse 1
+        ],
     )
     data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
 
@@ -437,16 +442,19 @@ def compute_1d_polarization(
 
     times_2 = times[idx_start_pulse2:]
     if times_2.size == 0:
-        times_2 = [times[-1]]  # idx_start_pulse2 : idx_end_pulse2 + 1
-    # If the second pulse starts before the first pulse ends, combine their contributions
+        times_2 = [
+            times[-1]
+        ]  # idx_start_pulse2 : idx_end_pulse2 + 1    # If the second pulse starts before the first pulse ends, combine their contributions
     phi_2 = 0  # FIXED PHASE!
     t_peak_pulse2 = tau_coh + T_wait
     pulse_f = (t_peak_pulse2, phi_2)
-    pulse_seq_f = PulseSequence.from_args(
+    pulse_seq_f = PulseSequence.from_pulse_specs(
         system=system,
-        curr=pulse_f,
-        prev=pulse_1,
-        preprev=pulse_0,
+        pulse_specs=[
+            (0, t_peak_pulse0, phi_0),  # preprev: pulse 0
+            (1, t_peak_pulse1, phi_1),  # prev: pulse 1
+            (2, t_peak_pulse2, phi_2),  # curr: pulse 2
+        ],
     )
     data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 
@@ -503,31 +511,22 @@ def compute_1d_polarization(
     t_det_start_idx_in_times = np.abs(times - (t_peak_pulse2)).argmin()
     t_det_start_idx_in_times_2 = np.abs(
         times_2 - (t_peak_pulse2)
-    ).argmin()  # detection time index in times_2
-
-    # JUST FIRST PULSE
+    ).argmin()  # detection time index in times_2    # JUST FIRST PULSE
     psi_0 = system.psi_ini
-    pulse_seq_just0 = PulseSequence.from_args(
-        system=system,
-        curr=pulse_0,
+    pulse_seq_just0 = PulseSequence.from_pulse_specs(
+        system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
     )
     data_only_pulse0 = compute_pulse_evolution(
         psi_0, times, pulse_seq_just0, system=system
-    )
-
-    # JUST SECOND PULSE
-    pulse_seq_just1 = PulseSequence.from_args(
-        system=system,
-        curr=pulse_1,
+    )  # JUST SECOND PULSE
+    pulse_seq_just1 = PulseSequence.from_pulse_specs(
+        system=system, pulse_specs=[(1, t_peak_pulse1, phi_1)]
     )
     data_only_pulse1 = compute_pulse_evolution(
         psi_0, times, pulse_seq_just1, system=system
-    )
-
-    # JUST THIRD PULSE
-    pulse_seq_just2 = PulseSequence.from_args(
-        system=system,
-        curr=pulse_f,
+    )  # JUST THIRD PULSE
+    pulse_seq_just2 = PulseSequence.from_pulse_specs(
+        system=system, pulse_specs=[(2, t_peak_pulse2, phi_2)]
     )
     data_only_pulse2 = compute_pulse_evolution(
         psi_0, times, pulse_seq_just2, system=system
@@ -696,14 +695,13 @@ def compute_2d_polarization(
         return np.array([0.0]), np.array([0.0]), np.zeros((1, 1), dtype=np.complex64)
 
     # initialize the time domain Spectroscopy data tr(Dip_op * rho_final(tau_coh, t_det))
-    data = np.zeros((len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64)
-
-    # information about the first pulse
+    data = np.zeros(
+        (len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64
+    )  # information about the first pulse
     t_peak_pulse0 = 0
     pulse_0 = (t_peak_pulse0, phi_0)
-    pulse_seq_0 = PulseSequence.from_args(
-        system=system,
-        curr=pulse_0,
+    pulse_seq_0 = PulseSequence.from_pulse_specs(
+        system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
     )
 
     idx_pulse1_max_peak = np.abs(
@@ -733,10 +731,12 @@ def compute_2d_polarization(
 
         t_peak_pulse1 = tau_coh
         pulse_1 = (t_peak_pulse1, phi_1)
-        pulse_seq_1 = PulseSequence.from_args(
+        pulse_seq_1 = PulseSequence.from_pulse_specs(
             system=system,
-            curr=pulse_1,
-            prev=pulse_0,
+            pulse_specs=[
+                (0, t_peak_pulse0, phi_0),  # prev: pulse 0
+                (1, t_peak_pulse1, phi_1),  # curr: pulse 1
+            ],
         )
         data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
 
@@ -749,11 +749,13 @@ def compute_2d_polarization(
 
         phi_2 = 0
         pulse_f = (t_peak_pulse2, phi_2)
-        pulse_seq_f = PulseSequence.from_args(
+        pulse_seq_f = PulseSequence.from_pulse_specs(
             system=system,
-            curr=pulse_f,
-            prev=pulse_1,
-            preprev=pulse_0,
+            pulse_specs=[
+                (0, t_peak_pulse0, phi_0),  # preprev: pulse 0
+                (1, t_peak_pulse1, phi_1),  # prev: pulse 1
+                (2, t_peak_pulse2, phi_2),  # curr: pulse 2
+            ],
         )
         data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 

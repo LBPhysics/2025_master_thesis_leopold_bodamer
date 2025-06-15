@@ -1,6 +1,0 @@
-numpy
-qutip
-matplotlib
-
-[:python_version < "3.7"]
-dataclasses

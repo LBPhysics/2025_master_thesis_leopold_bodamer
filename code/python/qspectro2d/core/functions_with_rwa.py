@@ -7,9 +7,9 @@ and other utilities using a Rotating Wave Approximation.
 
 import numpy as np
 from qutip import Qobj, expect
-from src.core.system_parameters import SystemParameters
-from src.core.pulse_sequences import PulseSequence
-from src.core.pulse_functions import E_pulse, Epsilon_pulse
+from qspectro2d.core.system_parameters import SystemParameters
+from qspectro2d.core.pulse_sequences import PulseSequence
+from qspectro2d.core.pulse_functions import E_pulse, Epsilon_pulse
 
 
 def H_int(
@@ -33,19 +33,20 @@ def H_int(
     if not isinstance(pulse_seq, PulseSequence):
         raise TypeError("pulse_seq must be a PulseSequence instance.")
 
-    SM_op = system.SM_op
     Dip_op = system.Dip_op
 
     if system.RWA_laser:
         E_field = E_pulse(t, pulse_seq)  # Combined electric field under RWA
-        H_int = -(
-            SM_op.dag() * E_field + SM_op * np.conj(E_field)
-        )  # RWA interaction Hamiltonian
+
+        ### Calculate total field amplitude E0 at current time
+        E0 = pulse_seq.get_total_amplitude_at_time(
+            t
+        )  # Sum of all active pulse amplitudes
+
+        H_int = -Dip_op * E0  # RWA interaction Hamiltonian
     else:
         E_field = Epsilon_pulse(t, pulse_seq)  # Combined electric field with carrier
-        H_int = (
-            -Dip_op * (E_field + np.conj(E_field)) / 2
-        )  # Full interaction Hamiltonian
+        H_int = -Dip_op * (E_field + np.conj(E_field))  # Full interaction Hamiltonian
 
     return H_int
 
@@ -194,14 +195,14 @@ if __name__ == "__main__":
     """
     Test the functions in this module when run directly.
     """
-    print("Testing functions_with_rwa.py module...")
-
-    ### Create test system for N_atoms=1
+    print(
+        "Testing functions_with_rwa.py module..."
+    )  ### Create test system for N_atoms=1
     print("\n=== Testing with N_atoms=1 ===")
     system1 = SystemParameters(N_atoms=1)
 
     ### Create simple pulse sequence
-    from src.core.pulse_sequences import Pulse
+    from qspectro2d.core.pulse_sequences import Pulse
 
     test_pulse = Pulse(
         pulse_peak_time=2.0,

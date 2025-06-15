@@ -7,7 +7,7 @@ import numpy as np
 from qutip import basis, ket2dm, tensor, Qobj, BosonicEnvironment
 
 # bath functions
-from src.baths.bath_fcts import (
+from qspectro2d.baths.bath_fcts import (
     spectral_density_func_paper,
     power_spectrum_func_paper,
 )

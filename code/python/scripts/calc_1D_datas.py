@@ -16,10 +16,10 @@ from pathlib import Path
 from datetime import datetime
 
 ### Project-specific imports
-from src.spectroscopy.calculations import (
+from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
 )
-from src.core.system_parameters import SystemParameters
+from qspectro2d.core.system_parameters import SystemParameters
 from config.paths import DATA_DIR
 
 

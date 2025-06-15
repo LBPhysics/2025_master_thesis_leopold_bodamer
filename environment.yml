@@ -1,0 +1,30 @@
+# Conda environment file for Master Thesis 2D Electronic Spectroscopy project
+# Usage: conda env create -f environment.yml
+# Update: conda env update -f environment.yml
+
+name: master_env
+channels:
+  - conda-forge  # Preferred channel for scientific packages
+  - defaults
+
+dependencies:
+  # Core Python
+  - python=3.11
+  - pip
+  
+  # Conda packages (when available, prefer conda over pip)
+  - numpy>=1.20.0
+  - scipy>=1.7.0  
+  - matplotlib>=3.5.0
+  - jupyter
+  - ipython
+  
+  # Pip packages (packages not available or better via pip)
+  - pip:
+    - qutip>=4.7.0           # Quantum toolbox
+    - psutil>=5.8.0          # System utilities
+    - pickle-mixin>=1.0.2    # Pickle utilities
+    - joblib>=1.1.0          # Parallel processing
+    - black[jupyter]>=22.0.0 # Code formatter with notebook support
+    - pytest>=6.0.0          # Testing framework
+    - -e ./code/python       # Local package in editable mode
