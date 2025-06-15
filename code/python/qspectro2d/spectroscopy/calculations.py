@@ -816,7 +816,8 @@ def compute_2d_polarization(
             # 3. We have enough elements in our data arrays
             time_cut = kwargs.get("time_cut", np.inf)
             if (
-                actual_det_time < system.t_max
+                t_idx + tau_idx < len(tau_coh_vals)
+                and actual_det_time < system.t_max  # TODO Not needed anymore?
                 and actual_det_time < time_cut
                 and len(times_2) > 0
                 and len(data_f.states) > 0
@@ -1058,7 +1059,7 @@ def parallel_compute_1d_E_with_inhomogenity(
         # Extract photon echo component P_{-1,1}(t) using discrete IFT
         # P_{-1,1}(t) = Σ_{m1=0}^3 Σ_{m2=0}^3 P_{m1,m2}(t) * exp(-i(-1*m1*π/2 + 1*m2*π/2))
 
-        if t_det_vals is not None:
+        if t_det_vals is not None:  # TODO get rid of this t_det_vals dependance
             # Extract photon echo component P_{-1,1}(t) using our new function
             # with coefficients l=-1, m=1 for the photon echo signal
             """
@@ -1073,6 +1074,8 @@ def parallel_compute_1d_E_with_inhomogenity(
                 l=-1,  # Coefficient for phi_1
                 m=1,  # Coefficient for phi_2
             )
+
+            omega_frequency_results.append(photon_echo_signal)
 
             omega_frequency_results.append(photon_echo_signal)
             print(f"  ✅ IFT completed for frequency {omega_idx + 1}")
@@ -1435,7 +1438,7 @@ def extract_ift_signal_component(
         for phi2_idx, phi_2 in enumerate(phases):
             if results_matrix[phi1_idx, phi2_idx] is not None:
                 # IFT phase factor with parameterized coefficients
-                phase_factor = np.exp(-1j * (l * phi_1 + m * phi_2))
+                phase_factor = np.exp(-1j * (l * phi_1 + m * phi_2))  # n * phi_3 is 0!
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 
     # Normalize by number of phase combinations

@@ -32,7 +32,7 @@ from config.paths import DATA_DIR
 def get_simulation_config():
     """Get default simulation configuration for 2D spectroscopy."""
     # Default number of atoms
-    N_atoms = 2
+    N_atoms = 1
 
     # =============================
     # GENERAL SIMULATION PARAMETERS
@@ -41,7 +41,7 @@ def get_simulation_config():
 
     # Time and output directory configuration
     time_config = {
-        "t_max": 6,  # Maximum time [fs]
+        "t_max": 60,  # Maximum time [fs]
         "dt": 0.1,  # Time step [fs]
     }
     config.update(time_config)
@@ -67,7 +67,7 @@ def get_simulation_config():
     # 2D SPECTROSCOPY PARAMETERS
     # =============================
     spectroscopy_config = {
-        "ODE_Solver": "BR",  # ODE solver type
+        "ODE_Solver": "Paper_eqs",  # ODE solver type
         "RWA_laser": True,  # Use RWA for laser interaction
         "T_wait_max": time_config["t_max"] / 2,  # Maximum waiting time [fs]
         "n_times_T": 1,  # Number of T_wait values

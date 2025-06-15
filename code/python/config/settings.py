@@ -1,4 +1,4 @@
-"""
+"""TODO implement this module
 General configuration settings for the qspectro2d project.
 
 This module contains project-wide configuration constants and settings.

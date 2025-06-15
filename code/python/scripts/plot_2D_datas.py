@@ -236,13 +236,18 @@ def get_plotting_config():
         Dictionary with default plotting parameters
     """
     return {
-        "data_subdir": "2d_spectroscopy/N_1/600fs/",
+        "data_subdir": "2d_spectroscopy/N_1/BR/600fs/",
         "file_pattern": "*.pkl",
         "output_subdir": "2d_spectroscopy/extended",
         "plot_types": ["imag", "abs", "real", "phase"],
         "extend_for": (1, 2.3),
-        "section": (1.5, 1.7, 1.5, 1.7),  # (x_min, x_max, y_min, y_max)
-        "plot_time_domain": False,
+        "section": (
+            0,
+            3,
+            0,
+            3,
+        ),  # (1.5, 1.7, 1.5, 1.7),  # (x_min, x_max, y_min, y_max)
+        "plot_time_domain": True,
     }
 
 

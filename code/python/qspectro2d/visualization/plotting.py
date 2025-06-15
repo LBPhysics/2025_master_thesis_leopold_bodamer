@@ -463,7 +463,7 @@ def Plot_2d_El_field(
     use_custom_colormap: bool = False,
     section: tuple = None,  # (x_min, x_max, y_min, y_max)
     system: SystemParameters = None,
-):
+) -> None:
     """
     x == t_det, y == tau_coh, data == polarization expectation value
     Create a color plot of 2D functional data for positive x and y values.
@@ -475,7 +475,6 @@ def Plot_2d_El_field(
         type (str): Type of data ('real', 'imag', 'abs', or 'phase'). Used only if domain="freq".
         output_dir (str, optional): Directory to save the plot.
         ODE_Solver (str, optional): Solver name for filename.
-        positive (bool): Whether to use ONLY positive values of x and y.
         save (bool): If True, saves the plot to a file.
         use_custom_colormap (bool): Use custom colormap with white at zero.
         section (tuple, optional): (x_min, x_max, y_min, y_max) to zoom in.
