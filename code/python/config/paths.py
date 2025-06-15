@@ -6,26 +6,36 @@ Paths are defined relative to the project root to ensure compatibility across di
 operating systems and user environments.
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 
-# Get the project root directory (master_thesis folder)
-# Start from current file location and go up to find master_thesis
-current_file = Path(__file__).resolve()
-project_root = None
 
-# Walk up the directory tree to find master_thesis folder
-for parent in current_file.parents:
-    if parent.name == "master_thesis":
-        project_root = parent
-        break
+def find_project_root():
+    """Find the project root directory by looking for 'Master_thesis' directory"""
+    current_path = Path(__file__).resolve()
 
-if project_root is None:
-    raise RuntimeError("Could not find 'master_thesis' directory in parent directories")
+    # Look for Master_thesis directory (case-insensitive search)
+    for parent in current_path.parents:
+        if parent.name.lower() == "master_thesis":
+            return parent
+
+    # Alternative: look for specific marker files/directories
+    for parent in current_path.parents:
+        if (parent / "Master_thesis").exists() or parent.name == "Master_thesis":
+            return (
+                parent if parent.name == "Master_thesis" else parent / "Master_thesis"
+            )
+
+    raise RuntimeError(
+        f"Could not find 'Master_thesis' directory. Current path: {current_path}"
+    )
+
+
+PROJECT_ROOT = find_project_root()
 
 # Define directory paths
-DATA_DIR = project_root / "code" / "python" / "data"
-FIGURES_DIR = project_root / "figures"
+DATA_DIR = PROJECT_ROOT / "code" / "python" / "data"
+FIGURES_DIR = PROJECT_ROOT / "figures"
 
 # Create directories if they don't exist
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -36,10 +46,10 @@ DATA_DIR = DATA_DIR.resolve()
 FIGURES_DIR = FIGURES_DIR.resolve()
 
 # Additional useful paths
-PYTHON_CODE_DIR = project_root / "code" / "python"
+PYTHON_CODE_DIR = PROJECT_ROOT / "code" / "python"
 SCRIPTS_DIR = PYTHON_CODE_DIR / "scripts"
 NOTEBOOKS_DIR = PYTHON_CODE_DIR / "notebooks"
-LATEX_DIR = project_root / "latex"
+LATEX_DIR = PROJECT_ROOT / "latex"
 
 # Figures subdirectories (commonly used)
 FIGURES_PYTHON_DIR = FIGURES_DIR / "figures_from_python"
@@ -61,7 +71,7 @@ for fig_dir in [
 # Print paths for debugging (only when directly executed)
 if __name__ == "__main__":
     print("Project paths configuration:")
-    print(f"Project root: {project_root}")
+    print(f"Project root: {PROJECT_ROOT}")
     print(f"Data directory: {DATA_DIR}")
     print(f"Figures directory: {FIGURES_DIR}")
     print(f"Python code directory: {PYTHON_CODE_DIR}")
