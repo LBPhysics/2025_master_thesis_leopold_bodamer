@@ -43,22 +43,6 @@ def compute_pulse_evolution(
     Returns:
         Result: Result of the evolution.
     """
-    """
-    # =============================
-    # Validate input parameters
-    # =============================
-    if system is None:
-        raise ValueError("System parameters must be provided.")
-
-    if not isinstance(psi_ini, Qobj):
-        raise TypeError(f"Expected psi_ini to be a Qobj, got {type(psi_ini)}")
-
-    if not isinstance(times, np.ndarray) or len(times) == 0:
-        raise ValueError(f"Invalid times array: {times}")
-
-    if not isinstance(pulse_seq, PulseSequence) or len(pulse_seq.pulses) == 0:
-        raise ValueError("Invalid or empty pulse sequence")"""
-
     # =============================
     # Set solver options
     # =============================
@@ -81,174 +65,100 @@ def compute_pulse_evolution(
             options[key] = value
 
     # =============================
+    # Split evolution by pulse regions for Paper_eqs
+    # =============================
+    # Find pulse regions in the time array using the dedicated function
+    pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
+    # BASED ON THIS split the time range into regions where the pulse envelope is zero
+    split_times = split_by_active_regions(times, pulse_regions)
+
+    # Initialize result storage for different regions
+    all_states = []
+    all_times = []
+    current_state = psi_ini
+
+    # Build Hamiltonian components
+    H_free = system.H0_diagonalized  # already includes the RWA, if present!
+    H_int_evo = QobjEvo(lambda t, args=None: H_free + H_int(t, pulse_seq, system))
+
+    # =============================
     # Choose solver and compute the evolution
     # =============================
     if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
 
-    # elif system.ODE_Solver == "BR": # TODO added THIS CASE, because i couldnt run with 2 atoms
+    elif (
+        system.ODE_Solver == "ME"
+    ):  # Set up collapse operators based on solver type; no c_ops for "BR"
+        c_ops = system.me_decay_channels
+    elif system.ODE_Solver == "Paper_BR":
+        c_ops = [R_paper(system)]
 
-    else:
-        # Build Hamiltonian components
-        H_free = system.H0_diagonalized  # already includes the RWA, if present!
-        if H_free is None or not isinstance(H_free, Qobj):
-            raise ValueError(f"Invalid H0_diagonalized: {H_free}")
-        H_int_evo = H_free + QobjEvo(lambda t, args=None: H_int(t, pulse_seq, system))
-
-        # Set up collapse operators based on solver type
+    elif system.ODE_Solver == "Paper_eqs":
         c_ops = []
-
-        if system.ODE_Solver == "Paper_BR" or system.ODE_Solver == "Paper_eqs":
-            c_ops = [R_paper(system)]
-            if not all(isinstance(op, Qobj) for op in c_ops):
-                raise ValueError(f"Invalid Redfield tensor: {c_ops}")
-            if system.ODE_Solver == "Paper_eqs":
-                if not system.RWA_laser:
-                    raise ValueError(
-                        "The equations of the paper only make sense with RWA"
-                    )
-
-                # For Paper_eqs, we need to define the full Liouville operator
-                Liouville_full = QobjEvo(
-                    lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system)
-                )
-                H_int_evo = Liouville_full
-
-        elif system.ODE_Solver == "ME":
-            c_ops = system.c_ops_list
-            if not all(isinstance(op, Qobj) for op in c_ops):
-                raise ValueError(f"Invalid collapse operators: {c_ops}")
-        elif system.ODE_Solver == "BR":
-            if not hasattr(system, "a_ops_list") or system.a_
-            ops_list is None:
-                raise ValueError("Missing a_ops_list for BR solver")
-
-        # =============================
-        # Split evolution by pulse regions for Paper_eqs
-        # =============================
-        # Find pulse regions in the time array using the dedicated function
-        pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
-        # BASED ON THIS split the time range into regions where the pulse envelope is zero
-        split_times = split_by_active_regions(times, pulse_regions)
-
-        # Initialize result storage for different regions
-        all_states = []
-        all_times = []
-        current_state = psi_ini
-        evolution_results = []  # Store individual evolution results
-
-        for i, times_ in enumerate(split_times):
-            if len(times_) == 0:
-                continue
-
-            # Find the indices in the original times array for this split
-            start_idx = np.abs(times - times_[0]).argmin()
-
-            # Check if this region has an active pulse by looking at the first time point
-            has_pulse = pulse_regions[start_idx]
-
-            if has_pulse:
-                # =============================
-                # Evolve with H_int_evo during pulse region
-                # =============================
-                if system.ODE_Solver == "BR":
-                    result = brmesolve(
-                        H_int_evo,
-                        current_state,
-                        times_,
-                        a_ops=system.a_ops_list,
-                        options=options,
-                    )
-                elif system.ODE_Solver == "Paper_eqs":
-                    result = mesolve(
-                        H_int_evo,  # Liouville includes the decay channels
-                        current_state,
-                        times_,
-                        options=options,
-                    )
-                else:
-                    result = mesolve(
-                        H_int_evo,
-                        current_state,
-                        times_,
-                        c_ops=c_ops,
-                        options=options,
-                    )
-            else:
-                # =============================
-                # Evolve with H_free during non-pulse region
-                # =============================
-                if system.ODE_Solver == "BR":
-                    result = brmesolve(
-                        H_free,
-                        current_state,
-                        times_,
-                        a_ops=system.a_ops_list,
-                        options=options,
-                    )
-                else:
-                    result = mesolve(
-                        H_free,
-                        current_state,
-                        times_,
-                        c_ops=c_ops,
-                        options=options,
-                    )
-
-            # Store states (excluding the last one to avoid duplication, unless this is the last region)
-            if i < len(split_times) - 1:
-                all_states.extend(result.states)
-                all_times.extend(result.times)
-            else:
-                all_states.extend(result.states)
-                all_times.extend(result.times)
-
-            # Update current state for next evolution
-            current_state = result.states[-1]
-
-            # Store the result for combining later
-            if len(evolution_results) == 0:
-                evolution_results.append(result)
-
-        # =============================
-        # Create combined result object using first result as base
-        # =============================
-        # Use the first result as a template and modify its data
-        result = evolution_results[0]
-        result.states = all_states
-        result.times = np.array(all_times)
-
-        # Ensure we have the correct number of states
-        if len(result.states) != len(times):
-            # Fallback: use full H_int_evo evolution if splitting failed
+        if not system.RWA_laser:
             print(
-                "Warning: Pulse region splitting failed, falling back to full evolution"
+                "The equations of the paper only make sense with RWA -> switched it on!"
             )
-            if system.ODE_Solver == "BR":
-                result = brmesolve(
-                    H_int_evo,
-                    psi_ini,
-                    times,
-                    a_ops=system.a_ops_list,
-                    options=options,
-                )
-            elif system.ODE_Solver == "Paper_eqs":
-                result = mesolve(
-                    H_int_evo,
-                    psi_ini,
-                    times,
-                    options=options,
-                )
-            else:
-                result = mesolve(
-                    H_int_evo,
-                    psi_ini,
-                    times,
-                    c_ops=c_ops,
-                    options=options,
-                )
+            system.RWA_laser = True
+        # For Paper_eqs, we need to define the full Liouville operator, which includes the decay channels
+        H_int_evo = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
 
-    return result
+    for times_ in split_times:
+        # Find the indices in the original times array for this split
+        start_idx = np.abs(times - times_[0]).argmin()
+
+        # Check if this region has an active pulse by looking at the first time point
+        has_pulse = pulse_regions[start_idx]
+        if has_pulse:
+            # Evolve with H_int_evo during pulse region
+            # for Paper_eqs, the evolution is always with H_int_evo
+            H_total = H_int_evo
+        else:
+            # Evolve with H_free during non-pulse region for all other solvers
+            H_total = H_free
+
+        if system.ODE_Solver == "BR":
+            a_ops = system.br_decay_channels
+            print("Using BR solver with a_ops:", a_ops)
+            result = brmesolve(
+                H_total,
+                current_state,
+                times_,
+                a_ops=a_ops,
+                options=options,
+            )
+        elif system.ODE_Solver == "Paper_eqs":
+            result = mesolve(
+                H_int_evo,
+                current_state,
+                times_,
+                options=options,
+            )
+        else:
+            result = mesolve(
+                H_total,
+                current_state,
+                times_,
+                c_ops=c_ops,
+                options=options,
+            )
+
+        # Store states
+        all_states.extend(result.states)
+        all_times.extend(result.times)
+
+        # Update current state for next evolution
+        current_state = result.states[-1]
+
+    # =============================
+    # Create combined result object using first result as base
+    # =============================
+    result_ = result
+    result_.states = all_states
+    result_.times = np.array(all_times)
+
+    return result_
 
 
 def check_the_solver(

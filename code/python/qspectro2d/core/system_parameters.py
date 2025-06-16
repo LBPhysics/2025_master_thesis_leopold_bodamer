@@ -26,7 +26,7 @@ class SystemParameters:
 
     # Temperature / cutoff of the bath
     Temp: float = 1.0
-    cutoff_: float = 1.0  # later * omega_A
+    cutoff_: float = 1e2  # later * omega_A
     # =============================
     # system size
     # =============================
@@ -367,7 +367,7 @@ class SystemParameters:
         if self.N_atoms == 1:
             e_ops_list = [
                 # ket2dm(self.atom_g), TODO
-                self.atom_g * self.atom_e.dag(),
+                # self.atom_g * self.atom_e.dag(),
                 self.atom_e * self.atom_g.dag(),
                 ket2dm(self.atom_e),
             ]
@@ -392,7 +392,7 @@ class SystemParameters:
     @property
     def e_ops_labels(self):
         if self.N_atoms == 1:
-            e_ops_labels = ["ge", "eg", "ee"]  # "gg", TODO
+            e_ops_labels = ["eg", "ee"]  # "ge",  # "gg", TODO
         elif self.N_atoms == 2:
             # e_ops_labels1 = [f"{i}" for i in range(len(self.eigenstates[1]))]
             e_ops_labels2 = ["0", "A", "B", "AB"]
@@ -404,9 +404,8 @@ class SystemParameters:
         return e_ops_labels
 
     @property
-    def c_ops_list(self):
+    def me_decay_channels(self):
         Gamma = self.Gamma
-        gamma_phi = self.gamma_phi
 
         w_th = self.Boltzmann * self.Temp / self.hbar
         from qutip.utilities import n_thermal
@@ -414,34 +413,33 @@ class SystemParameters:
         n_th_at = n_thermal(self.omega_A, w_th)
 
         if self.N_atoms == 1:
-            c_ops_list = [
+            me_decay_channels = [
                 self.SM_op.dag()
-                * np.sqrt(Gamma * n_th_at),  # Collapse operator for thermal excitation
+                * np.sqrt(
+                    self.gamma_0 * n_th_at
+                ),  # Collapse operator for thermal excitation
                 self.SM_op
                 * np.sqrt(
-                    Gamma * (n_th_at) + 1
+                    self.gamma_0 * (n_th_at + 1)
                 ),  # Collapse operator for spontaneous and thermal relaxation
                 self.Deph_op
-                * np.sqrt(
-                    gamma_phi * (2 * n_th_at + 1)
-                ),  # Collapse operator for dephasing
+                * np.sqrt(Gamma * (2 * n_th_at + 1)),  # Collapse operator for dephasing
             ]
 
         elif self.N_atoms == 2:  # TODO include the (temperature and THE DECAY?)!
-            c_ops_list = [self.Deph_op]
+            me_decay_channels = [self.Deph_op]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
-        return c_ops_list
+        return me_decay_channels
 
     @property
     def cutoff(self):
         return self.cutoff_ * self.omega_A
 
-    @property
-    def args_bath(self, coupling=0.0):
+    def args_bath(self, alpha=0.0):
         return {
-            "alpha": coupling,
+            "alpha": alpha,
             "cutoff": self.cutoff,
             "Boltzmann": self.Boltzmann,
             "hbar": self.hbar,
@@ -449,52 +447,56 @@ class SystemParameters:
             "s": 1.0,  # ohmic spectrum
         }
 
-    @property
-    def a_ops_list(self):
-        env = BosonicEnvironment.from_spectral_density(
-            lambda w: spectral_density_func_paper(w, self.args_bath),
-            wMax=10 * self.cutoff,
-            T=self.Temp,
+    def coupling_paper(self, gamma):
+        alpha = (
+            gamma * self.cutoff / self.omega_A * np.exp(self.omega_A / self.cutoff)
+        )  # for paper P(w) :> TODO PROBLEM?!?, also make omega_A dependent?
+        return alpha
+
+    def coupling_ohmic(self, gamma):
+        coth_term = 1 / np.tanh(
+            self.omega_A / (2 * self.Boltzmann * self.Temp / self.hbar)
         )
+        alpha = (
+            gamma / self.omega_A * np.exp(self.omega_A / self.cutoff) / (1 + coth_term)
+        )  # for ohmic P(w) :> TODO also make omega_A dependent?
+        return alpha
+
+    @property
+    def br_decay_channels(self):
         if self.N_atoms == 1:
-            a_ops_list = [
-                # [self.Deph_op, env.power_spectrum],
+            alpha_deph = self.coupling_paper(self.Gamma)
+            alpha_decay = self.coupling_paper(self.gamma_0)
+            br_decay_channels_ = [
                 [
                     self.Deph_op,
-                    lambda w: power_spectrum_func_paper(
-                        w, self.args_bath(self.gamma_phi)
-                    ),
+                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_deph)),
                 ],
                 [
                     self.Dip_op,
-                    lambda w: power_spectrum_func_paper(
-                        w, self.args_bath(self.gamma_0)
-                    ),
-                ],  # TODO CHECK THIS!!!!
-            ]  # TODO THIS WAS NOT IN THE PAPER!!!!
+                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_decay)),
+                ],
+            ]
 
-        elif self.N_atoms == 2:
-            a_ops_list = [
+        elif self.N_atoms == 2:  # TODO REDO this to implement the appendix C
+            br_decay_channels_ = [
                 [
                     ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
                     lambda w: power_spectrum_func_paper(w, self.args_bath),
-                    # env.power_spectrum,
                 ],  # atom A with ohmic_spectrum
                 [
                     ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B
                     lambda w: power_spectrum_func_paper(w, self.args_bath),
-                    # env.power_spectrum,
                 ],  # atom B with ohmic_spectrum
                 [
                     ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
                     lambda w: power_spectrum_func_paper(2 * w, self.args_bath),
-                    # lambda w: env.power_spectrum(2 * w),
                 ],  # double excited state with 2 * ohmic_spectrum
             ]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
-        return a_ops_list
+        return br_decay_channels_
 
     def omega_ij(self, i: int, j: int) -> float:
         """
@@ -631,12 +633,12 @@ class SystemParameters:
         # Solver Specifics
         print("\n# Solver specific information:")
         if self.ODE_Solver == "ME":
-            print(f"    {'c_ops_list':<20}:")
-            for op in self.c_ops_list:
+            print(f"    {'me_decay_channels':<20}:")
+            for op in self.me_decay_channels:
                 print(f"        {op}")
         elif self.ODE_Solver == "BR":
-            print(f"    {'a_ops_list':<20}:")
-            for op_spec in self.a_ops_list:
+            print(f"    {'br_decay_channels':<20}:")
+            for op_spec in self.br_decay_channels:
                 if isinstance(op_spec, list) and len(op_spec) == 2:
                     print(f"        Operator: {op_spec[0]}, Spectrum: {op_spec[1]}")
                 else:

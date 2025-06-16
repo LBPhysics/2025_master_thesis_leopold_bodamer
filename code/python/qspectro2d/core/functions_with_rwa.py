@@ -36,12 +36,12 @@ def H_int(
     Dip_op = system.Dip_op
 
     if system.RWA_laser:
-        # E_field = E_pulse(t, pulse_seq)  # Combined electric field under RWA
+        E_field = E_pulse(t, pulse_seq)  # Combined electric field under RWA
 
         ### Calculate total field amplitude E0 at current time
-        """E0 = pulse_seq.get_total_amplitude_at_time(
+        E0 = pulse_seq.get_total_amplitude_at_time(
             t
-        )  # Sum of all active pulse amplitudes"""
+        )  # Sum of all active pulse amplitudes
         from qspectro2d.core.pulse_functions import pulse_envelope
 
         Env = pulse_envelope(t, pulse_seq)
