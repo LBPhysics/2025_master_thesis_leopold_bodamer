@@ -110,7 +110,7 @@ def compute_pulse_evolution(
 
         # Check if this region has an active pulse by looking at the first time point
         has_pulse = pulse_regions[start_idx]
-        if has_pulse:
+        if has_pulse or system.ODE_Solver == "Paper_eqs":
             # Evolve with H_int_evo during pulse region
             # for Paper_eqs, the evolution is always with H_int_evo
             H_total = H_int_evo
@@ -120,19 +120,11 @@ def compute_pulse_evolution(
 
         if system.ODE_Solver == "BR":
             a_ops = system.br_decay_channels
-            print("Using BR solver with a_ops:", a_ops)
             result = brmesolve(
                 H_total,
                 current_state,
                 times_,
                 a_ops=a_ops,
-                options=options,
-            )
-        elif system.ODE_Solver == "Paper_eqs":
-            result = mesolve(
-                H_int_evo,
-                current_state,
-                times_,
                 options=options,
             )
         else:

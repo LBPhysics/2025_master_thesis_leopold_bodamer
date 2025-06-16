@@ -4,13 +4,14 @@
 from dataclasses import dataclass, field  # for the class definiton
 from typing import Optional  # for the class definiton
 import numpy as np
-from qutip import basis, ket2dm, tensor, Qobj, BosonicEnvironment
+from qutip import basis, ket2dm, tensor, Qobj, BosonicEnvironment, qeye
 
 # bath functions
 from qspectro2d.baths.bath_fcts import (
     spectral_density_func_paper,
     power_spectrum_func_paper,
 )
+from qutip.utilities import n_thermal
 
 
 @dataclass
@@ -102,15 +103,14 @@ class SystemParameters:
         if self.gamma_0 is None:
             self.gamma_0 = 1 / 300.0
         if self.gamma_phi is None:
-            self.gamma_phi = (
-                1 / 100.0
-            )  # units different in N_atoms=1 and N_atoms=2 ?!?!?!? TODO
+            self.gamma_phi = 1 / 100.0
 
         _H0_temp = None  # temoporary Hamiltonian
 
         # Set N_atoms-dependent parameters if they were not provided by the user
         if self.N_atoms == 1:
-            self.psi_ini = ket2dm(self.atom_g)
+            if self.psi_ini is None:
+                self.psi_ini = ket2dm(self.atom_g)
 
             if self.omega_A_cm is None:
                 # Use the instance's omega_laser_cm, which might have been overridden by the user
@@ -129,7 +129,8 @@ class SystemParameters:
                 pass
 
         elif self.N_atoms == 2:
-            self.psi_ini = ket2dm(tensor(self.atom_g, self.atom_g))
+            if self.psi_ini is None:
+                self.psi_ini = ket2dm(tensor(self.atom_g, self.atom_g))
 
             if self.omega_A_cm is None:
                 self.omega_A_cm = self.omega_laser_cm + 360.0
@@ -405,15 +406,15 @@ class SystemParameters:
 
     @property
     def me_decay_channels(self):
+        """Generate the c_ops for the Linblad Master Equation solver."""
         Gamma = self.Gamma
 
         w_th = self.Boltzmann * self.Temp / self.hbar
-        from qutip.utilities import n_thermal
 
         n_th_at = n_thermal(self.omega_A, w_th)
 
         if self.N_atoms == 1:
-            me_decay_channels = [
+            me_decay_channels_ = [
                 self.SM_op.dag()
                 * np.sqrt(
                     self.gamma_0 * n_th_at
@@ -427,17 +428,19 @@ class SystemParameters:
             ]
 
         elif self.N_atoms == 2:  # TODO include the (temperature and THE DECAY?)!
-            me_decay_channels = [self.Deph_op]
+            me_decay_channels_ = [self.Deph_op]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
-        return me_decay_channels
+        return me_decay_channels_
 
     @property
     def cutoff(self):
         return self.cutoff_ * self.omega_A
 
-    def args_bath(self, alpha=0.0):
+    def args_bath(self, alpha=None):
+        if alpha is None:
+            alpha = self.gamma_0
         return {
             "alpha": alpha,
             "cutoff": self.cutoff,
@@ -448,9 +451,17 @@ class SystemParameters:
         }
 
     def coupling_paper(self, gamma):
+        w_th = self.Boltzmann * self.Temp / self.hbar
+        n_th_at = n_thermal(self.omega_A, w_th)
         alpha = (
-            gamma * self.cutoff / self.omega_A * np.exp(self.omega_A / self.cutoff)
+            gamma
+            / (1 + n_th_at)
+            * self.cutoff
+            / self.omega_A
+            * np.exp(self.omega_A / self.cutoff)
         )  # for paper P(w) :> TODO PROBLEM?!?, also make omega_A dependent?
+        # This is the coupling constant for the spectral density function in the paper
+
         return alpha
 
     def coupling_ohmic(self, gamma):
@@ -464,9 +475,12 @@ class SystemParameters:
 
     @property
     def br_decay_channels(self):
+        """Generate the a_ops for the Bloch Redfield Master Equation solver."""
+
+        alpha_deph = self.coupling_paper(self.Gamma)
+        alpha_decay = self.coupling_paper(self.gamma_0)
+
         if self.N_atoms == 1:
-            alpha_deph = self.coupling_paper(self.Gamma)
-            alpha_decay = self.coupling_paper(self.gamma_0)
             br_decay_channels_ = [
                 [
                     self.Deph_op,
@@ -481,16 +495,26 @@ class SystemParameters:
         elif self.N_atoms == 2:  # TODO REDO this to implement the appendix C
             br_decay_channels_ = [
                 [
-                    ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A
-                    lambda w: power_spectrum_func_paper(w, self.args_bath),
-                ],  # atom A with ohmic_spectrum
+                    ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A dephasing
+                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_deph)),
+                ],
                 [
-                    ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B
-                    lambda w: power_spectrum_func_paper(w, self.args_bath),
-                ],  # atom B with ohmic_spectrum
+                    tensor(self.atom_g * self.atom_e.dag(), qeye(2)),  # atom A decay
+                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_decay)),
+                ],
+                [
+                    ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B dephasing
+                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_deph)),
+                ],
+                [
+                    ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B decay
+                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_decay)),
+                ],
                 [
                     ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
-                    lambda w: power_spectrum_func_paper(2 * w, self.args_bath),
+                    lambda w: power_spectrum_func_paper(
+                        2 * w, self.args_bath(alpha_deph)
+                    ),
                 ],  # double excited state with 2 * ohmic_spectrum
             ]
         else:
@@ -525,7 +549,7 @@ class SystemParameters:
 
         w_ij = self.omega_ij(i, j)
         return np.sin(2 * self.theta) ** 2 * power_spectrum_func_paper(
-            w_ij, self.args_bath
+            w_ij, self.args_bath()
         )
 
     def Gamma_big_ij(self, i: int, j: int) -> float:
@@ -540,7 +564,7 @@ class SystemParameters:
             float: Pure dephasing rate.
         """
         # Pure dephasing rates helper
-        P_0 = power_spectrum_func_paper(0, self.args_bath)
+        P_0 = power_spectrum_func_paper(0, self.args_bath())
         Gamma_t_ab = 2 * np.cos(2 * self.theta) ** 2 * P_0  # tilde
         Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.theta) ** 2) * P_0
         Gamma_11 = self.gamma_small_ij(2, 1)
