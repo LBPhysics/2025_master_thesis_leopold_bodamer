@@ -24,7 +24,8 @@ from config.paths import DATA_DIR, FIGURES_DIR
 from qspectro2d.spectroscopy.post_processing import extend_and_plot_results
 from qspectro2d.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
 from qspectro2d.visualization.plotting import Plot_2d_El_field
-from qspectro2d.visualization import mpl_tex_settings
+
+# from qspectro2d.visualization import mpl_tex_settings # -> TODO I think i want to stick to default latex font, cause my settings currently only work on my pc!
 
 
 # =============================
@@ -110,9 +111,9 @@ def create_output_directory(subdir: str) -> Path:
 # MAIN PLOTTING FUNCTION
 # =============================
 def plot_2d_spectroscopy_data(
-    data_subdir: str = "2d_spectroscopy/N_1/600fs/",
+    data_subdir: str = "2d_spectroscopy",
     file_pattern: str = "*.pkl",
-    output_subdir: str = "2d_spectroscopy/extended",
+    output_subdir: str = "2d_spectroscopy",
     plot_types: list = None,
     extend_for: tuple = (1, 2.3),
     section: tuple = (1.5, 1.7, 1.5, 1.7),
@@ -236,17 +237,12 @@ def get_plotting_config():
         Dictionary with default plotting parameters
     """
     return {
-        "data_subdir": "2d_spectroscopy/N_1/BR/600fs/",
+        "data_subdir": "2d_spectroscopy",
         "file_pattern": "*.pkl",
-        "output_subdir": "2d_spectroscopy/extended",
+        "output_subdir": "2d_spectroscopy",
         "plot_types": ["imag", "abs", "real", "phase"],
-        "extend_for": (1, 2.3),
-        "section": (
-            0,
-            3,
-            0,
-            3,
-        ),  # (1.5, 1.7, 1.5, 1.7),  # (x_min, x_max, y_min, y_max)
+        "extend_for": (1, 1),
+        "section": (0, 3, 0, 3),  # (x_min, x_max, y_min, y_max)
         "plot_time_domain": True,
     }
 
@@ -264,11 +260,17 @@ def main():
     # You can modify these parameters as needed
     config.update(
         {
-            # Example modifications:
-            # "data_subdir": "2d_spectroscopy/new_echo_signal/900fs/",
+            # Example modifications: TODO JUST CHANGE THIS PART
+            "data_subdir": "2d_spectroscopy/new_echo_signal/paper_eqs/100fs/",
             # "plot_types": ["real", "imag"],  # Plot only real and imaginary parts
-            # "plot_time_domain": True,  # Enable time domain plotting
-            # "section": (1.4, 1.8, 1.4, 1.8),  # Different section
+            "plot_time_domain": True,  # Enable time domain plotting
+            "extend_for": (1, 3),
+            "section": (
+                1.4,
+                1.8,
+                1.4,
+                1.8,
+            ),  # Different section   # (1.5, 1.7, 1.5, 1.7),
         }
     )
 

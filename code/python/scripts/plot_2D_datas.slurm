@@ -7,7 +7,7 @@
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
 
 #SBATCH --time=0-00:30:00
-#SBATCH --mem=15G
+#SBATCH --mem=5G
 #SBATCH -c 2
     
 # =============================
@@ -18,8 +18,10 @@ echo "Job started at: $(date)"
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
 
+# Initialize conda
+source /home/lbodamer/miniconda3/etc/profile.d/conda.sh
+
 # Activate conda environment (no need for modules since conda provides Python)
-source ~/.bashrc
 conda activate master_env
 
 # Run the plotting script

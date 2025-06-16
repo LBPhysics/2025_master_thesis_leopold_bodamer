@@ -36,14 +36,16 @@ def H_int(
     Dip_op = system.Dip_op
 
     if system.RWA_laser:
-        E_field = E_pulse(t, pulse_seq)  # Combined electric field under RWA
+        # E_field = E_pulse(t, pulse_seq)  # Combined electric field under RWA
 
         ### Calculate total field amplitude E0 at current time
-        E0 = pulse_seq.get_total_amplitude_at_time(
+        """E0 = pulse_seq.get_total_amplitude_at_time(
             t
-        )  # Sum of all active pulse amplitudes
+        )  # Sum of all active pulse amplitudes"""
+        from qspectro2d.core.pulse_functions import pulse_envelope
 
-        H_int = -Dip_op * E0  # RWA interaction Hamiltonian
+        Env = pulse_envelope(t, pulse_seq)
+        H_int = -Dip_op * Env  # RWA interaction Hamiltonian TODO whats the correct way?
     else:
         E_field = Epsilon_pulse(t, pulse_seq)  # Combined electric field with carrier
         H_int = -Dip_op * (E_field + np.conj(E_field))  # Full interaction Hamiltonian

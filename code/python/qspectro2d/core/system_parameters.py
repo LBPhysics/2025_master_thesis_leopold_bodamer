@@ -439,9 +439,9 @@ class SystemParameters:
         return self.cutoff_ * self.omega_A
 
     @property
-    def args_bath(self):
+    def args_bath(self, coupling=0.0):
         return {
-            "alpha": self.gamma_phi,
+            "alpha": coupling,
             "cutoff": self.cutoff,
             "Boltzmann": self.Boltzmann,
             "hbar": self.hbar,
@@ -459,7 +459,18 @@ class SystemParameters:
         if self.N_atoms == 1:
             a_ops_list = [
                 # [self.Deph_op, env.power_spectrum],
-                [self.Deph_op, lambda w: power_spectrum_func_paper(w, self.args_bath)],
+                [
+                    self.Deph_op,
+                    lambda w: power_spectrum_func_paper(
+                        w, self.args_bath(self.gamma_phi)
+                    ),
+                ],
+                [
+                    self.Dip_op,
+                    lambda w: power_spectrum_func_paper(
+                        w, self.args_bath(self.gamma_0)
+                    ),
+                ],  # TODO CHECK THIS!!!!
             ]  # TODO THIS WAS NOT IN THE PAPER!!!!
 
         elif self.N_atoms == 2:

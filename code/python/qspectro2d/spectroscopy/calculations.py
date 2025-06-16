@@ -119,7 +119,8 @@ def compute_pulse_evolution(
             if not all(isinstance(op, Qobj) for op in c_ops):
                 raise ValueError(f"Invalid collapse operators: {c_ops}")
         elif system.ODE_Solver == "BR":
-            if not hasattr(system, "a_ops_list") or system.a_ops_list is None:
+            if not hasattr(system, "a_ops_list") or system.a_
+            ops_list is None:
                 raise ValueError("Missing a_ops_list for BR solver")
 
         # =============================
@@ -1326,7 +1327,7 @@ def parallel_compute_2d_E_with_inhomogenity(
 
                     except Exception as e:
                         print(
-                            f"    Error processing phase combination ({phi1_idx}, phi2_idx): {str(e)}"
+                            f"    Error processing phase combination ({phi1_idx}, {phi2_idx}): {str(e)}"
                         )
                         continue
 
