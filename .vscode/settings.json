@@ -224,8 +224,7 @@
         "**/svg-inkscape/": true,
         "**/sympy-plots-for-*.tex/": true,
         "**/Thumbs.db": true,
-        "**/TSWLatexianTemp*": true,
-        "README.md": true
+        "**/TSWLatexianTemp*": true
     },
     "explorerExclude.backup": {},
 }

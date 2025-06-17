@@ -18,7 +18,7 @@ conda env create -f environment.yml
 conda activate master_env
 
 # Verify installation
-python -c "import master_thesis_2des; print('Package installed successfully!')"
+python -c "import qspectro2d; print('Package installed successfully!')"
 ```
 
 ### Environment Management
@@ -64,8 +64,8 @@ For VS Code users, the environment should be automatically detected. You can als
 
 ```
 master_thesis/
-├── code/python/           # Main Python package
-├── notebooks/            # Jupyter notebooks
+├── code/python/         # Main Python package
+├── notebooks/           # Jupyter notebooks
 ├── latex/               # LaTeX thesis files
 ├── figures/             # Generated figures
 ├── environment.yml      # Conda environment specification
