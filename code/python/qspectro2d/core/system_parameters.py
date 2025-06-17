@@ -8,8 +8,9 @@ from qutip import basis, ket2dm, tensor, Qobj, BosonicEnvironment, qeye
 
 # bath functions
 from qspectro2d.baths.bath_fcts import (
-    spectral_density_func_paper,
     power_spectrum_func_paper,
+    power_spectrum_func_ohmic,
+    power_spectrum_func_drude_lorentz,
 )
 from qutip.utilities import n_thermal
 
@@ -43,6 +44,7 @@ class SystemParameters:
     RWA_laser: bool = (
         True  #  CAN ONLY HANDLE TRUE For Paper_eqs   #   only valid for omega_laser ~ omega_A
     )
+    bath: str = "paper"  # Default bath type or "ohmic" or "dl"
 
     # =============================
     # Laser field parameters
@@ -464,7 +466,7 @@ class SystemParameters:
 
         return alpha
 
-    def coupling_ohmic(self, gamma):
+    def _coupling_ohmic(self, gamma):
         coth_term = 1 / np.tanh(
             self.omega_A / (2 * self.Boltzmann * self.Temp / self.hbar)
         )
@@ -473,22 +475,67 @@ class SystemParameters:
         )  # for ohmic P(w) :> TODO also make omega_A dependent?
         return alpha
 
+    def _coupling_dl(self, gamma):
+        # TODO IMPLEMENT THIS
+        alpha = gamma
+        return alpha
+
+    def _coupling(self, gamma):
+        """
+        Determine the coupling constant based on the bath type.
+
+        Parameters:
+            gamma (float): The decay rate.
+
+        Returns:
+            float: The coupling constant.
+        """
+        if self.bath == "paper":
+            return self._coupling_paper(gamma)
+        elif self.bath == "ohmic":
+            return self._coupling_ohmic(gamma)
+        elif self.bath == "dl":
+            return self._coupling_dl(gamma)
+        else:
+            raise ValueError(f"Unknown bath type: {self.bath}")
+
+    def power_spectrum_func(self, w, args):
+        """
+        Calculate the power spectrum function based on the bath type.
+
+        Parameters:
+            w (float): Frequency in fs^-1.
+            alpha (float, optional): Coupling constant. If None, uses self.coupling(self.gamma_0).
+
+        Returns:
+            float: The value of the power spectrum function.
+        """
+        if self.bath == "paper":
+            return power_spectrum_func_paper(w, args)
+        elif self.bath == "ohmic":
+            return power_spectrum_func_ohmic(w, args)
+        elif self.bath == "dl":
+            return power_spectrum_func_drude_lorentz(w, args)
+        else:
+            raise ValueError(f"Unknown bath type: {self.bath}")
+
     @property
     def br_decay_channels(self):
         """Generate the a_ops for the Bloch Redfield Master Equation solver."""
 
-        alpha_deph = self.coupling_paper(self.Gamma)
-        alpha_decay = self.coupling_paper(self.gamma_0)
-
+        alpha_deph = self.coupling(self.Gamma)
+        alpha_decay = self.coupling(self.gamma_0)
+        args_deph = self.args_bath(alpha_deph)
+        args_decay = self.args_bath(alpha_decay)
         if self.N_atoms == 1:
             br_decay_channels_ = [
                 [
                     self.Deph_op,
-                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_deph)),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
                     self.Dip_op,
-                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_decay)),
+                    lambda w: self.power_spectrum_func(w, args_decay),
                 ],
             ]
 
@@ -496,26 +543,24 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A dephasing
-                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_deph)),
-                ],
-                [
-                    tensor(self.atom_g * self.atom_e.dag(), qeye(2)),  # atom A decay
-                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_decay)),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
                     ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B dephasing
-                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_deph)),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
-                    ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B decay
-                    lambda w: power_spectrum_func_paper(w, self.args_bath(alpha_decay)),
+                    ket2dm(
+                        tensor(self.atom_e, self.atom_e)
+                    ),  # part from A on double excited state
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
-                    ket2dm(tensor(self.atom_e, self.atom_e)),  # double excited state
-                    lambda w: power_spectrum_func_paper(
-                        2 * w, self.args_bath(alpha_deph)
-                    ),
-                ],  # double excited state with 2 * ohmic_spectrum
+                    ket2dm(
+                        tensor(self.atom_e, self.atom_e)
+                    ),  # part from B on double excited state
+                    lambda w: self.power_spectrum_func(w, args_deph),
+                ],
             ]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
