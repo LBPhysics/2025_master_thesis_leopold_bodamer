@@ -52,13 +52,13 @@ def get_simulation_config():
     if N_atoms == 1:
         system_config = {
             "N_atoms": 1,  # Number of atoms in the system
-            "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
+            "pulse_fwhm": 15.0,  # Pulse fwhm for Gaussian envelope [fs]
             "output_subdir": "2d_spectroscopy/N_1/paper_eqs/100fs",
         }
     elif N_atoms == 2:
         system_config = {
             "N_atoms": 2,  # Number of atoms in the system
-            "pulse_FWHM": 5.0,  # Pulse FWHM for Gaussian envelope [fs]
+            "pulse_fwhm": 5.0,  # Pulse fwhm for Gaussian envelope [fs]
             "output_subdir": "2d_spectroscopy/N_2/600fs",
         }
     config.update(system_config)
@@ -191,14 +191,14 @@ def main():
         Delta_cm=config["Delta_cm"],  #  if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
         E0=config["E0"],
-        pulse_FWHM=config["pulse_FWHM"] if "pulse_FWHM" in config else 100.0,
+        pulse_fwhm=config["pulse_fwhm"] if "pulse_fwhm" in config else 100.0,
     )
     print(f"System configuration:")
     system.summary()
 
     ### Create time arrays
-    FWHMs = system.FWHMs
-    times = np.arange(-1 * FWHMs[0], system.t_max, system.dt)
+    fwhms = system.fwhms
+    times = np.arange(-1 * fwhms[0], system.t_max, system.dt)
     times_T = np.linspace(0, config["T_wait_max"], config["n_times_T"])
 
     # =============================
@@ -207,7 +207,7 @@ def main():
     test_system = copy.deepcopy(system)
     test_system.t_max = 10 * system.t_max
     test_system.dt = 10 * system.dt
-    times_test = np.arange(-FWHMs[0], test_system.t_max, test_system.dt)
+    times_test = np.arange(-fwhms[0], test_system.t_max, test_system.dt)
 
     try:
         _, time_cut = check_the_solver(times_test, test_system)

@@ -11,12 +11,12 @@ def pulse_envelope(
     Works with both scalar and array time inputs.
 
     Now uses pulse_peak_time as t_peak (peak time) where cos²/gaussian is maximal.
-    Pulse is zero outside [t_peak - FWHM, t_peak + FWHM] == outside of 2 FWHM.
+    Pulse is zero outside [t_peak - fwhm, t_peak + fwhm] == outside of 2 fwhm.
 
     Uses the envelope_type from each pulse to determine which envelope function to use:
     - 'cos2': cosine squared envelope
     - 'gaussian': Gaussian envelope, shifted so that:
-      - The Gaussian is zero at t_peak ± FWHM boundaries: (actually about <= 1%)
+      - The Gaussian is zero at t_peak ± fwhm boundaries: (actually about <= 1%)
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
@@ -39,34 +39,34 @@ def pulse_envelope(
     envelope = 0.0
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time
-        FWHM = pulse.pulse_FWHM
+        fwhm = pulse.pulse_fwhm
         envelope_type = getattr(
             pulse, "envelope_type", "cos2"
         )  # Default to cos2 for backward compatibility
 
-        if FWHM is None or FWHM <= 0:
+        if fwhm is None or fwhm <= 0:
             continue
         if t_peak is None:
             continue
 
-        # Pulse exists only in [t_peak - FWHM, t_peak + FWHM]
-        if not (t_peak - FWHM <= t <= t_peak + FWHM):
+        # Pulse exists only in [t_peak - fwhm, t_peak + fwhm]
+        if not (t_peak - fwhm <= t <= t_peak + fwhm):
             continue
 
         if envelope_type == "cos2":
             ### Cosine squared envelope
-            arg = np.pi * (t - t_peak) / (2 * FWHM)
+            arg = np.pi * (t - t_peak) / (2 * fwhm)
             envelope += np.cos(arg) ** 2
 
         elif envelope_type == "gaussian":
             ### Gaussian envelope
-            sigma = FWHM / (2 * np.sqrt(2 * np.log(2)))
+            sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
             gaussian_val = np.exp(-((t - t_peak) ** 2) / (2 * sigma**2))
-            boundary_distance_sq = FWHM**2
+            boundary_distance_sq = fwhm**2
             boundary_val = np.exp(-boundary_distance_sq / (2 * sigma**2))
             envelope += (
                 max(0.0, gaussian_val) - boundary_val
-            )  # TODO Check the effect of this (dis)continuity -> minumal
+            )  # effect of this (dis)continuity -> minimal
 
         else:
             raise ValueError(
@@ -111,7 +111,7 @@ def E_pulse(
             t, PulseSequence([pulse])
         )  # use pulse_envelope for each pulse
         E_total += E0 * envelope * np.exp(-1j * phi)
-    return E_total  # TODO make it into a cos: / 2.0
+    return E_total
 
 
 def Epsilon_pulse(
@@ -173,14 +173,14 @@ def identify_non_zero_pulse_regions(
         # A time is in an active region if any pulse contributes to the envelope
         for pulse in pulse_seq.pulses:
             t_peak = pulse.pulse_peak_time
-            FWHM = pulse.pulse_FWHM
+            fwhm = pulse.pulse_fwhm
 
             # Skip pulses with invalid parameters
-            if FWHM is None or FWHM <= 0 or t_peak is None:
+            if fwhm is None or fwhm <= 0 or t_peak is None:
                 continue
 
             # Check if time point falls within the pulse's active region
-            if t_peak - FWHM <= t <= t_peak + FWHM:
+            if t_peak - fwhm <= t <= t_peak + fwhm:
                 active_regions[i] = True
                 break  # Once we know this time point is active, we can move to the next
 

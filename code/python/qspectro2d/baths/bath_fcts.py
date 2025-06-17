@@ -28,41 +28,34 @@ def spectral_density_func_drude_lorentz(w, args):
     return result
 
 
-def power_spectrum_func_drude_lorentz(w, args):  # TODO CHECK, its just a guess
+def power_spectrum_func_drude_lorentz(w, args):
     """
-    power spectrum (symmetrized correlation function) for a Drude-Lorentz bath.
-
-    Parameters:
-        w : float or ndarray
-            Frequency (can be scalar or array).
-        args : dict
-            Dictionary containing:
-                - "alpha": Reorganization energy (coupling strength)
-                - "cutoff": Drude decay rate (cutoff frequency)
-
-    Returns:
-        float or ndarray: power spectrum value(s)
+    power spectrum function in the frequency domain for an drude lorentzian bath.
+    Handles both positive and negative frequencies, compatible with arrays.
     """
-    alpha = args["alpha"]
-    cutoff = args["cutoff"]
     Temp = args["Temp"]
 
     Boltzmann = args["Boltzmann"] if "Boltzmann" in args else 1.0
     hbar = args["hbar"] if "hbar" in args else 1.0
 
-    w_input = w
+    w_input = w  # Store original input
     w = np.asarray(w, dtype=float)
 
-    J = (2 * alpha * cutoff * w) / (w**2 + cutoff**2)
     # Avoid division by zero in tanh
-    w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
-
     w_safe = np.where(w == 0, 1e-10, w)
+    w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
     coth_term = 1 / np.tanh(w_safe / (2 * w_th))
 
-    S = (1 / np.pi) * J * coth_term
+    result = (
+        np.sign(w)
+        * spectral_density_func_drude_lorentz(np.abs(w), args)
+        * (coth_term + 1)
+    )
 
-    return float(S) if np.isscalar(w_input) else S
+    # Return scalar if input was scalar
+    if np.isscalar(w_input):
+        return float(result)
+    return result
 
 
 def spectral_density_func_ohmic(w, args):

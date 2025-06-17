@@ -164,7 +164,7 @@ def get_expect_vals_with_RWA(
         list of lists: Expectation values for each operator of len(states).
     """
     omega = system.omega_laser
-    e_ops = system.e_ops_list
+    e_ops = system.observable_ops
     if add_Dip:
         e_ops += [system.Dip_op]
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     test_pulse = Pulse(
         pulse_peak_time=2.0,
-        pulse_FWHM=1.0,
+        pulse_fwhm=1.0,
         pulse_phase=0.0,
         pulse_amplitude=0.05,
         pulse_freq=system1.omega_laser,

@@ -41,7 +41,7 @@ def get_simulation_config():
         "output_subdir": "1d_spectroscopy/inhomogeneity",
         "E0": 0.005,
         "ODE_Solver": "BR",  # ODE solver type
-        "pulse_FWHM": 15.0,  # Pulse FWHM for Gaussian envelope [fs]
+        "pulse_fwhm": 15.0,  # Pulse fwhm for Gaussian envelope [fs]
         "RWA_laser": True,  # Use RWA for laser interaction
     }
 
@@ -145,7 +145,7 @@ def main():
         dt=config["dt"],
         Delta_cm=config["Delta_cm"],  #  if config["n_freqs"] > 1 else 0,
         envelope_type=config["envelope_type"],
-        pulse_FWHM=config["pulse_FWHM"] if "pulse_FWHM" in config else 100.0,
+        pulse_fwhm=config["pulse_fwhm"] if "pulse_fwhm" in config else 100.0,
         E0=config["E0"],
         RWA_laser=config["RWA_laser"],
     )
@@ -154,8 +154,8 @@ def main():
     system.summary()
 
     ### Create time arrays
-    FWHMs = system.FWHMs
-    times = np.arange(-2 * FWHMs[0], system.t_max, system.dt)
+    fwhms = system.fwhms
+    times = np.arange(-2 * fwhms[0], system.t_max, system.dt)
 
     # =============================
     # RUN SIMULATION

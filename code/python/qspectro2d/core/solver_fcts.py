@@ -55,9 +55,10 @@ def _matrix_ODE_paper_1atom(
     L[3, 2] = -1j * Et_conj * system.mu_A
 
     # --- d/dt rho_gg ---
-    # L[0, 1] = -1j * Et * system.mu_A
-    # L[0, 2] = 1j * Et_conj * system.mu_A
-    L[0, :] += -1 * np.sum(L[[3], :], axis=0)  # Enforce trace conservation
+    L[0, 3] = system.gamma_0
+    L[0, 1] = -1j * Et * system.mu_A
+    L[0, 2] = 1j * Et_conj * system.mu_A
+    # L[0, :] += -1 * np.sum(L[[3], :], axis=0)  # Enforce trace conservation
 
     # --- d/dt rho_eg --- and  --- d/dt rho_ge ---
     L[2, 0] = 1j * Et * system.mu_A
@@ -211,7 +212,7 @@ def _matrix_ODE_paper_2atom(
     # --- d/dt rho_00 --- and  --- d/dt rho_33 (sum d/dt rho_ii = 0) (trace condition) ---
     L[15, :] = -1 * np.sum(
         L[[0, 5, 10], :], axis=0
-    )  # TODO not mentioned in paper, i will assume it to conserve the trace
+    )  # not mentioned in paper, but I will assume it to conserve the trace!!
     # print("the trace d/dt (rho_00 + rho_11 + rho_22 + rho_33) = ", np.sum(L[[0, 5, 10, 15], :]), "should be 0")
 
     return Qobj(L, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])

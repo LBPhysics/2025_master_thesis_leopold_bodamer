@@ -1,6 +1,3 @@
-# TODO - Add docstrings to all methods and classes
-#      - check for unnecessary code
-
 # =============================
 # Pulse and PulseSequence classes for structured pulse handling
 # =============================
@@ -20,7 +17,7 @@ class Pulse:
     """
 
     pulse_peak_time: float  # Time when pulse reaches maximum intensity [fs]
-    pulse_FWHM: float  # Full width at half maximum duration [fs]
+    pulse_fwhm: float  # Full width at half maximum duration [fs]
     pulse_phase: float  # Phase offset of the pulse [rad]
     pulse_amplitude: float  # Peak amplitude of the electric field [V/m]
     pulse_freq: float  # Central frequency of the pulse [rad/fs]
@@ -33,20 +30,32 @@ class Pulse:
         Calculate the time range where the pulse is active.
 
         The active range is defined as the time interval where the pulse envelope
-        has significant amplitude, extending one FWHM before and after the peak time.
+        has significant amplitude, extending one fwhm before and after the peak time.
 
         Returns:
             Tuple[float, float]: (start_time, end_time) where the pulse is active
-                                start_time = t_peak - FWHM [fs]
-                                end_time = t_peak + FWHM [fs]
+                                start_time = t_peak - fwhm [fs]
+                                end_time = t_peak + fwhm [fs]
         """
-        start_time = self.pulse_peak_time - self.pulse_FWHM
-        end_time = self.pulse_peak_time + self.pulse_FWHM
+        start_time = self.pulse_peak_time - self.pulse_fwhm
+        end_time = self.pulse_peak_time + self.pulse_fwhm
         return (start_time, end_time)
 
 
 @dataclass
 class PulseSequence:
+    """
+    Container for managing a sequence of optical pulses.
+
+    provides methods for creating, manipulating, and analyzing sequences
+    of optical pulses used in spectroscopy simulations. It supports factory methods
+    for convenient pulse sequence creation and analysis methods for determining
+    pulse overlaps and field strengths.
+
+    Attributes:
+        pulses (list): List of Pulse objects in the sequence
+    """
+
     pulses: list = field(default_factory=list)  # List of Pulse objects
 
     @staticmethod
@@ -63,7 +72,7 @@ class PulseSequence:
             system (SystemParameters): System configuration containing pulse parameters
             pulse_specs (List[Tuple[int, float, float]]): List of pulse specifications where
                 each tuple contains (pulse_index, peak_time, phase)
-                - pulse_index: Index of this pulse (used for amplitude/FWHM lookup)
+                - pulse_index: Index of this pulse (used for amplitude/fwhm lookup)
                 - peak_time: Time when pulse reaches maximum intensity [fs]
                 - phase: Phase offset of the pulse [rad]
 
@@ -81,7 +90,7 @@ class PulseSequence:
         """
         # Extract system parameters
         pulse_freq = system.omega_laser
-        FWHMs = system.FWHMs
+        fwhms = system.fwhms
         E_amps = system.E_amps
         envelope_type = system.envelope_type
 
@@ -95,7 +104,7 @@ class PulseSequence:
                     "Each pulse_spec must be a tuple of (index, time, phase)"
                 )
             pulse_idx, _, _ = spec
-            if pulse_idx >= len(FWHMs) or pulse_idx >= len(E_amps):
+            if pulse_idx >= len(fwhms) or pulse_idx >= len(E_amps):
                 raise ValueError(
                     f"Pulse index {pulse_idx} exceeds available parameters"
                 )
@@ -107,7 +116,7 @@ class PulseSequence:
                 Pulse(
                     pulse_peak_time=peak_time,
                     pulse_phase=phase,
-                    pulse_FWHM=FWHMs[pulse_index],
+                    pulse_fwhm=fwhms[pulse_index],
                     pulse_amplitude=E_amps[pulse_index],
                     pulse_freq=pulse_freq,
                     pulse_index=pulse_index,
@@ -172,6 +181,7 @@ class PulseSequence:
 
         return PulseSequence.from_pulse_specs(system, pulse_specs)
 
+    '''
     def as_dict(self) -> dict:
         """
         Convert to dictionary format compatible with legacy code.
@@ -208,6 +218,7 @@ class PulseSequence:
         latest_end = max(end for _, end in all_ranges)
 
         return (earliest_start, latest_end)
+    '''
 
     def get_active_pulses_at_time(self, time: float) -> List[Tuple[int, Pulse]]:
         """
@@ -271,84 +282,3 @@ class PulseSequence:
             ],
             "pulse_indices": [i for i, _ in active_pulses],
         }
-
-
-"""
-Utility function for identifying pulse regions in time arrays.
-"""
-
-
-def identify_pulse_regions(  # TODO even used??
-    times: np.ndarray, pulse_seq: PulseSequence, system: SystemParameters = None
-) -> List[Tuple[int, int, int]]:
-    """
-    Identify time regions where pulses are active in a time array.
-
-    This function locates the time indices corresponding to the active regions of each
-    pulse in a pulse sequence. For each pulse, it calculates the start and end times
-    based on the pulse peak time and width (FWHM), finds the corresponding indices
-    in the time array, and returns the regions sorted by start time.
-
-    Parameters
-    ----------
-    times : np.ndarray
-        Time array for the evolution.
-    pulse_seq : PulseSequence
-        PulseSequence object containing pulse information.
-    system : SystemParameters, optional
-        System parameters containing FWHM information. If None, FWHM must be
-        available directly from pulse_seq.
-
-    Returns
-    -------
-    List[Tuple[int, int, int]]
-        List of tuples (start_idx, end_idx, pulse_idx) representing:
-        - start_idx: Index in times array where the pulse region starts
-        - end_idx: Index in times array where the pulse region ends
-        - pulse_idx: Index of the pulse in the pulse sequence
-
-    Notes
-    -----
-    The function defines pulse regions as t ∈ [peak_time - width, peak_time + width],
-    where width is the FWHM (Full Width at Half Maximum) of the pulse.
-    Regions are sorted chronologically by start time.
-    """
-    # Input validation
-    if not isinstance(times, np.ndarray) or len(times) == 0:
-        raise ValueError("Times must be a non-empty numpy array")
-    if not hasattr(pulse_seq, "pulses") or len(pulse_seq.pulses) == 0:
-        raise ValueError("PulseSequence must have at least one pulse")
-
-    # Find pulse regions in the time array
-    pulse_regions = []
-    for i, pulse in enumerate(pulse_seq.pulses):
-        pulse_peak_time = pulse.pulse_peak_time
-
-        # Determine pulse width from system or fallback
-        if system is not None and hasattr(system, "FWHMs") and i < len(system.FWHMs):
-            pulse_width = system.FWHMs[i]
-        elif system is not None and hasattr(system, "FWHM"):
-            pulse_width = system.pulse_FWHMs[i]
-        elif hasattr(pulse, "pulse_FWHM"):
-            pulse_width = pulse.pulse_FWHM
-        else:
-            raise ValueError(
-                f"Could not determine width for pulse {i}. "
-                "Either system must provide FWHM/FWHMs or "
-                "pulse must have a 'width' attribute."
-            )
-
-        # Find indices for pulse region: t ∈ [peak_time - width, peak_time + width]
-        start_time = pulse_peak_time - pulse_width
-        end_time = pulse_peak_time + pulse_width
-
-        start_idx = np.abs(times - start_time).argmin()
-        end_idx = np.abs(times - end_time).argmin()
-
-        if start_idx < end_idx:  # Valid region
-            pulse_regions.append((start_idx, end_idx, i))
-
-    # Sort pulse regions by start time
-    pulse_regions.sort(key=lambda x: x[0])
-
-    return pulse_regions

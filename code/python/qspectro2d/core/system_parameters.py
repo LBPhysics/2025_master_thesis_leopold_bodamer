@@ -54,7 +54,7 @@ class SystemParameters:
     # =============================
     # Pulse and time grid parameters
     # =============================
-    pulse_FWHM: float = 15.0  # in fs
+    pulse_fwhm: float = 15.0  # in fs
     t_max: float = 10.0  # in fs
     dt: float = 1.0  # in fs
     envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
@@ -305,8 +305,8 @@ class SystemParameters:
         return 2 * np.pi / self.rabi_gen if self.rabi_gen != 0 else 0.0
 
     @property
-    def FWHMs(self):
-        return [self.pulse_FWHM] * 3
+    def fwhms(self):
+        return [self.pulse_fwhm] * 3
 
     @property
     def E_freqs(self):
@@ -366,45 +366,45 @@ class SystemParameters:
         return Deph_op
 
     @property
-    def e_ops_list(self):
+    def observable_ops(self):
         if self.N_atoms == 1:
-            e_ops_list = [
-                # ket2dm(self.atom_g), TODO
+            observable_ops = [
+                # ket2dm(self.atom_g),
                 # self.atom_g * self.atom_e.dag(),
                 self.atom_e * self.atom_g.dag(),
                 ket2dm(self.atom_e),
             ]
         elif self.N_atoms == 2:
             """
-            e_ops_list1 = [
+            observable_ops1 = [
                 ket2dm(tensor(self.atom_g, self.atom_g)),
                 ket2dm(tensor(self.atom_e, self.atom_g)),
                 ket2dm(tensor(self.atom_g, self.atom_e)),
                 ket2dm(tensor(self.atom_e, self.atom_e)),
             ]
             """
-            e_ops_list2 = [ket2dm(state) for state in self.eigenstates[1]]
+            observable_ops2 = [ket2dm(state) for state in self.eigenstates[1]]
 
-            e_ops_list = e_ops_list2
+            observable_ops = observable_ops2
 
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
-        return e_ops_list
+        return observable_ops
 
     @property
-    def e_ops_labels(self):
+    def observable_strs(self):
         if self.N_atoms == 1:
-            e_ops_labels = ["eg", "ee"]  # "ge",  # "gg", TODO
+            observable_strs = ["eg", "ee"]  # "ge",  # "gg",
         elif self.N_atoms == 2:
-            # e_ops_labels1 = [f"{i}" for i in range(len(self.eigenstates[1]))]
-            e_ops_labels2 = ["0", "A", "B", "AB"]
-            e_ops_labels = e_ops_labels2
+            # observable_strs1 = [f"{i}" for i in range(len(self.eigenstates[1]))]
+            observable_strs2 = ["0", "A", "B", "AB"]
+            observable_strs = observable_strs2
 
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
-        return e_ops_labels
+        return observable_strs
 
     @property
     def me_decay_channels(self):
@@ -426,11 +426,20 @@ class SystemParameters:
                     self.gamma_0 * (n_th_at + 1)
                 ),  # Collapse operator for spontaneous and thermal relaxation
                 self.Deph_op
-                * np.sqrt(Gamma * (2 * n_th_at + 1)),  # Collapse operator for dephasing
+                * np.sqrt(
+                    2 * Gamma * (2 * n_th_at + 1)  # factor 2 because of |exe|
+                ),  # Collapse operator for dephasing
             ]
 
-        elif self.N_atoms == 2:  # TODO include the (temperature and THE DECAY?)!
-            me_decay_channels_ = [self.Deph_op]
+        elif self.N_atoms == 2:
+            me_decay_channels_ = [
+                ket2dm(tensor(self.atom_e, self.atom_g))
+                * np.sqrt(self.Gamma * (2 * n_th_at + 1) / 2),
+                ket2dm(tensor(self.atom_g, self.atom_e))
+                * np.sqrt(self.Gamma * (2 * n_th_at + 1) / 2),
+                ket2dm(tensor(self.atom_e, self.atom_e))
+                * np.sqrt(Gamma * (2 * n_th_at + 1)),
+            ]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
@@ -452,7 +461,7 @@ class SystemParameters:
             "s": 1.0,  # ohmic spectrum
         }
 
-    def coupling_paper(self, gamma):
+    def _coupling_paper(self, gamma):
         w_th = self.Boltzmann * self.Temp / self.hbar
         n_th_at = n_thermal(self.omega_A, w_th)
         alpha = (
@@ -480,7 +489,7 @@ class SystemParameters:
         alpha = gamma
         return alpha
 
-    def _coupling(self, gamma):
+    def coupling(self, gamma):
         """
         Determine the coupling constant based on the bath type.
 
@@ -531,11 +540,11 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     self.Deph_op,
-                    lambda w: self.power_spectrum_func(w, args_deph),
+                    lambda w: self.power_spectrum_func(-w, args_deph),
                 ],
                 [
                     self.Dip_op,
-                    lambda w: self.power_spectrum_func(w, args_decay),
+                    lambda w: self.power_spectrum_func(-w, args_decay),
                 ],
             ]
 
@@ -543,23 +552,23 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A dephasing
-                    lambda w: self.power_spectrum_func(w, args_deph),
+                    lambda w: self.power_spectrum_func - (w, args_deph),
                 ],
                 [
                     ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B dephasing
-                    lambda w: self.power_spectrum_func(w, args_deph),
+                    lambda w: self.power_spectrum_func(-w, args_deph),
                 ],
                 [
                     ket2dm(
                         tensor(self.atom_e, self.atom_e)
                     ),  # part from A on double excited state
-                    lambda w: self.power_spectrum_func(w, args_deph),
+                    lambda w: self.power_spectrum_func(-w, args_deph),
                 ],
                 [
                     ket2dm(
                         tensor(self.atom_e, self.atom_e)
                     ),  # part from B on double excited state
-                    lambda w: self.power_spectrum_func(w, args_deph),
+                    lambda w: self.power_spectrum_func(-w, args_deph),
                 ],
             ]
         else:
@@ -661,7 +670,7 @@ class SystemParameters:
         print("\n# With parameters for the SIMULATION:")
         print(f"    {'t_max':<20}: {self.t_max} fs")
         print(f"    {'dt':<20}: {self.dt} fs")
-        print(f"    {'pulse_FWHM':<20}: {self.pulse_FWHM} fs")
+        print(f"    {'pulse_fwhm':<20}: {self.pulse_fwhm} fs")
         print(f"    {'omega_laser':<20}: {self.omega_laser_cm} cm^-1")
         print(f"    {'E0':<20}: {self.E0} (mu*E0, such that excitation is < 1%!)")
 
@@ -724,8 +733,8 @@ class SystemParameters:
         # Operators
         print("\n# Dipole operator (Dip_op):")
         print(self.Dip_op)
-        print("\n# Expectation operator labels (e_ops_labels):")
-        print(self.e_ops_labels)
+        print("\n# Expectation operator labels (observable_strs):")
+        print(self.observable_strs)
         print("\n=== End of Summary ===")
 
 

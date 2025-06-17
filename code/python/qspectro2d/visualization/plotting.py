@@ -43,7 +43,7 @@ def Plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     # Plot individual envelopes and annotations
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
         t_peak = pulse.pulse_peak_time  # Now interpreted as peak time
-        Delta_width = pulse.pulse_FWHM
+        Delta_width = pulse.pulse_fwhm
 
         # Compute individual pulse envelope using new logic
         individual_envelope = [
@@ -401,11 +401,11 @@ def Plot_example_evo(
     # Plot expectation values
     for idx, data in enumerate(datas):
         ax = axes[idx + 1]
-        if hasattr(system, "e_ops_labels") and idx < len(system.e_ops_labels):
+        if hasattr(system, "observable_strs") and idx < len(system.observable_strs):
             label = (
                 r"$\mathrm{Re}\langle"
                 + " "
-                + system.e_ops_labels[idx]
+                + system.observable_strs[idx]
                 + " "
                 + r"\rangle$"
             )
