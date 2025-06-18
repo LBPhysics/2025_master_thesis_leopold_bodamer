@@ -48,9 +48,7 @@ def H_int(
     return H_int
 
 
-def apply_RWA_phase_factors(
-    rho: Qobj, t: float, omega: float, system: SystemParameters
-) -> Qobj:
+def apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj:
     """
     Apply time-dependent phase factors to the density matrix entries.
     Dispatches to the appropriate implementation based on N_atoms.
@@ -58,12 +56,12 @@ def apply_RWA_phase_factors(
     Parameters:
         rho (Qobj): Density matrix (Qobj) to modify.
         t (float): Current time.
-        omega (float): Frequency of the phase factor.
         system (SystemParameters): System parameters.
 
     Returns:
         Qobj: Modified density matrix with phase factors applied.
     """
+    omega = system.omega_laser
     if system.N_atoms == 1:
         return _apply_RWA_phase_factors_1atom(rho, t, omega)
     elif system.N_atoms == 2:
@@ -171,7 +169,7 @@ def get_expect_vals_with_RWA(
     if system.RWA_laser:
         # Apply RWA phase factors to each state
         states = [
-            apply_RWA_phase_factors(state, time, omega, system)
+            apply_RWA_phase_factors(state, time, system)
             for state, time in zip(states, times)
         ]
 
@@ -221,8 +219,7 @@ if __name__ == "__main__":
     ### Test apply_RWA_phase_factors
     print("\n--- Testing apply_RWA_phase_factors ---")
     test_rho = system1.psi_ini  # Initial density matrix
-    omega_test = system1.omega_laser
-    rho_modified = apply_RWA_phase_factors(test_rho, test_time, omega_test, system1)
+    rho_modified = apply_RWA_phase_factors(test_rho, test_time, system1)
     print(f"Original rho type: {type(test_rho)}")
     print(f"Modified rho type: {type(rho_modified)}")
     print(f"Modified rho is Hermitian: {rho_modified.isherm}")
@@ -253,9 +250,7 @@ if __name__ == "__main__":
 
         ### Test RWA phase factors for 2-atom system
         test_rho2 = system2.psi_ini
-        rho_modified2 = apply_RWA_phase_factors(
-            test_rho2, test_time, omega_test, system2
-        )
+        rho_modified2 = apply_RWA_phase_factors(test_rho2, test_time, system2)
         print(f"2-atom modified rho is Hermitian: {rho_modified2.isherm}")
 
     except Exception as e:
@@ -273,7 +268,7 @@ if __name__ == "__main__":
         # Test with unsupported N_atoms
         system_invalid = SystemParameters(N_atoms=1)
         system_invalid.N_atoms = 3  # Manually set invalid value
-        apply_RWA_phase_factors(test_rho, test_time, omega_test, system_invalid)
+        apply_RWA_phase_factors(test_rho, test_time, system_invalid)
     except ValueError as e:
         print(f"✓ Correctly caught ValueError: {e}")
 

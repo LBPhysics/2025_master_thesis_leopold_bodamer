@@ -1,9 +1,8 @@
 import numpy as np
-from qutip import Qobj, Result
+from qutip import Qobj
 from qspectro2d.core.system_parameters import SystemParameters
 from qspectro2d.core.pulse_sequences import PulseSequence
 from qspectro2d.core.pulse_functions import *
-from qspectro2d.core.functions_with_rwa import apply_RWA_phase_factors
 
 
 # =============================

@@ -239,12 +239,11 @@ def check_the_solver(
     # CHECK DENSITY MATRIX PROPERTIES
     # =============================
     strg = ""
-    omega = system.omega_laser
     time_cut = np.inf  # time after which the checks failed
     for index, state in enumerate(result.states):
         # Apply RWA phase factors if needed
         if getattr(system, "RWA_laser", False):
-            state = apply_RWA_phase_factors(state, times[index], omega, system)
+            state = apply_RWA_phase_factors(state, times[index], system)
         time = times[index]
         if not state.isherm:
             strg += f"Density matrix is not Hermitian after t = {time}.\n"
@@ -465,27 +464,19 @@ def compute_1d_polarization(
     # Apply RWA phase factors to the states at detection time t_det
     if system.RWA_laser:
         states_full = [
-            apply_RWA_phase_factors(
-                state, time, omega=system.omega_laser, system=system
-            )
+            apply_RWA_phase_factors(state, time, system=system)
             for state, time in zip(states_full, actual_det_times)
         ]
         states_only_pulse0 = [
-            apply_RWA_phase_factors(
-                state, time, omega=system.omega_laser, system=system
-            )
+            apply_RWA_phase_factors(state, time, system=system)
             for state, time in zip(states_only_pulse0, actual_det_times)
         ]
         states_only_pulse1 = [
-            apply_RWA_phase_factors(
-                state, time, omega=system.omega_laser, system=system
-            )
+            apply_RWA_phase_factors(state, time, system=system)
             for state, time in zip(states_only_pulse1, actual_det_times)
         ]
         states_only_pulse2 = [
-            apply_RWA_phase_factors(
-                state, time, omega=system.omega_laser, system=system
-            )
+            apply_RWA_phase_factors(state, time, system=system)
             for state, time in zip(states_only_pulse2, actual_det_times)
         ]
 
@@ -760,7 +751,6 @@ def compute_2d_polarization(
                     rho_f = apply_RWA_phase_factors(
                         rho_f,
                         times_2[t_idx_in_times_2],
-                        omega=system.omega_laser,
                         system=system,
                     )
 

@@ -397,8 +397,8 @@ class SystemParameters:
         if self.N_atoms == 1:
             observable_strs = ["eg", "ee"]  # "ge",  # "gg",
         elif self.N_atoms == 2:
-            # observable_strs1 = [f"{i}" for i in range(len(self.eigenstates[1]))]
-            observable_strs2 = ["0", "A", "B", "AB"]
+            # observable_strs1 = ["0", "A", "B", "AB"]
+            observable_strs2 = [f"{i}" for i in range(len(self.eigenstates[1]))]
             observable_strs = observable_strs2
 
         else:
@@ -417,28 +417,25 @@ class SystemParameters:
 
         if self.N_atoms == 1:
             me_decay_channels_ = [
-                self.SM_op.dag()
+                self.SM_op  # .dag()
                 * np.sqrt(
-                    self.gamma_0 * n_th_at
+                    self.gamma_0  # * n_th_at
                 ),  # Collapse operator for thermal excitation
-                self.SM_op
-                * np.sqrt(
-                    self.gamma_0 * (n_th_at + 1)
-                ),  # Collapse operator for spontaneous and thermal relaxation
                 self.Deph_op
                 * np.sqrt(
-                    2 * Gamma * (2 * n_th_at + 1)  # factor 2 because of |exe|
+                    2 * self.Gamma  # * (2 * n_th_at + 1)  # factor 2 because of |exe|
                 ),  # Collapse operator for dephasing
             ]
+            # Alternative: self.SM_op * np.sqrt(self.gamma_0 * (n_th_at + 1))  # Collapse operator for spontaneous and thermal relaxation
 
         elif self.N_atoms == 2:
             me_decay_channels_ = [
                 ket2dm(tensor(self.atom_e, self.atom_g))
-                * np.sqrt(self.Gamma * (2 * n_th_at + 1) / 2),
+                * np.sqrt(self.Gamma * (n_th_at + 1)),
                 ket2dm(tensor(self.atom_g, self.atom_e))
-                * np.sqrt(self.Gamma * (2 * n_th_at + 1) / 2),
+                * np.sqrt(self.Gamma * (n_th_at + 1)),
                 ket2dm(tensor(self.atom_e, self.atom_e))
-                * np.sqrt(Gamma * (2 * n_th_at + 1)),
+                * np.sqrt(self.Gamma * (n_th_at + 1)),
             ]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
@@ -540,11 +537,11 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     self.Deph_op,
-                    lambda w: self.power_spectrum_func(-w, args_deph),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
                     self.Dip_op,
-                    lambda w: self.power_spectrum_func(-w, args_decay),
+                    lambda w: self.power_spectrum_func(w, args_decay),
                 ],
             ]
 
@@ -552,23 +549,23 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     ket2dm(tensor(self.atom_e, self.atom_g)),  # atom A dephasing
-                    lambda w: self.power_spectrum_func - (w, args_deph),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
                     ket2dm(tensor(self.atom_g, self.atom_e)),  # atom B dephasing
-                    lambda w: self.power_spectrum_func(-w, args_deph),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
                     ket2dm(
                         tensor(self.atom_e, self.atom_e)
                     ),  # part from A on double excited state
-                    lambda w: self.power_spectrum_func(-w, args_deph),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
                 [
                     ket2dm(
                         tensor(self.atom_e, self.atom_e)
                     ),  # part from B on double excited state
-                    lambda w: self.power_spectrum_func(-w, args_deph),
+                    lambda w: self.power_spectrum_func(w, args_deph),
                 ],
             ]
         else:
