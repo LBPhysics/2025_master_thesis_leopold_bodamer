@@ -4,7 +4,7 @@
 from dataclasses import dataclass, field  # for the class definiton
 from typing import Optional  # for the class definiton
 import numpy as np
-from qutip import basis, ket2dm, tensor, Qobj, BosonicEnvironment, qeye
+from qutip import basis, ket2dm, tensor, Qobj
 
 # bath functions
 from qspectro2d.baths.bath_fcts import (
@@ -50,16 +50,15 @@ class SystemParameters:
     # Laser field parameters
     # =============================
     E0: float = 0.05
+    envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
 
     # =============================
     # Pulse and time grid parameters
     # =============================
     pulse_fwhm: float = 15.0  # in fs
+    omega_laser_cm: float = 16000.0  # in cm-1
     t_max: float = 10.0  # in fs
     dt: float = 1.0  # in fs
-    envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
-    omega_laser_cm: float = 16000.0
-    # in cm-1
 
     # =============================
     # Energy and transition parameters in cm-1
@@ -67,8 +66,9 @@ class SystemParameters:
     # =============================
     Delta_cm: Optional[float] = None
     omega_A_cm: Optional[float] = None
-    omega_B_cm: Optional[float] = None  # Specific to N_atoms = 2
     mu_A: Optional[float] = None
+
+    omega_B_cm: Optional[float] = None  # Specific to N_atoms = 2
     mu_B: Optional[float] = None  # Specific to N_atoms = 2
     J_cm: Optional[float] = None  # Specific to N_atoms = 2
 
@@ -319,10 +319,8 @@ class SystemParameters:
     @property
     def SM_op(self):
         if self.N_atoms == 1:
-            SM_op = self.mu_A * (self.atom_g * self.atom_e.dag()).unit()
-        elif (
-            self.N_atoms == 2
-        ):  # TODO THIS IS ONLY FOR THE COUPLED / DIAGONALIZED HAMILTONIAN
+            SM_op = self.mu_A * (self.atom_g * self.atom_e.dag())
+        elif self.N_atoms == 2:
             C_A_1 = -np.sin(self.theta)
             C_A_2 = np.cos(self.theta)
             C_B_1 = C_A_2
@@ -335,10 +333,10 @@ class SystemParameters:
             _, eigenvecs = self.eigenstates
 
             sm_list = [
-                mu_10 * (eigenvecs[0] * eigenvecs[1].dag()).unit(),
-                mu_20 * (eigenvecs[0] * eigenvecs[2].dag()).unit(),
-                mu_31 * (eigenvecs[1] * eigenvecs[3].dag()).unit(),
-                mu_32 * (eigenvecs[2] * eigenvecs[3].dag()).unit(),
+                mu_10 * (eigenvecs[0] * eigenvecs[1].dag()),
+                mu_20 * (eigenvecs[0] * eigenvecs[2].dag()),
+                mu_31 * (eigenvecs[1] * eigenvecs[3].dag()),
+                mu_32 * (eigenvecs[2] * eigenvecs[3].dag()),
             ]
             SM_op = sum(sm_list)
         else:
@@ -352,27 +350,27 @@ class SystemParameters:
     @property
     def Deph_op(self):
         if self.N_atoms == 1:
-            Deph_op = ket2dm(self.atom_e)
+            cplng_ops_to_env = [ket2dm(self.atom_e)]
         elif self.N_atoms == 2:
             cplng_ops_to_env = [
                 ket2dm(tensor(self.atom_e, self.atom_g)),
                 ket2dm(tensor(self.atom_g, self.atom_e)),
                 ket2dm(tensor(self.atom_e, self.atom_e)),
             ]
-            Deph_op = sum(cplng_ops_to_env)
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")
 
+        Deph_op = sum(cplng_ops_to_env)
         return Deph_op
 
     @property
     def observable_ops(self):
         if self.N_atoms == 1:
             observable_ops = [
-                # ket2dm(self.atom_g),
-                # self.atom_g * self.atom_e.dag(),
-                self.atom_e * self.atom_g.dag(),
-                ket2dm(self.atom_e),
+                ket2dm(self.atom_g),  # |gxg|
+                self.atom_g * self.atom_e.dag(),  # |gxe|
+                self.atom_e * self.atom_g.dag(),  # |exg|
+                ket2dm(self.atom_e),  # |exe|
             ]
         elif self.N_atoms == 2:
             """
@@ -395,7 +393,7 @@ class SystemParameters:
     @property
     def observable_strs(self):
         if self.N_atoms == 1:
-            observable_strs = ["eg", "ee"]  # "ge",  # "gg",
+            observable_strs = ["gg", "ge", "eg", "ee"]
         elif self.N_atoms == 2:
             # observable_strs1 = ["0", "A", "B", "AB"]
             observable_strs2 = [f"{i}" for i in range(len(self.eigenstates[1]))]
@@ -419,8 +417,8 @@ class SystemParameters:
             me_decay_channels_ = [
                 self.SM_op  # .dag()
                 * np.sqrt(
-                    self.gamma_0  # * n_th_at
-                ),  # Collapse operator for thermal excitation
+                    self.gamma_0  # * n_th_at  # Collapse operator for thermal excitation
+                ),
                 self.Deph_op
                 * np.sqrt(
                     2 * self.Gamma  # * (2 * n_th_at + 1)  # factor 2 because of |exe|
@@ -537,7 +535,9 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     self.Deph_op,
-                    lambda w: self.power_spectrum_func(w, args_deph),
+                    lambda w: self.power_spectrum_func(
+                        2 * w, args_deph
+                    ),  # because of the factor 2 in the dephasing operator
                 ],
                 [
                     self.Dip_op,

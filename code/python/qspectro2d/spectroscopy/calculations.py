@@ -65,6 +65,101 @@ def compute_pulse_evolution(
             options[key] = value
 
     # Initialize result storage for different regions
+
+    # Build Hamiltonian components
+    H_free = system.H0_diagonalized  # already includes the RWA, if present!
+    print(H_free, flush=True)
+    H_int_evo = QobjEvo(
+        lambda t, args=None: H_free + H_int(t, pulse_seq, system)
+    )  # also add H_int, with potential RWA
+
+    # =============================
+    # Choose solver and compute the evolution
+    # =============================
+    if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
+        raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
+
+    elif (
+        system.ODE_Solver == "ME"
+    ):  # Set up collapse operators based on solver type; no c_ops for "BR"
+        c_ops_list = system.me_decay_channels
+    elif system.ODE_Solver == "Paper_BR":
+        c_ops_list = [R_paper(system)]
+
+    elif system.ODE_Solver == "Paper_eqs":
+        c_ops_list = []
+        if not system.RWA_laser:
+            print(
+                "The equations of the paper only make sense with RWA -> switched it on!",
+                flush=True,
+            )
+            system.RWA_laser = True
+        # For Paper_eqs, we need to define the full Liouville operator, which includes the decay channels
+        H_int_evo = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+
+    if system.ODE_Solver == "BR":
+        a_ops_list = system.br_decay_channels
+        result = brmesolve(
+            H_int_evo,
+            psi_ini,
+            times,
+            a_ops=a_ops_list,
+            options=options,
+        )
+    else:
+        result = mesolve(
+            H_int_evo,
+            psi_ini,
+            times,
+            c_ops=c_ops_list,
+            options=options,
+        )
+
+    return result
+
+
+'''
+def compute_pulse_evolution(
+    psi_ini: Qobj,
+    times: np.ndarray,
+    pulse_seq: PulseSequence,
+    system: SystemParameters = None,
+    **solver_options: dict,
+) -> Result:
+    """
+    Compute the evolution of the system for a given pulse sequence.
+
+    Parameters:
+        psi_ini (Qobj): Initial quantum state.
+        times (np.ndarray): Time array for the evolution.
+        pulse_seq (PulseSequence): PulseSequence object.
+        system (SystemParameters): System parameters.
+
+    Returns:
+        Result: Result of the evolution.
+    """
+    # =============================
+    # Set solver options
+    # =============================
+    # Initialize with provided solver_options or empty dict
+    options = solver_options.copy() if solver_options else {}
+
+    # Add default options if not already present
+    default_options = {
+        "store_states": True,
+        "progress_bar": "",
+        # Increasing max steps and atol/rtol for better stability
+        "nsteps": 200000,
+        "atol": 1e-6,
+        "rtol": 1e-4,
+    }
+
+    # Update options with defaults only if not already set
+    for key, value in default_options.items():
+        if key not in options:
+            options[key] = value
+
+    # Initialize result storage for different regions
     all_states = []
     all_times = []
     current_state = psi_ini
@@ -166,6 +261,7 @@ def compute_pulse_evolution(
     result_.times = np.array(all_times)
 
     return result_
+'''
 
 
 def check_the_solver(
