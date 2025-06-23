@@ -482,6 +482,8 @@ def compute_1d_polarization(
     )
     data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 
+    # TODO add time_cut to avoid numerical issues
+    
     # Just in case I want to plot an example evolution
     plot_example = kwargs.get("plot_example", False)
     if plot_example:

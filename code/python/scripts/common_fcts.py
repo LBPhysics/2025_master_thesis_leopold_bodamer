@@ -44,10 +44,19 @@ from qspectro2d.spectroscopy.post_processing import (
 # =============================
 # GENERALIZED DATA SAVING FUNCTIONS
 # =============================
-def generate_unique_filename(
+def generate_unique_data_path(
     output_dir: Path, config: dict, system, simulation_type: str = "spectroscopy"
 ) -> Path:
-    """Generate a unique filename for spectroscopy data."""
+    """
+    Args:
+        output_dir: Directory path where file will be saved
+        config: Dictionary containing simulation parameters
+        system: System parameters object
+        simulation_type: Type of simulation ("1d", "2d", or other)
+        
+    Returns:
+        unique path
+    """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Build filename components based on simulation type
@@ -86,11 +95,11 @@ def save_spectroscopy_data(
 ) -> Path:
     """Save spectroscopy simulation data to a pickle file."""
     ### Create output directory
-    output_dir = DATA_DIR / config["output_subdir"]
+    output_dir = DATA_DIR / simulation_type / config["output_subdir"]
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ### Generate unique filename
-    save_path = generate_unique_filename(output_dir, config, system, simulation_type)
+    save_path = generate_unique_data_path(output_dir, config, system, simulation_type)
 
     ### Add common metadata to data
     data_dict.update(
@@ -220,8 +229,10 @@ def _run_1d_simulation(
 
     ### Create time arrays
     fwhms = system.fwhms
-    times = np.arange(-2 * fwhms[0], system.t_max, system.dt)
+    times = np.arange(-1 * fwhms[0], system.t_max, system.dt)
 
+    ### Validate solver
+    # TODO add time_cut validation
     print("Computing 1D polarization with parallel processing...")
 
     try:
@@ -254,7 +265,10 @@ def _run_2d_simulation(
     time_cut = validate_solver(system, times)
 
     print("Computing 2D polarization with parallel processing...")
-    kwargs = {"plot_example": False, "time_cut": time_cut}
+    kwargs = {
+        "plot_example": False, 
+        "time_cut": time_cut
+        }
 
     try:
         two_d_datas = parallel_compute_2d_E_with_inhomogenity(
@@ -377,19 +391,14 @@ def run_2d_simulation_with_config(config: dict):
     return run_simulation_with_config(config, "2d")
 
 
-# NOW FOR PLOTTING FUNCTIONS
-
-
 # =============================
 # GENERALIZED PLOTTING FUNCTIONS
 # =============================
 def find_latest_file(data_subdir: str, file_pattern: str = "*.pkl") -> Optional[Path]:
     """Find the most recent file matching pattern in a data subdirectory.
-
     Args:
         data_subdir: Subdirectory within DATA_DIR (e.g., '2d_spectroscopy/N_1/paper_eqs/100fs')
         file_pattern: Glob pattern for file matching
-
     Returns:
         Path to the latest file or None if not found
     """
