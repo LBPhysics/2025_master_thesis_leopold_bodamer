@@ -261,7 +261,7 @@ def main():
     config.update(
         {
             # Example modifications: TODO JUST CHANGE THIS PART
-            "data_subdir": "2d_spectroscopy/new_echo_signal/paper_eqs/100fs/",
+            "data_subdir": "2d_spectroscopy/N_1/paper_eqs/t_max_100fs",
             # "plot_types": ["real", "imag"],  # Plot only real and imaginary parts
             "plot_time_domain": True,  # Enable time domain plotting
             "extend_for": (1, 3),
