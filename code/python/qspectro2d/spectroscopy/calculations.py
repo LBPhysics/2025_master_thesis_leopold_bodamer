@@ -23,8 +23,7 @@ from qspectro2d.core.functions_with_rwa import (
     apply_RWA_phase_factors,
 )
 
-
-# THIS FUNCTION is problem
+'''
 def compute_pulse_evolution(
     psi_ini: Qobj,
     times: np.ndarray,
@@ -124,8 +123,6 @@ def compute_pulse_evolution(
         )
 
     return result
-
-
 '''
 
 
@@ -176,7 +173,9 @@ def compute_pulse_evolution(
 
     # Build Hamiltonian components
     H_free = system.H0_diagonalized  # already includes the RWA, if present!
-    H_int_evo = QobjEvo(lambda t, args=None: H_free + H_int(t, pulse_seq, system))
+    H_int_evo = QobjEvo(
+        lambda t, args=None: H_free + H_int(t, pulse_seq, system)
+    )  # also add H_int, with potential RWA
 
     # =============================
     # Choose solver and compute the evolution
@@ -184,14 +183,7 @@ def compute_pulse_evolution(
     if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
 
-    elif (
-        system.ODE_Solver == "ME"
-    ):  # Set up collapse operators based on solver type; no c_ops for "BR"
-        c_ops_list = system.me_decay_channels
-    elif system.ODE_Solver == "Paper_BR":
-        c_ops_list = [R_paper(system)]
-
-    elif system.ODE_Solver == "Paper_eqs":
+    if system.ODE_Solver == "Paper_eqs":
         c_ops_list = []
         if not system.RWA_laser:
             print(
@@ -200,7 +192,8 @@ def compute_pulse_evolution(
             )
             system.RWA_laser = True
         # For Paper_eqs, we need to define the full Liouville operator, which includes the decay channels
-        H_int_evo = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+        EVO_obj = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+        # no explicit c_ops, matrix_ODE represents the full Liouville operator
 
     # =============================
     # Split evolution by pulse regions for Paper_eqs
@@ -224,18 +217,26 @@ def compute_pulse_evolution(
 
         # Check if this region has an active pulse by looking at the first time point
         has_pulse = pulse_regions[start_idx]
-        if has_pulse or system.ODE_Solver == "Paper_eqs":
-            # Evolve with H_int_evo during pulse region
-            # for Paper_eqs, the evolution is always with H_int_evo
-            H_total = H_int_evo
-        else:
-            # Evolve with H_free during non-pulse region for all other solvers
-            H_total = H_free
+
+        # Set up collapse operators based on solver type; no c_ops for "BR"
+        if system.ODE_Solver == "ME":
+            if has_pulse:
+                c_ops_list = []
+                EVO_obj = H_free
+            else:
+                c_ops_list = system.me_decay_channels  # explicit c_ops
+                EVO_obj = H_int_evo  # For ME, we use the Hamiltonian evolution operator directly
+        elif system.ODE_Solver == "Paper_BR":
+            # no explicit c_ops for Paper_BR, but we need to define the R operator
+            c_ops_list = []
+            EVO_obj = liouvillian(H_int_evo) + R_paper(
+                system
+            )  # TODO PROBLEM SOMEHOW INCLUDES RWA twice? -> double the oscillation
 
         if system.ODE_Solver == "BR":
             a_ops_list = system.br_decay_channels
             result = brmesolve(
-                H_total,
+                H_int_evo,
                 current_state,
                 times_,
                 a_ops=a_ops_list,
@@ -243,7 +244,7 @@ def compute_pulse_evolution(
             )
         else:
             result = mesolve(
-                H_total,
+                EVO_obj,
                 current_state,
                 times_,
                 c_ops=c_ops_list,
@@ -271,7 +272,6 @@ def compute_pulse_evolution(
     result_.times = np.array(all_times)
 
     return result_
-'''
 
 
 def check_the_solver(
