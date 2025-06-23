@@ -429,11 +429,11 @@ class SystemParameters:
         elif self.N_atoms == 2:
             me_decay_channels_ = [
                 ket2dm(tensor(self.atom_e, self.atom_g))
-                * np.sqrt(self.Gamma * (n_th_at + 1)),
+                * np.sqrt(self.Gamma),  # * (n_th_at + 1)
                 ket2dm(tensor(self.atom_g, self.atom_e))
-                * np.sqrt(self.Gamma * (n_th_at + 1)),
+                * np.sqrt(self.Gamma),  # * (n_th_at + 1)
                 ket2dm(tensor(self.atom_e, self.atom_e))
-                * np.sqrt(self.Gamma * (n_th_at + 1)),
+                * np.sqrt(self.Gamma),  # * (n_th_at + 1)
             ]
         else:
             raise ValueError("Only N_atoms=1 or 2 are supported.")

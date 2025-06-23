@@ -62,9 +62,7 @@ def _matrix_ODE_paper_1atom(  # carefull: I changed this function with GPT
     L[idx_00, idx_10] = +1j * Et_conj * μ
 
     # ----- d/dt ρ_ee
-    L[idx_11, idx_11] = -gamma0
-    L[idx_11, idx_01] = +1j * Et * μ  # ρ_ge
-    L[idx_11, idx_10] = -1j * Et_conj * μ  # ρ_eg
+    L[idx_11, :] = -L[idx_00, :]  # Ensures trace conservation
 
     # ----- d/dt ρ_eg
     L[idx_10, idx_00] = +1j * Et * μ  # ρ_gg
@@ -73,8 +71,8 @@ def _matrix_ODE_paper_1atom(  # carefull: I changed this function with GPT
     L[idx_10, idx_10] = -Γ  # Decay term for coherence
 
     # ----- d/dt ρ_ge  – complex conjugate
-    L[idx_01, idx_00] = +1j * Et * μ  # ρ_gg
-    L[idx_01, idx_11] = -1j * Et * μ  # ρ_ee
+    L[idx_01, idx_00] = -1j * Et_conj * μ  # ρ_gg
+    L[idx_01, idx_11] = +1j * Et_conj * μ  # ρ_ee
 
     L[idx_01, idx_01] = -Γ  # Decay term for coherence
 
@@ -99,291 +97,162 @@ def _matrix_ODE_paper_2atom(
     Et = E_pulse(t, pulse_seq)
     Et_conj = np.conj(Et)
 
-    N = 4
-    idx = lambda i, j: i + N * j  # column-stack index mapper
+    size = 4  # 4 states |0>, |1>, |2>, |3>
 
-    L = np.zeros((N * N, N * N), dtype=complex)
+    # Define all indices using stacked_index
+    idx_00 = stacked_index(size, row=0, col=0)  # ρ_00
+    idx_01 = stacked_index(size, row=0, col=1)  # ρ_01
+    idx_02 = stacked_index(size, row=0, col=2)  # ρ_02
+    idx_03 = stacked_index(size, row=0, col=3)  # ρ_03
+    idx_10 = stacked_index(size, row=1, col=0)  # ρ_10
+    idx_11 = stacked_index(size, row=1, col=1)  # ρ_11
+    idx_12 = stacked_index(size, row=1, col=2)  # ρ_12
+    idx_13 = stacked_index(size, row=1, col=3)  # ρ_13
+    idx_20 = stacked_index(size, row=2, col=0)  # ρ_20
+    idx_21 = stacked_index(size, row=2, col=1)  # ρ_21
+    idx_22 = stacked_index(size, row=2, col=2)  # ρ_22
+    idx_23 = stacked_index(size, row=2, col=3)  # ρ_23
+    idx_30 = stacked_index(size, row=3, col=0)  # ρ_30
+    idx_31 = stacked_index(size, row=3, col=1)  # ρ_31
+    idx_32 = stacked_index(size, row=3, col=2)  # ρ_32
+    idx_33 = stacked_index(size, row=3, col=3)  # ρ_33
+
+    L = np.zeros((size * size, size * size), dtype=complex)
 
     # --------------------------------------------------------------
-    # 1) Off-diagonal Ein-Anregungs-Kohärenzen
+    # 1) Off-diagonal one-excited-coherences
     # --------------------------------------------------------------
     # ρ_10   (|1⟩⟨0|)
     term = -1j * (system.omega_ij(1, 0) - system.omega_laser) - system.Gamma_big_ij(
         1, 0
     )
-    L[idx(1, 0), idx(1, 0)] = term
-    L[idx(1, 0), idx(0, 0)] = 1j * Et * system.Dip_op[1, 0]
-    L[idx(1, 0), idx(1, 1)] = -1j * Et * system.Dip_op[1, 0]
-    L[idx(1, 0), idx(1, 2)] = -1j * Et * system.Dip_op[2, 0]
-    L[idx(1, 0), idx(3, 0)] = 1j * Et_conj * system.Dip_op[3, 1]
+    L[idx_10, idx_10] = term
+    L[idx_10, idx_00] = 1j * Et * system.Dip_op[1, 0]
+    L[idx_10, idx_11] = -1j * Et * system.Dip_op[1, 0]
+    L[idx_10, idx_12] = -1j * Et * system.Dip_op[2, 0]
+    L[idx_10, idx_30] = 1j * Et_conj * system.Dip_op[3, 1]
 
     # ρ_01   = (ρ_10)†
-    L[idx(0, 1), :] = np.conj(L[idx(1, 0), :])
+    L[idx_01, idx_01] = np.conj(term)
+    L[idx_01, idx_00] = np.conj(L[idx_10, idx_00])
+    L[idx_01, idx_11] = np.conj(L[idx_10, idx_11])
+    L[idx_01, idx_21] = np.conj(L[idx_10, idx_12])
+    L[idx_01, idx_03] = np.conj(L[idx_10, idx_30])
 
     # ρ_20   (|2⟩⟨0|)
     term = -1j * (system.omega_ij(2, 0) - system.omega_laser) - system.Gamma_big_ij(
         2, 0
     )
-    L[idx(2, 0), idx(2, 0)] = term
-    L[idx(2, 0), idx(0, 0)] = 1j * Et * system.Dip_op[2, 0]
-    L[idx(2, 0), idx(2, 2)] = -1j * Et * system.Dip_op[2, 0]
-    L[idx(2, 0), idx(2, 1)] = -1j * Et * system.Dip_op[1, 0]
-    L[idx(2, 0), idx(3, 0)] = 1j * Et_conj * system.Dip_op[3, 2]
+    L[idx_20, idx_20] = term
+    L[idx_20, idx_00] = 1j * Et * system.Dip_op[2, 0]
+    L[idx_20, idx_22] = -1j * Et * system.Dip_op[2, 0]
+    L[idx_20, idx_21] = -1j * Et * system.Dip_op[1, 0]
+    L[idx_20, idx_30] = 1j * Et_conj * system.Dip_op[3, 2]
 
     # ρ_02
-    L[idx(0, 2), :] = np.conj(L[idx(2, 0), :])
+    L[idx_02, idx_02] = np.conj(term)
+    L[idx_02, idx_00] = np.conj(L[idx_20, idx_00])
+    L[idx_02, idx_22] = np.conj(L[idx_20, idx_22])
+    L[idx_02, idx_12] = np.conj(L[idx_20, idx_21])
+    L[idx_02, idx_03] = np.conj(L[idx_20, idx_30])
 
     # --------------------------------------------------------------
-    # 2) Doppel-Anregungs-Kohärenzen
+    # 2) double-excited-coherences
     # --------------------------------------------------------------
     # ρ_30   (|3⟩⟨0|)
     term = -1j * (system.omega_ij(3, 0) - 2 * system.omega_laser) - system.Gamma_big_ij(
         3, 0
     )
-    L[idx(3, 0), idx(3, 0)] = term
-    L[idx(3, 0), idx(1, 0)] = -1j * Et_conj * system.Dip_op[3, 1]
-    L[idx(3, 0), idx(2, 0)] = -1j * Et_conj * system.Dip_op[3, 2]
-    L[idx(3, 0), idx(3, 1)] = 1j * Et_conj * system.Dip_op[1, 0]
-    L[idx(3, 0), idx(3, 2)] = 1j * Et_conj * system.Dip_op[2, 0]
+    L[idx_30, idx_30] = term
+    L[idx_30, idx_10] = 1j * Et * system.Dip_op[3, 1]
+    L[idx_30, idx_20] = 1j * Et * system.Dip_op[3, 2]
+    L[idx_30, idx_31] = -1j * Et * system.Dip_op[1, 0]
+    L[idx_30, idx_32] = -1j * Et * system.Dip_op[2, 0]
 
     # ρ_03
-    L[idx(0, 3), :] = np.conj(L[idx(3, 0), :])
+    L[idx_03, idx_03] = np.conj(term)
+    L[idx_03, idx_01] = np.conj(L[idx_30, idx_10])
+    L[idx_03, idx_02] = np.conj(L[idx_30, idx_20])
+    L[idx_03, idx_13] = np.conj(L[idx_30, idx_31])
+    L[idx_03, idx_23] = np.conj(L[idx_30, idx_32])
 
     # --------------------------------------------------------------
-    # 3) Kreuz-Kohärenzen innerhalb der Ein-Anregungs-Manifold
+    # 3) cross-coherences inside one excitation manifold
     # --------------------------------------------------------------
     # ρ_12   (|1⟩⟨2|)
     term = -1j * system.omega_ij(1, 2) - system.Gamma_big_ij(1, 2)
-    L[idx(1, 2), idx(1, 2)] = term
-    L[idx(1, 2), idx(0, 2)] = 1j * Et * system.Dip_op[1, 0]
-    L[idx(1, 2), idx(1, 3)] = -1j * Et * system.Dip_op[3, 2]
-    L[idx(1, 2), idx(3, 2)] = 1j * Et_conj * system.Dip_op[3, 1]
-    L[idx(1, 2), idx(1, 0)] = -1j * Et_conj * system.Dip_op[2, 0]
+    L[idx_12, idx_12] = term
+    L[idx_12, idx_02] = 1j * Et * system.Dip_op[1, 0]
+    L[idx_12, idx_13] = -1j * Et * system.Dip_op[3, 2]
+    L[idx_12, idx_32] = 1j * Et_conj * system.Dip_op[3, 1]
+    L[idx_12, idx_10] = -1j * Et_conj * system.Dip_op[2, 0]
 
     # ρ_21
-    L[idx(2, 1), :] = np.conj(L[idx(1, 2), :])
+    L[idx_21, idx_21] = np.conj(term)
+    L[idx_21, idx_20] = np.conj(L[idx_12, idx_02])
+    L[idx_21, idx_31] = np.conj(L[idx_12, idx_13])
+    L[idx_21, idx_23] = np.conj(L[idx_12, idx_32])
+    L[idx_21, idx_01] = np.conj(L[idx_12, idx_10])
 
     # ρ_31   (|3⟩⟨1|)
     term = -1j * (system.omega_ij(3, 1) - system.omega_laser) - system.Gamma_big_ij(
         3, 1
     )
-    L[idx(3, 1), idx(3, 1)] = term
-    L[idx(3, 1), idx(1, 1)] = 1j * Et * system.Dip_op[3, 1]
-    L[idx(3, 1), idx(2, 1)] = 1j * Et * system.Dip_op[3, 2]
-    L[idx(3, 1), idx(3, 0)] = -1j * Et_conj * system.Dip_op[1, 0]
+    L[idx_31, idx_31] = term
+    L[idx_31, idx_11] = 1j * Et * system.Dip_op[3, 1]
+    L[idx_31, idx_21] = 1j * Et * system.Dip_op[3, 2]
+    L[idx_31, idx_30] = -1j * Et_conj * system.Dip_op[1, 0]
 
     # ρ_13
-    L[idx(1, 3), :] = np.conj(L[idx(3, 1), :])
+    L[idx_13, idx_13] = np.conj(term)
+    L[idx_13, idx_11] = np.conj(L[idx_31, idx_11])
+    L[idx_13, idx_12] = np.conj(L[idx_31, idx_21])
+    L[idx_13, idx_03] = np.conj(L[idx_31, idx_30])
 
     # ρ_32   (|3⟩⟨2|)
     term = -1j * (system.omega_ij(3, 2) - system.omega_laser) - system.Gamma_big_ij(
         3, 2
     )
-    L[idx(3, 2), idx(3, 2)] = term
-    L[idx(3, 2), idx(2, 2)] = 1j * Et * system.Dip_op[3, 2]
-    L[idx(3, 2), idx(1, 2)] = 1j * Et * system.Dip_op[3, 1]
-    L[idx(3, 2), idx(3, 0)] = -1j * Et_conj * system.Dip_op[2, 0]
+    L[idx_32, idx_32] = term
+    L[idx_32, idx_22] = 1j * Et * system.Dip_op[3, 2]
+    L[idx_32, idx_12] = 1j * Et * system.Dip_op[3, 1]
+    L[idx_32, idx_30] = -1j * Et_conj * system.Dip_op[2, 0]
 
     # ρ_23
-    L[idx(2, 3), :] = np.conj(L[idx(3, 2), :])
+    L[idx_23, idx_23] = np.conj(term)
+    L[idx_23, idx_22] = np.conj(L[idx_32, idx_22])
+    L[idx_23, idx_21] = np.conj(L[idx_32, idx_12])
+    L[idx_23, idx_03] = np.conj(L[idx_32, idx_30])
 
     # --------------------------------------------------------------
-    # 4) Populations (Diagonalelemente)
+    # 4) Populations (diagonals)
     # --------------------------------------------------------------
     # ρ_00
-    L[idx(0, 0), idx(0, 1)] = -1j * Et * system.Dip_op[1, 0]
-    L[idx(0, 0), idx(0, 2)] = -1j * Et * system.Dip_op[2, 0]
-    L[idx(0, 0), idx(1, 0)] = 1j * Et_conj * system.Dip_op[1, 0]
-    L[idx(0, 0), idx(2, 0)] = 1j * Et_conj * system.Dip_op[2, 0]
+    L[idx_00, idx_01] = -1j * Et * system.Dip_op[1, 0]
+    L[idx_00, idx_02] = -1j * Et * system.Dip_op[2, 0]
+    L[idx_00, idx_10] = 1j * Et_conj * system.Dip_op[1, 0]
+    L[idx_00, idx_20] = 1j * Et_conj * system.Dip_op[2, 0]
 
     # ρ_11
-    L[idx(1, 1), idx(1, 1)] = -system.Gamma_big_ij(1, 1)
-    L[idx(1, 1), idx(2, 2)] = system.gamma_small_ij(1, 2)
-    L[idx(1, 1), idx(0, 1)] = 1j * Et * system.Dip_op[1, 0]
-    L[idx(1, 1), idx(1, 3)] = -1j * Et * system.Dip_op[3, 1]
-    L[idx(1, 1), idx(3, 1)] = 1j * Et_conj * system.Dip_op[3, 1]
-    L[idx(1, 1), idx(1, 0)] = -1j * Et_conj * system.Dip_op[1, 0]
+    L[idx_11, idx_11] = -system.Gamma_big_ij(1, 1)
+    L[idx_11, idx_22] = system.gamma_small_ij(1, 2)
+    L[idx_11, idx_01] = 1j * Et * system.Dip_op[1, 0]
+    L[idx_11, idx_13] = -1j * Et * system.Dip_op[3, 1]
+    L[idx_11, idx_31] = 1j * Et_conj * system.Dip_op[3, 1]
+    L[idx_11, idx_10] = -1j * Et_conj * system.Dip_op[1, 0]
 
     # ρ_22
-    L[idx(2, 2), idx(2, 2)] = -system.Gamma_big_ij(2, 2)
-    L[idx(2, 2), idx(1, 1)] = system.gamma_small_ij(2, 1)
-    L[idx(2, 2), idx(0, 2)] = 1j * Et * system.Dip_op[2, 0]
-    L[idx(2, 2), idx(2, 3)] = -1j * Et * system.Dip_op[3, 2]
-    L[idx(2, 2), idx(3, 2)] = 1j * Et_conj * system.Dip_op[3, 2]
-    L[idx(2, 2), idx(2, 0)] = -1j * Et_conj * system.Dip_op[2, 0]
+    L[idx_22, idx_22] = -system.Gamma_big_ij(2, 2)
+    L[idx_22, idx_11] = system.gamma_small_ij(2, 1)
+    L[idx_22, idx_02] = 1j * Et * system.Dip_op[2, 0]
+    L[idx_22, idx_23] = -1j * Et * system.Dip_op[3, 2]
+    L[idx_22, idx_32] = 1j * Et_conj * system.Dip_op[3, 2]
+    L[idx_22, idx_20] = -1j * Et_conj * system.Dip_op[2, 0]
 
     # ρ_33  – Spurbedingung: dρ_00 + dρ_11 + dρ_22 + dρ_33 = 0
-    L[idx(3, 3), :] = -L[idx(0, 0), :] - L[idx(1, 1), :] - L[idx(2, 2), :]
+    L[idx_33, :] = -L[idx_00, :] - L[idx_11, :] - L[idx_22, :]
 
-    # --------------------------------------------------------------
-    # Rückgabe als Qobj ('super')
-    # --------------------------------------------------------------
     return Qobj(L, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])
-
-
-'''
-def _matrix_ODE_paper_2atom(
-    t: float, pulse_seq: PulseSequence, system: SystemParameters
-) -> Qobj:
-    """including RWA.
-    Constructs the matrix L(t) for the equation drho_dt = L(t) * rho,
-    where rho is the flattened density matrix.
-    """
-    Et = E_pulse(t, pulse_seq)
-    Et_conj = np.conj(Et)
-
-    L = np.zeros((16, 16), dtype=complex)
-
-    # Indices for the flattened density matrix:
-    # 0: rho00, 1: rho01, 2: rho02, 3: rho03
-    # 4: rho10, 5: rho11, 6: rho12, 7: rho13
-    # 8: rho20, 9: rho21, 10: rho22, 11: rho23
-    # 12: rho30, 13: rho31, 14: rho32, 15: rho33
-
-    # --- d/dt rho_10 ---
-    term = -1j * (system.omega_ij(1, 0) - system.omega_laser) - system.Gamma_big_ij(
-        1, 0
-    )
-    L[4, 4] = term  # ρ₁₀ ← ρ₁₀
-    L[4, 0] = 1j * Et * system.Dip_op[1, 0]  # ρ₁₀ ← ρ₀₀
-    L[4, 5] = -1j * Et * system.Dip_op[1, 0]  # ρ₁₀ ← ρ₁₁
-    L[4, 6] = -1j * Et * system.Dip_op[2, 0]  # ρ₁₀ ← ρ₁₂
-    L[4, 12] = 1j * Et_conj * system.Dip_op[3, 1]  # ρ₁₀ ← ρ₃₀
-
-    # --- d/dt rho_01 ---
-    L[1, :] = np.conj(L[4, :])  # ρ₀₁ ← ρ
-    """
-    L[1, 1] = np.conj(term)  # ρ₀₁ ← ρ₀₁
-    L[1, 0] = np.conj(L[4, 0])  # ρ₀₁ ← ρ₀₀
-    L[1, 5] = np.conj(L[4, 5])  # ρ₀₁ ← ρ₁₁
-    L[1, 9] = np.conj(L[4, 6])  # ρ₀₁ ← ρ₂₁
-    L[1, 3] = np.conj(L[4, 12])  # ρ₀₁ ← ρ₀₃
-    """
-    # --- d/dt rho_20 ---
-    term = -1j * (system.omega_ij(2, 0) - system.omega_laser) - system.Gamma_big_ij(
-        2, 0
-    )
-    L[8, 8] = term  # ρ₂₀ ← ρ₂₀
-    L[8, 0] = 1j * Et * system.Dip_op[2, 0]  # ρ₂₀ ← ρ₀₀
-    L[8, 10] = -1j * Et * system.Dip_op[2, 0]  # ρ₂₀ ← ρ₂₂
-    L[8, 9] = -1j * Et * system.Dip_op[1, 0]  # ρ₂₀ ← ρ₂₁
-    L[8, 12] = 1j * Et_conj * system.Dip_op[3, 2]  # ρ₂₀ ← ρ₃₀
-
-    # --- d/dt rho_02 ---
-    L[2, :] = np.conj(L[8, :])  # ρ₀₂ ← ρ
-    """
-    L[2, 2] = np.conj(term)  # ρ₀₂ ← ρ₀₂
-    L[2, 0] = np.conj(L[8, 0])  # ρ₀₂ ← ρ₀₀
-    L[2, 10] = np.conj(L[8, 10])  # ρ₀₂ ← ρ₂₂
-    L[2, 6] = np.conj(L[8, 9])  # ρ₀₂ ← ρ₁₂
-    L[2, 3] = np.conj(L[8, 12])  # ρ₀₂ ← ρ₀₃
-    """
-
-    # for the next 2 terms: CHANGES Et ->_conj and sign with respect to the paper of the Interaction term
-    # --- d/dt rho_30 ---
-    term = -1j * (system.omega_ij(3, 0) - 2 * system.omega_laser) - system.Gamma_big_ij(
-        3, 0
-    )
-    L[12, 12] = term  # ρ₃₀ ← ρ₃₀
-    L[12, 4] = -1j * Et_conj * system.Dip_op[3, 1]  # ρ₃₀ ← ρ₁₀
-    L[12, 8] = -1j * Et_conj * system.Dip_op[3, 2]  # ρ₃₀ ← ρ₂₀
-    L[12, 13] = 1j * Et_conj * system.Dip_op[1, 0]  # ρ₃₀ ← ρ₃₁
-    L[12, 14] = 1j * Et_conj * system.Dip_op[2, 0]  # ρ₃₀ ← ρ₃₂
-
-    # --- d/dt rho_03 ---
-    L[3, :] = np.conj(L[12, :])  # ρ₀₃ ← ρ
-    """
-    L[3, 3] = np.conj(term)  # ρ₀₃ ← ρ₀₃
-    L[3, 1] = np.conj(L[12, 4])  # ρ₀₃ ← ρ₀₁
-    L[3, 2] = np.conj(L[12, 8])  # ρ₀₃ ← ρ₀₂
-    L[3, 7] = np.conj(L[12, 13])  # ρ₀₃ ← ρ₁₃
-    L[3, 11] = np.conj(L[12, 14])  # ρ₀₃ ← ρ₂₃
-    """
-
-    # --- d/dt rho_12 ---
-    term = -1j * system.omega_ij(1, 2) - system.Gamma_big_ij(1, 2)
-    L[6, 6] = term  # ρ₁₂ ← ρ₁₂
-    L[6, 2] = 1j * Et * system.Dip_op[1, 0]  # ρ₁₂ ← ρ₀₂
-    L[6, 7] = -1j * Et * system.Dip_op[3, 2]  # ρ₁₂ ← ρ₁₃
-    L[6, 14] = 1j * Et_conj * system.Dip_op[3, 1]  # ρ₁₂ ← ρ₃₂
-    L[6, 4] = -1j * Et_conj * system.Dip_op[2, 0]  # ρ₁₂ ← ρ₁₀
-
-    # --- d/dt rho_21 ---
-    L[9, :] = np.conj(L[6, :])  # ρ₂₁ ← ρ
-    """
-    L[9, 9] = np.conj(term)  # ρ₂₁ ← ρ₂₁
-    L[9, 8] = np.conj(L[6, 2])  # ρ₂₁ ← ρ₂₀
-    L[9, 13] = np.conj(L[6, 7])  # ρ₂₁ ← ρ₃₁
-    L[9, 9] = np.conj(L[6, 14])  # ρ₂₁ ← ρ₂₃
-    L[9, 1] = np.conj(L[6, 4])  # ρ₂₁ ← ρ₀₁
-    """
-
-    # --- d/dt rho_31 ---
-    term = -1j * (system.omega_ij(3, 1) - system.omega_laser) - system.Gamma_big_ij(
-        3, 1
-    )
-    L[13, 13] = term  # ρ₃₁ ← ρ₃₁
-    L[13, 5] = 1j * Et * system.Dip_op[3, 1]  # ρ₃₁ ← ρ₁₁
-    L[13, 9] = 1j * Et * system.Dip_op[3, 2]  # ρ₃₁ ← ρ₂₁
-    L[13, 12] = -1j * Et_conj * system.Dip_op[1, 0]  # ρ₃₁ ← ρ₃₀
-
-    # --- d/dt rho_13 ---
-    L[7, :] = np.conj(L[13, :])  # ρ₁₃ ← ρ
-    """
-    L[7, 7] = np.conj(term)  # ρ₁₃ ← ρ₁₃
-    L[7, 5] = np.conj(L[13, 5])  # ρ₁₃ ← ρ₁₁
-    L[7, 6] = np.conj(L[13, 9])  # ρ₁₃ ← ρ₁₂
-    L[7, 3] = np.conj(L[13, 12])  # ρ₁₃ ← ρ₀₃
-    """
-
-    # for the next 2 terms: CHANGES ET->_conj with respect to the paper of the Interaction term
-    # --- d/dt rho_32 ---
-    term = -1j * (system.omega_ij(3, 2) - system.omega_laser) - system.Gamma_big_ij(
-        3, 2
-    )
-    L[14, 14] = term  # ρ₃₂ ← ρ₃₂
-    L[14, 10] = 1j * Et * system.Dip_op[3, 2]  # ρ₃₂ ← ρ₂₂         #
-    L[14, 6] = 1j * Et * system.Dip_op[3, 1]  # ρ₃₂ ← ρ₁₂          #
-    L[14, 12] = -1j * Et_conj * system.Dip_op[2, 0]  # ρ₃₂ ← ρ₃₀     #
-
-    # --- d/dt rho_23 ---
-    L[11, :] = np.conj(L[14, :])  # ρ₂₃ ← ρ
-    """
-    L[11, 11] = np.conj(term)  # ρ₂₃ ← ρ₂₃
-    L[11, 10] = np.conj(L[14, 10])  # ρ₂₃ ← ρ₂₂         #
-    L[11, 9] = np.conj(L[14, 6])  # ρ₂₃ ← ρ₂₁          #
-    L[11, 3] = np.conj(L[14, 12])  # ρ₂₃ ← ρ₀₃      #
-    """
-    ### Diagonals
-    # --- d/dt rho_00 ---
-    L[0, 1] = -1j * Et * system.Dip_op[1, 0]
-    L[0, 2] = -1j * Et * system.Dip_op[2, 0]
-    L[0, 4] = 1j * Et_conj * system.Dip_op[1, 0]
-    L[0, 8] = 1j * Et_conj * system.Dip_op[2, 0]
-
-    # --- d/dt rho_11 ---
-    L[5, 5] = -system.Gamma_big_ij(1, 1)
-    L[5, 10] = system.gamma_small_ij(1, 2)
-    L[5, 1] = 1j * Et * system.Dip_op[1, 0]
-    L[5, 7] = -1j * Et * system.Dip_op[3, 1]
-    L[5, 13] = 1j * Et_conj * system.Dip_op[3, 1]
-    L[5, 4] = -1j * Et_conj * system.Dip_op[1, 0]
-
-    # --- d/dt rho_22 ---
-    L[10, 10] = -1 * system.Gamma_big_ij(2, 2)
-    L[10, 5] = system.gamma_small_ij(2, 1)
-    L[10, 2] = 1j * Et * system.Dip_op[2, 0]
-    L[10, 11] = -1j * Et * system.Dip_op[3, 2]
-    L[10, 14] = 1j * Et_conj * system.Dip_op[3, 2]
-    L[10, 8] = -1j * Et_conj * system.Dip_op[2, 0]
-
-    # d/dt rho_33 (sum d/dt rho_ii = 0) (trace condition) ---
-    L[15, :] = -L[0, :] - L[5, :] - L[10, :]
-    # not mentioned in paper, but I will assume it to conserve the trace!!
-
-    # print("the trace d/dt (rho_00 + rho_11 + rho_22 + rho_33) = ", np.sum(L[[0, 5, 10, 15], :]), "should be 0")
-    return Qobj(L, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])
-'''
 
 
 # only use the Redfield tensor as a matrix:
@@ -429,77 +298,106 @@ def _R_paper_2atom(system: SystemParameters) -> Qobj:
     Constructs the Redfield Tensor R for the equation drho_dt = -i(Hrho - rho H) + R * rho,
     where rho is the flattened density matrix.
     """
-    R = np.zeros((16, 16), dtype=complex)
+    size = 4  # 4 states |0>, |1>, |2>, |3>
 
-    # Indices for the flattened density matrix:
-    # 0: rho00, 1: rho01, 2: rho02, 3: rho03
-    # 4: rho10, 5: rho11, 6: rho12, 7: rho13
-    # 8: rho20, 9: rho21, 10: rho22, 11: rho23
-    # 12: rho30, 13: rho31, 14: rho32, 15: rho33
+    # Define all indices using stacked_index
+    idx_00 = stacked_index(size, row=0, col=0)  # ρ_00
+    idx_01 = stacked_index(size, row=0, col=1)  # ρ_01
+    idx_02 = stacked_index(size, row=0, col=2)  # ρ_02
+    idx_03 = stacked_index(size, row=0, col=3)  # ρ_03
+    idx_10 = stacked_index(size, row=1, col=0)  # ρ_10
+    idx_11 = stacked_index(size, row=1, col=1)  # ρ_11
+    idx_12 = stacked_index(size, row=1, col=2)  # ρ_12
+    idx_13 = stacked_index(size, row=1, col=3)  # ρ_13
+    idx_20 = stacked_index(size, row=2, col=0)  # ρ_20
+    idx_21 = stacked_index(size, row=2, col=1)  # ρ_21
+    idx_22 = stacked_index(size, row=2, col=2)  # ρ_22
+    idx_23 = stacked_index(size, row=2, col=3)  # ρ_23
+    idx_30 = stacked_index(size, row=3, col=0)  # ρ_30
+    idx_31 = stacked_index(size, row=3, col=1)  # ρ_31
+    idx_32 = stacked_index(size, row=3, col=2)  # ρ_32
+    idx_33 = stacked_index(size, row=3, col=3)  # ρ_33
 
+    R = np.zeros((size * size, size * size), dtype=complex)
+
+    # --------------------------------------------------------------
+    # 1) Off-diagonal one-excited-coherences
+    # --------------------------------------------------------------
     # --- d/dt rho_10 ---
     term = -1j * (system.omega_ij(1, 0) - system.omega_laser) - system.Gamma_big_ij(
         1, 0
     )
-    R[4, 4] = term  # ρ₁₀ ← ρ₁₀
+    R[idx_10, idx_10] = term  # ρ₁₀ ← ρ₁₀
 
     # --- d/dt rho_01 ---
-    R[1, 1] = np.conj(term)  # ρ₀₁ ← ρ₀₁
+    R[idx_01, idx_01] = np.conj(term)  # ρ₀₁ ← ρ₀₁
 
     # --- d/dt rho_20 --- = ANSATZ = (d/dt s_20 - i omega_laser s_20) e^(-i omega_laser t)
     term = -1j * (system.omega_ij(2, 0) - system.omega_laser) - system.Gamma_big_ij(
         2, 0
     )
-    R[8, 8] = term  # ρ₂₀ ← ρ₂₀
+    R[idx_20, idx_20] = term  # ρ₂₀ ← ρ₂₀
 
     # --- d/dt rho_02 ---
-    R[2, 2] = np.conj(term)  # ρ₀₂ ← ρ₀₂
+    R[idx_02, idx_02] = np.conj(term)  # ρ₀₂ ← ρ₀₂
 
+    # --------------------------------------------------------------
+    # 2) double-excited-coherences
+    # --------------------------------------------------------------
     # --- d/dt rho_30 ---
     term = -1j * (system.omega_ij(3, 0) - 2 * system.omega_laser) - system.Gamma_big_ij(
         3, 0
     )
-    R[12, 12] = term  # ρ₃₀ ← ρ₃₀
+    R[idx_30, idx_30] = term  # ρ₃₀ ← ρ₃₀
 
     # --- d/dt rho_03 ---
-    R[3, 3] = np.conj(term)  # ρ₀₃ ← ρ₀₃
+    R[idx_03, idx_03] = np.conj(term)  # ρ₀₃ ← ρ₀₃
 
+    # --------------------------------------------------------------
+    # 3) cross-coherences inside one excitation manifold
+    # --------------------------------------------------------------
     # --- d/dt rho_12 ---
     term = -1j * system.omega_ij(1, 2) - system.Gamma_big_ij(1, 2)
-    R[6, 6] = term  # ρ₁₂ ← ρ₁₂
+    R[idx_12, idx_12] = term  # ρ₁₂ ← ρ₁₂
 
     # --- d/dt rho_21 ---
-    R[9, 9] = np.conj(term)  # ρ₂₁ ← ρ₂₁
+    R[idx_21, idx_21] = np.conj(term)  # ρ₂₁ ← ρ₂₁
 
     # --- d/dt rho_31 ---
     term = -1j * (system.omega_ij(3, 1) - system.omega_laser) - system.Gamma_big_ij(
         3, 1
     )
-    R[13, 13] = term  # ρ₃₁ ← ρ₃₁
+    R[idx_31, idx_31] = term  # ρ₃₁ ← ρ₃₁
 
     # --- d/dt rho_13 ---
-    R[7, 7] = np.conj(term)  # ρ₁₃ ← ρ₁₃
+    R[idx_13, idx_13] = np.conj(term)  # ρ₁₃ ← ρ₁₃
 
     # --- d/dt rho_32 ---
     term = -1j * (system.omega_ij(3, 2) - system.omega_laser) - system.Gamma_big_ij(
         3, 2
     )
-    R[14, 14] = term  # ρ₃₂ ← ρ₃₂
+    R[idx_32, idx_32] = term  # ρ₃₂ ← ρ₃₂
 
     # --- d/dt rho_23 ---
-    R[11, 11] = np.conj(term)  # ρ₂₃ ← ρ₂₃
+    R[idx_23, idx_23] = np.conj(term)  # ρ₂₃ ← ρ₂₃
 
-    ### Diagonals
+    # --------------------------------------------------------------
+    # 4) populations (diagonals)
+    # --------------------------------------------------------------
     # --- d/dt rho_11 ---
-    R[5, 5] = -system.Gamma_big_ij(1, 1)
-    R[5, 10] = system.gamma_small_ij(1, 2)  # for the coupled dimer: pop transer
+    R[idx_11, idx_11] = -system.Gamma_big_ij(1, 1)
+    R[idx_11, idx_22] = system.gamma_small_ij(
+        1, 2
+    )  # for the coupled dimer: pop transer
 
     # --- d/dt rho_22 ---
-    R[10, 10] = -system.Gamma_big_ij(2, 2)
-    R[10, 5] = system.gamma_small_ij(2, 1)  # for the coupled dimer: pop transer
+    R[idx_22, idx_22] = -system.Gamma_big_ij(2, 2)
+    R[idx_22, idx_11] = system.gamma_small_ij(
+        2, 1
+    )  # for the coupled dimer: pop transer
 
     # NOW THERE IS NO POPULATION CHANGE in 3 || 1 goes to 2 and vice versa
     # --- d/dt rho_00 --- and  --- d/dt rho_33 (sum d/dt rho_ii = 0) (trace condition) ---
-    R[15, :] = -R[0, :] - R[5, :] - R[10, :]
+    R[idx_33, :] = -R[idx_00, :] - R[idx_11, :] - R[idx_22, :]
 
     return Qobj(R, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])
