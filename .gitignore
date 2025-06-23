@@ -542,3 +542,4 @@ code/mathematica/*~
 
 # all error filed from suptercomputer proteus
 **/.err
+**/logs
