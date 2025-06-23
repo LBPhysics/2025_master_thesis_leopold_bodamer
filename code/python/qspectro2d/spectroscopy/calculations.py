@@ -101,7 +101,9 @@ def compute_pulse_evolution(
     elif system.ODE_Solver == "Paper_BR":
         # no explicit c_ops for Paper_BR, but we need to define the R operator
         c_ops_list = []
-        EVO_obj = liouvillian(H_int_evo) + R_paper(system)
+        EVO_obj = liouvillian(H_int_evo) + R_paper(
+            system
+        )  # TODO PROBLEM SOMEHOW INCLUDE RWA twice? -> double the oscillation
 
     if system.ODE_Solver == "BR":
         a_ops_list = system.br_decay_channels
