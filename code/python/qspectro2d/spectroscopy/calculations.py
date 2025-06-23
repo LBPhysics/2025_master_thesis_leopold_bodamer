@@ -3,7 +3,7 @@
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
-from qutip import Qobj, Result, mesolve, brmesolve, expect
+from qutip import Qobj, Result, liouvillian, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
 from qspectro2d.core.system_parameters import SystemParameters
 from qspectro2d.core.pulse_sequences import PulseSequence
@@ -24,6 +24,7 @@ from qspectro2d.core.functions_with_rwa import (
 )
 
 
+# THIS FUNCTION is problem
 def compute_pulse_evolution(
     psi_ini: Qobj,
     times: np.ndarray,
@@ -68,7 +69,6 @@ def compute_pulse_evolution(
 
     # Build Hamiltonian components
     H_free = system.H0_diagonalized  # already includes the RWA, if present!
-    print(H_free, flush=True)
     H_int_evo = QobjEvo(
         lambda t, args=None: H_free + H_int(t, pulse_seq, system)
     )  # also add H_int, with potential RWA
@@ -79,12 +79,12 @@ def compute_pulse_evolution(
     if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
         raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
 
-    elif (
-        system.ODE_Solver == "ME"
-    ):  # Set up collapse operators based on solver type; no c_ops for "BR"
-        c_ops_list = system.me_decay_channels
-    elif system.ODE_Solver == "Paper_BR":
-        c_ops_list = [R_paper(system)]
+    # Set up collapse operators based on solver type; no c_ops for "BR"
+    elif system.ODE_Solver == "ME":
+        c_ops_list = system.me_decay_channels  # explicit c_ops
+        EVO_obj = (
+            H_int_evo  # For ME, we use the Hamiltonian evolution operator directly
+        )
 
     elif system.ODE_Solver == "Paper_eqs":
         c_ops_list = []
@@ -95,7 +95,13 @@ def compute_pulse_evolution(
             )
             system.RWA_laser = True
         # For Paper_eqs, we need to define the full Liouville operator, which includes the decay channels
-        H_int_evo = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+        EVO_obj = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+        # no explicit c_ops, matrix_ODE represents the full Liouville operator
+
+    elif system.ODE_Solver == "Paper_BR":
+        # no explicit c_ops for Paper_BR, but we need to define the R operator
+        c_ops_list = []
+        EVO_obj = liouvillian(H_int_evo) + R_paper(system)
 
     if system.ODE_Solver == "BR":
         a_ops_list = system.br_decay_channels
@@ -103,12 +109,12 @@ def compute_pulse_evolution(
             H_int_evo,
             psi_ini,
             times,
-            a_ops=a_ops_list,
+            a_ops=a_ops_list,  # contains all the info about the sys-batch coupling
             options=options,
         )
     else:
         result = mesolve(
-            H_int_evo,
+            EVO_obj,
             psi_ini,
             times,
             c_ops=c_ops_list,
@@ -119,6 +125,8 @@ def compute_pulse_evolution(
 
 
 '''
+
+
 def compute_pulse_evolution(
     psi_ini: Qobj,
     times: np.ndarray,

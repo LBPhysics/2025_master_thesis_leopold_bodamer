@@ -535,9 +535,7 @@ class SystemParameters:
             br_decay_channels_ = [
                 [
                     self.Deph_op,
-                    lambda w: self.power_spectrum_func(
-                        2 * w, args_deph
-                    ),  # because of the factor 2 in the dephasing operator
+                    lambda w: self.Gamma,
                 ],
                 [
                     self.Dip_op,
