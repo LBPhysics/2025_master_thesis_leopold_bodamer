@@ -17,8 +17,8 @@ def main():
 
     ### Main system configuration
     N_atoms = 2  # Number of atoms (1 or 2)
-    t_max = 10  # Maximum time [fs]
-    dt = 1  # Time step [fs]
+    t_max = 4  # Maximum time [fs]
+    dt = 2  # Time step [fs]
     ODE_Solver = "BR"  # ODE solver type
 
     ### System-specific parameters
@@ -76,7 +76,10 @@ def main():
     # =============================
     # RUN SIMULATION
     # =============================
-    run_2d_simulation_with_config(config)
+    saved_filepath = run_2d_simulation_with_config(config)
+
+    # Print the output subdirectory for script compatibility
+    print(f"OUTPUT_SUBDIR:{output_subdir}")
 
 
 if __name__ == "__main__":

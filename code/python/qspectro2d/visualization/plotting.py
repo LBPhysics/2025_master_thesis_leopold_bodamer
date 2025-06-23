@@ -5,9 +5,11 @@ from qspectro2d.core.pulse_functions import *
 from qspectro2d.core.pulse_sequences import PulseSequence
 import matplotlib.pyplot as plt
 import os
+from typing import Literal, Union
+from pathlib import Path
 
 
-def Plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     """
     Plot the combined pulse envelope over time for up to three pulses using PulseSequence.
 
@@ -96,7 +98,7 @@ def Plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     return ax
 
 
-def Plot_E_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     """
     Plot the RWA electric field (envelope only) over time for pulses using PulseSequence.
 
@@ -146,7 +148,7 @@ def Plot_E_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     return ax
 
 
-def Plot_Epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     """
     Plot the full electric field (with carrier) over time for pulses using PulseSequence.
 
@@ -196,7 +198,7 @@ def Plot_Epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     return ax
 
 
-def Plot_all_pulse_components(
+def plot_all_pulse_components(
     times: np.ndarray, pulse_seq: PulseSequence, figsize=(15, 12)
 ):
     """
@@ -214,13 +216,13 @@ def Plot_all_pulse_components(
     fig, axes = plt.subplots(3, 1, figsize=figsize)
 
     # Plot pulse envelope
-    Plot_pulse_envelope(times, pulse_seq, ax=axes[0])
+    plot_pulse_envelope(times, pulse_seq, ax=axes[0])
 
     # Plot RWA electric field
-    Plot_E_pulse(times, pulse_seq, ax=axes[1])
+    plot_e_pulse(times, pulse_seq, ax=axes[1])
 
     # Plot full electric field
-    Plot_Epsilon_pulse(times, pulse_seq, ax=axes[2])
+    plot_epsilon_pulse(times, pulse_seq, ax=axes[2])
 
     # Add overall title
     fig.suptitle(
@@ -233,7 +235,7 @@ def Plot_all_pulse_components(
     return fig
 
 
-def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
+def plot_fixed_tau_t(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     """
     Plot the data for a fixed tau_coh and T.
 
@@ -333,7 +335,7 @@ def Plot_fixed_tau_T(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     return fig
 
 
-def Plot_example_evo(
+def plot_example_evo(
     times_plot: np.ndarray,
     datas: list,
     pulse_seq_f: PulseSequence,
@@ -452,43 +454,79 @@ def Plot_example_evo(
     plt.show()
 
 
-def Plot_2d_El_field(
-    datas: tuple,
-    T_wait: float = np.inf,
-    domain: str = "time",
-    type: str = "real",
-    output_dir: str = None,  # TODO or maybe not? change to specific output directory
-    ODE_Solver: str = None,
+def plot_2d_el_field(
+    data_xyz: tuple[np.ndarray, np.ndarray, np.ndarray],
+    t_wait: float = np.inf,
+    domain: Literal["time", "freq"] = "time",
+    component: Literal["real", "imag", "abs", "phase"] = "real",
+    output_dir: Union[Path, None] = None,
+    ode_solver: Union[str, None] = None,
     save: bool = False,
     use_custom_colormap: bool = False,
-    section: tuple = None,  # (x_min, x_max, y_min, y_max)
-    system: SystemParameters = None,
-) -> None:
+    section: Union[tuple[float, float, float, float], None] = None,
+    system: Union[SystemParameters, None] = None,
+    show: bool = True,
+) -> Union[plt.Figure, None]:
     """
-    x == t_det, y == tau_coh, data == polarization expectation value
-    Create a color plot of 2D functional data for positive x and y values.
+    Create a color plot of 2D electric field data for positive x and y values.
 
-    Parameters:
-        datas (tuple): (x, y, data) where x and y are 1D arrays and data is a 2D array.
-        T_wait (float): waiting time to include in plot title and file name.
-        domain (str): Either 'time' or 'freq' specifying the domain of the data.
-        type (str): Type of data ('real', 'imag', 'abs', or 'phase'). Used only if domain="freq".
-        output_dir (str, optional): Directory to save the plot.
-        ODE_Solver (str, optional): Solver name for filename.
-        save (bool): If True, saves the plot to a file.
-        use_custom_colormap (bool): Use custom colormap with white at zero.
-        section (tuple, optional): (x_min, x_max, y_min, y_max) to zoom in.
+    This function plots 2D spectroscopic data where x represents detection time,
+    y represents coherence time, and the data represents polarization expectation values.
 
-    Returns:
-        None
+    Parameters
+    ----------
+    data_xyz : tuple[np.ndarray, np.ndarray, np.ndarray]
+        Tuple of (x, y, data) where x and y are 1D arrays representing time/frequency
+        grids and data is a 2D complex array with shape (len(y), len(x)).
+    t_wait : float, default np.inf
+        Waiting time T (fs) to include in plot title and filename. If np.inf,
+        no waiting time is displayed.
+    domain : {"time", "freq"}, default "time"
+        Domain of the data. "time" for time-domain plots (fs), "freq" for
+        frequency-domain plots (10^4 cm^-1).
+    component : {"real", "imag", "abs", "phase"}, default "real"
+        Component of complex data to plot. Used for both title and data processing.
+    output_dir : Path or None, optional
+        Directory path to save the plot. Must exist if save=True.
+    ode_solver : str or None, optional
+        ODE solver name to include in filename for identification.
+    save : bool, default False
+        If True, saves the plot to output_dir with generated filename.
+    use_custom_colormap : bool, default False
+        If True, uses custom red-white-blue colormap centered at zero.
+        Automatically set to True for "real", "imag", and "phase" components.
+    section : tuple[float, float, float, float] or None, optional
+        Crop section as (x_min, x_max, y_min, y_max) to zoom into specific region.
+    system : SystemParameters or None, optional
+        System parameters required for filename generation when save=True.
+    show : bool, default True
+        If True, displays the plot using plt.show().
+
+    Returns
+    -------
+    matplotlib.figure.Figure or None
+        The generated figure object, or None if an error occurs.
+
+    Raises
+    ------
+    ValueError
+        If data_xyz is not a 3-tuple, data is all zeros, array dimensions mismatch,
+        invalid domain/component values, or output_dir doesn't exist when saving.
+
+    Examples
+    --------
+    >>> x = np.linspace(0, 100, 50)
+    >>> y = np.linspace(0, 50, 25)
+    >>> data = np.random.complex128((25, 50))
+    >>> plot_2d_el_field((x, y, data), domain="time", component="real")
     """
     # =============================
-    # Validate input
+    # VALIDATE INPUT
     # =============================
-    if not isinstance(datas, tuple) or len(datas) != 3:
-        raise ValueError("datas must be a tuple of (x, y, data)")
+    if not isinstance(data_xyz, tuple) or len(data_xyz) != 3:
+        raise ValueError("data_xyz must be a tuple of (x, y, data)")
 
-    x, y, data = datas
+    x, y, data = data_xyz
 
     x = np.real(x)
     y = np.real(y)
@@ -496,7 +534,7 @@ def Plot_2d_El_field(
     data = np.array(data, dtype=np.complex128)
 
     # =============================
-    # Section cropping
+    # SECTION CROPPING
     # =============================
     if section is not None:
         x_min, x_max, y_min, y_max = section
@@ -531,7 +569,7 @@ def Plot_2d_El_field(
         )
 
     # =============================
-    # Set plot labels and colormap
+    # SET PLOT LABELS AND COLORMAP
     # =============================
     if domain not in ("time", "freq"):
         raise ValueError("Invalid domain. Must be 'time' or 'freq'.")
@@ -546,31 +584,33 @@ def Plot_2d_El_field(
         x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
         y_title = r"$\omega_{\tau_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
 
-    if type not in ("real", "imag", "abs", "phase"):
-        raise ValueError("Invalid Type. Must be 'real', 'imag', 'abs', or 'phase'.")
-    if type == "real":
+    if component not in ("real", "imag", "abs", "phase"):
+        raise ValueError(
+            "Invalid component. Must be 'real', 'imag', 'abs', or 'phase'."
+        )
+    if component == "real":
         title += r"$\text{, Real 2D Spectrum}$"
         data = np.real(data)
-    elif type == "imag":
+    elif component == "imag":
         title += r"$\text{, Imag 2D Spectrum}$"
         data = np.imag(data)
-    elif type == "abs":
+    elif component == "abs":
         title += r"$\text{, Abs 2D Spectrum}$"
         data = np.abs(data)
         use_custom_colormap = False
-    elif type == "phase":
+    elif component == "phase":
         title += r"$\text{, Phase 2D Spectrum}$"
         data = np.angle(data)
 
-    if T_wait != np.inf:
-        title += rf"$\ \text{{at }} T = {T_wait:.2f}$"
+    if t_wait != np.inf:
+        title += rf"$\ \text{{at }} T = {t_wait:.2f}$ fs"
 
     # =============================
-    # Custom colormap for zero-centered data
+    # CUSTOM COLORMAP FOR ZERO-CENTERED DATA
     # =============================
     norm = None
     # For real and imag data, use red-white-blue colormap by default
-    if type in ("real", "imag", "phase"):
+    if component in ("real", "imag", "phase"):
         use_custom_colormap = True
 
     if use_custom_colormap:
@@ -592,9 +632,9 @@ def Plot_2d_El_field(
     cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
 
     # =============================
-    # Plotting
+    # PLOTTING
     # =============================
-    plt.figure(figsize=(10, 8))
+    fig = plt.figure(figsize=(10, 8))
     # Create the pcolormesh plot for the 2D data
     pcolor_plot = plt.pcolormesh(
         x,  # <- ts
@@ -607,7 +647,7 @@ def Plot_2d_El_field(
 
     """
     # Add contour lines with different styles for positive and negative values
-    if type in ("real", "imag", "phase"):
+    if component in ("real", "imag", "phase"):
         # Determine contour levels based on the data range
         vmax = max(abs(np.min(data)), abs(np.max(data)))
         vmin = -vmax
@@ -672,6 +712,7 @@ def Plot_2d_El_field(
     plt.title(title)
     plt.xlabel(x_title)
     plt.ylabel(y_title)
+    plt.tight_layout()
 
     """# Add a border around the plot for better visual definition
     plt.gca().spines["top"].set_visible(True)
@@ -684,60 +725,102 @@ def Plot_2d_El_field(
     plt.gca().spines["left"].set_linewidth(1.5)"""
 
     # =============================
-    # Save or show
+    # SAVE OR SHOW
     # =============================
     if save and output_dir and system is not None:
-        if not os.path.isdir(output_dir):
+        output_path = Path(output_dir)
+        if not output_path.is_dir():
             raise ValueError(f"Output directory {output_dir} does not exist.")
 
-        filename_parts = [
-            f"{domain}_domain",
+        filename = _build_2d_field_filename(
+            system, domain, component, t_wait, ode_solver
+        )
+        save_path = output_path / filename
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Plot saved to: {save_path}")
+    elif save:
+        print(
+            "Plot not saved. Ensure 'save' is True, 'output_dir' is specified, and 'system' is provided."
+        )
+
+    if show:
+        plt.show()
+
+    return fig
+
+
+def _build_2d_field_filename(
+    system: SystemParameters,
+    domain: Literal["time", "freq"],
+    component: Literal["real", "imag", "abs", "phase"],
+    t_wait: float,
+    ode_solver: Union[str, None],
+) -> str:
+    """
+    Build filename for 2D electric field plots.
+
+    Parameters
+    ----------
+    system : SystemParameters
+        System parameters containing physical constants.
+    domain : {"time", "freq"}
+        Domain of the data.
+    component : {"real", "imag", "abs", "phase"}
+        component of data component.
+    t_wait : float
+        Waiting time T (fs).
+    ode_solver : str or None
+        ODE solver name for filename.
+
+    Returns
+    -------
+    str
+        Generated filename with .png extension.
+    """
+    filename_parts = [f"{domain}_domain"]
+
+    if domain == "freq":
+        filename_parts.append(f"{component}_2D_spectrum")
+    else:  # domain == "time"
+        filename_parts.append("2D_polarization")
+
+    # System-specific parameters
+    filename_parts.extend(
+        [
+            f"N={system.N_atoms}",
+            f"wA={system.omega_A:.2f}",
+            f"muA={system.mu_A:.0f}",
         ]
-        if domain == "freq":
-            filename_parts.append(f"{type}_2D_spectrum")
-        else:  # domain == "time":
-            filename_parts.append("2D_polarization")
+    )
 
-        ### System-specific parameters
+    # Add N_atoms=2 specific parameters
+    if system.N_atoms == 2:
         filename_parts.extend(
             [
-                f"N={system.N_atoms}",
-                f"wA={system.omega_A:.2f}",
-                f"muA={system.mu_A:.0f}",
+                f"wb={system.omega_B/system.omega_A:.2f}wA",
+                f"J={system.J:.2f}",
+                f"mub={system.mu_B/system.mu_A:.0f}muA",
             ]
         )
 
-        ### Add N_atoms=2 specific parameters
-        if system.N_atoms == 2:
-            filename_parts.extend(
-                [
-                    f"wb={system.omega_B/system.omega_A:.2f}wA",
-                    f"J={system.J:.2f}",
-                    f"mub={system.mu_B/system.mu_A:.0f}muA",
-                ]
-            )
+    # Common parameters for both N_atoms=1 and N_atoms=2
+    filename_parts.extend(
+        [
+            f"wL={system.omega_laser / system.omega_A:.1f}wA",
+            f"E0={system.E0:.2e}",
+            f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
+        ]
+    )
 
-        ### Common parameters for both N_atoms=1 and N_atoms=2
-        filename_parts.extend(
-            [
-                f"wL={system.omega_laser / system.omega_A:.1f}wA",
-                f"E0={system.E0:.2e}",
-                f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
-            ]
-        )
+    # Add waiting time if not infinite
+    if t_wait != np.inf:
+        filename_parts.append(f"T={t_wait:.2f}fs")
 
-        ### Add solver information to filename
-        if ODE_Solver is not None:
-            filename_parts.append(f"with_{ODE_Solver}")
+    # Add solver information to filename
+    if ode_solver is not None:
+        filename_parts.append(f"with_{ode_solver}")
 
-        file_name_combined = (
-            "_".join(filename_parts) + ".png"
-        )  # TODO CHANGE TO svg for final result
-        save_path_combined = os.path.join(output_dir, file_name_combined)
-        plt.savefig(save_path_combined)
-    else:
-        print("Plot not saved. Ensure 'save' is True and 'output_dir' is specified.")
-    plt.show()
+    return "_".join(filename_parts) + ".png"
 
 
 def Plot_example_Polarization(
@@ -817,10 +900,10 @@ def Plot_example_Polarization(
     plt.show()
 
 
-def Plot_1d_frequency_spectrum(
+def plot_1d_frequency_spectrum(
     nu_vals: np.ndarray,
     spectrum_data: np.ndarray,
-    type: str = "abs",
+    component: str = "abs",
     title: str = "1D Frequency Spectrum",
     output_dir: str = None,
     save: bool = False,
@@ -833,7 +916,7 @@ def Plot_1d_frequency_spectrum(
     Parameters:
         nu_vals (np.ndarray): Frequency values in wavenumber units (10^4 cm^-1).
         spectrum_data (np.ndarray): Complex spectrum data from FFT.
-        type (str): Type of data to plot - 'abs', 'real', 'imag', or 'phase'. Defaults to 'abs'.
+        component (str): component of data to plot - 'abs', 'real', 'imag', or 'phase'. Defaults to 'abs'.
         title (str): Plot title. Defaults to '1D Frequency Spectrum'.
         output_dir (str): Directory to save the plot. Defaults to None.
         save (bool): If True, saves the plot to a file. Defaults to False.
@@ -845,8 +928,8 @@ def Plot_1d_frequency_spectrum(
     """
     plt.figure(figsize=(10, 6))
 
-    # Plot different representations based on type
-    if type == "abs":
+    # Plot different representations based on component
+    if component == "abs":
         plt.plot(
             nu_vals,
             np.abs(spectrum_data),
@@ -855,7 +938,7 @@ def Plot_1d_frequency_spectrum(
             linestyle="solid",
         )
         ylabel = r"$|S(\omega)|$"
-    elif type == "real":
+    elif component == "real":
         plt.plot(
             nu_vals,
             np.real(spectrum_data),
@@ -864,7 +947,7 @@ def Plot_1d_frequency_spectrum(
             linestyle="solid",
         )
         ylabel = r"$\mathrm{Re}[S(\omega)]$"
-    elif type == "imag":
+    elif component == "imag":
         plt.plot(
             nu_vals,
             np.imag(spectrum_data),
@@ -873,7 +956,7 @@ def Plot_1d_frequency_spectrum(
             linestyle="solid",
         )
         ylabel = r"$\mathrm{Im}[S(\omega)]$"
-    elif type == "phase":
+    elif component == "phase":
         plt.plot(
             nu_vals,
             np.angle(spectrum_data),
@@ -926,7 +1009,7 @@ def Plot_1d_frequency_spectrum(
 
         filename_parts = [
             f"freq_domain",
-            f"{type}_1D_spectrum",
+            f"{component}_1D_spectrum",
         ]
 
         ### System-specific parameters

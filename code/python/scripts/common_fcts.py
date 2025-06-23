@@ -14,16 +14,31 @@ import time
 import pickle
 import copy
 import os
+import gc
 from pathlib import Path
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 ### Project-specific imports
 from qspectro2d.spectroscopy.calculations import (
+    parallel_compute_1d_E_with_inhomogenity,
     parallel_compute_2d_E_with_inhomogenity,
     check_the_solver,
+    get_tau_cohs_and_t_dets_for_T_wait,
 )
 from qspectro2d.core.system_parameters import SystemParameters
-from config.paths import DATA_DIR
+from config.paths import DATA_DIR, FIGURES_DIR
+from typing import Optional
+
+from qspectro2d.visualization.plotting import (
+    plot_fixed_tau_t,
+    plot_2d_el_field,
+    plot_1d_frequency_spectrum,
+)
+from qspectro2d.spectroscopy.post_processing import (
+    compute_1d_fft_wavenumber,
+    extend_and_plot_results,
+)
 
 
 # =============================
@@ -191,20 +206,17 @@ def run_simulation(
     max_workers = get_max_workers()
 
     if simulation_type == "1d":
-        return run_1d_simulation(config, system, max_workers)
+        return _run_1d_simulation(config, system, max_workers)
     elif simulation_type == "2d":
-        return run_2d_simulation(config, system, max_workers)
+        return _run_2d_simulation(config, system, max_workers)
     else:
         raise ValueError(f"Unsupported simulation type: {simulation_type}")
 
 
-def run_1d_simulation(
+def _run_1d_simulation(
     config: dict, system: SystemParameters, max_workers: int
 ) -> tuple:
     """Run 1D spectroscopy simulation."""
-    from qspectro2d.spectroscopy.calculations import (
-        parallel_compute_1d_E_with_inhomogenity,
-    )
 
     ### Create time arrays
     fwhms = system.fwhms
@@ -229,7 +241,9 @@ def run_1d_simulation(
         raise
 
 
-def run_2d_simulation(config: dict, system: SystemParameters, max_workers: int) -> list:
+def _run_2d_simulation(
+    config: dict, system: SystemParameters, max_workers: int
+) -> list:
     """Run 2D spectroscopy simulation."""
     ### Create time arrays
     fwhms = system.fwhms
@@ -326,14 +340,10 @@ def run_simulation_with_config(config: dict, simulation_type: str):
     print(f"System configuration:")
     system.summary()
 
-    # =============================
     # RUN SIMULATION
-    # =============================
     result = run_simulation(config, system, simulation_type)
 
-    # =============================
     # SAVE DATA
-    # =============================
     print("\nSaving simulation data...")
 
     if simulation_type == "1d":
@@ -351,7 +361,7 @@ def run_simulation_with_config(config: dict, simulation_type: str):
     elapsed_time = time.time() - start_time
     print_simulation_summary(elapsed_time, result_data, save_path, simulation_type)
 
-    return result
+    return save_path  # Return the file path instead of result data
 
 
 # =============================
@@ -368,27 +378,6 @@ def run_2d_simulation_with_config(config: dict):
 
 
 # NOW FOR PLOTTING FUNCTIONS
-
-# =============================
-# IMPORTS
-# =============================
-import numpy as np
-import psutil
-import time
-import pickle
-import copy
-import os
-from pathlib import Path
-from datetime import datetime
-from typing import Optional
-
-### Project-specific imports
-from qspectro2d.spectroscopy.calculations import (
-    parallel_compute_2d_E_with_inhomogenity,
-    check_the_solver,
-)
-from qspectro2d.core.system_parameters import SystemParameters
-from config.paths import DATA_DIR
 
 
 # =============================
@@ -467,8 +456,6 @@ def create_output_directory(subdir: str) -> Path:
     Returns:
         Path to the created output directory
     """
-    from config.paths import FIGURES_DIR
-    import os
 
     output_dir = FIGURES_DIR / subdir
     os.makedirs(output_dir, exist_ok=True)
@@ -495,7 +482,7 @@ def plot_spectroscopy_data(config: dict, simulation_type: str) -> None:
         )
         return
 
-    loaded_data = load_pickle_file(file_path)
+    loaded_data = load_pickle_file(DATA_DIR / file_path)
 
     if loaded_data is None:
         print(f"❌ Failed to load {simulation_type.upper()} spectroscopy data.")
@@ -517,15 +504,6 @@ def plot_spectroscopy_data(config: dict, simulation_type: str) -> None:
 
 def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
     """Plot 1D spectroscopy data."""
-    from qspectro2d.visualization.plotting import (
-        Plot_fixed_tau_T,
-        Plot_1d_frequency_spectrum,
-    )
-    from qspectro2d.spectroscopy.post_processing import compute_1d_fft_wavenumber
-    import matplotlib.pyplot as plt
-    import gc
-    import psutil
-
     # Extract data
     t_det_vals = data["t_det_vals"]
     data_avg = data["data_avg"]
@@ -539,13 +517,15 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
     if config.get("plot_time_domain", True):
         print("📊 Plotting time domain data...")
         try:
-            Plot_fixed_tau_T(
+            plot_fixed_tau_t(
                 t_det_vals=t_det_vals,
                 data_avg=data_avg,
                 tau_coh=data.get("tau_coh", 300),
                 T_wait=data.get("T_wait", 1000),
                 system=system,
-                plot_types=config.get("plot_types", ["real", "imag", "abs", "phase"]),
+                spectral_components_to_plot=config.get(
+                    "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+                ),
                 output_dir=output_dir,
             )
             print("✅ Time domain plots completed!")
@@ -559,11 +539,13 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
             frequencies, data_fft = compute_1d_fft_wavenumber(
                 t_det_vals, data_avg, system
             )
-            Plot_1d_frequency_spectrum(
+            plot_1d_frequency_spectrum(
                 frequencies=frequencies,
                 data_fft=data_fft,
                 system=system,
-                plot_types=config.get("plot_types", ["real", "imag", "abs", "phase"]),
+                spectral_components_to_plot=config.get(
+                    "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+                ),
                 output_dir=output_dir,
             )
             print("✅ Frequency domain plots completed!")
@@ -577,13 +559,6 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
 
 def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
     """Plot 2D spectroscopy data."""
-    from qspectro2d.spectroscopy.post_processing import extend_and_plot_results
-    from qspectro2d.spectroscopy.calculations import get_tau_cohs_and_t_dets_for_T_wait
-    from qspectro2d.visualization.plotting import Plot_2d_El_field
-    import matplotlib.pyplot as plt
-    import gc
-    import psutil
-
     # Extract data
     times = data["times"]
     times_T = data["times_T"]
@@ -599,31 +574,44 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
     if config.get("plot_time_domain", False):
         print("📊 Plotting time domain data...")
         try:
-            tau_cohs, t_dets = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-            Plot_2d_El_field(
-                tau_cohs=tau_cohs,
-                t_dets=t_dets,
-                two_d_datas=two_d_datas,
+            tau_cohs_0, t_dets_0 = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
+            print(
+                "⚠️  Time domain plotting temporarily disabled - function signature mismatch"
+            )
+            print(
+                f"   Available data: tau_cohs ({len(tau_cohs_0)} points), t_dets ({len(t_dets_0)} points)"
+            )
+            print(
+                f"   two_d_datas shape: {two_d_datas[0].shape if two_d_datas else 'None'}"
+            )
+            plot_2d_el_field(
+                data_xyz=(
+                    tau_cohs_0,
+                    t_dets_0,
+                    two_d_datas[0],
+                ),
+                domain="time",
                 output_dir=output_dir,
             )
-            print("✅ Time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
 
     ### Plot frequency domain data
     extend_for = config.get("extend_for", (1, 2.3))
     section = config.get("section", (1.5, 1.7, 1.5, 1.7))
-    plot_types = config.get("plot_types", ["imag", "abs", "real", "phase"])
+    spectral_components_to_plot = config.get(
+        "spectral_components_to_plot", ["imag", "abs", "real", "phase"]
+    )
 
     print(
         f"📊 Plotting frequency domain data with extend_for={extend_for}, section={section}"
     )
 
-    for plot_type in plot_types:
-        print(f"   Generating {plot_type} plot...")
+    for component in spectral_components_to_plot:
+        print(f"   Generating {component} plot...")
 
         plot_args = {
-            "plot_type": plot_type,
+            "component": component,
             "output_dir": output_dir,
             "section": section,
             "system": system_data,
@@ -637,7 +625,7 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
                 extend_for=extend_for,
                 **plot_args,
             )
-            print(f"✅ {plot_type} plot completed!")
+            print(f"✅ {component} plot completed!")
 
             # Force garbage collection after each plot to free memory
             plt.close("all")
@@ -645,12 +633,66 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
 
             # Check memory usage after each plot
             memory_usage = psutil.Process().memory_info().rss / 1024 / 1024 / 1024  # GB
-            print(f"  Memory usage after {plot_type}: {memory_usage:.2f} GB")
+            print(f"  Memory usage after {component}: {memory_usage:.2f} GB")
 
         except Exception as e:
-            print(f"❌ Error plotting {plot_type}: {e}")
+            print(f"❌ Error plotting {component}: {e}")
             plt.close("all")
             gc.collect()
+
+
+def plot_2d_from_filepath(filepath: Path, config: dict) -> None:
+    """Plot 2D spectroscopy data from a specific filepath.
+
+    Args:
+        filepath: Path to the pickle file containing 2D data
+        config: Dictionary containing plotting configuration
+    """
+    print("# =============================")
+    print("# LOAD AND PLOT 2D DATA FROM FILEPATH")
+    print("# =============================")
+
+    ### Load data from the specific file
+    loaded_data = load_pickle_file(filepath)
+
+    if loaded_data is None:
+        print(f"❌ Failed to load 2D spectroscopy data from {filepath}")
+        return
+
+    ### Create output directory
+    output_dir = create_output_directory(config["output_subdir"])
+
+    ### Route to 2D plotting function
+    _plot_2d_data(loaded_data, config, output_dir)
+
+    print(f"🎯 All 2D plots saved to: {output_dir}")
+
+
+def plot_1d_from_filepath(filepath: Path, config: dict) -> None:
+    """Plot 1D spectroscopy data from a specific filepath.
+
+    Args:
+        filepath: Path to the pickle file containing 1D data
+        config: Dictionary containing plotting configuration
+    """
+    print("# =============================")
+    print("# LOAD AND PLOT 1D DATA FROM FILEPATH")
+    print("# =============================")
+
+    ### Load data from the specific file
+    loaded_data = load_pickle_file(filepath)
+
+    if loaded_data is None:
+        print(f"❌ Failed to load 1D spectroscopy data from {filepath}")
+        return
+
+    ### Create output directory
+    output_dir = create_output_directory(config["output_subdir"])
+
+    ### Route to 1D plotting function
+    _plot_1d_data(loaded_data, config, output_dir)
+
+    print(f"🎯 All 1D plots saved to: {output_dir}")
 
 
 # =============================
@@ -658,9 +700,9 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
 # =============================
 def plot_1d_spectroscopy_data(config: dict) -> None:
     """Plot 1D spectroscopy data - convenience wrapper."""
-    plot_spectroscopy_data(config, "1d")
+    plot_spectroscopy_data(config, simulation_type="1d")
 
 
 def plot_2d_spectroscopy_data(config: dict) -> None:
     """Plot 2D spectroscopy data - convenience wrapper."""
-    plot_spectroscopy_data(config, "2d")
+    plot_spectroscopy_data(config, simulation_type="2d")

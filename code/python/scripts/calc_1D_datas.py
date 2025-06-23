@@ -80,6 +80,11 @@ def main():
     # =============================
     run_1d_simulation_with_config(config)
 
+    # Print the output subdirectory for SLURM script to capture
+    print(f"OUTPUT_SUBDIR:{output_subdir}")
+
+    return output_subdir
+
 
 if __name__ == "__main__":
     main()

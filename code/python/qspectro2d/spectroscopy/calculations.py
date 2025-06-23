@@ -521,7 +521,7 @@ def compute_1d_polarization(
             "T_wait": T_wait,
             # "system": system,
         }
-        # Return the data to create a plot with Plot_example_evo(res)!!
+        # Return the data to create a plot with plot_example_evo(res)!!
         return (
             times_plot,
             data_expectations,
@@ -814,7 +814,7 @@ def compute_2d_polarization(
                     "T_wait": T_wait,
                     "system": system,
                 }
-                # Return the data to create a plot with Plot_example_evo(res)!!
+                # Return the data to create a plot with plot_example_evo(res)!!
                 return (
                     times_plot,
                     data_expectations,

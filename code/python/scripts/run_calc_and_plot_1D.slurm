@@ -1,21 +1,21 @@
 #!/bin/bash
-#SBATCH --job-name=2D_calc_plot
-#SBATCH --output=logs/2D_calc_plot_%j.out
-#SBATCH --error=logs/2D_calc_plot_%j.err
+#SBATCH --job-name=1D_calc_plot
+#SBATCH --output=logs/1D_calc_plot_%j.out
+#SBATCH --error=logs/1D_calc_plot_%j.err
 
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
 
-#SBATCH --time=3-00:00:00
-#SBATCH --mem=30G
-#SBATCH -c 12
+#SBATCH --time=12:00:00
+#SBATCH --mem=8G
+#SBATCH -c 4
 
 # =============================
-# UNIFIED 2D SPECTROSCOPY: CALCULATION + PLOTTING
+# UNIFIED 1D SPECTROSCOPY: CALCULATION + PLOTTING
 # =============================
 
 echo "=========================================="
-echo "2D Spectroscopy Calculation and Plotting"
+echo "1D Spectroscopy Calculation and Plotting"
 echo "=========================================="
 echo "Job started at: $(date)"
 echo "Running on node: $(hostname)"
@@ -32,27 +32,27 @@ conda activate master_env
 cd /home/lbodamer/Master_thesis/code/python/scripts/
 
 # =============================
-# STEP 1: RUN 2D DATA CALCULATION
+# STEP 1: RUN 1D DATA CALCULATION
 # =============================
 echo ""
 echo "=========================================="
-echo "STEP 1: Starting 2D spectroscopy calculation..."
+echo "STEP 1: Starting 1D spectroscopy calculation..."
 echo "=========================================="
 echo "Start time: $(date)"
 
-# Run calculation and capture output
-calc_output=$(python3 calc_2D_datas.py)
+# Run calculation and capture the filepath
+calc_output=$(python3 calc_1D_datas.py)
 echo "$calc_output"
 
-# Extract the output subdirectory from the output
-output_subdir=$(echo "$calc_output" | grep "OUTPUT_SUBDIR:" | cut -d':' -f2)
+# Extract the saved filepath from the output
+saved_filepath=$(echo "$calc_output" | grep "SAVED_FILEPATH:" | cut -d':' -f2)
 
 # Check if calculation completed successfully
-if [ $? -eq 0 ] && [ ! -z "$output_subdir" ]; then
-    echo "✅ 2D data calculation completed successfully at: $(date)"
-    echo "📁 Data saved to subdirectory: $output_subdir"
+if [ $? -eq 0 ] && [ ! -z "$saved_filepath" ]; then
+    echo "✅ 1D data calculation completed successfully at: $(date)"
+    echo "📁 Data saved to: $saved_filepath"
 else
-    echo "❌ 2D data calculation failed at: $(date)"
+    echo "❌ 1D data calculation failed at: $(date)"
     echo "Exiting without plotting..."
     exit 1
 fi
@@ -62,18 +62,18 @@ fi
 # =============================
 echo ""
 echo "=========================================="
-echo "STEP 2: Starting 2D data plotting..."
+echo "STEP 2: Starting 1D data plotting..."
 echo "=========================================="
 echo "Start time: $(date)"
-echo "📊 Plotting data from subdirectory: $output_subdir"
+echo "📊 Plotting data from: $saved_filepath"
 
-python3 plot_2D_datas.py "$output_subdir"
+python3 plot_1D_datas.py "$saved_filepath"
 
 # Check if plotting completed successfully
 if [ $? -eq 0 ]; then
-    echo "✅ 2D data plotting completed successfully at: $(date)"
+    echo "✅ 1D data plotting completed successfully at: $(date)"
 else
-    echo "❌ 2D data plotting failed at: $(date)"
+    echo "❌ 1D data plotting failed at: $(date)"
     exit 1
 fi
 
