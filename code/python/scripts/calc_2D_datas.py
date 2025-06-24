@@ -16,9 +16,9 @@ def main():
     # =============================
 
     ### Main system configuration
-    N_atoms = 2  # Number of atoms (1 or 2)
-    t_max = 4  # Maximum time [fs]
-    dt = 2  # Time step [fs]
+    N_atoms = 1  # Number of atoms (1 or 2)
+    t_max = 10  # Maximum time [fs]
+    dt = 1  # Time step [fs]
     ODE_Solver = "BR"  # ODE solver type
 
     ### System-specific parameters
@@ -71,7 +71,7 @@ def main():
     print(f"  Time: {t_max} fs (dt = {dt} fs)")
     print(f"  Pulse FWHM: {pulse_fwhm} fs")
     print(f"  Output: {output_subdir}")
-    print("")    # =============================
+    print("")  # =============================
     # RUN SIMULATION
     # =============================
     relative_path = run_2d_simulation_with_config(config)

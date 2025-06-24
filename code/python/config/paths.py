@@ -45,13 +45,13 @@ FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR = DATA_DIR.resolve()
 FIGURES_DIR = FIGURES_DIR.resolve()
 
-# Additional useful paths
+# Additional useful paths (NOT used)
 PYTHON_CODE_DIR = PROJECT_ROOT / "code" / "python"
 SCRIPTS_DIR = PYTHON_CODE_DIR / "scripts"
 NOTEBOOKS_DIR = PYTHON_CODE_DIR / "notebooks"
 LATEX_DIR = PROJECT_ROOT / "latex"
 
-# Figures subdirectories (commonly used)
+# Figures subdirectories (NOT used)
 FIGURES_PYTHON_DIR = FIGURES_DIR / "figures_from_python"
 FIGURES_1D_DIR = FIGURES_PYTHON_DIR / "1d_spectroscopy"
 FIGURES_2D_DIR = FIGURES_PYTHON_DIR / "2d_spectroscopy"

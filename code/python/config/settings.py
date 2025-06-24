@@ -68,8 +68,8 @@ LINE_STYLES = ["solid", "dashed", "dashdot", "dotted"]
 # =============================
 
 # Default file extensions
-FIGURE_FORMAT = "png"
-DATA_FORMAT = "npz"  # NumPy compressed format
+FIGURE_FORMAT = "svg"
+DATA_FORMAT = "pkl"  # NumPy compressed format
 
 # =============================
 # COMPUTATIONAL SETTINGS

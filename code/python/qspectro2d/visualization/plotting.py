@@ -580,7 +580,6 @@ def plot_2d_el_field(
         y_title = r"$\tau_{\text{coh}}$ [fs]"
     else:
         colormap = "plasma"
-        title = r"$\text{Freq domain}$"
         x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
         y_title = r"$\omega_{\tau_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
 
@@ -589,17 +588,17 @@ def plot_2d_el_field(
             "Invalid component. Must be 'real', 'imag', 'abs', or 'phase'."
         )
     if component == "real":
-        title += r"$\text{, Real 2D Spectrum}$"
+        title = r"$\text{2D Real Spectrum}$"
         data = np.real(data)
     elif component == "imag":
-        title += r"$\text{, Imag 2D Spectrum}$"
+        title = r"$\text{2D Imag Spectrum}$"
         data = np.imag(data)
     elif component == "abs":
-        title += r"$\text{, Abs 2D Spectrum}$"
+        title = r"$\text{2D Abs Spectrum}$"
         data = np.abs(data)
         use_custom_colormap = False
     elif component == "phase":
-        title += r"$\text{, Phase 2D Spectrum}$"
+        title = r"$\text{2D Phase Spectrum}$"
         data = np.angle(data)
 
     if t_wait != np.inf:
@@ -732,7 +731,7 @@ def plot_2d_el_field(
         if not output_path.is_dir():
             raise ValueError(f"Output directory {output_dir} does not exist.")
 
-        filename = _build_2d_field_filename(
+        filename = _build_2d_plot_filename(
             system, domain, component, t_wait, ode_solver
         )
         save_path = output_path / filename
@@ -749,7 +748,7 @@ def plot_2d_el_field(
     return fig
 
 
-def _build_2d_field_filename(
+def _build_2d_plot_filename(
     system: SystemParameters,
     domain: Literal["time", "freq"],
     component: Literal["real", "imag", "abs", "phase"],
@@ -775,14 +774,14 @@ def _build_2d_field_filename(
     Returns
     -------
     str
-        Generated filename with .png extension.
+        Generated filename with .svg extension.
     """
-    filename_parts = [f"{domain}_domain"]
+    filename_parts = [f"2D_polarization"]
 
     if domain == "freq":
-        filename_parts.append(f"{component}_2D_spectrum")
+        filename_parts.append(f"{component}_spectrum")
     else:  # domain == "time"
-        filename_parts.append("2D_polarization")
+        filename_parts.append("time_domain")
 
     # System-specific parameters
     filename_parts.extend(
@@ -820,7 +819,7 @@ def _build_2d_field_filename(
     if ode_solver is not None:
         filename_parts.append(f"with_{ode_solver}")
 
-    return "_".join(filename_parts) + ".png"
+    return "_".join(filename_parts) + ".svg"
 
 
 def Plot_example_Polarization(
@@ -1040,7 +1039,7 @@ def plot_1d_frequency_spectrum(
             ]
         )
 
-        file_name = "_".join(filename_parts) + ".png"
+        file_name = "_".join(filename_parts) + ".svg"
         save_path = os.path.join(output_dir, file_name)
         plt.savefig(save_path)
     else:

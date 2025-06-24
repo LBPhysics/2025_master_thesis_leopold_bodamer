@@ -276,6 +276,12 @@ def extend_and_plot_results(
     -------
     None
     """
+    # Debug prints:
+    print(f"Debug - save: {plot_args_freq.get('save', 'NOT_SET')}")
+    print(f"Debug - output_dir: {plot_args_freq.get('output_dir', 'NOT_SET')}")
+    print(f"Debug - system: {plot_args_freq.get('system', 'NOT_SET')}")
+    print(f"Debug - system is None: {plot_args_freq.get('system') is None}")
+
     # Filter out None values from averaged_results
     valid_results = [res for res in averaged_results if res is not None]
     valid_T_waits = [

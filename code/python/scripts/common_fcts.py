@@ -53,28 +53,25 @@ def generate_unique_data_path(
         config: Dictionary containing simulation parameters
         system: System parameters object
         simulation_type: Type of simulation ("1d", "2d", or other)
-        
+
     Returns:
         unique path
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Build filename components based on simulation type
+    # Build filename components based on simulation type (no timestamp)
     if simulation_type == "1d":
         base_filename = (
             f"1d_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}_"
-            f"ph{config['n_phases']}_freq{config['n_freqs']}_{timestamp}.pkl"
+            f"ph{config['n_phases']}_freq{config['n_freqs']}.pkl"
         )
     elif simulation_type == "2d":
         base_filename = (
             f"2d_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}_"
             f"T{config.get('n_times_T', 1)}_ph{config['n_phases']}_"
-            f"freq{config['n_freqs']}_{timestamp}.pkl"
+            f"freq{config['n_freqs']}.pkl"
         )
     else:
         base_filename = (
-            f"{simulation_type}_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}_"
-            f"{timestamp}.pkl"
+            f"{simulation_type}_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}.pkl"
         )
 
     save_path = output_dir / base_filename
@@ -95,7 +92,7 @@ def save_spectroscopy_data(
 ) -> Path:
     """Save spectroscopy simulation data to a pickle file."""
     ### Create output directory with simulation type
-    output_dir = DATA_DIR / f"{simulation_type}d_spectroscopy" / config["output_subdir"]
+    output_dir = DATA_DIR / f"{simulation_type}_spectroscopy" / config["output_subdir"]
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ### Generate unique filename
@@ -265,10 +262,7 @@ def _run_2d_simulation(
     time_cut = validate_solver(system, times)
 
     print("Computing 2D polarization with parallel processing...")
-    kwargs = {
-        "plot_example": False, 
-        "time_cut": time_cut
-        }
+    kwargs = {"plot_example": False, "time_cut": time_cut}
 
     try:
         two_d_datas = parallel_compute_2d_E_with_inhomogenity(
@@ -355,7 +349,7 @@ def run_simulation_with_config(config: dict, simulation_type: str):
     system.summary()
 
     # RUN SIMULATION
-    result = run_simulation(config, system, simulation_type)    # SAVE DATA
+    result = run_simulation(config, system, simulation_type)  # SAVE DATA
     print("\nSaving simulation data...")
 
     if simulation_type == "1d":
@@ -425,6 +419,70 @@ def find_latest_file(data_subdir: str, file_pattern: str = "*.pkl") -> Optional[
     return latest_file
 
 
+def find_latest_file_with_counter(pkl_files: list[Path]) -> Path:
+    """
+    Find the file with the highest counter suffix (_1, _2, etc.) from a list of pkl files.
+
+    Args:
+        pkl_files: List of Path objects pointing to .pkl files
+
+    Returns:
+        Path object of the file with highest counter, or the base file if no counters exist
+    """
+    import re
+
+    # Group files by base name (without counter)
+    file_groups = {}
+
+    for pkl_file in pkl_files:
+        filename = pkl_file.stem  # Remove .pkl extension
+
+        # Check if filename ends with _number pattern
+        counter_match = re.search(r"_(\d+)$", filename)
+
+        if counter_match:
+            # File has counter suffix
+            counter = int(counter_match.group(1))
+            base_name = filename[: counter_match.start()]  # Remove _number part
+        else:
+            # File has no counter (original file)
+            counter = 0
+            base_name = filename
+
+        if base_name not in file_groups:
+            file_groups[base_name] = []
+
+        file_groups[base_name].append((pkl_file, counter))
+
+    # Find the file with highest counter for each base name
+    latest_files = []
+    for base_name, files_with_counters in file_groups.items():
+        # Sort by counter and take the highest
+        files_with_counters.sort(key=lambda x: x[1], reverse=True)
+        latest_file, highest_counter = files_with_counters[0]
+        latest_files.append(latest_file)
+
+        print(
+            f"  📁 Base: {base_name} → Latest: {latest_file.name} (counter: {highest_counter})"
+        )
+
+    # If multiple base names exist, return all latest files
+    # If only one base name, return the single latest file
+    if len(latest_files) == 1:
+        return latest_files[0]
+    else:
+        # Multiple different file types - return the one with highest overall counter
+        all_counters = []
+        for pkl_file in pkl_files:
+            filename = pkl_file.stem
+            counter_match = re.search(r"_(\d+)$", filename)
+            counter = int(counter_match.group(1)) if counter_match else 0
+            all_counters.append((pkl_file, counter))
+
+        all_counters.sort(key=lambda x: x[1], reverse=True)
+        return all_counters[0][0]
+
+
 def load_pickle_file(filepath: Path) -> Optional[dict]:
     """Load data from pickle file (supports both .pkl and .pkl.gz).
 
@@ -473,16 +531,16 @@ def create_output_directory(subdir: str) -> Path:
 
 def create_output_directory_from_data_path(data_relative_path: Path) -> Path:
     """Create output directory for plots based on data path structure.
-    
+
     Args:
         data_relative_path: Relative path from DATA_DIR (e.g., '1d_spectroscopy/special_dir/filename.pkl')
-        
+
     Returns:
         Output directory path in FIGURES_DIR with same structure
     """
     # Extract the directory part (without filename)
     special_dir = data_relative_path.parent
-    
+
     # Create corresponding directory in FIGURES_DIR
     output_dir = FIGURES_DIR / "figures_from_python" / special_dir
     os.makedirs(output_dir, exist_ok=True)
@@ -554,6 +612,7 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
                     "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
                 ),
                 output_dir=output_dir,
+                save=True,  # Add the missing save parameter
             )
             print("✅ Time domain plots completed!")
         except Exception as e:
@@ -602,15 +661,6 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
         print("📊 Plotting time domain data...")
         try:
             tau_cohs_0, t_dets_0 = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-            print(
-                "⚠️  Time domain plotting temporarily disabled - function signature mismatch"
-            )
-            print(
-                f"   Available data: tau_cohs ({len(tau_cohs_0)} points), t_dets ({len(t_dets_0)} points)"
-            )
-            print(
-                f"   two_d_datas shape: {two_d_datas[0].shape if two_d_datas else 'None'}"
-            )
             plot_2d_el_field(
                 data_xyz=(
                     tau_cohs_0,
@@ -619,6 +669,8 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
                 ),
                 domain="time",
                 output_dir=output_dir,
+                system=system_data,  # Add the missing system parameter
+                save=True,
             )
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
@@ -642,6 +694,7 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
             "output_dir": output_dir,
             "section": section,
             "system": system_data,
+            "save": True,
         }
 
         try:
@@ -693,7 +746,9 @@ def plot_2d_from_filepath(filepath: Path, config: dict) -> None:
         output_dir = create_output_directory_from_data_path(data_relative_path)
     except ValueError:
         # Fallback to config if filepath is not under DATA_DIR
-        output_dir = create_output_directory(config.get("output_subdir", "figures_from_python"))
+        output_dir = create_output_directory(
+            config.get("output_subdir", "figures_from_python")
+        )
 
     ### Route to 2D plotting function
     _plot_2d_data(loaded_data, config, output_dir)
@@ -726,7 +781,9 @@ def plot_1d_from_filepath(filepath: Path, config: dict) -> None:
         output_dir = create_output_directory_from_data_path(data_relative_path)
     except ValueError:
         # Fallback to config if filepath is not under DATA_DIR
-        output_dir = create_output_directory(config.get("output_subdir", "figures_from_python"))
+        output_dir = create_output_directory(
+            config.get("output_subdir", "figures_from_python")
+        )
 
     ### Route to 1D plotting function
     _plot_1d_data(loaded_data, config, output_dir)
@@ -738,13 +795,13 @@ def plot_2d_from_relative_path(relative_path_str: str, config: dict = None) -> N
     """Plot 2D spectroscopy data from a relative path string (feed-forward compatible).
 
     Args:
-        relative_path_str: Relative path from DATA_DIR (e.g., '2d_spectroscopy/special_dir/filename.pkl')
+        relative_path_str: Relative path from DATA_DIR (e.g., '2d_spectroscopy/special_dir/filename.pkl' or '2d_spectroscopy/special_dir/')
         config: Optional plotting configuration dictionary
     """
     # Convert string to Path object
     relative_path = Path(relative_path_str)
-    full_filepath = DATA_DIR / relative_path
-    
+    full_path = DATA_DIR / relative_path
+
     # Use default config if none provided
     if config is None:
         config = {
@@ -753,12 +810,33 @@ def plot_2d_from_relative_path(relative_path_str: str, config: dict = None) -> N
             "extend_for": (1, 3),
             "section": (1.4, 1.8, 1.4, 1.8),
         }
-    
+
     print(f"📊 Plotting from relative path: {relative_path_str}")
-    print(f"📂 Full path: {full_filepath}")
-    
-    # Call the main plotting function
-    plot_2d_from_filepath(full_filepath, config)
+    print(f"📂 Full path: {full_path}")
+
+    # Check if it's a directory or file
+    if full_path.is_dir():
+        # Find all .pkl files in the directory
+        pkl_files = list(full_path.glob("*.pkl"))
+        if not pkl_files:
+            print(f"❌ No .pkl files found in directory: {full_path}")
+            return
+
+        print(f"Found {len(pkl_files)} .pkl files:")
+        for pkl_file in pkl_files:
+            print(f"  - {pkl_file.name}")
+
+        # Find and plot only the latest file (highest counter)
+        latest_file = find_latest_file_with_counter(pkl_files)
+        print(f"\n📊 Plotting latest file: {latest_file.name}")
+        plot_2d_from_filepath(latest_file, config)
+
+    elif full_path.is_file():
+        # Direct file path provided
+        plot_2d_from_filepath(full_path, config)
+    else:
+        print(f"❌ Path does not exist: {full_path}")
+        return
 
 
 def plot_1d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
@@ -771,7 +849,7 @@ def plot_1d_from_relative_path(relative_path_str: str, config: dict = None) -> N
     # Convert string to Path object
     relative_path = Path(relative_path_str)
     full_filepath = DATA_DIR / relative_path
-    
+
     # Use default config if none provided
     if config is None:
         config = {
@@ -779,10 +857,10 @@ def plot_1d_from_relative_path(relative_path_str: str, config: dict = None) -> N
             "plot_time_domain": True,
             "plot_frequency_domain": True,
         }
-    
+
     print(f"📊 Plotting from relative path: {relative_path_str}")
     print(f"📂 Full path: {full_filepath}")
-    
+
     # Call the main plotting function
     plot_1d_from_filepath(full_filepath, config)
 
