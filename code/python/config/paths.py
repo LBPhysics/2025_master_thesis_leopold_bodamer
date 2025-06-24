@@ -57,6 +57,7 @@ FIGURES_1D_DIR = FIGURES_PYTHON_DIR / "1d_spectroscopy"
 FIGURES_2D_DIR = FIGURES_PYTHON_DIR / "2d_spectroscopy"
 FIGURES_BATH_DIR = FIGURES_PYTHON_DIR / "bath_correlator"
 FIGURES_PULSES_DIR = FIGURES_PYTHON_DIR / "pulses"
+FIGURES_TESTS_DIR = FIGURES_PYTHON_DIR / "tests"  # Added for test figures
 
 # Create figure subdirectories if they don't exist
 for fig_dir in [
@@ -65,6 +66,7 @@ for fig_dir in [
     FIGURES_2D_DIR,
     FIGURES_BATH_DIR,
     FIGURES_PULSES_DIR,
+    FIGURES_TESTS_DIR,  # Added for test figures
 ]:
     fig_dir.mkdir(parents=True, exist_ok=True)
 

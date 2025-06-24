@@ -37,39 +37,6 @@ DEFAULT_RTOL = 1e-9
 DEFAULT_NSTEPS = 1000
 DEFAULT_MAX_STEP = 0.1  # fs
 
-# =============================
-# PLOTTING SETTINGS
-# =============================
-
-# Default figure settings
-DEFAULT_FIGSIZE = (10, 8)
-DEFAULT_DPI = 300
-DEFAULT_FONT_SIZE = 12
-
-# Color palette for consistent plotting
-COLORS = {
-    "C0": "#1f77b4",  # blue
-    "C1": "#ff7f0e",  # orange
-    "C2": "#2ca02c",  # green
-    "C3": "#d62728",  # red
-    "C4": "#9467bd",  # purple
-    "C5": "#8c564b",  # brown
-    "C6": "#e377c2",  # pink
-    "C7": "#7f7f7f",  # gray
-    "C8": "#bcbd22",  # olive
-    "C9": "#17becf",  # cyan
-}
-
-# Line styles
-LINE_STYLES = ["solid", "dashed", "dashdot", "dotted"]
-
-# =============================
-# FILE FORMATS
-# =============================
-
-# Default file extensions
-FIGURE_FORMAT = "svg"
-DATA_FORMAT = "pkl"  # NumPy compressed format
 
 # =============================
 # COMPUTATIONAL SETTINGS
