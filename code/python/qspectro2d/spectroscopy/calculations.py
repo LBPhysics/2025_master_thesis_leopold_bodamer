@@ -483,7 +483,7 @@ def compute_1d_polarization(
     data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
 
     # TODO add time_cut to avoid numerical issues
-    
+
     # Just in case I want to plot an example evolution
     plot_example = kwargs.get("plot_example", False)
     if plot_example:
@@ -605,8 +605,8 @@ def compute_1d_polarization(
             P_only2[t_idx] = np.real(expect(system.Dip_op, states_only_pulse2[t_idx]))
             """
 
-    # If plot_example_Polarization is True, return the full data for plotting
-    if kwargs.get("plot_example_Polarization", False):
+    # If plot_example_polarization is True, return the full data for plotting
+    if kwargs.get("plot_example_polarization", False):
         return (
             actual_det_times - actual_det_times[0],
             P_full,

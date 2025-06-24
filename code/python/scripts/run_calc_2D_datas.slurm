@@ -6,9 +6,9 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
 
-#SBATCH --time=24:00:00
-#SBATCH --mem=10G
-#SBATCH -c 8
+#SBATCH --time=3-00:00:00
+#SBATCH --mem=30G
+#SBATCH -c 16
 
 # =============================
 # UNIFIED 2D SPECTROSCOPY SIMULATION

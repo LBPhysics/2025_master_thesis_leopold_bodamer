@@ -77,12 +77,108 @@ def check_font_available(font_name):
         return False
 
 
+def check_system_fonts():
+    """
+    Check system directories for common serif fonts and add them to matplotlib's font list.
+    This helps when matplotlib's font detection is failing.
+
+    Returns:
+    --------
+    list
+        List of available serif font names found in the system
+    """
+    # Common font locations on Linux/macOS/Windows
+    font_locations = [
+        "/usr/share/fonts/truetype/dejavu",
+        "/usr/share/fonts/truetype/liberation",
+        "/usr/share/fonts/opentype",
+        "/usr/share/fonts/truetype",
+        "/usr/local/share/fonts",
+        "/Library/Fonts",  # macOS
+        "/System/Library/Fonts",  # macOS
+        "C:\\Windows\\Fonts",  # Windows
+    ]
+
+    # Common serif font files to look for
+    serif_font_files = {
+        "DejaVuSerif.ttf": "DejaVu Serif",
+        "DejaVuSerif-Bold.ttf": "DejaVu Serif",
+        "LiberationSerif-Regular.ttf": "Liberation Serif",
+        "LiberationSerif-Bold.ttf": "Liberation Serif",
+        "Times.ttf": "Times",
+        "TimesNewRoman.ttf": "Times New Roman",
+        "Times New Roman.ttf": "Times New Roman",
+        "Georgia.ttf": "Georgia",
+        "STIXGeneral-Regular.otf": "STIX",
+        "cmunrm.ttf": "Computer Modern",  # TeX fonts if installed
+    }
+
+    available_fonts = []
+
+    # Check for fonts in standard locations
+    for location in font_locations:
+        if not os.path.isdir(location):
+            continue
+
+        # Check for specific serif fonts
+        for font_file, font_name in serif_font_files.items():
+            font_path = os.path.join(location, font_file)
+            if os.path.exists(font_path):
+                try:
+                    import matplotlib.font_manager as fm
+
+                    fm.fontManager.addfont(font_path)
+                    if font_name not in available_fonts:
+                        available_fonts.append(font_name)
+                except:
+                    # If adding font fails, just continue
+                    pass
+
+    return available_fonts
+
+
 # Check if LaTeX is available
 latex_available = check_latex_available()
 
 # Define preferred and fallback fonts
 preferred_font = "Palatino"
-fallback_fonts = ["Times", "DejaVu Serif", "Computer Modern Roman", "serif"]
+fallback_fonts = [
+    "Times",
+    "Times New Roman",
+    "DejaVu Serif",
+    "Liberation Serif",
+    "Computer Modern Roman",
+    "STIX",
+    "Georgia",
+    "Cambria",
+    "Garamond",
+    "serif",
+]
+
+# Try to rebuild font cache and check system fonts if we haven't done it before
+# This only runs once, the first time the module is imported
+try:
+    if "system_fonts_checked" not in globals():
+        try:
+            # Try rebuilding the matplotlib font cache to find missing fonts
+            import matplotlib.font_manager as fm
+
+            fm._rebuild()
+            system_fonts_checked = True
+        except:
+            # Failed to rebuild cache, continue anyway
+            system_fonts_checked = False
+
+        # Check system font directories for additional serif fonts
+        system_fonts = check_system_fonts()
+
+        # Add any found system fonts to our fallback list
+        for font in system_fonts:
+            if font not in fallback_fonts:
+                fallback_fonts.insert(0, font)  # Insert at beginning for priority
+except:
+    # If anything fails, we can continue with our regular font detection
+    pass
 
 # Find first available font
 font_to_use = preferred_font  # Default to preferred
@@ -104,7 +200,20 @@ if not check_font_available(preferred_font):
 # Base settings common to both LaTeX and non-LaTeX modes
 base_settings = {
     "font.family": "serif",  # Use a serif font family
-    "font.serif": [font_to_use],  # Use the available font
+    # Multiple fallbacks - use the found font plus all common serif options for better resiliency
+    "font.serif": [
+        font_to_use,
+        *[f for f in fallback_fonts if f != font_to_use and f.lower() != "serif"],
+        "serif",
+    ],
+    # Add sans-serif fallbacks just in case we need them
+    "font.sans-serif": [
+        "DejaVu Sans",
+        "Liberation Sans",
+        "Arial",
+        "Helvetica",
+        "sans-serif",
+    ],
     "font.size": 18,  # Font size for general text
     "axes.titlesize": 20,  # Font size for axis titles
     "axes.labelsize": 18,  # Font size for axis labels

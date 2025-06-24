@@ -19,12 +19,13 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
-        ax (matplotlib.axes.Axes): Axes object with the plot.
+        tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the combined envelope over time
     envelope = [pulse_envelope(t, pulse_seq) for t in times]
 
     # Create figure and axis if not provided
+    fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -95,7 +96,7 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     ax.set_ylabel(r"Envelope Amplitude")
     ax.set_title(r"Pulse Envelopes for Up to Three Pulses")
     ax.legend(loc="upper right", fontsize="small")
-    return ax
+    return fig, ax
 
 
 def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
@@ -108,12 +109,13 @@ def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
-        ax (matplotlib.axes.Axes): Axes object with the plot.
+        tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the RWA electric field over time
     E_field = np.array([E_pulse(t, pulse_seq) for t in times])
 
     # Create figure and axis if not provided
+    fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -132,20 +134,26 @@ def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
         linestyle="dashed",
         color="C1",
     )
-    ax.plot(
-        times,
-        np.abs(E_field),
-        label=r"$|E(t)|$",
-        linestyle="dashdot",
-        color="C2",
-    )
+
+    # Styles for up to three pulses
+    colors = ["C2", "C3", "C4"]
+
+    # Plot pulse peak times
+    for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
+        t_peak = pulse.pulse_peak_time
+        ax.axvline(
+            t_peak,
+            linestyle="dotted",
+            label=rf"$t_{{peak, {idx + 1}}}$",
+            color=colors[idx % len(colors)],
+        )
 
     # Final plot labeling
     ax.set_xlabel(r"Time $t$")
     ax.set_ylabel(r"Electric Field (RWA)")
-    ax.set_title(r"RWA Electric Field $E(t)$ (Envelope Only)")
-    ax.legend()
-    return ax
+    ax.set_title(r"RWA Electric Field Components")
+    ax.legend(loc="upper right")
+    return fig, ax
 
 
 def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
@@ -158,12 +166,13 @@ def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
-        ax (matplotlib.axes.Axes): Axes object with the plot.
+        tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the full electric field over time
     Epsilon_field = np.array([Epsilon_pulse(t, pulse_seq) for t in times])
 
     # Create figure and axis if not provided
+    fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -190,12 +199,25 @@ def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
         color="C5",
     )
 
+    # Styles for up to three pulses
+    colors = ["C0", "C1", "C2"]
+
+    # Plot pulse peak times
+    for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
+        t_peak = pulse.pulse_peak_time
+        ax.axvline(
+            t_peak,
+            linestyle="dotted",
+            label=rf"$t_{{peak, {idx + 1}}}$",
+            color=colors[idx % len(colors)],
+        )
+
     # Final plot labeling
     ax.set_xlabel(r"Time $t$")
     ax.set_ylabel(r"Electric Field (Full)")
-    ax.set_title(r"Full Electric Field $\varepsilon(t)$ (With Carrier)")
-    ax.legend()
-    return ax
+    ax.set_title(r"Full Electric Field with Carrier")
+    ax.legend(loc="upper right")
+    return fig, ax
 
 
 def plot_all_pulse_components(
@@ -356,7 +378,7 @@ def plot_example_evo(
         system: System object containing all relevant parameters.
 
     Returns:
-        None
+        matplotlib.figure.Figure: The figure object.
     """
     # =============================
     # PREPARE TIME AXIS AND FIELD
@@ -451,7 +473,13 @@ def plot_example_evo(
         rf"$\tau = {tau_coh:.2f}\,\mathrm{{fs}},\quad T = {T_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {system.ODE_Solver}"
     )
     plt.tight_layout()
-    plt.show()
+
+    # Only show the plot if not being saved elsewhere
+    show = kwargs.get("show", True)
+    if show:
+        plt.show()
+
+    return fig
 
 
 def plot_2d_el_field(
@@ -465,7 +493,6 @@ def plot_2d_el_field(
     use_custom_colormap: bool = False,
     section: Union[tuple[float, float, float, float], None] = None,
     system: Union[SystemParameters, None] = None,
-    show: bool = True,
 ) -> Union[plt.Figure, None]:
     """
     Create a color plot of 2D electric field data for positive x and y values.
@@ -499,8 +526,6 @@ def plot_2d_el_field(
         Crop section as (x_min, x_max, y_min, y_max) to zoom into specific region.
     system : SystemParameters or None, optional
         System parameters required for filename generation when save=True.
-    show : bool, default True
-        If True, displays the plot using plt.show().
 
     Returns
     -------
@@ -742,8 +767,7 @@ def plot_2d_el_field(
             "Plot not saved. Ensure 'save' is True, 'output_dir' is specified, and 'system' is provided."
         )
 
-    if show:
-        plt.show()
+    plt.show()
 
     return fig
 
@@ -807,7 +831,7 @@ def _build_2d_plot_filename(
         [
             f"wL={system.omega_laser / system.omega_A:.1f}wA",
             f"E0={system.E0:.2e}",
-            f"rabigen={system.rabi_gen:.2f}= sqrt({system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2)",
+            f"rabigen={system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2",
         ]
     )
 
@@ -822,7 +846,7 @@ def _build_2d_plot_filename(
     return "_".join(filename_parts) + ".svg"
 
 
-def Plot_example_Polarization(
+def plot_example_polarization(
     times: np.ndarray,
     P_full: np.ndarray,
     P_only0: np.ndarray,
@@ -844,9 +868,9 @@ def Plot_example_Polarization(
         **kwargs: Additional keyword arguments for annotation.
 
     Returns:
-        None
+        matplotlib.figure.Figure: The figure object.
     """
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))
     plt.plot(
         times,
         np.abs(P_full),
@@ -896,7 +920,13 @@ def Plot_example_Polarization(
         )
 
     plt.tight_layout()
-    plt.show()
+
+    # Only show the plot if not being saved elsewhere
+    show = kwargs.get("show", True)
+    if show:
+        plt.show()
+
+    return fig
 
 
 def plot_1d_frequency_spectrum(
@@ -923,9 +953,9 @@ def plot_1d_frequency_spectrum(
         **kwargs: Additional keyword arguments for annotation.
 
     Returns:
-        None
+        matplotlib.figure.Figure: The figure object.
     """
-    plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))
 
     # Plot different representations based on component
     if component == "abs":
@@ -1000,7 +1030,7 @@ def plot_1d_frequency_spectrum(
         )
 
     # =============================
-    # Save or show
+    # Save
     # =============================
     if save and output_dir and system is not None:
         if not os.path.isdir(output_dir):
@@ -1042,6 +1072,10 @@ def plot_1d_frequency_spectrum(
         file_name = "_".join(filename_parts) + ".svg"
         save_path = os.path.join(output_dir, file_name)
         plt.savefig(save_path)
-    else:
-        print("Plot not saved. Ensure 'save' is True and 'output_dir' is specified.")
-    plt.show()
+
+    # Only show the plot if not being saved elsewhere
+    show = kwargs.get("show", True)
+    if show:
+        plt.show()
+
+    return fig
