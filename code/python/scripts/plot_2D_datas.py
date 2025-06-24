@@ -3,11 +3,16 @@
 
 This script loads and plots 2D electronic spectroscopy data from pickle files
 in various formats (real, imaginary, absolute, phase) for analysis and visualization.
+
+Usage modes:
+1. Direct file path: python plot_2D_datas.py /path/to/file.pkl
+2. Relative path (feed-forward): python plot_2D_datas.py special_dir/filename.pkl  
+3. No arguments: Use search configuration (original behavior)
 """
 
 import sys
 from pathlib import Path
-from common_fcts import plot_2d_spectroscopy_data, plot_2d_from_filepath
+from common_fcts import plot_2d_spectroscopy_data, plot_2d_from_filepath, plot_2d_from_relative_path
 from config.paths import DATA_DIR
 
 
@@ -19,12 +24,43 @@ def main():
 
     # Check if filepath was provided as command line argument
     if len(sys.argv) > 1:
-        # Mode 1: Plot from specific filepath
-        filepath = Path(sys.argv[1])
-        plot_from_filepath(filepath)
+        # Mode 1: Plot from specific filepath or relative path
+        path_arg = sys.argv[1]
+        
+        # Check if it's a relative path (contains no path separators or starts with simulation type)
+        if "/" in path_arg or "\\" in path_arg:
+            if path_arg.startswith(("1d_spectroscopy", "2d_spectroscopy")):
+                # This is a relative path from DATA_DIR (feed-forward mode)
+                plot_from_relative_path(path_arg)
+            else:
+                # This is an absolute or other relative path
+                filepath = Path(path_arg)
+                plot_from_filepath(filepath)
+        else:
+            # Single filename, treat as direct path
+            filepath = Path(path_arg)
+            plot_from_filepath(filepath)
     else:
         # Mode 2: Plot using search configuration (original behavior)
         plot_with_search_config()
+
+
+def plot_from_relative_path(relative_path_str: str):
+    """Plot 2D data from a relative path string (feed-forward mode)."""
+    print(f"🚀 Starting 2D Electronic Spectroscopy Plotting from relative path: {relative_path_str}")
+
+    ### Plotting configuration
+    config = {
+        "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
+        "plot_time_domain": True,
+        "extend_for": (1, 3),
+        "section": (1.4, 1.8, 1.4, 1.8),
+    }
+
+    # Call the feed-forward plotting function
+    plot_2d_from_relative_path(relative_path_str, config)
+    
+    print("✅ 2D Spectroscopy plotting completed!")
 
 
 def plot_from_filepath(filepath: Path):

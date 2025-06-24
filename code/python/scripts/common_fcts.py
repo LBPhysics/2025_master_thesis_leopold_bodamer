@@ -94,8 +94,8 @@ def save_spectroscopy_data(
     data_dict: dict, config: dict, system, simulation_type: str = "spectroscopy"
 ) -> Path:
     """Save spectroscopy simulation data to a pickle file."""
-    ### Create output directory
-    output_dir = DATA_DIR / simulation_type / config["output_subdir"]
+    ### Create output directory with simulation type
+    output_dir = DATA_DIR / f"{simulation_type}d_spectroscopy" / config["output_subdir"]
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ### Generate unique filename
@@ -355,9 +355,7 @@ def run_simulation_with_config(config: dict, simulation_type: str):
     system.summary()
 
     # RUN SIMULATION
-    result = run_simulation(config, system, simulation_type)
-
-    # SAVE DATA
+    result = run_simulation(config, system, simulation_type)    # SAVE DATA
     print("\nSaving simulation data...")
 
     if simulation_type == "1d":
@@ -375,7 +373,9 @@ def run_simulation_with_config(config: dict, simulation_type: str):
     elapsed_time = time.time() - start_time
     print_simulation_summary(elapsed_time, result_data, save_path, simulation_type)
 
-    return save_path  # Return the file path instead of result data
+    # Return relative path from DATA_DIR for feed-forward compatibility
+    relative_path = save_path.relative_to(DATA_DIR)
+    return relative_path
 
 
 # =============================
@@ -467,6 +467,24 @@ def create_output_directory(subdir: str) -> Path:
     """
 
     output_dir = FIGURES_DIR / subdir
+    os.makedirs(output_dir, exist_ok=True)
+    return output_dir
+
+
+def create_output_directory_from_data_path(data_relative_path: Path) -> Path:
+    """Create output directory for plots based on data path structure.
+    
+    Args:
+        data_relative_path: Relative path from DATA_DIR (e.g., '1d_spectroscopy/special_dir/filename.pkl')
+        
+    Returns:
+        Output directory path in FIGURES_DIR with same structure
+    """
+    # Extract the directory part (without filename)
+    special_dir = data_relative_path.parent
+    
+    # Create corresponding directory in FIGURES_DIR
+    output_dir = FIGURES_DIR / "figures_from_python" / special_dir
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -668,8 +686,14 @@ def plot_2d_from_filepath(filepath: Path, config: dict) -> None:
         print(f"❌ Failed to load 2D spectroscopy data from {filepath}")
         return
 
-    ### Create output directory
-    output_dir = create_output_directory(config["output_subdir"])
+    ### Create output directory based on data file structure
+    # Get relative path from DATA_DIR to maintain same directory structure
+    try:
+        data_relative_path = filepath.relative_to(DATA_DIR)
+        output_dir = create_output_directory_from_data_path(data_relative_path)
+    except ValueError:
+        # Fallback to config if filepath is not under DATA_DIR
+        output_dir = create_output_directory(config.get("output_subdir", "figures_from_python"))
 
     ### Route to 2D plotting function
     _plot_2d_data(loaded_data, config, output_dir)
@@ -695,13 +719,72 @@ def plot_1d_from_filepath(filepath: Path, config: dict) -> None:
         print(f"❌ Failed to load 1D spectroscopy data from {filepath}")
         return
 
-    ### Create output directory
-    output_dir = create_output_directory(config["output_subdir"])
+    ### Create output directory based on data file structure
+    # Get relative path from DATA_DIR to maintain same directory structure
+    try:
+        data_relative_path = filepath.relative_to(DATA_DIR)
+        output_dir = create_output_directory_from_data_path(data_relative_path)
+    except ValueError:
+        # Fallback to config if filepath is not under DATA_DIR
+        output_dir = create_output_directory(config.get("output_subdir", "figures_from_python"))
 
     ### Route to 1D plotting function
     _plot_1d_data(loaded_data, config, output_dir)
 
     print(f"🎯 All 1D plots saved to: {output_dir}")
+
+
+def plot_2d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
+    """Plot 2D spectroscopy data from a relative path string (feed-forward compatible).
+
+    Args:
+        relative_path_str: Relative path from DATA_DIR (e.g., '2d_spectroscopy/special_dir/filename.pkl')
+        config: Optional plotting configuration dictionary
+    """
+    # Convert string to Path object
+    relative_path = Path(relative_path_str)
+    full_filepath = DATA_DIR / relative_path
+    
+    # Use default config if none provided
+    if config is None:
+        config = {
+            "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
+            "plot_time_domain": True,
+            "extend_for": (1, 3),
+            "section": (1.4, 1.8, 1.4, 1.8),
+        }
+    
+    print(f"📊 Plotting from relative path: {relative_path_str}")
+    print(f"📂 Full path: {full_filepath}")
+    
+    # Call the main plotting function
+    plot_2d_from_filepath(full_filepath, config)
+
+
+def plot_1d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
+    """Plot 1D spectroscopy data from a relative path string (feed-forward compatible).
+
+    Args:
+        relative_path_str: Relative path from DATA_DIR (e.g., '1d_spectroscopy/special_dir/filename.pkl')
+        config: Optional plotting configuration dictionary
+    """
+    # Convert string to Path object
+    relative_path = Path(relative_path_str)
+    full_filepath = DATA_DIR / relative_path
+    
+    # Use default config if none provided
+    if config is None:
+        config = {
+            "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
+            "plot_time_domain": True,
+            "plot_frequency_domain": True,
+        }
+    
+    print(f"📊 Plotting from relative path: {relative_path_str}")
+    print(f"📂 Full path: {full_filepath}")
+    
+    # Call the main plotting function
+    plot_1d_from_filepath(full_filepath, config)
 
 
 # =============================

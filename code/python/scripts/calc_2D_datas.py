@@ -71,15 +71,14 @@ def main():
     print(f"  Time: {t_max} fs (dt = {dt} fs)")
     print(f"  Pulse FWHM: {pulse_fwhm} fs")
     print(f"  Output: {output_subdir}")
-    print("")
-
-    # =============================
+    print("")    # =============================
     # RUN SIMULATION
     # =============================
-    saved_filepath = run_2d_simulation_with_config(config)
+    relative_path = run_2d_simulation_with_config(config)
 
-    # Print the output subdirectory for script compatibility
-    print(f"OUTPUT_SUBDIR:{output_subdir}")
+    # Print the relative path for feed-forward to plotting script
+    print(f"SAVED_DATA_PATH:{relative_path}")
+    print(f"OUTPUT_SUBDIR:{output_subdir}")  # Keep for backwards compatibility
 
 
 if __name__ == "__main__":
