@@ -24,7 +24,7 @@ def matrix_ODE_paper(
         raise ValueError("Only N_atoms=1 or 2 are supported.")
 
 
-def _matrix_ODE_paper_1atom(  # carefull: I changed this function with GPT
+def _matrix_ODE_paper_1atom(
     t: float, pulse_seq: PulseSequence, system: SystemParameters
 ) -> Qobj:
     """

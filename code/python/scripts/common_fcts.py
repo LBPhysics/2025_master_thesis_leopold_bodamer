@@ -18,6 +18,7 @@ import gc
 from pathlib import Path
 from datetime import datetime
 import matplotlib.pyplot as plt
+from typing import Optional, Literal, Union
 
 ### Project-specific imports
 from qspectro2d.spectroscopy.calculations import (
@@ -28,7 +29,7 @@ from qspectro2d.spectroscopy.calculations import (
 )
 from qspectro2d.core.system_parameters import SystemParameters
 from config.paths import DATA_DIR, FIGURES_DIR
-from typing import Optional
+from config.mpl_tex_settings import DEFAULT_FIG_FORMAT, save_fig
 
 from qspectro2d.visualization.plotting import (
     plot_fixed_tau_t,
@@ -38,16 +39,49 @@ from qspectro2d.visualization.plotting import (
 from qspectro2d.spectroscopy.post_processing import (
     compute_1d_fft_wavenumber,
     extend_and_plot_results,
+    extend_time_axes,
 )
 
 
 # =============================
-# GENERALIZED DATA SAVING FUNCTIONS
+# FILENAME GENERATION HELPERS
+# =============================
+def _build_1d_plot_filename(
+    system: SystemParameters,
+    domain: Literal["time", "freq"],
+    component: Literal["real", "imag", "abs", "phase"] | None = None,
+) -> str:
+    """Build standardized filename for 1D plots."""
+    base = f"1d_{domain}_N{system.N_atoms}_{system.ODE_Solver.lower()}"
+    if component:
+        base += f"_{component}"
+    return base
+
+
+def _build_2d_plot_filename(
+    system: SystemParameters,
+    domain: Literal["time", "freq"],
+    component: Literal["real", "imag", "abs", "phase"] | None = None,
+    t_wait: float = None,
+) -> str:
+    """Build standardized filename for 2D plots."""
+    base = f"2d_{domain}_N{system.N_atoms}_{system.ODE_Solver.lower()}"
+    if t_wait is not None:
+        base += f"_T{t_wait:.0f}fs"
+    if component:
+        base += f"_{component}"
+    return base
+
+
+# =============================
+# UNIFIED DATA SAVING FUNCTIONS
 # =============================
 def generate_unique_data_path(
     output_dir: Path, config: dict, system, simulation_type: str = "spectroscopy"
 ) -> Path:
     """
+    Generate unique data path with compressed pickle format.
+
     Args:
         output_dir: Directory path where file will be saved
         config: Dictionary containing simulation parameters
@@ -55,23 +89,23 @@ def generate_unique_data_path(
         simulation_type: Type of simulation ("1d", "2d", or other)
 
     Returns:
-        unique path
+        unique path with .pkl.gz extension
     """
     # Build filename components based on simulation type (no timestamp)
     if simulation_type == "1d":
         base_filename = (
             f"1d_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}_"
-            f"ph{config['n_phases']}_freq{config['n_freqs']}.pkl"
+            f"ph{config['n_phases']}_freq{config['n_freqs']}.pkl.gz"
         )
     elif simulation_type == "2d":
         base_filename = (
             f"2d_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}_"
             f"T{config.get('n_times_T', 1)}_ph{config['n_phases']}_"
-            f"freq{config['n_freqs']}.pkl"
+            f"freq{config['n_freqs']}.pkl.gz"
         )
     else:
         base_filename = (
-            f"{simulation_type}_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}.pkl"
+            f"{simulation_type}_data_tmax_{system.t_max:.0f}_dt_{system.dt:.1f}.pkl.gz"
         )
 
     save_path = output_dir / base_filename
@@ -79,18 +113,34 @@ def generate_unique_data_path(
     ### Ensure unique filename by adding counter if needed
     counter = 1
     while save_path.exists():
-        name_parts = base_filename.split(".pkl")[0]
-        name_with_counter = f"{name_parts}_{counter}.pkl"
+        name_parts = base_filename.split(".pkl.gz")[0]
+        name_with_counter = f"{name_parts}_{counter}.pkl.gz"
         save_path = output_dir / name_with_counter
         counter += 1
 
     return save_path
 
 
-def save_spectroscopy_data(
-    data_dict: dict, config: dict, system, simulation_type: str = "spectroscopy"
+def save_data(
+    payload: dict,
+    config: dict,
+    system: SystemParameters,
+    simulation_type: str = "spectroscopy",
 ) -> Path:
-    """Save spectroscopy simulation data to a pickle file."""
+    """
+    Unified function to save spectroscopy simulation data with standardized structure.
+
+    Args:
+        payload: Dictionary containing data, axes, system, config, metadata
+        config: Dictionary containing simulation parameters
+        system: System parameters object
+        simulation_type: Type of simulation ("1d", "2d", or other)
+
+    Returns:
+        Path to saved file
+    """
+    import gzip
+
     ### Create output directory with simulation type
     output_dir = DATA_DIR / f"{simulation_type}_spectroscopy" / config["output_subdir"]
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -98,21 +148,10 @@ def save_spectroscopy_data(
     ### Generate unique filename
     save_path = generate_unique_data_path(output_dir, config, system, simulation_type)
 
-    ### Add common metadata to data
-    data_dict.update(
-        {
-            "system": system,
-            "n_phases": config["n_phases"],
-            "n_freqs": config["n_freqs"],
-            "simulation_type": simulation_type,
-            "timestamp": datetime.now().isoformat(),
-        }
-    )
-
-    ### Save as pickle file
+    ### Save as compressed pickle file
     try:
-        with open(save_path, "wb") as f:
-            pickle.dump(data_dict, f)
+        with gzip.open(save_path, "wb") as f:
+            pickle.dump(payload, f)
         print(f"✅ Data saved successfully to: {save_path}")
         return save_path
     except Exception as e:
@@ -121,32 +160,81 @@ def save_spectroscopy_data(
 
 
 # =============================
-# WRAPPER FUNCTIONS FOR BACKWARD COMPATIBILITY
+# UNIFIED DATA STRUCTURE BUILDERS
+# =============================
+def build_1d_payload(
+    t_det_vals: np.ndarray, data_avg: np.ndarray, config: dict, system: SystemParameters
+) -> dict:
+    """Build standardized 1D data payload."""
+    return {
+        "data": data_avg,
+        "axes": {
+            "t_det": t_det_vals,
+            "tau_coh": np.array([config["tau_coh"]]),  # Single value as array
+            "T_wait": np.array([config["T_wait"]]),  # Single value as array
+        },
+        "system": system,
+        "config": config,
+        "metadata": {
+            "timestamp": datetime.now().isoformat(),
+            "simulation_type": "1d",
+            "n_phases": config["n_phases"],
+            "n_freqs": config["n_freqs"],
+        },
+    }
+
+
+def build_2d_payload(
+    two_d_datas: list,
+    times: np.ndarray,
+    times_T: np.ndarray,
+    config: dict,
+    system: SystemParameters,
+) -> dict:
+    """Build standardized 2D data payload."""
+    # Get tau_coh and t_det arrays for the first T_wait for axes info
+    tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
+
+    return {
+        "data": two_d_datas,
+        "axes": {
+            "t_det": t_det_vals,
+            "tau_coh": tau_coh_vals,
+            "T_wait": times_T,
+        },
+        "system": system,
+        "config": config,
+        "metadata": {
+            "timestamp": datetime.now().isoformat(),
+            "simulation_type": "2d",
+            "n_phases": config["n_phases"],
+            "n_freqs": config["n_freqs"],
+            "n_times_T": config["n_times_T"],
+        },
+    }
+
+
+# =============================
+# BACKWARD COMPATIBILITY WRAPPERS
 # =============================
 def save_1d_data(
-    t_det_vals: np.ndarray, data_avg: np.ndarray, config: dict, system
+    t_det_vals: np.ndarray, data_avg: np.ndarray, config: dict, system: SystemParameters
 ) -> Path:
-    """Save 1D polarization simulation data - wrapper for generalized function."""
-    data_dict = {
-        "t_det_vals": t_det_vals,
-        "data_avg": data_avg,
-        "tau_coh": config["tau_coh"],
-        "T_wait": config["T_wait"],
-    }
-    return save_spectroscopy_data(data_dict, config, system, "1d")
+    """Save 1D polarization simulation data - wrapper for unified function."""
+    payload = build_1d_payload(t_det_vals, data_avg, config, system)
+    return save_data(payload, config, system, "1d")
 
 
 def save_2d_data(
-    two_d_datas: list, times: np.ndarray, times_T: np.ndarray, config: dict, system
+    two_d_datas: list,
+    times: np.ndarray,
+    times_T: np.ndarray,
+    config: dict,
+    system: SystemParameters,
 ) -> Path:
-    """Save 2D polarization simulation data - wrapper for generalized function."""
-    data_dict = {
-        "times": times,
-        "times_T": times_T,
-        "two_d_datas": two_d_datas,
-        "n_times_T": config["n_times_T"],
-    }
-    return save_spectroscopy_data(data_dict, config, system, "2d")
+    """Save 2D polarization simulation data - wrapper for unified function."""
+    payload = build_2d_payload(two_d_datas, times, times_T, config, system)
+    return save_data(payload, config, system, "2d")
 
 
 # =============================
@@ -203,18 +291,25 @@ def create_system_parameters(config: dict) -> SystemParameters:
 
 
 # =============================
-# GENERALIZED SIMULATION FUNCTIONS
+# HARMONIZED SIMULATION FUNCTIONS
 # =============================
 def run_simulation(
     config: dict, system: SystemParameters, simulation_type: str
-) -> tuple:
-    """Run spectroscopy simulation based on type."""
+) -> dict:
+    """
+    Run spectroscopy simulation and return standardized payload.
+
+    Returns:
+        dict: Standardized payload with keys: data, axes, system, config, metadata
+    """
     max_workers = get_max_workers()
 
     if simulation_type == "1d":
-        return _run_1d_simulation(config, system, max_workers)
+        t_det_vals, data_avg = _run_1d_simulation(config, system, max_workers)
+        return build_1d_payload(t_det_vals, data_avg, config, system)
     elif simulation_type == "2d":
-        return _run_2d_simulation(config, system, max_workers)
+        two_d_datas, times, times_T = _run_2d_simulation(config, system, max_workers)
+        return build_2d_payload(two_d_datas, times, times_T, config, system)
     else:
         raise ValueError(f"Unsupported simulation type: {simulation_type}")
 
@@ -329,10 +424,19 @@ def print_simulation_summary(
 
 
 # =============================
-# MAIN SIMULATION RUNNERS
+# UNIFIED MAIN SIMULATION RUNNER
 # =============================
-def run_simulation_with_config(config: dict, simulation_type: str):
-    """Main simulation runner that takes a configuration dictionary."""
+def run_simulation_with_config(config: dict, simulation_type: str) -> str:
+    """
+    Unified simulation runner that returns standardized payload and path.
+
+    Args:
+        config: Dictionary containing simulation parameters
+        simulation_type: "1d" or "2d"
+
+    Returns:
+        str: Relative path from DATA_DIR for feed-forward compatibility
+    """
     start_time = time.time()
 
     ### Get parallel processing configuration
@@ -348,51 +452,51 @@ def run_simulation_with_config(config: dict, simulation_type: str):
     print(f"System configuration:")
     system.summary()
 
-    # RUN SIMULATION
-    result = run_simulation(config, system, simulation_type)  # SAVE DATA
-    print("\nSaving simulation data...")
+    # =============================
+    # RUN SIMULATION (returns standardized payload)
+    # =============================
+    payload = run_simulation(config, system, simulation_type)
 
-    if simulation_type == "1d":
-        t_det_vals, data_avg = result
-        save_path = save_1d_data(t_det_vals, data_avg, config, system)
-        result_data = data_avg
-    elif simulation_type == "2d":
-        two_d_datas, times, times_T = result
-        save_path = save_2d_data(two_d_datas, times, times_T, config, system)
-        result_data = two_d_datas
+    # =============================
+    # SAVE DATA
+    # =============================
+    print("\nSaving simulation data...")
+    save_path = save_data(payload, config, system, simulation_type)
 
     # =============================
     # SIMULATION SUMMARY
     # =============================
     elapsed_time = time.time() - start_time
-    print_simulation_summary(elapsed_time, result_data, save_path, simulation_type)
+    print_simulation_summary(elapsed_time, payload["data"], save_path, simulation_type)
 
     # Return relative path from DATA_DIR for feed-forward compatibility
     relative_path = save_path.relative_to(DATA_DIR)
-    return relative_path
+    return str(relative_path)
 
 
 # =============================
 # CONVENIENCE FUNCTIONS FOR BACKWARD COMPATIBILITY
 # =============================
-def run_1d_simulation_with_config(config: dict):
-    """Run 1D simulation - wrapper for generalized function."""
+def run_1d_simulation_with_config(config: dict) -> str:
+    """Run 1D simulation - wrapper for unified function."""
     return run_simulation_with_config(config, "1d")
 
 
-def run_2d_simulation_with_config(config: dict):
-    """Run 2D simulation - wrapper for generalized function."""
+def run_2d_simulation_with_config(config: dict) -> str:
+    """Run 2D simulation - wrapper for unified function."""
     return run_simulation_with_config(config, "2d")
 
 
 # =============================
 # GENERALIZED PLOTTING FUNCTIONS
 # =============================
-def find_latest_file(data_subdir: str, file_pattern: str = "*.pkl") -> Optional[Path]:
+def find_latest_file(data_subdir: str, file_pattern: str = "*.pkl*") -> Optional[Path]:
     """Find the most recent file matching pattern in a data subdirectory.
+
     Args:
         data_subdir: Subdirectory within DATA_DIR (e.g., '2d_spectroscopy/N_1/paper_eqs/100fs')
-        file_pattern: Glob pattern for file matching
+        file_pattern: Glob pattern for file matching (supports both .pkl and .pkl.gz)
+
     Returns:
         Path to the latest file or None if not found
     """
@@ -402,12 +506,16 @@ def find_latest_file(data_subdir: str, file_pattern: str = "*.pkl") -> Optional[
         print(f"❌ Data directory does not exist: {data_dir}")
         return None
 
-    # Look for files matching the pattern
-    files = list(data_dir.glob(file_pattern))
-
-    # For 2D data, also look for compressed files
-    if "2d_spectroscopy" in data_subdir:
+    # Search for both compressed and uncompressed pickle files
+    files = []
+    if file_pattern == "*.pkl*":
+        files.extend(list(data_dir.glob("*.pkl")))
         files.extend(list(data_dir.glob("*.pkl.gz")))
+    else:
+        files.extend(list(data_dir.glob(file_pattern)))
+        # Also try with .gz extension if original pattern didn't find anything
+        if not files and not file_pattern.endswith(".gz"):
+            files.extend(list(data_dir.glob(file_pattern + ".gz")))
 
     if not files:
         print(f"❌ No files matching '{file_pattern}' found in {data_dir}")
@@ -588,32 +696,36 @@ def plot_spectroscopy_data(config: dict, simulation_type: str) -> None:
 
 
 def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
-    """Plot 1D spectroscopy data."""
-    # Extract data
-    t_det_vals = data["t_det_vals"]
-    data_avg = data["data_avg"]
+    """Plot 1D spectroscopy data using standardized data structure."""
+    # Extract data from standardized structure
+    data_avg = data["data"]
+    axes = data["axes"]
+    t_det_vals = axes["t_det"]
+    tau_coh = axes["tau_coh"][0] if len(axes["tau_coh"]) > 0 else 300.0
+    T_wait = axes["T_wait"][0] if len(axes["T_wait"]) > 0 else 1000.0
     system = data["system"]
 
     print(f"✅ Data loaded with shape: {data_avg.shape}")
     print(f"   Time points: {len(t_det_vals)}")
-    print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
-
-    ### Plot time domain data
+    print(
+        f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs"
+    )  ### Plot time domain data
     if config.get("plot_time_domain", True):
         print("📊 Plotting time domain data...")
         try:
-            plot_fixed_tau_t(
+            fig = plot_fixed_tau_t(
                 t_det_vals=t_det_vals,
-                data_avg=data_avg,
-                tau_coh=data.get("tau_coh", 300),
-                T_wait=data.get("T_wait", 1000),
+                data=data_avg,
+                tau_coh=tau_coh,
+                T_wait=T_wait,
                 system=system,
                 spectral_components_to_plot=config.get(
                     "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
                 ),
-                output_dir=output_dir,
-                save=True,  # Add the missing save parameter
             )
+            filename = _build_1d_plot_filename(system, "time")
+            save_fig(fig, filename=filename, output_dir=output_dir)
+            plt.close(fig)  # Clean up memory
             print("✅ Time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
@@ -622,18 +734,24 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
     if config.get("plot_frequency_domain", True):
         print("📊 Plotting frequency domain data...")
         try:
-            frequencies, data_fft = compute_1d_fft_wavenumber(
-                t_det_vals, data_avg, system
-            )
-            plot_1d_frequency_spectrum(
-                frequencies=frequencies,
-                data_fft=data_fft,
-                system=system,
-                spectral_components_to_plot=config.get(
-                    "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
-                ),
-                output_dir=output_dir,
-            )
+            frequencies, data_fft = compute_1d_fft_wavenumber(t_det_vals, data_avg)
+
+            # Plot each spectral component separately
+            for component in config.get(
+                "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+            ):
+                fig = plot_1d_frequency_spectrum(
+                    frequencies=frequencies,
+                    data_fft=data_fft,
+                    system=system,
+                    spectral_components_to_plot=[
+                        component
+                    ],  # Plot one component at a time
+                )
+                filename = _build_1d_plot_filename(system, "freq", component)
+                save_fig(fig, filename=filename, output_dir=output_dir)
+                plt.close(fig)  # Clean up memory
+
             print("✅ Frequency domain plots completed!")
         except Exception as e:
             print(f"❌ Error in frequency domain plotting: {e}")
@@ -644,11 +762,14 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
 
 
 def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
-    """Plot 2D spectroscopy data."""
-    # Extract data
-    times = data["times"]
-    times_T = data["times_T"]
-    two_d_datas = data["two_d_datas"]
+    """Plot 2D spectroscopy data using standardized data structure."""
+    # Extract data from standardized structure
+    two_d_datas = data["data"]
+    axes = data["axes"]
+    times = np.arange(
+        -axes["tau_coh"][-1], axes["t_det"][-1], axes["t_det"][1] - axes["t_det"][0]
+    )  # Reconstruct times array
+    times_T = axes["T_wait"]
     system_data = data["system"]
 
     print(f"✅ 2D data loaded successfully!")
@@ -656,69 +777,88 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
     print(f"   Times_T shape: {times_T.shape}")
     print(f"   Data shape: {two_d_datas[0].shape}")
 
-    ### Plot time domain data if requested
-    if config.get("plot_time_domain", False):
-        print("📊 Plotting time domain data...")
+    ### Plot time domain data
+    if config.get("plot_time_domain", True):
+        print("📊 Plotting 2D time domain data...")
         try:
-            tau_cohs_0, t_dets_0 = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-            plot_2d_el_field(
-                data_xyz=(
-                    tau_cohs_0,
-                    t_dets_0,
-                    two_d_datas[0],
-                ),
-                domain="time",
-                output_dir=output_dir,
-                system=system_data,  # Add the missing system parameter
-                save=True,
-            )
+            for i, T_wait in enumerate(times_T):
+                if two_d_datas[i] is not None:
+                    tau_cohs, t_dets = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+
+                    fig = plot_2d_el_field(
+                        data_xyz=(tau_cohs, t_dets, two_d_datas[i]),
+                        domain="time",
+                        use_custom_colormap=True,
+                    )
+                    filename = _build_2d_plot_filename(
+                        system=system_data, domain="time", t_wait=T_wait
+                    )
+                    save_fig(fig, filename=filename, output_dir=output_dir)
+                    plt.show(fig)  # Show plot for interactive use
+                    plt.close(fig)  # Clean up memory
+
+            print("✅ 2D time domain plots completed!")
         except Exception as e:
-            print(f"❌ Error in time domain plotting: {e}")
+            print(f"❌ Error in 2D time domain plotting: {e}")
 
     ### Plot frequency domain data
-    extend_for = config.get("extend_for", (1, 2.3))
-    section = config.get("section", (1.5, 1.7, 1.5, 1.7))
-    spectral_components_to_plot = config.get(
-        "spectral_components_to_plot", ["imag", "abs", "real", "phase"]
-    )
+    if config.get("plot_frequency_domain", True):
+        print("📊 Plotting 2D frequency domain data...")
 
-    print(
-        f"📊 Plotting frequency domain data with extend_for={extend_for}, section={section}"
-    )
+        for component in config.get(
+            "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+        ):
+            try:
+                for i, T_wait in enumerate(times_T):
+                    if two_d_datas[i] is not None:
+                        # Apply extend_for and section processing                        extend_for = config.get("extend_for", (1, 3))
+                        section = config.get("section", (1.4, 1.8, 1.4, 1.8))
+                        tau_cohs, t_dets = get_tau_cohs_and_t_dets_for_T_wait(
+                            times, T_wait
+                        )
+                        t_dets_ext, tau_cohs_ext, data_ext = extend_time_axes(
+                            data=two_d_datas[i],
+                            t_det=t_dets,
+                            tau_coh=tau_cohs,
+                            pad_t_det=extend_for,
+                            pad_tau_coh=extend_for,
+                        )
+                        # PLOT THE time domain data
+                        """fig = plot_2d_el_field(
+                            data_xyz=(t_dets_ext, tau_cohs_ext, data_ext),
+                            t_wait=T_wait,  # Plot specific T_wait
+                            times_T=times_T,
+                            times=times,
+                            component=component,
+                            extend_for=extend_for,
+                            section=section,
+                        )"""
 
-    for component in spectral_components_to_plot:
-        print(f"   Generating {component} plot...")
+                        fig = plot_2d_el_field(
+                            data_xyz=(t_dets_ext, tau_cohs_ext, data_ext),
+                            t_wait=T_wait,  # Plot specific T_wait
+                            times_T=times_T,
+                            times=times,
+                            component=component,
+                            extend_for=extend_for,
+                            section=section,
+                        )
+                        filename = _build_2d_plot_filename(
+                            system=system_data,
+                            domain="freq",
+                            component=component,
+                            t_wait=T_wait,
+                        )
+                        save_fig(fig, filename=filename, output_dir=output_dir)
+                        plt.close(fig)  # Clean up memory
 
-        plot_args = {
-            "component": component,
-            "output_dir": output_dir,
-            "section": section,
-            "system": system_data,
-            "save": True,
-        }
-
-        try:
-            extend_and_plot_results(
-                two_d_datas,
-                times_T=times_T,
-                times=times,
-                extend_for=extend_for,
-                **plot_args,
-            )
-            print(f"✅ {component} plot completed!")
-
-            # Force garbage collection after each plot to free memory
-            plt.close("all")
-            gc.collect()
-
-            # Check memory usage after each plot
-            memory_usage = psutil.Process().memory_info().rss / 1024 / 1024 / 1024  # GB
-            print(f"  Memory usage after {component}: {memory_usage:.2f} GB")
-
-        except Exception as e:
-            print(f"❌ Error plotting {component}: {e}")
-            plt.close("all")
-            gc.collect()
+                print(f"✅ 2D {component} component plots completed!")
+            except Exception as e:
+                print(
+                    f"❌ Error plotting 2D {component} component: {e}"
+                )  # Clean up memory
+    plt.close("all")
+    gc.collect()
 
 
 def plot_2d_from_filepath(filepath: Path, config: dict) -> None:
@@ -876,3 +1016,78 @@ def plot_1d_spectroscopy_data(config: dict) -> None:
 def plot_2d_spectroscopy_data(config: dict) -> None:
     """Plot 2D spectroscopy data - convenience wrapper."""
     plot_spectroscopy_data(config, simulation_type="2d")
+
+
+def _build_2d_plot_filename(  # TODO IMPLEMENT THIS
+    system: SystemParameters,
+    domain: Literal["time", "freq"],
+    component: Literal["real", "imag", "abs", "phase"] | None = None,
+    t_wait: float = np.inf,
+) -> str:
+    """
+    Build filename for 2D electric field plots.
+
+    Parameters
+    ----------
+    system : SystemParameters
+        System parameters containing physical constants.
+    domain : {"time", "freq"}
+        Domain of the data.
+    component : {"real", "imag", "abs", "phase"}
+        component of data component.
+    t_wait : float
+        Waiting time T (fs).
+
+    Returns
+    -------
+    str
+        Generated filename with variable extension.
+    """
+    ode_solver = system.ODE_Solver if hasattr(system, "ODE_Solver") else None
+
+    filename_parts = [f"2D_polarization"]
+
+    if domain == "freq":
+        if component is None:
+            raise ValueError("`component` must be specified when domain='freq'.")
+        filename_parts.append(f"{component}_spectrum")
+    else:  # domain == "time"
+        filename_parts.append("time_domain")
+
+    # System-specific parameters
+    filename_parts.extend(
+        [
+            f"N={system.N_atoms}",
+            f"wA={system.omega_A:.2f}",
+            f"muA={system.mu_A:.0f}",
+        ]
+    )
+
+    # Add N_atoms=2 specific parameters
+    if system.N_atoms == 2:
+        filename_parts.extend(
+            [
+                f"wb={system.omega_B/system.omega_A:.2f}wA",
+                f"J={system.J:.2f}",
+                f"mub={system.mu_B/system.mu_A:.0f}muA",
+            ]
+        )
+
+    # Common parameters for both N_atoms=1 and N_atoms=2
+    filename_parts.extend(
+        [
+            f"wL={system.omega_laser / system.omega_A:.1f}wA",
+            f"E0={system.E0:.2e}",
+            f"rabigen={system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2",
+        ]
+    )
+
+    # Add waiting time if not infinite
+    if t_wait != np.inf:
+        filename_parts.append(f"T={t_wait:.2f}fs")
+
+    # Add solver information to filename
+    if ode_solver is not None:
+        filename_parts.append(f"with_{ode_solver}")
+
+    return "_".join(filename_parts) + "." + DEFAULT_FIG_FORMAT

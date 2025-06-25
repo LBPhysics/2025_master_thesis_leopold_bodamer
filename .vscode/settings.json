@@ -125,7 +125,6 @@
         "**/*.glsdefs": true,
         "**/*.gnuplot": true,
         "**/*.gtex": true,
-        "**/*.gz": true,
         "**/*.hd": true,
         "**/*.hst": true,
         "**/*.idv": true,

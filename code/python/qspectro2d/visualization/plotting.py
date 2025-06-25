@@ -6,7 +6,10 @@ from qspectro2d.core.pulse_sequences import PulseSequence
 import matplotlib.pyplot as plt
 import os
 from typing import Literal, Union
-from pathlib import Path
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+from config.mpl_tex_settings import COLORS, LINE_STYLES, MARKERS
 
 
 def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
@@ -27,21 +30,17 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     # Create figure and axis if not provided
     fig = None
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot combined envelope
+        fig, ax = plt.subplots(figsize=(10, 6))  # Plot combined envelope
     ax.plot(
         times,
         envelope,
         label=r"$\text{Combined Envelope}$",
-        linestyle="solid",
+        linestyle=LINE_STYLES[0],  # "solid"
         alpha=0.8,
-        color="C0",
-    )
-
-    # Styles for up to three pulses
-    linestyles = ["dashed", "dashdot", "dotted"]
-    colors = ["C1", "C2", "C3"]
+        color=list(COLORS.keys())[0],  # "C0"
+    )  # Styles for up to three pulses
+    linestyles = LINE_STYLES[1:4]  # ["dashed", "dashdot", "dotted"]
+    colors = [list(COLORS.keys())[i] for i in [1, 2, 3]]  # ["C1", "C2", "C3"]
 
     # Plot individual envelopes and annotations
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
@@ -65,19 +64,17 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
             linestyle=linestyles[idx % len(linestyles)],
             alpha=0.6,
             color=colors[idx % len(colors)],
-        )
-
-        # Annotate pulse key points
+        )  # Annotate pulse key points
         ax.axvline(
             t_peak - Delta_width,
-            linestyle="dotted",
+            linestyle=LINE_STYLES[3],  # "dotted"
             label=rf"$t_{{peak, {idx + 1}}} - \Delta_{{{idx + 1}}}$",
             alpha=0.4,
             color=colors[idx % len(colors)],
         )
         ax.axvline(
             t_peak,
-            linestyle="solid",
+            linestyle=LINE_STYLES[0],  # "solid"
             label=rf"$t_{{peak, {idx + 1}}}$",
             alpha=0.8,
             color=colors[idx % len(colors)],
@@ -85,7 +82,7 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
         )
         ax.axvline(
             t_peak + Delta_width,
-            linestyle="dotted",
+            linestyle=LINE_STYLES[3],  # "dotted"
             label=rf"$t_{{peak, {idx + 1}}} + \Delta_{{{idx + 1}}}$",
             alpha=0.4,
             color=colors[idx % len(colors)],
@@ -96,6 +93,7 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     ax.set_ylabel(r"Envelope Amplitude")
     ax.set_title(r"Pulse Envelopes for Up to Three Pulses")
     ax.legend(loc="upper right", fontsize="small")
+
     return fig, ax
 
 
@@ -117,33 +115,31 @@ def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     # Create figure and axis if not provided
     fig = None
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot real and imaginary parts
+        fig, ax = plt.subplots(figsize=(10, 6))  # Plot real and imaginary parts
     ax.plot(
         times,
         np.real(E_field),
         label=r"$\mathrm{Re}[E(t)]$",
-        linestyle="solid",
-        color="C0",
+        linestyle=LINE_STYLES[0],  # "solid"
+        color=list(COLORS.keys())[0],  # "C0"
     )
     ax.plot(
         times,
         np.imag(E_field),
         label=r"$\mathrm{Im}[E(t)]$",
-        linestyle="dashed",
-        color="C1",
+        linestyle=LINE_STYLES[1],  # "dashed"
+        color=list(COLORS.keys())[1],  # "C1"
     )
 
     # Styles for up to three pulses
-    colors = ["C2", "C3", "C4"]
+    colors = [list(COLORS.keys())[i] for i in [2, 3, 4]]  # ["C2", "C3", "C4"]
 
     # Plot pulse peak times
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
         t_peak = pulse.pulse_peak_time
         ax.axvline(
             t_peak,
-            linestyle="dotted",
+            linestyle=LINE_STYLES[3],  # "dotted"
             label=rf"$t_{{peak, {idx + 1}}}$",
             color=colors[idx % len(colors)],
         )
@@ -174,40 +170,38 @@ def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     # Create figure and axis if not provided
     fig = None
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))
-
-    # Plot real and imaginary parts
+        fig, ax = plt.subplots(figsize=(10, 6))  # Plot real and imaginary parts
     ax.plot(
         times,
         np.real(Epsilon_field),
         label=r"$\mathrm{Re}[\varepsilon(t)]$",
-        linestyle="solid",
-        color="C3",
+        linestyle=LINE_STYLES[0],  # "solid"
+        color=list(COLORS.keys())[3],  # "C3"
     )
     ax.plot(
         times,
         np.imag(Epsilon_field),
         label=r"$\mathrm{Im}[\varepsilon(t)]$",
-        linestyle="dashed",
-        color="C4",
+        linestyle=LINE_STYLES[1],  # "dashed"
+        color=list(COLORS.keys())[4],  # "C4"
     )
     ax.plot(
         times,
         np.abs(Epsilon_field),
         label=r"$|\varepsilon(t)|$",
-        linestyle="dashdot",
-        color="C5",
+        linestyle=LINE_STYLES[2],  # "dashdot"
+        color=list(COLORS.keys())[5],  # "C5"
     )
 
     # Styles for up to three pulses
-    colors = ["C0", "C1", "C2"]
+    colors = [list(COLORS.keys())[i] for i in [0, 1, 2]]  # ["C0", "C1", "C2"]
 
     # Plot pulse peak times
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
         t_peak = pulse.pulse_peak_time
         ax.axvline(
             t_peak,
-            linestyle="dotted",
+            linestyle=LINE_STYLES[3],  # "dotted"
             label=rf"$t_{{peak, {idx + 1}}}$",
             color=colors[idx % len(colors)],
         )
@@ -259,7 +253,7 @@ def plot_all_pulse_components(
 
 def plot_fixed_tau_t(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     """
-    Plot the data for a fixed tau_coh and T.
+    Plot the data for a fixed tau_coh and T_wait.
 
     Parameters
     ----------
@@ -288,24 +282,24 @@ def plot_fixed_tau_t(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     plt.plot(
         t_det_vals,
         np.real(data),
-        color="C1",
-        linestyle="dashed",
+        color=list(COLORS.keys())[1],  # "C1"
+        linestyle=LINE_STYLES[1],  # "dashed"
         linewidth=0.75,
         label=rf"$\mathrm{{Re}}[{f}(t)]$",
     )
     plt.plot(
         t_det_vals,
         np.imag(data),
-        color="C2",
-        linestyle="dotted",
+        color=list(COLORS.keys())[2],  # "C2"
+        linestyle=LINE_STYLES[2],  # "dotted"
         linewidth=0.75,
         label=rf"$\mathrm{{Im}}[{f}(t)]$",
     )
     plt.plot(
         t_det_vals,
         np.abs(data),
-        color="C0",
-        linestyle="solid",
+        color=list(COLORS.keys())[0],  # "C0"
+        linestyle=LINE_STYLES[0],  # "solid"
         label=rf"$|{f}(t)|$",
     )
 
@@ -349,10 +343,7 @@ def plot_fixed_tau_t(t_det_vals: np.ndarray, data: np.ndarray, **kwargs: dict):
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.tight_layout()
 
-    # Only show the plot if not being saved elsewhere
-    show = kwargs.get("show", True)
-    if show:
-        plt.show()
+    plt.show()
 
     return fig
 
@@ -402,21 +393,19 @@ def plot_example_evo(
     # =============================
     fig, axes = plt.subplots(
         len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True
-    )
-
-    # Plot electric field
+    )  # Plot electric field
     axes[0].plot(
         times_plot,
         np.real(E_total),
-        color="C0",
-        linestyle="solid",
+        color=list(COLORS.keys())[0],  # "C0"
+        linestyle=LINE_STYLES[0],  # "solid"
         label=r"$\mathrm{Re}[E(t)]$",
     )
     axes[0].plot(
         times_plot,
         np.imag(E_total),
-        color="C1",
-        linestyle="dashed",
+        color=list(COLORS.keys())[1],  # "C1"
+        linestyle=LINE_STYLES[1],  # "dashed"
         label=r"$\mathrm{Im}[E(t)]$",
     )
     axes[0].set_ylabel(r"$E(t) / E_0$")
@@ -435,10 +424,24 @@ def plot_example_evo(
             )
         else:
             label = r"$\mathrm{Re}\langle \mu \rangle$"
-        ax.plot(times_plot, data, color=f"C{(idx+5)%10}", linestyle="solid")
-        ax.axvline(0, color="C2", linestyle="dashed", label="Pulse0")
-        ax.axvline(tau_coh, color="C3", linestyle="dashdot", label="Pulse1")
-        ax.axvline(tau_coh + T_wait, color="C4", linestyle="dotted", label="Pulse2")
+        ax.plot(
+            times_plot, data, color=f"C{(idx+5)%10}", linestyle=LINE_STYLES[0]
+        )  # "solid"
+        ax.axvline(
+            0, color=list(COLORS.keys())[2], linestyle=LINE_STYLES[1], label="Pulse0"
+        )  # "C2", "dashed"
+        ax.axvline(
+            tau_coh,
+            color=list(COLORS.keys())[3],
+            linestyle=LINE_STYLES[2],
+            label="Pulse1",
+        )  # "C3", "dashdot"
+        ax.axvline(
+            tau_coh + T_wait,
+            color=list(COLORS.keys())[4],
+            linestyle=LINE_STYLES[3],
+            label="Pulse2",
+        )  # "C4", "dotted"
         ax.set_ylabel(label)
 
     # Set x-label only on the bottom subplot
@@ -474,10 +477,7 @@ def plot_example_evo(
     )
     plt.tight_layout()
 
-    # Only show the plot if not being saved elsewhere
-    show = kwargs.get("show", True)
-    if show:
-        plt.show()
+    plt.show()
 
     return fig
 
@@ -487,12 +487,8 @@ def plot_2d_el_field(
     t_wait: float = np.inf,
     domain: Literal["time", "freq"] = "time",
     component: Literal["real", "imag", "abs", "phase"] = "real",
-    output_dir: Union[Path, None] = None,
-    ode_solver: Union[str, None] = None,
-    save: bool = False,
     use_custom_colormap: bool = False,
     section: Union[tuple[float, float, float, float], None] = None,
-    system: Union[SystemParameters, None] = None,
 ) -> Union[plt.Figure, None]:
     """
     Create a color plot of 2D electric field data for positive x and y values.
@@ -513,19 +509,11 @@ def plot_2d_el_field(
         frequency-domain plots (10^4 cm^-1).
     component : {"real", "imag", "abs", "phase"}, default "real"
         Component of complex data to plot. Used for both title and data processing.
-    output_dir : Path or None, optional
-        Directory path to save the plot. Must exist if save=True.
-    ode_solver : str or None, optional
-        ODE solver name to include in filename for identification.
-    save : bool, default False
-        If True, saves the plot to output_dir with generated filename.
     use_custom_colormap : bool, default False
         If True, uses custom red-white-blue colormap centered at zero.
         Automatically set to True for "real", "imag", and "phase" components.
     section : tuple[float, float, float, float] or None, optional
         Crop section as (x_min, x_max, y_min, y_max) to zoom into specific region.
-    system : SystemParameters or None, optional
-        System parameters required for filename generation when save=True.
 
     Returns
     -------
@@ -556,29 +544,12 @@ def plot_2d_el_field(
     x = np.real(x)
     y = np.real(y)
 
-    data = np.array(data, dtype=np.complex128)
-
+    data = np.array(data, dtype=np.complex128)  # why did you do this?
     # =============================
     # SECTION CROPPING
     # =============================
     if section is not None:
-        x_min, x_max, y_min, y_max = section
-
-        # Validate coordinates are within data range
-        x_min = max(x_min, np.min(x))
-        x_max = min(x_max, np.max(x))
-        y_min = max(y_min, np.min(y))
-        y_max = min(y_max, np.max(y))
-
-        x_indices = np.where((x >= x_min) & (x <= x_max))[0]
-        y_indices = np.where((y >= y_min) & (y <= y_max))[0]
-
-        x_indices = x_indices[x_indices < data.shape[1]]
-        y_indices = y_indices[y_indices < data.shape[0]]
-
-        data = data[np.ix_(y_indices, x_indices)]
-        x = x[x_indices]
-        y = y[y_indices]
+        x, y, data = crop_2d_data_to_section(x, y, data, section)
 
     if np.abs(data).max() == 0:
         raise ValueError("Data array is all zeros, cannot normalize.")
@@ -656,11 +627,11 @@ def plot_2d_el_field(
     cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
 
     # =============================
-    # PLOTTING
+    # GENERATE FIGURE
     # =============================
-    fig = plt.figure(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(10, 8))
     # Create the pcolormesh plot for the 2D data
-    pcolor_plot = plt.pcolormesh(
+    pcolor_plot = ax.pcolormesh(
         x,  # <- ts
         y,  # <- taus
         data,  # <- data[taus, ts]
@@ -668,75 +639,17 @@ def plot_2d_el_field(
         cmap=colormap,
         norm=norm,
     )
+    cbar = fig.colorbar(pcolor_plot, ax=ax, label=cbarlabel)
 
-    """
     # Add contour lines with different styles for positive and negative values
-    if component in ("real", "imag", "phase"):
-        # Determine contour levels based on the data range
-        vmax = max(abs(np.min(data)), abs(np.max(data)))
-        vmin = -vmax
-
-        # Create evenly spaced levels for both positive and negative regions
-        level_count = 8  # Number of contour levels in each region (positive/negative)
-        if vmax > 0:
-            positive_levels = np.linspace(0.05 * vmax, 0.95 * vmax, level_count)
-            negative_levels = np.linspace(0.95 * vmin, 0.05 * vmin, level_count)
-
-            # Plot positive contours (solid lines)
-            pos_contour = plt.contour(
-                x,
-                y,
-                data,
-                levels=positive_levels,
-                colors="black",
-                linewidths=0.7,
-                alpha=0.8,
-            )
-
-            # Plot negative contours (dashed lines)
-            neg_contour = plt.contour(
-                x,
-                y,
-                data,
-                levels=negative_levels,
-                colors="black",
-                linewidths=0.7,
-                alpha=0.8,
-                linestyles="dashed",
-            )
-
-            # Optional: Add contour labels to every other contour line
-            # plt.clabel(pos_contour, inline=True, fontsize=8, fmt='%.2f', levels=positive_levels[::2])
-            # plt.clabel(neg_contour, inline=True, fontsize=8, fmt='%.2f', levels=negative_levels[::2])
-    else:
-        # For abs and phase, use standard contours
-        level_count = 8
-        contour_plot = plt.contour(
-            x,
-            y,
-            data,
-            levels=level_count,
-            colors="black",
-            linewidths=0.7,
-            alpha=0.8,
-        )
-        # Optional: Add contour labels
-        plt.clabel(
-            contour_plot,
-            inline=True,
-            fontsize=8,
-            fmt="%.2f",
-            levels=contour_plot.levels[::2],
-        )
-    """
-    # Add colorbar
-    cbar = plt.colorbar(label=cbarlabel)
+    # add_custom_contour_lines(x, y, data, component) # TODO UNCOMMENT IF NEEDED
 
     # Improve overall plot appearance
-    plt.title(title)
-    plt.xlabel(x_title)
-    plt.ylabel(y_title)
-    plt.tight_layout()
+    ax.set_title(title)
+    ax.set_xlabel(x_title)
+    ax.set_ylabel(y_title)
+
+    fig.tight_layout()
 
     """# Add a border around the plot for better visual definition
     plt.gca().spines["top"].set_visible(True)
@@ -748,102 +661,9 @@ def plot_2d_el_field(
     plt.gca().spines["bottom"].set_linewidth(1.5)
     plt.gca().spines["left"].set_linewidth(1.5)"""
 
-    # =============================
-    # SAVE OR SHOW
-    # =============================
-    if save and output_dir and system is not None:
-        output_path = Path(output_dir)
-        if not output_path.is_dir():
-            raise ValueError(f"Output directory {output_dir} does not exist.")
-
-        filename = _build_2d_plot_filename(
-            system, domain, component, t_wait, ode_solver
-        )
-        save_path = output_path / filename
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
-        print(f"Plot saved to: {save_path}")
-    elif save:
-        print(
-            "Plot not saved. Ensure 'save' is True, 'output_dir' is specified, and 'system' is provided."
-        )
-
     plt.show()
 
     return fig
-
-
-def _build_2d_plot_filename(
-    system: SystemParameters,
-    domain: Literal["time", "freq"],
-    component: Literal["real", "imag", "abs", "phase"],
-    t_wait: float,
-    ode_solver: Union[str, None],
-) -> str:
-    """
-    Build filename for 2D electric field plots.
-
-    Parameters
-    ----------
-    system : SystemParameters
-        System parameters containing physical constants.
-    domain : {"time", "freq"}
-        Domain of the data.
-    component : {"real", "imag", "abs", "phase"}
-        component of data component.
-    t_wait : float
-        Waiting time T (fs).
-    ode_solver : str or None
-        ODE solver name for filename.
-
-    Returns
-    -------
-    str
-        Generated filename with .svg extension.
-    """
-    filename_parts = [f"2D_polarization"]
-
-    if domain == "freq":
-        filename_parts.append(f"{component}_spectrum")
-    else:  # domain == "time"
-        filename_parts.append("time_domain")
-
-    # System-specific parameters
-    filename_parts.extend(
-        [
-            f"N={system.N_atoms}",
-            f"wA={system.omega_A:.2f}",
-            f"muA={system.mu_A:.0f}",
-        ]
-    )
-
-    # Add N_atoms=2 specific parameters
-    if system.N_atoms == 2:
-        filename_parts.extend(
-            [
-                f"wb={system.omega_B/system.omega_A:.2f}wA",
-                f"J={system.J:.2f}",
-                f"mub={system.mu_B/system.mu_A:.0f}muA",
-            ]
-        )
-
-    # Common parameters for both N_atoms=1 and N_atoms=2
-    filename_parts.extend(
-        [
-            f"wL={system.omega_laser / system.omega_A:.1f}wA",
-            f"E0={system.E0:.2e}",
-            f"rabigen={system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2",
-        ]
-    )
-
-    # Add waiting time if not infinite
-    if t_wait != np.inf:
-        filename_parts.append(f"T={t_wait:.2f}fs")
-
-    # Add solver information to filename
-    if ode_solver is not None:
-        filename_parts.append(f"with_{ode_solver}")
-
-    return "_".join(filename_parts) + ".svg"
 
 
 def plot_example_polarization(
@@ -875,24 +695,36 @@ def plot_example_polarization(
         times,
         np.abs(P_full),
         label=r"$|P_{\mathrm{full}}(t)|$",
-        color="C0",
-        linestyle="solid",
+        color=list(COLORS.keys())[0],  # "C0"
+        linestyle=LINE_STYLES[0],  # "solid"
     )
     plt.plot(
-        times, np.abs(P_only0), label=r"$|P_0(t)|$", color="C1", linestyle="dashed"
+        times,
+        np.abs(P_only0),
+        label=r"$|P_0(t)|$",
+        color=list(COLORS.keys())[1],
+        linestyle=LINE_STYLES[1],  # "C1", "dashed"
     )
     plt.plot(
-        times, np.abs(P_only1), label=r"$|P_1(t)|$", color="C2", linestyle="dashdot"
+        times,
+        np.abs(P_only1),
+        label=r"$|P_1(t)|$",
+        color=list(COLORS.keys())[2],
+        linestyle=LINE_STYLES[2],  # "C2", "dashdot"
     )
     plt.plot(
-        times, np.abs(P_only2), label=r"$|P_2(t)|$", color="C3", linestyle="dotted"
+        times,
+        np.abs(P_only2),
+        label=r"$|P_2(t)|$",
+        color=list(COLORS.keys())[3],
+        linestyle=LINE_STYLES[3],  # "C3", "dotted"
     )
     plt.plot(
         times,
         np.abs(P_full - P_only0 - P_only1 - P_only2),
         label=r"$|P^{3}(t)|$",
-        color="C4",
-        linestyle="solid",
+        color=list(COLORS.keys())[4],  # "C4"
+        linestyle=LINE_STYLES[0],  # "solid"
     )
     plt.xlabel(r"$t_{\mathrm{det}}$ [fs]")
     plt.ylabel(r"$|P(t)|$")
@@ -920,11 +752,7 @@ def plot_example_polarization(
         )
 
     plt.tight_layout()
-
-    # Only show the plot if not being saved elsewhere
-    show = kwargs.get("show", True)
-    if show:
-        plt.show()
+    plt.show()
 
     return fig
 
@@ -955,16 +783,16 @@ def plot_1d_frequency_spectrum(
     Returns:
         matplotlib.figure.Figure: The figure object.
     """
-    fig = plt.figure(figsize=(10, 6))
-
-    # Plot different representations based on component
+    fig = plt.figure(
+        figsize=(10, 6)
+    )  # Plot different representations based on component
     if component == "abs":
         plt.plot(
             nu_vals,
             np.abs(spectrum_data),
             label=r"$|S(\omega)|$",
-            color="C0",
-            linestyle="solid",
+            color=list(COLORS.keys())[0],  # "C0"
+            linestyle=LINE_STYLES[0],  # "solid"
         )
         ylabel = r"$|S(\omega)|$"
     elif component == "real":
@@ -972,8 +800,8 @@ def plot_1d_frequency_spectrum(
             nu_vals,
             np.real(spectrum_data),
             label=r"$\mathrm{Re}[S(\omega)]$",
-            color="C1",
-            linestyle="solid",
+            color=list(COLORS.keys())[1],  # "C1"
+            linestyle=LINE_STYLES[0],  # "solid"
         )
         ylabel = r"$\mathrm{Re}[S(\omega)]$"
     elif component == "imag":
@@ -981,8 +809,8 @@ def plot_1d_frequency_spectrum(
             nu_vals,
             np.imag(spectrum_data),
             label=r"$\mathrm{Im}[S(\omega)]$",
-            color="C2",
-            linestyle="solid",
+            color=list(COLORS.keys())[2],  # "C2"
+            linestyle=LINE_STYLES[0],  # "solid"
         )
         ylabel = r"$\mathrm{Im}[S(\omega)]$"
     elif component == "phase":
@@ -990,8 +818,8 @@ def plot_1d_frequency_spectrum(
             nu_vals,
             np.angle(spectrum_data),
             label=r"$\mathrm{Arg}[S(\omega)]$",
-            color="C3",
-            linestyle="solid",
+            color=list(COLORS.keys())[3],  # "C3"
+            linestyle=LINE_STYLES[0],  # "solid"
         )
         ylabel = r"$\mathrm{Arg}[S(\omega)]$ [rad]"
     else:
@@ -999,8 +827,8 @@ def plot_1d_frequency_spectrum(
             nu_vals,
             np.abs(spectrum_data),
             label=r"$|S(\omega)|$",
-            color="C0",
-            linestyle="solid",
+            color=list(COLORS.keys())[0],  # "C0"
+            linestyle=LINE_STYLES[0],  # "solid"
         )
         ylabel = r"$|S(\omega)|$"
 
@@ -1079,3 +907,121 @@ def plot_1d_frequency_spectrum(
         plt.show()
 
     return fig
+
+
+# =============================
+# HELPER FUNCTIONS
+# =============================
+
+
+def crop_2d_data_to_section(
+    x: np.ndarray,
+    y: np.ndarray,
+    data: np.ndarray,
+    section: tuple[float, float, float, float],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Crop 2D data to a specified rectangular section.
+
+    Parameters:
+        x (np.ndarray): X-axis coordinate array
+        y (np.ndarray): Y-axis coordinate array
+        data (np.ndarray): 2D data array with shape (len(y), len(x))
+        section (tuple): Section boundaries as (x_min, x_max, y_min, y_max)
+
+    Returns:
+        tuple: Cropped (x, y, data) arrays
+    """
+    x_min, x_max, y_min, y_max = section
+
+    ### Validate coordinates are within data range
+    x_min = max(x_min, np.min(x))
+    x_max = min(x_max, np.max(x))
+    y_min = max(y_min, np.min(y))
+    y_max = min(y_max, np.max(y))
+
+    ### Find indices within the specified section
+    x_indices = np.where((x >= x_min) & (x <= x_max))[0]
+    y_indices = np.where((y >= y_min) & (y <= y_max))[0]
+
+    ### Ensure indices are within data array bounds
+    x_indices = x_indices[x_indices < data.shape[1]]
+    y_indices = y_indices[y_indices < data.shape[0]]
+
+    ### Crop data and coordinate arrays
+    cropped_data = data[np.ix_(y_indices, x_indices)]
+    cropped_x = x[x_indices]
+    cropped_y = y[y_indices]
+
+    return cropped_x, cropped_y, cropped_data
+
+
+def add_custom_contour_lines(
+    x: np.ndarray, y: np.ndarray, data: np.ndarray, component: str, level_count: int = 8
+) -> None:
+    """
+    Add custom contour lines to a 2D plot with different styles for positive/negative values.
+
+    Parameters:
+        x (np.ndarray): X-axis coordinate array
+        y (np.ndarray): Y-axis coordinate array
+        data (np.ndarray): 2D data array to contour
+        component (str): Data component type ("real", "imag", "phase", "abs")
+        level_count (int): Number of contour levels in each region (positive/negative)
+    """
+    ### Add contour lines with different styles for positive and negative values
+    if component in ("real", "imag", "phase"):
+        ### Determine contour levels based on the data range
+        vmax = max(abs(np.min(data)), abs(np.max(data)))
+        vmin = -vmax
+
+        ### Create evenly spaced levels for both positive and negative regions
+        if vmax > 0:
+            positive_levels = np.linspace(0.05 * vmax, 0.95 * vmax, level_count)
+            negative_levels = np.linspace(0.95 * vmin, 0.05 * vmin, level_count)
+
+            ### Plot positive contours (solid lines)
+            pos_contour = plt.contour(
+                x,
+                y,
+                data,
+                levels=positive_levels,
+                colors="black",
+                linewidths=0.7,
+                alpha=0.8,
+            )
+
+            ### Plot negative contours (dashed lines)
+            neg_contour = plt.contour(
+                x,
+                y,
+                data,
+                levels=negative_levels,
+                colors="black",
+                linewidths=0.7,
+                alpha=0.8,
+                linestyles="dashed",
+            )
+
+            ### Optional: Add contour labels to every other contour line
+            # plt.clabel(pos_contour, inline=True, fontsize=8, fmt='%.2f', levels=positive_levels[::2])
+            # plt.clabel(neg_contour, inline=True, fontsize=8, fmt='%.2f', levels=negative_levels[::2])
+    else:
+        ### For abs and phase, use standard contours
+        contour_plot = plt.contour(
+            x,
+            y,
+            data,
+            levels=level_count,
+            colors="black",
+            linewidths=0.7,
+            alpha=0.8,
+        )
+        ### Optional: Add contour labels
+        plt.clabel(
+            contour_plot,
+            inline=True,
+            fontsize=8,
+            fmt="%.2f",
+            levels=contour_plot.levels[::2],
+        )

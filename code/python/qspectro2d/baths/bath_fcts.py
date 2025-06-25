@@ -105,7 +105,7 @@ def power_spectrum_func_ohmic(w, args):
 
 
 # =============================
-# BATH FUNCTIONS defined in the paper
+# BATH FUNCTIONS as defined in the paper
 # =============================
 def spectral_density_func_paper(w, args):
     """

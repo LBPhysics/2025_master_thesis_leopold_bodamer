@@ -422,10 +422,6 @@ def compute_1d_polarization(
 
     # First pulse
     t_peak_pulse0 = 0
-    pulse_0 = (
-        t_peak_pulse0,
-        phi_0,
-    )  # Instead of directly constructing PulseSequence, use from_pulse_specs:
     pulse_seq_0 = PulseSequence.from_pulse_specs(
         system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
     )
@@ -448,7 +444,6 @@ def compute_1d_polarization(
             times[idx_start_pulse1]
         ]  # Handle overlapping pulses: If the second pulse starts before the first pulse ends, combine their contributions
     t_peak_pulse1 = tau_coh
-    pulse_1 = (t_peak_pulse1, phi_1)
     pulse_seq_1 = PulseSequence.from_pulse_specs(
         system=system,
         pulse_specs=[
@@ -471,7 +466,6 @@ def compute_1d_polarization(
         ]  # idx_start_pulse2 : idx_end_pulse2 + 1    # If the second pulse starts before the first pulse ends, combine their contributions
     phi_2 = 0  # FIXED PHASE!
     t_peak_pulse2 = tau_coh + T_wait
-    pulse_f = (t_peak_pulse2, phi_2)
     pulse_seq_f = PulseSequence.from_pulse_specs(
         system=system,
         pulse_specs=[
@@ -717,7 +711,6 @@ def compute_2d_polarization(
         (len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64
     )  # information about the first pulse
     t_peak_pulse0 = 0
-    pulse_0 = (t_peak_pulse0, phi_0)
     pulse_seq_0 = PulseSequence.from_pulse_specs(
         system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
     )
@@ -748,7 +741,6 @@ def compute_2d_polarization(
             times_1 = [times[idx_start_pulse1]]
 
         t_peak_pulse1 = tau_coh
-        pulse_1 = (t_peak_pulse1, phi_1)
         pulse_seq_1 = PulseSequence.from_pulse_specs(
             system=system,
             pulse_specs=[
@@ -766,7 +758,6 @@ def compute_2d_polarization(
             times_2 = [times[-1]]
 
         phi_2 = 0
-        pulse_f = (t_peak_pulse2, phi_2)
         pulse_seq_f = PulseSequence.from_pulse_specs(
             system=system,
             pulse_specs=[

@@ -3,13 +3,159 @@ from qspectro2d.visualization.plotting import plot_2d_el_field
 from qspectro2d.spectroscopy.calculations import (
     get_tau_cohs_and_t_dets_for_T_wait,
 )
-from qutip import basis, ket2dm, tensor, Qobj, mesolve, brmesolve, expect
+
 import numpy as np
 
 
 # ##########################
 # functions for post-processing and plotting
 # ##########################
+def extend_time_axes(
+    data: np.ndarray,
+    t_det: np.ndarray,
+    tau_coh: np.ndarray = None,
+    pad_t_det: tuple[float, float] = (1, 1),
+    pad_tau_coh: tuple[float, float] = (1, 1),
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray]:
+    """
+    Extend time axes by padding for both 1D and 2D spectroscopy data.
+
+    This function handles both 1D and 2D cases automatically based on input dimensions.
+    For 1D: extends t_det axis only. For 2D: extends both tau_coh and t_det axes.
+    The padding is specified as multipliers, where values >= 1 indicate how much
+    to extend each axis. Data types are preserved during the operation.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Spectroscopy data array.
+        - 1D case: Shape (N_t,) - data along t_det axis
+        - 2D case: Shape (N_tau, N_t) - data along (tau_coh, t_det) axes
+    t_det : np.ndarray
+        Time axis for detection. Shape: (N_t,)
+    tau_coh : np.ndarray, optional
+        Time axis for coherence. Shape: (N_tau,). Required for 2D data.
+    pad_t_det : tuple[float, float], default=(1, 1)
+        Padding multipliers for t_det axis as (before, after).
+        Values >= 1, where 1 means no padding, 2 means add original length, etc.
+    pad_tau_coh : tuple[float, float], default=(1, 1)
+        Padding multipliers for tau_coh axis as (before, after).
+        Only used for 2D data. Values >= 1.
+
+    Returns
+    -------
+    For 1D data:
+        tuple[np.ndarray, np.ndarray]
+            extended_t_det : np.ndarray
+                Extended time axis for detection.
+            padded_data : np.ndarray
+                Zero-padded data array.
+
+    For 2D data:
+        tuple[np.ndarray, np.ndarray, np.ndarray]
+            extended_t_det : np.ndarray
+                Extended time axis for detection.
+            extended_tau_coh : np.ndarray
+                Extended time axis for coherence.
+            padded_data : np.ndarray
+                Zero-padded data array.
+
+    Raises
+    ------
+    ValueError
+        If any padding multiplier is < 1, or if 2D data provided without tau_coh.
+
+    Examples
+    --------
+    # 1D case
+    >>> t_det = np.linspace(0, 100, 51)  # 0 to 100 fs, 51 points
+    >>> data_1d = np.random.rand(51)
+    >>> ext_t_det, ext_data = extend_time_axes(data_1d, t_det, pad_t_det=(1, 2))
+    >>> # Result: t_det axis doubled after
+
+    # 2D case
+    >>> t_det = np.linspace(0, 100, 51)  # 0 to 100 fs, 51 points
+    >>> tau_coh = np.linspace(0, 50, 26)  # 0 to 50 fs, 26 points
+    >>> data_2d = np.random.rand(26, 51)
+    >>> ext_t_det, ext_tau_coh, ext_data = extend_time_axes(
+    ...     data_2d, t_det, tau_coh, pad_t_det=(1, 3), pad_tau_coh=(2, 2)
+    ... )
+    >>> # Result: tau_coh axis doubled on both sides, t_det axis tripled after
+    """
+    # Validate input multipliers
+    if any(val < 1 for val in pad_t_det + pad_tau_coh):
+        raise ValueError("All padding multipliers must be >= 1")
+
+    # Determine if we're dealing with 1D or 2D data
+    is_2d = data.ndim == 2
+
+    if is_2d:
+        if tau_coh is None:
+            raise ValueError("tau_coh must be provided for 2D data")
+
+        # 2D case: data shape is (N_tau, N_t)
+        original_tau_points, original_t_points = data.shape
+
+        # Convert multipliers to actual padding values
+        pad_tau_actual = (
+            int((pad_tau_coh[0] - 1) * original_tau_points),
+            int((pad_tau_coh[1] - 1) * original_tau_points),
+        )
+        pad_t_actual = (
+            int((pad_t_det[0] - 1) * original_t_points),
+            int((pad_t_det[1] - 1) * original_t_points),
+        )
+
+        # Pad the data array (rows=tau_coh, cols=t_det)
+        padded_data = np.pad(
+            data, (pad_tau_actual, pad_t_actual), mode="constant", constant_values=0
+        )
+
+        # Compute steps
+        dt = t_det[1] - t_det[0]
+        dtau = tau_coh[1] - tau_coh[0]
+
+        # Extend axes
+        extended_t_det = np.linspace(
+            t_det[0] - pad_t_actual[0] * dt,
+            t_det[-1] + pad_t_actual[1] * dt,
+            padded_data.shape[1],
+        )
+        extended_tau_coh = np.linspace(
+            tau_coh[0] - pad_tau_actual[0] * dtau,
+            tau_coh[-1] + pad_tau_actual[1] * dtau,
+            padded_data.shape[0],
+        )
+
+        return extended_t_det, extended_tau_coh, padded_data
+
+    else:
+        # 1D case: data shape is (N_t,)
+        original_t_points = data.shape[0]
+
+        # Convert multipliers to actual padding values
+        pad_t_actual = (
+            int((pad_t_det[0] - 1) * original_t_points),
+            int((pad_t_det[1] - 1) * original_t_points),
+        )
+
+        # Pad the data array
+        padded_data = np.pad(data, pad_t_actual, mode="constant", constant_values=0)
+
+        # Compute step
+        dt = t_det[1] - t_det[0]
+
+        # Extend axis
+        extended_t_det = np.linspace(
+            t_det[0] - pad_t_actual[0] * dt,
+            t_det[-1] + pad_t_actual[1] * dt,
+            padded_data.shape[0],
+        )
+
+        return extended_t_det, padded_data
+
+
+# Backward compatibility aliases
 def extend_time_tau_axes(
     ts: np.ndarray,
     taus: np.ndarray,
@@ -18,90 +164,83 @@ def extend_time_tau_axes(
     pad_cols: tuple[float, float] = (1, 1),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Extend the time and tau axes by padding and correspondingly extend the data array.
+    Legacy function for 2D data extension. Use extend_time_axes() instead.
 
-    This function takes 2D spectroscopy data and extends both time axes by padding
-    with zeros. The padding is specified as multipliers, where values >= 1 indicate
-    how much to extend each axis. Data types are preserved during the operation.
+    This function is maintained for backward compatibility.
+    """
+    # Map old parameter names to new ones
+    extended_t_det, extended_tau_coh, padded_data = extend_time_axes(
+        data=data,
+        t_det=ts,
+        tau_coh=taus,
+        pad_t_det=pad_cols,
+        pad_tau_coh=pad_rows,
+    )
+    # Return in old order (ts, taus, data)
+    return extended_t_det, extended_tau_coh, padded_data
+
+
+def compute_1d_fft_wavenumber(
+    ts: np.ndarray, data: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute 1D real FFT of spectroscopy data and convert frequency axis to wavenumber units.
+
+    This function performs a 1D real-valued FFT on the input data and converts the
+    resulting frequency axis from cycles/fs to wavenumber units (10^4 cm⁻¹). The
+    output spectrum is multiplied by 1j to account for the relationship E ~ i*P
+    between electric field and polarization.
 
     Parameters
     ----------
     ts : np.ndarray
-        Time axis for detection (t_det). Shape: (N_t,)
-    taus : np.ndarray
-        Time axis for coherence (tau_coh). Shape: (N_tau,)
+        Time axis for detection (t_det) in femtoseconds. Shape: (N_t,)
+        Must be evenly spaced for accurate FFT.
     data : np.ndarray
-        2D spectroscopy data array. Shape: (N_tau, N_t)
-        Data type is preserved in the output.
-    pad_rows : tuple[float, float], default=(1, 1)
-        Padding multipliers for rows (taus axis) as (before, after).
-        Values >= 1, where 1 means no padding, 2 means add original length, etc.
-    pad_cols : tuple[float, float], default=(1, 1)
-        Padding multipliers for columns (ts axis) as (before, after).
-        Values >= 1, where 1 means no padding, 2 means add original length, etc.
+        1D spectroscopy data array, typically real-valued polarization.
+        Shape: (N_t,). Data should be real for rfft to be appropriate.
 
     Returns
     -------
-    tuple[np.ndarray, np.ndarray, np.ndarray]
-        extended_ts : np.ndarray
-            Extended time axis for detection. Same dtype as input ts.
-        extended_taus : np.ndarray
-            Extended time axis for coherence. Same dtype as input taus.
-        padded_data : np.ndarray
-            Zero-padded data array. Same dtype as input data.
+    tuple[np.ndarray, np.ndarray]
+        nu_ts : np.ndarray
+            Wavenumber axis for detection in units of 10^4 cm⁻¹.
+            Shape: (N_t//2 + 1,) due to rfft.
+        s1d : np.ndarray
+            1D FFT spectrum with dtype np.complex64.
+            Shape: (N_t//2 + 1,).
+            Includes factor of 1j to represent E ~ i*P relationship.
 
-    Raises
-    ------
-    ValueError
-        If any padding multiplier is < 1.
+    Notes
+    -----
+    - Uses np.fft.rfft() which assumes real input data and returns only positive frequencies
+    - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
+      * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
+      * Wavenumber = frequency / c, scaled by 10^4
+    - The 1j factor accounts for the physical relationship between electric field and polarization
 
     Examples
     --------
-    >>> ts = np.linspace(0, 100, 51)  # 0 to 100 fs, 51 points
-    >>> taus = np.linspace(0, 50, 26)  # 0 to 50 fs, 26 points
-    >>> data = np.random.rand(26, 51)
-    >>> ext_ts, ext_taus, ext_data = extend_time_tau_axes(ts, taus, data,
-    ...                                                   pad_rows=(2, 2),
-    ...                                                   pad_cols=(1, 3))
-    >>> # Result: taus axis doubled on both sides, ts axis tripled after
+    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt = 1 fs
+    >>> data = np.random.rand(101)  # Real polarization data
+    >>> nu_ts, spectrum = compute_1d_fft_wavenumber(ts, data)
+    >>> # nu_ts in 10^4 cm⁻¹, spectrum is complex
     """
-    # Validate input multipliers
-    if any(val < 1 for val in pad_rows + pad_cols):
-        raise ValueError("All padding multipliers must be >= 1")
+    # Calculate sampling rates and perform FFT
+    dt = ts[1] - ts[0]  # Sampling interval in fs
+    N_t = len(ts)
 
-    # Convert multipliers to actual padding values
-    original_rows, original_cols = data.shape
-    pad_rows_actual = (
-        int((pad_rows[0] - 1) * original_rows),  # before - convert to int for np.pad
-        int((pad_rows[1] - 1) * original_rows),  # after - convert to int for np.pad
-    )
-    pad_cols_actual = (
-        int((pad_cols[0] - 1) * original_cols),  # before - convert to int for np.pad
-        int((pad_cols[1] - 1) * original_cols),  # after - convert to int for np.pad
-    )
+    # Full FFT with shift (similar to 2D implementation)
+    s1d = np.fft.fft(data)
+    s1d = np.fft.fftshift(s1d)
+    freq_t = np.fft.fftshift(np.fft.fftfreq(N_t, d=dt))
 
-    # Pad the data array
-    padded_data = np.pad(
-        data, (pad_rows_actual, pad_cols_actual), mode="constant", constant_values=0
-    )
+    # Convert to wavenumber (10^4 cm^-1)
+    # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-5 cm/fs
+    # Wavenumber = frequency / c, scaled by 10^4
+    nu_ts = freq_t / 2.998 * 10
 
-    # Compute steps
-    dt = ts[1] - ts[0]
-    dtau = taus[1] - taus[0]
-
-    # Extend axes
-    extended_ts = np.linspace(
-        ts[0] - pad_cols_actual[0] * dt,
-        ts[-1] + pad_cols_actual[1] * dt,
-        padded_data.shape[1],
-    )
-    extended_taus = np.linspace(
-        taus[0] - pad_rows_actual[0] * dtau,
-        taus[-1] + pad_rows_actual[1] * dtau,
-        padded_data.shape[0],
-    )
-
-    return extended_ts, extended_taus, padded_data
+    return nu_ts, s1d
 
 
 def compute_2d_fft_wavenumber(
@@ -185,74 +324,11 @@ def compute_2d_fft_wavenumber(
     )
 
 
-def compute_1d_fft_wavenumber(
-    ts: np.ndarray, data: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Compute 1D real FFT of spectroscopy data and convert frequency axis to wavenumber units.
-
-    This function performs a 1D real-valued FFT on the input data and converts the
-    resulting frequency axis from cycles/fs to wavenumber units (10^4 cm⁻¹). The
-    output spectrum is multiplied by 1j to account for the relationship E ~ i*P
-    between electric field and polarization.
-
-    Parameters
-    ----------
-    ts : np.ndarray
-        Time axis for detection (t_det) in femtoseconds. Shape: (N_t,)
-        Must be evenly spaced for accurate FFT.
-    data : np.ndarray
-        1D spectroscopy data array, typically real-valued polarization.
-        Shape: (N_t,). Data should be real for rfft to be appropriate.
-
-    Returns
-    -------
-    tuple[np.ndarray, np.ndarray]
-        nu_ts : np.ndarray
-            Wavenumber axis for detection in units of 10^4 cm⁻¹.
-            Shape: (N_t//2 + 1,) due to rfft.
-        s1d : np.ndarray
-            1D FFT spectrum with dtype np.complex64.
-            Shape: (N_t//2 + 1,).
-            Includes factor of 1j to represent E ~ i*P relationship.
-
-    Notes
-    -----
-    - Uses np.fft.rfft() which assumes real input data and returns only positive frequencies
-    - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
-      * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
-      * Wavenumber = frequency / c, scaled by 10^4
-    - The 1j factor accounts for the physical relationship between electric field and polarization
-
-    Examples
-    --------
-    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt = 1 fs
-    >>> data = np.random.rand(101)  # Real polarization data
-    >>> nu_ts, spectrum = compute_1d_fft_wavenumber(ts, data)
-    >>> # nu_ts in 10^4 cm⁻¹, spectrum is complex
-    """
-    # Calculate sampling rates and perform FFT
-    dt = ts[1] - ts[0]  # Sampling interval in fs
-    N_t = len(ts)
-
-    # Full FFT with shift (similar to 2D implementation)
-    s1d = np.fft.fft(data)
-    s1d = np.fft.fftshift(s1d)
-    freq_t = np.fft.fftshift(np.fft.fftfreq(N_t, d=dt))
-
-    # Convert to wavenumber (10^4 cm^-1)
-    # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-5 cm/fs
-    # Wavenumber = frequency / c, scaled by 10^4
-    nu_ts = freq_t / 2.998 * 10
-
-    return nu_ts, s1d
-
-
 def extend_and_plot_results(
     averaged_results: list[np.ndarray],
     times_T: np.ndarray,
     times: np.ndarray,
-    extend_for: tuple[float, float] = None,
+    extend_for: tuple[float, float] = (1, 1),
     **plot_args_freq: dict,
 ) -> None:
     """
@@ -304,20 +380,19 @@ def extend_and_plot_results(
     # Combine all data arrays into global arrays for time and frequency domains
     # =============================
     # Initialize global arrays with zeros
-    # global_ts and global_taus are the largest axes (from the first valid T_wait)
-
+    # global_ts and global_taus are the largest axes (from the first valid T_wait)    
     global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(
         times, times_T[first_valid_idx]
     )
     global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
 
     if extend_for is not None:
-        global_ts, global_taus, global_data_time = extend_time_tau_axes(
-            global_ts,
-            global_taus,
-            global_data_time,
-            pad_rows=extend_for,
-            pad_cols=extend_for,
+        global_ts, global_taus, global_data_time = extend_time_axes(
+            data=global_data_time,
+            t_det=global_ts,
+            tau_coh=global_taus,
+            pad_t_det=extend_for,
+            pad_tau_coh=extend_for,
         )
 
     global_nu_ts, global_nu_taus, global_data_freq = compute_2d_fft_wavenumber(
@@ -325,12 +400,15 @@ def extend_and_plot_results(
     )
 
     for i, data in enumerate(valid_results):
-        T_wait = valid_T_waits[i]
-        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+        T_wait = valid_T_waits[i]        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
 
         if extend_for is not None:
-            ts, taus, data = extend_time_tau_axes(
-                ts, taus, data, pad_rows=extend_for, pad_cols=extend_for
+            ts, taus, data = extend_time_axes(
+                data=data,
+                t_det=ts,
+                tau_coh=taus,
+                pad_t_det=extend_for,
+                pad_tau_coh=extend_for,
             )
 
         nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
@@ -360,16 +438,13 @@ def extend_and_plot_results(
                 ]
 
         """if len(times_T) > 1:
-            plot_2d_el_field(
+            fig = plot_2d_el_field(
                 data_xyz=(ts, taus, data),
                 t_wait=times_T[i],
                 use_custom_colormap=True,
-                save=True,  # CHANGE TO False for no plotting the Time domain
-                output_dir=plot_args_freq.get("output_dir", None),
-                system=plot_args_freq.get("system", None),
             )
 
-            plot_2d_el_field(
+            fig = plot_2d_el_field(
                 data_xyz=(nu_ts, nu_taus, data_freq), t_wait=times_T[i], **plot_args_freq
             )"""
 
@@ -380,16 +455,13 @@ def extend_and_plot_results(
 
     # Plot the global results
     """
-    plot_2d_el_field(
+    fig = plot_2d_el_field(
         data_xyz=(global_ts, global_taus, global_data_time),
-        save=True,  # CHANGE TO False for no plotting the Time domain
-        output_dir=plot_args_freq.get("output_dir", None),
-        system=plot_args_freq.get("system", None),
         use_custom_colormap=True,
     )
     """
 
-    plot_2d_el_field(
+    fig = plot_2d_el_field(
         data_xyz=(global_nu_ts, global_nu_taus, global_data_freq),
         **plot_args_freq,
     )

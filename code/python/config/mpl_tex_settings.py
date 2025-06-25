@@ -18,7 +18,33 @@ import os
 import sys
 import shutil
 import subprocess
-from matplotlib.font_manager import findfont, FontProperties
+from matplotlib import font_manager as fm
+from matplotlib import rcParams
+
+# =============================
+# PLOTTING SETTINGS
+# =============================
+
+DEFAULT_FIGSIZE = [10, 8]
+DEFAULT_DPI = 10  # 100 is very high, 10 is good for notebooks
+DEFAULT_FONT_SIZE = 16
+DEFAULT_FIG_FORMAT = "svg"  # pdf, png, svg
+COLORS = {
+    "C0": "#1f77b4",
+    "C1": "#ff7f0e",
+    "C2": "#2ca02c",
+    "C3": "#d62728",
+    "C4": "#9467bd",
+    "C5": "#8c564b",
+    "C6": "#e377c2",
+    "C7": "#7f7f7f",
+    "C8": "#bcbd22",
+    "C9": "#17becf",
+}
+
+LINE_STYLES = ["solid", "dashed", "dashdot", "dotted", (0, (3, 1, 1, 1)), (0, (5, 1))]
+MARKERS = ["o", "s", "^", "v", "D", "p", "*", "X", "+", "x"]
+
 
 # =============================
 # SYSTEM CHECKS FOR FAILSAFE
@@ -35,7 +61,6 @@ def check_latex_available():
         True if LaTeX is available, False otherwise
     """
     try:
-        # Try to run pdflatex with version flag
         result = subprocess.run(
             ["pdflatex", "--version"],
             stdout=subprocess.PIPE,
@@ -45,245 +70,99 @@ def check_latex_available():
         return result.returncode == 0
     except (subprocess.SubprocessError, FileNotFoundError):
         try:
-            # Alternative: check if latex is in PATH
             return shutil.which("latex") is not None
         except:
             return False
 
 
-def check_font_available(font_name):
-    """
-    Check if a specified font is available in matplotlib.
-
-    Parameters:
-    -----------
-    font_name : str
-        Name of the font to check
-
-    Returns:
-    --------
-    bool
-        True if font is available, False otherwise
-    """
-    try:
-        font_path = findfont(FontProperties(family=font_name))
-        # If the default font is returned instead of the requested one,
-        # it means the font is not available
-        return (
-            os.path.basename(font_path).lower().startswith(font_name.lower())
-            or font_name.lower() in os.path.basename(font_path).lower()
-        )
-    except:
-        return False
+def get_available_fonts(keywords):
+    """Return a list of available fonts that match given keywords."""
+    available = set()
+    for f in fm.fontManager.ttflist:
+        for kw in keywords:
+            if kw in f.name.lower():
+                available.add(f.name)
+    return sorted(available)
 
 
-def check_system_fonts():
-    """
-    Check system directories for common serif fonts and add them to matplotlib's font list.
-    This helps when matplotlib's font detection is failing.
-
-    Returns:
-    --------
-    list
-        List of available serif font names found in the system
-    """
-    # Common font locations on Linux/macOS/Windows
-    font_locations = [
-        "/usr/share/fonts/truetype/dejavu",
-        "/usr/share/fonts/truetype/liberation",
-        "/usr/share/fonts/opentype",
-        "/usr/share/fonts/truetype",
-        "/usr/local/share/fonts",
-        "/Library/Fonts",  # macOS
-        "/System/Library/Fonts",  # macOS
-        "C:\\Windows\\Fonts",  # Windows
+def set_best_serif_font():
+    preferred_order = [
+        "palatino linotype",
+        "palatino",
+        "cmu serif",  # latex imitate
+        "times new roman",
     ]
-
-    # Common serif font files to look for
-    serif_font_files = {
-        "DejaVuSerif.ttf": "DejaVu Serif",
-        "DejaVuSerif-Bold.ttf": "DejaVu Serif",
-        "LiberationSerif-Regular.ttf": "Liberation Serif",
-        "LiberationSerif-Bold.ttf": "Liberation Serif",
-        "Times.ttf": "Times",
-        "TimesNewRoman.ttf": "Times New Roman",
-        "Times New Roman.ttf": "Times New Roman",
-        "Georgia.ttf": "Georgia",
-        "STIXGeneral-Regular.otf": "STIX",
-        "cmunrm.ttf": "Computer Modern",  # TeX fonts if installed
-    }
-
-    available_fonts = []
-
-    # Check for fonts in standard locations
-    for location in font_locations:
-        if not os.path.isdir(location):
-            continue
-
-        # Check for specific serif fonts
-        for font_file, font_name in serif_font_files.items():
-            font_path = os.path.join(location, font_file)
-            if os.path.exists(font_path):
-                try:
-                    import matplotlib.font_manager as fm
-
-                    fm.fontManager.addfont(font_path)
-                    if font_name not in available_fonts:
-                        available_fonts.append(font_name)
-                except:
-                    # If adding font fails, just continue
-                    pass
-
-    return available_fonts
+    available = get_available_fonts(preferred_order)
+    for pref in preferred_order:
+        match = next((f for f in available if pref == f.lower()), None)
+        if match:
+            rcParams["font.family"] = match
+            global font_to_use
+            font_to_use = match
+            print(f"✔️ Using font: {match}")
+            return
+    print("⚠️ No preferred serif fonts found.")
+    font_to_use = "serif"
 
 
-# Check if LaTeX is available
-latex_available = check_latex_available()
-
-# Define preferred and fallback fonts
-preferred_font = "Palatino"
-fallback_fonts = [
-    "Times",
-    "Times New Roman",
-    "DejaVu Serif",
-    "Liberation Serif",
-    "Computer Modern Roman",
-    "STIX",
-    "Georgia",
-    "Cambria",
-    "Garamond",
-    "serif",
-]
-
-# Try to rebuild font cache and check system fonts if we haven't done it before
-# This only runs once, the first time the module is imported
-try:
-    if "system_fonts_checked" not in globals():
-        try:
-            # Try rebuilding the matplotlib font cache to find missing fonts
-            import matplotlib.font_manager as fm
-
-            fm._rebuild()
-            system_fonts_checked = True
-        except:
-            # Failed to rebuild cache, continue anyway
-            system_fonts_checked = False
-
-        # Check system font directories for additional serif fonts
-        system_fonts = check_system_fonts()
-
-        # Add any found system fonts to our fallback list
-        for font in system_fonts:
-            if font not in fallback_fonts:
-                fallback_fonts.insert(0, font)  # Insert at beginning for priority
-except:
-    # If anything fails, we can continue with our regular font detection
-    pass
-
-# Find first available font
-font_to_use = preferred_font  # Default to preferred
-if not check_font_available(preferred_font):
-    for font in fallback_fonts:
-        if check_font_available(font):
-            font_to_use = font
-            break
-    # If none of the specified fonts are available, use the system's default serif font
-    if (
-        font_to_use == preferred_font
-    ):  # Still on preferred, means none of fallbacks found
-        font_to_use = "serif"
+# Initialize font_to_use
+font_to_use = "serif"  # fall back
+set_best_serif_font()  # update font to use
+latex_available = (
+    check_latex_available()
+)  # what happens with FONT_TO_USE if latex is not available??
 
 # =============================
 # MATPLOTLIB LaTeX SETTINGS
 # =============================
-
-# Base settings common to both LaTeX and non-LaTeX modes
 base_settings = {
-    "font.family": "serif",  # Use a serif font family
-    # Multiple fallbacks - use the found font plus all common serif options for better resiliency
+    # font
+    "font.family": "serif",
     "font.serif": [
         font_to_use,
-        *[f for f in fallback_fonts if f != font_to_use and f.lower() != "serif"],
+        "cmu serif",
+        "times new roman",
         "serif",
     ],
-    # Add sans-serif fallbacks just in case we need them
-    "font.sans-serif": [
-        "DejaVu Sans",
-        "Liberation Sans",
-        "Arial",
-        "Helvetica",
-        "sans-serif",
-    ],
-    "font.size": 18,  # Font size for general text
-    "axes.titlesize": 20,  # Font size for axis titles
-    "axes.labelsize": 18,  # Font size for axis labels
-    "xtick.labelsize": 16,  # Font size for x-axis tick labels
-    "ytick.labelsize": 16,  # Font size for y-axis tick labels
-    "legend.fontsize": 16,  # Font size for legends
-    "figure.figsize": [10, 8],  # Size of the plot (width x height)
-    "figure.autolayout": True,  # Automatic layout adjustment
-    "savefig.format": "svg",  # SVG for vector graphics in LaTeX
-    "savefig.dpi": 300,  # High DPI for quality output
-    "savefig.bbox": "tight",  # Ensure tight bounding box
-    "figure.facecolor": "white",  # White background
-    "axes.facecolor": "white",  # White axes background
-    "savefig.transparent": False,  # Disable transparency for consistency
-    "savefig.facecolor": "white",  # Ensure white background when saving
-    "axes.grid": False,  # No grid lines by default
-    "axes.axisbelow": True,  # Place grid lines below plots
-    "legend.frameon": True,  # Show legend frame
-    "legend.fancybox": True,  # Rounded corners on legend
-    "legend.framealpha": 0.8,  # Partial transparency for legend background
+    # font sizes
+    "font.size": DEFAULT_FONT_SIZE,
+    "axes.titlesize": DEFAULT_FONT_SIZE + 4,
+    "axes.labelsize": DEFAULT_FONT_SIZE + 2,
+    "xtick.labelsize": DEFAULT_FONT_SIZE,
+    "ytick.labelsize": DEFAULT_FONT_SIZE,
+    "legend.fontsize": DEFAULT_FONT_SIZE,
+    # layout
+    "figure.figsize": DEFAULT_FIGSIZE,
+    "figure.autolayout": True,
+    "savefig.bbox": "tight",
+    "axes.grid": False,
+    "axes.axisbelow": True,
+    "legend.frameon": True,
+    "legend.fancybox": True,
+    "legend.framealpha": 0.8,
+    "savefig.transparent": True,
+    # "figure.facecolor": "white", # Uncomment if you want white background, but only with transparent=False
+    #    "axes.facecolor": "white",
+    #    "savefig.facecolor": "white",
+    # Quality of the plot:
+    "savefig.format": DEFAULT_FIG_FORMAT,
+    "savefig.dpi": DEFAULT_DPI,
 }
 
-# LaTeX-specific settings
 if latex_available:
     latex_settings = {
-        "text.usetex": True,  # Enable LaTeX for text rendering
-        "text.latex.preamble": r"\usepackage{amsmath}\usepackage{physics}",  # Add physics package for better notation
+        "text.usetex": True,
+        "text.latex.preamble": r"\usepackage{amsmath}\usepackage{physics}\usepackage{mathpazo}",
     }
-    # Update base settings with LaTeX settings
     base_settings.update(latex_settings)
 else:
-    # Non-LaTeX fallback settings
     non_latex_settings = {
         "text.usetex": False,
-        "mathtext.default": "regular",  # Use regular mathtext if LaTeX is not available
+        "mathtext.default": "regular",
     }
-    # Update base settings with non-LaTeX settings
     base_settings.update(non_latex_settings)
 
-# Apply all settings
 plt.rcParams.update(base_settings)
-
-# =============================
-# PLOTTING SETTINGS
-# =============================
-
-# Default figure settings
-DEFAULT_FIGSIZE = (10, 8)
-DEFAULT_DPI = 300
-DEFAULT_FONT_SIZE = 18
-
-# Color palette for consistent plotting
-COLORS = {
-    "C0": "#1f77b4",  # blue
-    "C1": "#ff7f0e",  # orange
-    "C2": "#2ca02c",  # green
-    "C3": "#d62728",  # red
-    "C4": "#9467bd",  # purple
-    "C5": "#8c564b",  # brown
-    "C6": "#e377c2",  # pink
-    "C7": "#7f7f7f",  # gray
-    "C8": "#bcbd22",  # olive
-    "C9": "#17becf",  # cyan
-}
-
-# Line styles for distinguishing multiple curves
-LINE_STYLES = ["solid", "dashed", "dashdot", "dotted", (0, (3, 1, 1, 1)), (0, (5, 1))]
-
-# Marker styles
-MARKERS = ["o", "s", "^", "v", "D", "p", "*", "X", "+", "x"]
 
 # =============================
 # HELPER FUNCTIONS
@@ -291,111 +170,38 @@ MARKERS = ["o", "s", "^", "v", "D", "p", "*", "X", "+", "x"]
 
 
 def set_size(width_pt=510, fraction=1, subplots=(1, 1), height_ratio=None):
-    """
-    Set figure dimensions to match LaTeX document dimensions.
-
-    Parameters:
-    -----------
-    width_pt : float
-        Document width in points (510 is for a standard LaTeX article)
-    fraction : float
-        Fraction of the width to use (default: 1)
-    subplots : tuple
-        Number of rows and columns of subplots
-    height_ratio : float
-        Aspect ratio (height/width), if None, golden ratio is used
-
-    Returns:
-    --------
-    fig_dim : tuple
-        Dimensions of figure in inches
-    """
-    # Width of figure (in pts)
     fig_width_pt = width_pt * fraction
-
-    # Convert from pt to inches
     inches_per_pt = 1 / 72.27
-
-    # Golden ratio to set aesthetic figure height
     if height_ratio is None:
         height_ratio = (5**0.5 - 1) / 2
-
-    # Figure width in inches
     fig_width_in = fig_width_pt * inches_per_pt
-
-    # Figure height in inches
     fig_height_in = fig_width_in * height_ratio * (subplots[0] / subplots[1])
-
     return (fig_width_in, fig_height_in)
 
 
 def format_sci_notation(x, decimals=1, include_dollar=True):
-    """
-    Format number in scientific notation for plot labels.
-    Works with both LaTeX and non-LaTeX rendering.
-
-    Parameters:
-    -----------
-    x : float
-        Number to format
-    decimals : int
-        Number of decimal places
-    include_dollar : bool
-        Whether to include dollar signs in the output.
-        Set to False when embedding in a larger LaTeX expression.
-
-    Returns:
-    --------
-    formatted_string : str
-        LaTeX-formatted string
-    """
     if x == 0:
         return r"$0$" if include_dollar else r"0"
-
     exp = int(np.floor(np.log10(abs(x))))
     coef = round(x / 10**exp, decimals)
-
-    # Handle the coefficient and exponent formatting
+    mult_symbol = r" \times " if latex_available else r" \cdot "
     if coef == 1:
         result = r"10^{" + str(exp) + r"}"
     else:
-        # Choose the appropriate multiplication symbol
-        if latex_available:
-            mult_symbol = r" \times "
-        else:
-            mult_symbol = r" \cdot "
         result = str(coef) + mult_symbol + r"10^{" + str(exp) + r"}"
-
-    # Add dollar signs if requested
-    if include_dollar:
-        return r"$" + result + r"$"
-    else:
-        return result
+    return r"$" + result + r"$" if include_dollar else result
 
 
 def save_fig(
-    fig, filename, formats=["svg", "png"], dpi=300, transparent=False, category=None
+    fig,
+    filename,
+    formats=["svg", "png", "pdf"],
+    dpi=DEFAULT_DPI,
+    transparent=False,
+    category=None,
+    output_dir=None,
 ):
-    """
-    Save figure in multiple formats for different uses.
-
-    Parameters:
-    -----------
-    fig : matplotlib.figure.Figure
-        Figure to save
-    filename : str
-        Base filename without extension
-    formats : list
-        List of formats to save as
-    dpi : int
-        Resolution for raster formats
-    transparent : bool
-        Whether to use transparency
-    category : str
-        Optional category to override automatic determination
-    """
     try:
-        # Try to import paths from config
         from config.paths import (
             FIGURES_PYTHON_DIR,
             FIGURES_1D_DIR,
@@ -407,9 +213,7 @@ def save_fig(
 
         using_paths_module = True
     except ImportError:
-        # Fallback to old method if paths module is not available
         using_paths_module = False
-        # Get the base directory structure using relative paths
         base_dir = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "..",
@@ -419,24 +223,21 @@ def save_fig(
             "figures_from_python",
         )
 
-    # Create directory if it doesn't exist
-    # First check if filename has a directory component
     if filename and os.path.dirname(filename):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         full_path = filename
+    elif output_dir:
+        # Use provided output_dir directly
+        os.makedirs(output_dir, exist_ok=True)
+        full_path = os.path.join(output_dir, filename)
     else:
-        # If filename is just a base name without path, add the default path
         if category:
-            # Use the provided category
             category_name = category
         else:
-            # Get script name to determine category
             calling_script = os.path.basename(sys.argv[0]).replace(".py", "")
             category_name = get_figure_category(calling_script)
 
-        # Determine save directory based on category
         if using_paths_module:
-            # Use the paths from the paths module
             if category_name == "tests" or "test" in calling_script.lower():
                 save_dir = FIGURES_TESTS_DIR
             elif category_name == "1d_spectroscopy":
@@ -450,14 +251,11 @@ def save_fig(
             else:
                 save_dir = FIGURES_PYTHON_DIR / category_name
         else:
-            # Use the old method
             save_dir = os.path.join(base_dir, category_name)
 
-        # Create the directory and construct the full path
         os.makedirs(save_dir, exist_ok=True)
         full_path = os.path.join(save_dir, filename)
 
-    # Save in all requested formats
     for fmt in formats:
         fig.savefig(
             f"{full_path}.{fmt}",
@@ -466,24 +264,10 @@ def save_fig(
             bbox_inches="tight",
             transparent=transparent,
         )
-
     print(f"Figure saved as: {full_path}")
 
 
 def get_figure_category(script_name):
-    """
-    Determine appropriate figure category based on script name.
-
-    Parameters:
-    -----------
-    script_name : str
-        Name of the calling script
-
-    Returns:
-    --------
-    category : str
-        Figure category folder name
-    """
     if "test" in script_name.lower():
         return "tests"
     elif "1d_" in script_name or "_1d" in script_name:
@@ -499,7 +283,7 @@ def get_figure_category(script_name):
     elif "paper" in script_name or "br" in script_name or "BR" in script_name:
         return "replicate_paper_with_BR"
     else:
-        return "misc"  # Default category
+        return "misc"
 
 
 # =============================
@@ -508,41 +292,24 @@ def get_figure_category(script_name):
 
 
 def setup_backend():
-    """
-    Set the appropriate matplotlib backend based on execution environment.
-    - Jupyter notebook: inline backend for integrated display
-    - HPC/SLURM: Agg backend for headless environments
-    - Regular terminal: TkAgg for interactive display
-    """
-    # Check if backend has already been set explicitly
     if mpl.get_backend() not in ["", "agg"]:
         return
-
-    # Check if running in Jupyter notebook first (highest priority)
     try:
         if "ipykernel" in sys.modules:
             mpl.use("module://matplotlib_inline.backend_inline")
             print("✅ Matplotlib backend: Jupyter inline")
         elif "DISPLAY" not in os.environ or os.environ.get("SLURM_JOB_ID"):
-            # Use non-interactive backend for HPC/SLURM environments
             mpl.use("Agg")
             print("✅ Matplotlib backend: Agg (headless/HPC environment)")
         else:
-            # Use TkAgg for interactive environments
             mpl.use("TkAgg")
             print("✅ Matplotlib backend: TkAgg (interactive)")
     except (ImportError, ValueError) as e:
-        # Fallback to Agg if other backends are not available
         mpl.use("Agg")
         print(f"ℹ️ Matplotlib backend set to Agg (fallback): {e}")
 
 
-# Set the backend based on environment
 setup_backend()
-
-# =============================
-# EXPORT FUNCTIONS AND SETTINGS
-# =============================
 
 __all__ = [
     "DEFAULT_FIGSIZE",
@@ -555,19 +322,14 @@ __all__ = [
     "format_sci_notation",
     "save_fig",
     "check_latex_available",
-    "check_font_available",
     "latex_available",
     "font_to_use",
 ]
 
-# Print confirmation of successful import
 print(f"📊 Matplotlib settings loaded")
 print(
     f"   - LaTeX rendering: {'Enabled' if latex_available else 'Disabled (fallback to mathtext)'}"
 )
-if font_to_use == preferred_font:
-    print(f"   - Font: {font_to_use}")
-else:
-    print(f"   - Font: {font_to_use} (fallback from {preferred_font})")
+print(f"   - Font: {font_to_use}")
 print(f"   - Backend: {mpl.get_backend()}")
 print(f"   - Default figure size: {DEFAULT_FIGSIZE}")

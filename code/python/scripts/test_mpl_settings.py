@@ -31,12 +31,22 @@ def create_test_plot():
     x = np.linspace(-2 * np.pi, 2 * np.pi, 1000)
 
     # Create figure with custom size
-    fig, axes = plt.subplots(2, 1, figsize=(10, 8))
-
-    # First subplot - math expressions
+    fig, axes = plt.subplots(2, 1, figsize=(10, 8))  # First subplot - math expressions
     ax1 = axes[0]
-    ax1.plot(x, np.sin(x), color="C0", linestyle="solid", label=r"$\sin(x)$")
-    ax1.plot(x, np.cos(x), color="C1", linestyle="dashed", label=r"$\cos(x)$")
+    ax1.plot(
+        x,
+        np.sin(x),
+        color=list(COLORS.keys())[0],
+        linestyle=LINE_STYLES[0],
+        label=r"$\sin(x)$",
+    )  # "C0", "solid"
+    ax1.plot(
+        x,
+        np.cos(x),
+        color=list(COLORS.keys())[1],
+        linestyle=LINE_STYLES[1],
+        label=r"$\cos(x)$",
+    )  # "C1", "dashed"
     ax1.set_title(
         r"Math Expressions (mode: "
         + ("LaTeX" if latex_available else "Mathtext")
@@ -49,7 +59,9 @@ def create_test_plot():
     # Second subplot - scientific notation
     ax2 = axes[1]
     y = np.exp(x / 3) * 1e-5
-    ax2.semilogy(x, y, color="C2", linestyle="solid")
+    ax2.semilogy(
+        x, y, color=list(COLORS.keys())[2], linestyle=LINE_STYLES[0]
+    )  # "C2", "solid"
     ax2.set_title(f"Scientific notation with {font_to_use} font")
     ax2.set_xlabel(r"$x$ [rad]")
 
