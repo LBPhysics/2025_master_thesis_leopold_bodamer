@@ -32,13 +32,11 @@ from config.paths import DATA_DIR, FIGURES_DIR
 from config.mpl_tex_settings import DEFAULT_FIG_FORMAT, save_fig
 
 from qspectro2d.visualization.plotting import (
-    plot_fixed_tau_t,
+    plot_1d_el_field,
     plot_2d_el_field,
-    plot_1d_frequency_spectrum,
 )
 from qspectro2d.spectroscopy.post_processing import (
     compute_1d_fft_wavenumber,
-    extend_and_plot_results,
     extend_time_axes,
     compute_2d_fft_wavenumber,
 )
@@ -53,25 +51,97 @@ def _build_1d_plot_filename(
     component: Literal["real", "imag", "abs", "phase"] | None = None,
 ) -> str:
     """Build standardized filename for 1D plots."""
-    base = f"1d_{domain}_N{system.N_atoms}_{system.ODE_Solver.lower()}"
+    base = f"1D_{domain}_N{system.N_atoms}_{system.ODE_Solver.lower()}"
     if component:
         base += f"_{component}"
     return base
+
+
+""" TODO potentially add this to filenames?
+        ### System-specific parameters
+        filename_parts.extend(
+            [
+                f"N={system.N_atoms}",
+                f"wA={system.omega_A:.2f}",
+                f"muA={system.mu_A:.0f}",
+            ]
+        )
+
+        ### Add N_atoms=2 specific parameters
+        if system.N_atoms == 2:
+            filename_parts.extend(
+                [
+                    f"wb={system.omega_B/system.omega_A:.2f}wA",
+                    f"J={system.J:.2f}",
+                    f"mub={system.mu_B/system.mu_A:.0f}muA",
+                ]
+            )
+
+        ### Common parameters
+        filename_parts.extend(
+            [
+                f"wL={system.omega_laser / system.omega_A:.1f}wA",
+                f"E0={system.E0:.2e}",
+                f"rabigen={system.rabi_gen:.2f}",
+            ]
+        )
+
+        file_name = "_".join(filename_parts) + ".svg"
+        save_path = os.path.join(output_dir, file_name)
+        plt.savefig(save_path)
+        print(f"Plot saved to {save_path}")
+
+"""
 
 
 def _build_2d_plot_filename(
     system: SystemParameters,
     domain: Literal["time", "freq"],
     component: Literal["real", "imag", "abs", "phase"] | None = None,
-    t_wait: float = None,
+    t_wait: float = np.inf,
 ) -> str:
-    """Build standardized filename for 2D plots."""
-    base = f"2d_{domain}_N{system.N_atoms}_{system.ODE_Solver.lower()}"
-    if t_wait is not None:
-        base += f"_T{t_wait:.0f}fs"
+    """
+    Build filename for 2D electric field plots.
+
+    Parameters
+    ----------
+    system : SystemParameters
+        System parameters containing physical constants.
+    domain : {"time", "freq"}
+        Domain of the data.
+    component : {"real", "imag", "abs", "phase"}
+        component of data component.
+    t_wait : float
+        Waiting time T (fs).
+
+    Returns
+    -------
+    str
+        Generated filename with variable extension.
+    """
+    # Check required component for frequency domain
+    if domain == "freq" and component is None:
+        raise ValueError("`component` must be specified when domain='freq'.")
+
+    # Start with basic filename structure
+    filename_parts = ["2D", domain]
     if component:
-        base += f"_{component}"
-    return base
+        filename_parts.append(component)
+
+    # Add system parameters
+    filename_parts.append(f"N{system.N_atoms}")
+    filename_parts.append(f"wA{system.omega_A:.2f}")
+
+    # Add waiting time if not infinite
+    if t_wait != np.inf:
+        filename_parts.append(f"T{t_wait:.0f}fs")
+
+    # Add solver info if available
+    if hasattr(system, "ODE_Solver"):
+        filename_parts.append(system.ODE_Solver.lower())
+
+    # Join with underscores
+    return "_".join(filename_parts)
 
 
 # =============================
@@ -326,6 +396,15 @@ def _run_1d_simulation(
 
     ### Validate solver
     # TODO add time_cut validation
+    ### Validate solver
+    time_cut = validate_solver(system, times)
+    if time_cut < times[-1]:
+        print(
+            f"⚠️  WARNING: Time cut {time_cut} is less than the last time point {times[-1]}. "
+            "This may affect the simulation results.",
+            flush=True,
+        )
+
     print("Computing 1D polarization with parallel processing...")
 
     try:
@@ -502,21 +581,18 @@ def find_latest_file(data_subdir: str, file_pattern: str = "*.pkl*") -> Optional
         Path to the latest file or None if not found
     """
     data_dir = DATA_DIR / data_subdir
-
     if not data_dir.exists():
         print(f"❌ Data directory does not exist: {data_dir}")
         return None
 
-    # Search for both compressed and uncompressed pickle files
+    # Search for files matching the pattern(s)
     files = []
-    if file_pattern == "*.pkl*":
-        files.extend(list(data_dir.glob("*.pkl")))
-        files.extend(list(data_dir.glob("*.pkl.gz")))
-    else:
-        files.extend(list(data_dir.glob(file_pattern)))
-        # Also try with .gz extension if original pattern didn't find anything
-        if not files and not file_pattern.endswith(".gz"):
-            files.extend(list(data_dir.glob(file_pattern + ".gz")))
+    patterns = [file_pattern]
+    if file_pattern == "*.pkl*":  # Special case for pickle files
+        patterns = ["*.pkl", "*.pkl.gz"]
+
+    for pattern in patterns:
+        files.extend(list(data_dir.glob(pattern)))
 
     if not files:
         print(f"❌ No files matching '{file_pattern}' found in {data_dir}")
@@ -540,56 +616,20 @@ def find_latest_file_with_counter(pkl_files: list[Path]) -> Path:
     """
     import re
 
-    # Group files by base name (without counter)
-    file_groups = {}
-
+    # Simple approach: extract all counters, sort by counter value
+    counters = []
     for pkl_file in pkl_files:
-        filename = pkl_file.stem  # Remove .pkl extension
-
-        # Check if filename ends with _number pattern
+        filename = pkl_file.stem  # Remove extension
         counter_match = re.search(r"_(\d+)$", filename)
+        counter = int(counter_match.group(1)) if counter_match else 0
+        counters.append((pkl_file, counter))
 
-        if counter_match:
-            # File has counter suffix
-            counter = int(counter_match.group(1))
-            base_name = filename[: counter_match.start()]  # Remove _number part
-        else:
-            # File has no counter (original file)
-            counter = 0
-            base_name = filename
+    # Sort by counter (descending)
+    counters.sort(key=lambda x: x[1], reverse=True)
+    latest_file = counters[0][0]
 
-        if base_name not in file_groups:
-            file_groups[base_name] = []
-
-        file_groups[base_name].append((pkl_file, counter))
-
-    # Find the file with highest counter for each base name
-    latest_files = []
-    for base_name, files_with_counters in file_groups.items():
-        # Sort by counter and take the highest
-        files_with_counters.sort(key=lambda x: x[1], reverse=True)
-        latest_file, highest_counter = files_with_counters[0]
-        latest_files.append(latest_file)
-
-        print(
-            f"  📁 Base: {base_name} → Latest: {latest_file.name} (counter: {highest_counter})"
-        )
-
-    # If multiple base names exist, return all latest files
-    # If only one base name, return the single latest file
-    if len(latest_files) == 1:
-        return latest_files[0]
-    else:
-        # Multiple different file types - return the one with highest overall counter
-        all_counters = []
-        for pkl_file in pkl_files:
-            filename = pkl_file.stem
-            counter_match = re.search(r"_(\d+)$", filename)
-            counter = int(counter_match.group(1)) if counter_match else 0
-            all_counters.append((pkl_file, counter))
-
-        all_counters.sort(key=lambda x: x[1], reverse=True)
-        return all_counters[0][0]
+    print(f"✅ Selected latest file: {latest_file.name} (counter: {counters[0][1]})")
+    return latest_file
 
 
 def load_pickle_file(filepath: Path) -> Optional[dict]:
@@ -604,7 +644,7 @@ def load_pickle_file(filepath: Path) -> Optional[dict]:
     print(f"Loading data from: {filepath.name}")
 
     try:
-        if filepath.suffix == ".gz":
+        if str(filepath).endswith(".gz"):
             # Handle compressed pickle files
             import gzip
 
@@ -632,26 +672,29 @@ def create_output_directory(subdir: str) -> Path:
     Returns:
         Path to the created output directory
     """
-
     output_dir = FIGURES_DIR / subdir
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
 
-def create_output_directory_from_data_path(data_relative_path: Path) -> Path:
+def create_output_directory_from_data_path(data_path: Path) -> Path:
     """Create output directory for plots based on data path structure.
 
     Args:
-        data_relative_path: Relative path from DATA_DIR (e.g., '1d_spectroscopy/special_dir/filename.pkl')
+        data_path: Path to data file (can be absolute or relative to DATA_DIR)
 
     Returns:
         Output directory path in FIGURES_DIR with same structure
     """
-    # Extract the directory part (without filename)
-    special_dir = data_relative_path.parent
+    # Handle both absolute and relative paths
+    try:
+        relative_path = data_path.relative_to(DATA_DIR)
+    except ValueError:
+        # Path is already relative or outside DATA_DIR
+        relative_path = data_path
 
     # Create corresponding directory in FIGURES_DIR
-    output_dir = FIGURES_DIR / "figures_from_python" / special_dir
+    output_dir = FIGURES_DIR / "figures_from_python" / relative_path.parent
     os.makedirs(output_dir, exist_ok=True)
     return output_dir
 
@@ -667,25 +710,32 @@ def plot_spectroscopy_data(config: dict, simulation_type: str) -> None:
     print(f"# LOAD AND PLOT {simulation_type.upper()} SPECTROSCOPY DATA")
     print(f"# =============================")
 
-    ### Find and load data
-    file_path = find_latest_file(config["data_subdir"], config["file_pattern"])
+    # Set defaults if not provided
+    if "file_pattern" not in config:
+        config["file_pattern"] = "*.pkl*"
 
+    # Derive output_subdir if not provided
+    if "output_subdir" not in config:
+        config["output_subdir"] = f"figures_from_python/{simulation_type}_spectroscopy"
+
+    # Find and load data
+    file_path = find_latest_file(config["data_subdir"], config["file_pattern"])
     if file_path is None:
         print(
             f"   Please run the {simulation_type.upper()} spectroscopy calculation first to generate data."
         )
         return
 
-    loaded_data = load_pickle_file(DATA_DIR / file_path)
-
+    # Load the data file
+    loaded_data = load_pickle_file(file_path)
     if loaded_data is None:
         print(f"❌ Failed to load {simulation_type.upper()} spectroscopy data.")
         return
 
-    ### Create output directory
+    # Create output directory
     output_dir = create_output_directory(config["output_subdir"])
 
-    ### Route to specific plotting function
+    # Route to specific plotting function
     if simulation_type == "1d":
         _plot_1d_data(loaded_data, config, output_dir)
     elif simulation_type == "2d":
@@ -696,8 +746,133 @@ def plot_spectroscopy_data(config: dict, simulation_type: str) -> None:
     print(f"🎯 All {simulation_type.upper()} plots saved to: {output_dir}")
 
 
+def plot_from_filepath(
+    filepath: Path, config: dict = None, sim_type: str = None
+) -> None:
+    """Plot spectroscopy data from a specific filepath.
+
+    Args:
+        filepath: Path to the pickle file containing data
+        config: Dictionary containing plotting configuration
+        sim_type: Simulation type ("1d" or "2d"). If None, determined automatically.
+    """
+    print(f"# =============================")
+    print(f"# LOAD AND PLOT DATA FROM {filepath}")
+    print(f"# =============================")
+
+    # Auto-detect simulation type if not provided
+    if sim_type is None:
+        sim_type = "2d" if "2d" in str(filepath).lower() else "1d"
+        print(f"Auto-detected simulation type: {sim_type}")
+
+    # Use default config if none provided
+    if config is None:
+        config = {
+            "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
+            "plot_time_domain": True,
+            "plot_frequency_domain": True,
+        }
+        # Add 2D-specific defaults
+        if sim_type == "2d":
+            config.update(
+                {
+                    "extend_for": (1, 3),
+                    "section": (1.4, 1.8, 1.4, 1.8),
+                }
+            )
+
+    # Load data from the specific file
+    loaded_data = load_pickle_file(filepath)
+    if loaded_data is None:
+        print(f"❌ Failed to load {sim_type} spectroscopy data from {filepath}")
+        return
+
+    # Create output directory based on data file structure
+    output_dir = create_output_directory_from_data_path(filepath)
+
+    # Route to specific plotting function
+    if sim_type == "1d":
+        _plot_1d_data(loaded_data, config, output_dir)
+    else:  # sim_type == "2d"
+        _plot_2d_data(loaded_data, config, output_dir)
+
+    print(f"🎯 All {sim_type.upper()} plots saved to: {output_dir}")
+
+
+def plot_from_relative_path(
+    relative_path_str: str, config: dict = None, sim_type: str = None
+) -> None:
+    """Plot spectroscopy data from a relative path string.
+
+    Args:
+        relative_path_str: Relative path from DATA_DIR (e.g., '2d_spectroscopy/special_dir/filename.pkl')
+        config: Optional plotting configuration dictionary
+        sim_type: Simulation type ("1d" or "2d"). If None, determined automatically.
+    """
+    # Convert string to Path object
+    relative_path = Path(relative_path_str)
+    full_path = DATA_DIR / relative_path
+
+    print(f"📊 Plotting from relative path: {relative_path_str}")
+    print(f"📂 Full path: {full_path}")
+
+    # Auto-detect simulation type if not provided
+    if sim_type is None:
+        sim_type = "2d" if "2d" in relative_path_str.lower() else "1d"
+        print(f"Auto-detected simulation type: {sim_type}")
+
+    # Check if it's a directory or file
+    if full_path.is_dir():
+        # Find all .pkl files in the directory
+        pkl_files = list(full_path.glob("*.pkl*"))  # Include both .pkl and .pkl.gz
+        if not pkl_files:
+            print(f"❌ No .pkl files found in directory: {full_path}")
+            return
+
+        print(f"Found {len(pkl_files)} .pkl files:")
+        for pkl_file in pkl_files:
+            print(f"  - {pkl_file.name}")
+
+        # Find and plot only the latest file
+        latest_file = find_latest_file_with_counter(pkl_files)
+        print(f"\n📊 Plotting latest file: {latest_file.name}")
+        plot_from_filepath(latest_file, config, sim_type)
+    elif full_path.is_file():
+        # Direct file path provided
+        plot_from_filepath(full_path, config, sim_type)
+    else:
+        print(f"❌ Path does not exist: {full_path}")
+
+
+# Define backward-compatible wrapper functions
+def plot_1d_from_filepath(filepath: Path, config: dict = None) -> None:
+    """Backward-compatible wrapper for plotting 1D data from filepath."""
+    plot_from_filepath(filepath, config, sim_type="1d")
+
+
+def plot_2d_from_filepath(filepath: Path, config: dict = None) -> None:
+    """Backward-compatible wrapper for plotting 2D data from filepath."""
+    plot_from_filepath(filepath, config, sim_type="2d")
+
+
+def plot_1d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
+    """Backward-compatible wrapper for plotting 1D data from relative path."""
+    plot_from_relative_path(relative_path_str, config, sim_type="1d")
+
+
+def plot_2d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
+    """Backward-compatible wrapper for plotting 2D data from relative path."""
+    plot_from_relative_path(relative_path_str, config, sim_type="2d")
+
+
 def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
-    """Plot 1D spectroscopy data using standardized data structure."""
+    """Plot 1D spectroscopy data using standardized data structure.
+
+    Args:
+        data: Dictionary with standardized 1D data structure
+        config: Plotting configuration
+        output_dir: Directory to save plots
+    """
     # Extract data from standardized structure
     data_avg = data["data"]
     axes = data["axes"]
@@ -708,25 +883,26 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
 
     print(f"✅ Data loaded with shape: {data_avg.shape}")
     print(f"   Time points: {len(t_det_vals)}")
-    print(
-        f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs"
-    )  ### Plot time domain data
+    print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
+
+    spectral_components = config.get(
+        "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+    )
+
+    ### Plot time domain data
     if config.get("plot_time_domain", True):
         print("📊 Plotting time domain data...")
         try:
-            fig = plot_fixed_tau_t(
-                t_det_vals=t_det_vals,
-                data=data_avg,
+            fig = plot_1d_el_field(  # TODO add the decision if P or E_k_s is plotted (in title or something like that)!
+                data_x=t_det_vals,
+                data_y=data_avg,
+                domain="time",
                 tau_coh=tau_coh,
                 T_wait=T_wait,
-                system=system,
-                spectral_components_to_plot=config.get(
-                    "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
-                ),
             )
             filename = _build_1d_plot_filename(system, "time")
             save_fig(fig, filename=filename, output_dir=output_dir)
-            plt.close(fig)  # Clean up memory
+            plt.close(fig)
             print("✅ Time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
@@ -734,28 +910,25 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
     ### Plot frequency domain data
     if config.get("plot_frequency_domain", True):
         print("📊 Plotting frequency domain data...")
-        try:
-            frequencies, data_fft = compute_1d_fft_wavenumber(t_det_vals, data_avg)
+        for component in spectral_components:
+            try:
+                frequencies, data_fft = compute_1d_fft_wavenumber(t_det_vals, data_avg)
 
-            # Plot each spectral component separately
-            for component in config.get(
-                "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
-            ):
-                fig = plot_1d_frequency_spectrum(
-                    frequencies=frequencies,
-                    data_fft=data_fft,
-                    system=system,
-                    spectral_components_to_plot=[
-                        component
-                    ],  # Plot one component at a time
-                )
-                filename = _build_1d_plot_filename(system, "freq", component)
-                save_fig(fig, filename=filename, output_dir=output_dir)
-                plt.close(fig)  # Clean up memory
+                # Plot each spectral component separately
+                for component in spectral_components:
+                    fig = plot_1d_el_field(
+                        data_x=frequencies,
+                        data_y=data_fft,
+                        domain="freq",
+                        component=component,
+                    )
+                    filename = _build_1d_plot_filename(system, "freq", component)
+                    save_fig(fig, filename=filename, output_dir=output_dir)
+                    plt.close(fig)
 
-            print("✅ Frequency domain plots completed!")
-        except Exception as e:
-            print(f"❌ Error in frequency domain plotting: {e}")
+                print("✅ Frequency domain plots completed!")
+            except Exception as e:
+                print(f"❌ Error in frequency domain plotting: {e}")
 
     # Clean up memory
     plt.close("all")
@@ -763,63 +936,56 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
 
 
 def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
-    """Plot 2D spectroscopy data using standardized data structure."""
+    """Plot 2D spectroscopy data using standardized data structure.
+
+    Args:
+        data: Dictionary with standardized 2D data structure
+        config: Plotting configuration
+        output_dir: Directory to save plots
+    """
     # Extract data from standardized structure
     two_d_datas = data["data"]
     axes = data["axes"]
     times_T = axes["T_wait"]
     system_data = data["system"]
-    fwhm0 = system_data.fwhms[0]
+
+    # Get simulation parameters
+    fwhm0 = system_data.fwhms[0] if hasattr(system_data, "fwhms") else 100  # Default
     times = np.arange(-1 * fwhm0, system_data.t_max, system_data.dt)
 
+    # Get configuration values
     extend_for = config.get("extend_for", (1, 3))
     section = config.get("section", (1.4, 1.8, 1.4, 1.8))
+    spectral_components = config.get(
+        "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+    )
 
     print(f"✅ 2D data loaded successfully!")
     print(f"   Times shape: {times.shape}")
     print(f"   Times_T shape: {times_T.shape}")
-    print(f"   Data shape: {two_d_datas[0].shape}")
+    print(f"   Data shape: {two_d_datas[0].shape if two_d_datas else 'None'}")
 
     # Filter out None values from averaged_results
     valid_results = [res for res in two_d_datas if res is not None]
     valid_T_waits = [times_T[i] for i, res in enumerate(two_d_datas) if res is not None]
 
     if not valid_results:
-        print("No valid results to plot")
+        print("❌ No valid results to plot")
         return
 
-    # =============================
-    # Combine all data arrays into global arrays for time and frequency domains
-    # =============================
-    # Initialize global arrays with zeros
-    # global_ts and global_taus are the largest axes (from the first valid T_wait)
-    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-    global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
-
-    if extend_for != (1, 1):
-        global_ts, global_taus, global_data_time = extend_time_axes(
-            data=global_data_time,
-            t_det=global_ts,
-            tau_coh=global_taus,
-            pad_t_det=extend_for,
-            pad_tau_coh=extend_for,
-        )
-
-    global_nu_ts, global_nu_taus, global_data_freq = compute_2d_fft_wavenumber(
-        global_ts, global_taus, global_data_time
-    )
-
-    for i, data in enumerate(valid_results):
+    # Process each valid waiting time
+    for i, data_array in enumerate(valid_results):
         T_wait = valid_T_waits[i]
         ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
 
-        ### Plot time domain data
+        # Plot time domain data
         if config.get("plot_time_domain", True):
-            # print("📊 Plotting 2D time domain data...")
             try:
                 fig = plot_2d_el_field(
-                    data_xyz=(ts, taus, data),
-                    t_wait=T_wait,  # Plot specific T_wait
+                    data_x=ts,
+                    data_y=taus,
+                    data_z=data_array,
+                    t_wait=T_wait,
                     domain="time",
                     use_custom_colormap=True,
                 )
@@ -827,59 +993,37 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
                     system=system_data, domain="time", t_wait=T_wait
                 )
                 save_fig(fig, filename=filename, output_dir=output_dir)
-                plt.close(fig)  # Clean up memory
-
-                # print("✅ 2D time domain plots completed!")
+                plt.close(fig)
             except Exception as e:
                 print(f"❌ Error in 2D time domain plotting: {e}")
 
-        if extend_for != (1, 1):
-            ts, taus, data = extend_time_axes(
-                data=data,
-                t_det=ts,
-                tau_coh=taus,
-                pad_t_det=extend_for,
-                pad_tau_coh=extend_for,
-            )
-
-        nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
-
-        # Map local data into the global arrays with safe index mapping
-        tau_indices = np.array([np.argmin(np.abs(global_taus - v)) for v in taus])
-        t_indices = np.array([np.argmin(np.abs(global_ts - v)) for v in ts])
-        nu_tau_indices = np.array(
-            [np.argmin(np.abs(global_nu_taus - v)) for v in nu_taus]
-        )
-        nu_t_indices = np.array([np.argmin(np.abs(global_nu_ts - v)) for v in nu_ts])
-
-        # Map time domain data using time indices
-        for local_tau_idx, global_tau_idx in enumerate(tau_indices):
-            for local_t_idx, global_t_idx in enumerate(t_indices):
-                # Safe assignment with verified bounds for time domain
-                global_data_time[global_tau_idx, global_t_idx] += data[
-                    local_tau_idx, local_t_idx
-                ]
-
-        # Map frequency domain data using frequency indices
-        for local_nu_tau_idx, global_nu_tau_idx in enumerate(nu_tau_indices):
-            for local_nu_t_idx, global_nu_t_idx in enumerate(nu_t_indices):
-                # Safe assignment with verified bounds for frequency domain
-                global_data_freq[global_nu_tau_idx, global_nu_t_idx] += data_freq[
-                    local_nu_tau_idx, local_nu_t_idx
-                ]
-
-        ### Plot frequency domain data
+        # Handle frequency domain processing
         if config.get("plot_frequency_domain", True):
-            # print("📊 Plotting 2D frequency domain data...")
+            try:
+                # Extend time axes if needed
+                if extend_for != (1, 1):
+                    extended_ts, extended_taus, extended_data = extend_time_axes(
+                        data=data_array,
+                        t_det=ts,
+                        tau_coh=taus,
+                        pad_t_det=extend_for,
+                        pad_tau_coh=extend_for,
+                    )
+                else:
+                    extended_ts, extended_taus, extended_data = ts, taus, data_array
 
-            for component in config.get(
-                "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
-            ):
-                print(nu_ts, nu_taus, data_freq, flush=True)
-                try:
+                # Compute FFT
+                nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(
+                    extended_ts, extended_taus, extended_data
+                )
+
+                # Plot each component
+                for component in spectral_components:
                     fig = plot_2d_el_field(
-                        data_xyz=(nu_ts, nu_taus, data_freq),
-                        t_wait=T_wait,  # Plot specific T_wait
+                        data_x=nu_ts,
+                        data_y=nu_taus,
+                        data_z=data_freq,
+                        t_wait=T_wait,
                         domain="freq",
                         use_custom_colormap=True,
                         component=component,
@@ -892,297 +1036,11 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
                         t_wait=T_wait,
                     )
                     save_fig(fig, filename=filename, output_dir=output_dir)
-                    plt.close(fig)  # Clean up memory
+                    plt.close(fig)
 
-                    # print(f"✅ 2D {component} component plots completed!")
-                except Exception as e:
-                    print(
-                        f"❌ Error plotting 2D {component} component: {e}"
-                    )  # Clean up memory
-
-    # Normalize by number of valid results
-    global_data_time /= len(valid_results)
-    global_data_freq /= len(valid_results)
-
-    # Plot the global results
-    """
-    if config.get("plot_time_domain", True):
-        # print("📊 Plotting 2D time domain data...")
-        try:
-            fig = plot_2d_el_field(
-                data_xyz=(ts, taus, data),
-                domain="time",
-                use_custom_colormap=True,
-            )
-            filename = _build_2d_plot_filename(
-                system=system_data, domain="time", t_wait=T_wait
-            )
-            save_fig(fig, filename=filename, output_dir=output_dir)
-            plt.close(fig)  # Clean up memory
-
-            # print("✅ 2D time domain plots completed!")
-        except Exception as e:
-            print(f"❌ Error in 2D time domain plotting: {e}")
-    """
-
-    if config.get("plot_frequency_domain", True):
-        # print("📊 Plotting 2D frequency domain data...")
-
-        for component in config.get(
-            "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
-        ):
-            try:
-                fig = plot_2d_el_field(
-                    data_xyz=(global_nu_ts, global_nu_taus, global_data_freq),
-                    domain="freq",
-                    use_custom_colormap=True,
-                    component=component,
-                    section=section,
-                )
-                filename = _build_2d_plot_filename(
-                    system=system_data,
-                    domain="freq",
-                    component=component,
-                )
-                save_fig(fig, filename=filename, output_dir=output_dir)
-                plt.close(fig)  # Clean up memory
-
-                # print(f"✅ 2D {component} component plots completed!")
             except Exception as e:
-                print(
-                    f"❌ Error plotting 2D {component} component: {e}"
-                )  # Clean up memory
+                print(f"❌ Error plotting 2D {component} component: {e}")
+
+    # Clean up memory
     plt.close("all")
     gc.collect()
-
-
-def plot_2d_from_filepath(filepath: Path, config: dict) -> None:
-    """Plot 2D spectroscopy data from a specific filepath.
-
-    Args:
-        filepath: Path to the pickle file containing 2D data
-        config: Dictionary containing plotting configuration
-    """
-    print("# =============================")
-    print("# LOAD AND PLOT 2D DATA FROM FILEPATH")
-    print("# =============================")
-
-    ### Load data from the specific file
-    loaded_data = load_pickle_file(filepath)
-
-    if loaded_data is None:
-        print(f"❌ Failed to load 2D spectroscopy data from {filepath}")
-        return
-
-    ### Create output directory based on data file structure
-    # Get relative path from DATA_DIR to maintain same directory structure
-    try:
-        data_relative_path = filepath.relative_to(DATA_DIR)
-        output_dir = create_output_directory_from_data_path(data_relative_path)
-    except ValueError:
-        # Fallback to config if filepath is not under DATA_DIR
-        output_dir = create_output_directory(
-            config.get("output_subdir", "figures_from_python")
-        )
-
-    ### Route to 2D plotting function
-    _plot_2d_data(loaded_data, config, output_dir)
-
-    print(f"🎯 All 2D plots saved to: {output_dir}")
-
-
-def plot_1d_from_filepath(filepath: Path, config: dict) -> None:
-    """Plot 1D spectroscopy data from a specific filepath.
-
-    Args:
-        filepath: Path to the pickle file containing 1D data
-        config: Dictionary containing plotting configuration
-    """
-    print("# =============================")
-    print("# LOAD AND PLOT 1D DATA FROM FILEPATH")
-    print("# =============================")
-
-    ### Load data from the specific file
-    loaded_data = load_pickle_file(filepath)
-
-    if loaded_data is None:
-        print(f"❌ Failed to load 1D spectroscopy data from {filepath}")
-        return
-
-    ### Create output directory based on data file structure
-    # Get relative path from DATA_DIR to maintain same directory structure
-    try:
-        data_relative_path = filepath.relative_to(DATA_DIR)
-        output_dir = create_output_directory_from_data_path(data_relative_path)
-    except ValueError:
-        # Fallback to config if filepath is not under DATA_DIR
-        output_dir = create_output_directory(
-            config.get("output_subdir", "figures_from_python")
-        )
-
-    ### Route to 1D plotting function
-    _plot_1d_data(loaded_data, config, output_dir)
-
-    print(f"🎯 All 1D plots saved to: {output_dir}")
-
-
-def plot_2d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
-    """Plot 2D spectroscopy data from a relative path string (feed-forward compatible).
-
-    Args:
-        relative_path_str: Relative path from DATA_DIR (e.g., '2d_spectroscopy/special_dir/filename.pkl' or '2d_spectroscopy/special_dir/')
-        config: Optional plotting configuration dictionary
-    """
-    # Convert string to Path object
-    relative_path = Path(relative_path_str)
-    full_path = DATA_DIR / relative_path
-
-    # Use default config if none provided
-    if config is None:
-        config = {
-            "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
-            "plot_time_domain": True,
-            "extend_for": (1, 3),
-            "section": (1.4, 1.8, 1.4, 1.8),
-        }
-
-    print(f"📊 Plotting from relative path: {relative_path_str}")
-    print(f"📂 Full path: {full_path}")
-
-    # Check if it's a directory or file
-    if full_path.is_dir():
-        # Find all .pkl files in the directory
-        pkl_files = list(full_path.glob("*.pkl"))
-        if not pkl_files:
-            print(f"❌ No .pkl files found in directory: {full_path}")
-            return
-
-        print(f"Found {len(pkl_files)} .pkl files:")
-        for pkl_file in pkl_files:
-            print(f"  - {pkl_file.name}")
-
-        # Find and plot only the latest file (highest counter)
-        latest_file = find_latest_file_with_counter(pkl_files)
-        print(f"\n📊 Plotting latest file: {latest_file.name}")
-        plot_2d_from_filepath(latest_file, config)
-
-    elif full_path.is_file():
-        # Direct file path provided
-        plot_2d_from_filepath(full_path, config)
-    else:
-        print(f"❌ Path does not exist: {full_path}")
-        return
-
-
-def plot_1d_from_relative_path(relative_path_str: str, config: dict = None) -> None:
-    """Plot 1D spectroscopy data from a relative path string (feed-forward compatible).
-
-    Args:
-        relative_path_str: Relative path from DATA_DIR (e.g., '1d_spectroscopy/special_dir/filename.pkl')
-        config: Optional plotting configuration dictionary
-    """
-    # Convert string to Path object
-    relative_path = Path(relative_path_str)
-    full_filepath = DATA_DIR / relative_path
-
-    # Use default config if none provided
-    if config is None:
-        config = {
-            "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
-            "plot_time_domain": True,
-            "plot_frequency_domain": True,
-        }
-
-    print(f"📊 Plotting from relative path: {relative_path_str}")
-    print(f"📂 Full path: {full_filepath}")
-
-    # Call the main plotting function
-    plot_1d_from_filepath(full_filepath, config)
-
-
-# =============================
-# CONVENIENCE PLOTTING FUNCTIONS
-# =============================
-def plot_1d_spectroscopy_data(config: dict) -> None:
-    """Plot 1D spectroscopy data - convenience wrapper."""
-    plot_spectroscopy_data(config, simulation_type="1d")
-
-
-def plot_2d_spectroscopy_data(config: dict) -> None:
-    """Plot 2D spectroscopy data - convenience wrapper."""
-    plot_spectroscopy_data(config, simulation_type="2d")
-
-
-def _build_2d_plot_filename(  # TODO IMPLEMENT THIS
-    system: SystemParameters,
-    domain: Literal["time", "freq"],
-    component: Literal["real", "imag", "abs", "phase"] | None = None,
-    t_wait: float = np.inf,
-) -> str:
-    """
-    Build filename for 2D electric field plots.
-
-    Parameters
-    ----------
-    system : SystemParameters
-        System parameters containing physical constants.
-    domain : {"time", "freq"}
-        Domain of the data.
-    component : {"real", "imag", "abs", "phase"}
-        component of data component.
-    t_wait : float
-        Waiting time T (fs).
-
-    Returns
-    -------
-    str
-        Generated filename with variable extension.
-    """
-    ode_solver = system.ODE_Solver if hasattr(system, "ODE_Solver") else None
-
-    filename_parts = [f"2D_polarization"]
-
-    if domain == "freq":
-        if component is None:
-            raise ValueError("`component` must be specified when domain='freq'.")
-        filename_parts.append(f"{component}_spectrum")
-    else:  # domain == "time"
-        filename_parts.append("time_domain")
-
-    # System-specific parameters
-    filename_parts.extend(
-        [
-            f"N={system.N_atoms}",
-            f"wA={system.omega_A:.2f}",
-            f"muA={system.mu_A:.0f}",
-        ]
-    )
-
-    # Add N_atoms=2 specific parameters
-    if system.N_atoms == 2:
-        filename_parts.extend(
-            [
-                f"wb={system.omega_B/system.omega_A:.2f}wA",
-                f"J={system.J:.2f}",
-                f"mub={system.mu_B/system.mu_A:.0f}muA",
-            ]
-        )
-
-    # Common parameters for both N_atoms=1 and N_atoms=2
-    filename_parts.extend(
-        [
-            f"wL={system.omega_laser / system.omega_A:.1f}wA",
-            f"E0={system.E0:.2e}",
-            f"rabigen={system.rabi_0:.2f}^2+{system.delta_rabi:.2f}^2",
-        ]
-    )
-
-    # Add waiting time if not infinite
-    if t_wait != np.inf:
-        filename_parts.append(f"T={t_wait:.2f}fs")
-
-    # Add solver information to filename
-    if ode_solver is not None:
-        filename_parts.append(f"with_{ode_solver}")
-
-    return "_".join(filename_parts) + "." + DEFAULT_FIG_FORMAT

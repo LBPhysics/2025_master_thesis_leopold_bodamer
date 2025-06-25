@@ -448,6 +448,8 @@ def extend_and_plot_results(
     """
 
     fig = plot_2d_el_field(
-        data_xyz=(global_nu_ts, global_nu_taus, global_data_freq),
+        data_x=global_nu_ts,
+        data_y=global_nu_taus,
+        data_z=global_data_freq,
         **plot_args_freq,
     )

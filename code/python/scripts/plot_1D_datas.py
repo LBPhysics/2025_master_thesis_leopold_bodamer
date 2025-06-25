@@ -10,7 +10,7 @@ in various formats (real, imaginary, absolute, phase). All parameters are define
 # =============================
 import sys
 from pathlib import Path
-from common_fcts import plot_1d_spectroscopy_data, plot_1d_from_filepath
+from common_fcts import plot_spectroscopy_data, plot_1d_from_filepath
 
 
 # =============================
@@ -102,7 +102,7 @@ def plot_with_search_config():
     # =============================
     # RUN PLOTTING
     # =============================
-    plot_1d_spectroscopy_data(config)
+    plot_spectroscopy_data(config, simulation_type="1d")
 
     print("✅ 1D Spectroscopy plotting completed!")
 

@@ -29,6 +29,7 @@ DEFAULT_FIGSIZE = [10, 8]
 DEFAULT_DPI = 10  # 100 is very high, 10 is good for notebooks
 DEFAULT_FONT_SIZE = 16
 DEFAULT_FIG_FORMAT = "svg"  # pdf, png, svg
+DEFAULT_TRANSPARENCY = True  # True for transparent background, False for white
 COLORS = {
     "C0": "#1f77b4",
     "C1": "#ff7f0e",
@@ -140,7 +141,7 @@ base_settings = {
     "legend.frameon": True,
     "legend.fancybox": True,
     "legend.framealpha": 0.8,
-    "savefig.transparent": True,
+    "savefig.transparent": DEFAULT_TRANSPARENCY,
     # "figure.facecolor": "white", # Uncomment if you want white background, but only with transparent=False
     #    "axes.facecolor": "white",
     #    "savefig.facecolor": "white",
@@ -195,67 +196,59 @@ def format_sci_notation(x, decimals=1, include_dollar=True):
 def save_fig(
     fig,
     filename,
-    formats=["svg", "png", "pdf"],
+    formats=[DEFAULT_FIG_FORMAT],
     dpi=DEFAULT_DPI,
-    transparent=False,
+    transparent=DEFAULT_TRANSPARENCY,
     category=None,
     output_dir=None,
+    base_dir=None,
 ):
-    try:
-        from config.paths import (
-            FIGURES_PYTHON_DIR,
-            FIGURES_1D_DIR,
-            FIGURES_2D_DIR,
-            FIGURES_BATH_DIR,
-            FIGURES_PULSES_DIR,
-            FIGURES_TESTS_DIR,
-        )
+    """
+    Save a matplotlib figure in multiple formats.
 
-        using_paths_module = True
-    except ImportError:
-        using_paths_module = False
-        base_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "..",
-            "..",
-            "..",
-            "figures",
-            "figures_from_python",
-        )
-
+    Parameters:
+    -----------
+    fig : matplotlib.figure.Figure
+        The figure to save
+    filename : str
+        The name of the file without extension
+    formats : list, optional
+        List of file formats to save
+    dpi : int, optional
+        Resolution for raster formats
+    transparent : bool, optional
+        Whether to save with transparent background
+    category : str, optional
+        Category folder to save in (e.g., '1d_spectroscopy')
+    output_dir : str, optional
+        Direct path to save the figure
+    base_dir : str, optional
+        Base directory for organizing figures by category
+    """
+    # Direct path provided in filename
     if filename and os.path.dirname(filename):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         full_path = filename
+    # Specific output directory provided
     elif output_dir:
-        # Use provided output_dir directly
         os.makedirs(output_dir, exist_ok=True)
         full_path = os.path.join(output_dir, filename)
+    # Organize by category in base_dir
     else:
-        if category:
-            category_name = category
-        else:
+        if not base_dir:
+            base_dir = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)), "figures"
+            )
+
+        if not category:
             calling_script = os.path.basename(sys.argv[0]).replace(".py", "")
-            category_name = get_figure_category(calling_script)
+            category = get_figure_category(calling_script)
 
-        if using_paths_module:
-            if category_name == "tests" or "test" in calling_script.lower():
-                save_dir = FIGURES_TESTS_DIR
-            elif category_name == "1d_spectroscopy":
-                save_dir = FIGURES_1D_DIR
-            elif category_name == "2d_spectroscopy":
-                save_dir = FIGURES_2D_DIR
-            elif category_name == "bath_correlator":
-                save_dir = FIGURES_BATH_DIR
-            elif category_name == "pulses":
-                save_dir = FIGURES_PULSES_DIR
-            else:
-                save_dir = FIGURES_PYTHON_DIR / category_name
-        else:
-            save_dir = os.path.join(base_dir, category_name)
-
+        save_dir = os.path.join(base_dir, category)
         os.makedirs(save_dir, exist_ok=True)
         full_path = os.path.join(save_dir, filename)
 
+    # Save in all requested formats
     for fmt in formats:
         fig.savefig(
             f"{full_path}.{fmt}",

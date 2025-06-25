@@ -13,7 +13,7 @@ Usage modes:
 import sys
 from pathlib import Path
 from common_fcts import (
-    plot_2d_spectroscopy_data,
+    plot_spectroscopy_data,
     plot_2d_from_filepath,
     plot_2d_from_relative_path,
 )
@@ -179,7 +179,7 @@ def plot_with_search_config():
     # =============================
     # RUN PLOTTING
     # =============================
-    plot_2d_spectroscopy_data(config)
+    plot_spectroscopy_data(config, simulation_type="2d")
 
     print("✅ 2D Spectroscopy plotting completed!")
 
