@@ -40,6 +40,7 @@ from qspectro2d.spectroscopy.post_processing import (
     compute_1d_fft_wavenumber,
     extend_and_plot_results,
     extend_time_axes,
+    compute_2d_fft_wavenumber,
 )
 
 
@@ -766,93 +767,187 @@ def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
     # Extract data from standardized structure
     two_d_datas = data["data"]
     axes = data["axes"]
-    times = np.arange(
-        -axes["tau_coh"][-1], axes["t_det"][-1], axes["t_det"][1] - axes["t_det"][0]
-    )  # Reconstruct times array
     times_T = axes["T_wait"]
     system_data = data["system"]
+    fwhm0 = system_data.fwhms[0]
+    times = np.arange(-1 * fwhm0, system_data.t_max, system_data.dt)
+
+    extend_for = config.get("extend_for", (1, 3))
+    section = config.get("section", (1.4, 1.8, 1.4, 1.8))
 
     print(f"✅ 2D data loaded successfully!")
     print(f"   Times shape: {times.shape}")
     print(f"   Times_T shape: {times_T.shape}")
     print(f"   Data shape: {two_d_datas[0].shape}")
 
-    ### Plot time domain data
-    if config.get("plot_time_domain", True):
-        print("📊 Plotting 2D time domain data...")
-        try:
-            for i, T_wait in enumerate(times_T):
-                if two_d_datas[i] is not None:
-                    tau_cohs, t_dets = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+    # Filter out None values from averaged_results
+    valid_results = [res for res in two_d_datas if res is not None]
+    valid_T_waits = [times_T[i] for i, res in enumerate(two_d_datas) if res is not None]
 
+    if not valid_results:
+        print("No valid results to plot")
+        return
+
+    # =============================
+    # Combine all data arrays into global arrays for time and frequency domains
+    # =============================
+    # Initialize global arrays with zeros
+    # global_ts and global_taus are the largest axes (from the first valid T_wait)
+    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
+    global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
+
+    if extend_for != (1, 1):
+        global_ts, global_taus, global_data_time = extend_time_axes(
+            data=global_data_time,
+            t_det=global_ts,
+            tau_coh=global_taus,
+            pad_t_det=extend_for,
+            pad_tau_coh=extend_for,
+        )
+
+    global_nu_ts, global_nu_taus, global_data_freq = compute_2d_fft_wavenumber(
+        global_ts, global_taus, global_data_time
+    )
+
+    for i, data in enumerate(valid_results):
+        T_wait = valid_T_waits[i]
+        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+
+        ### Plot time domain data
+        if config.get("plot_time_domain", True):
+            # print("📊 Plotting 2D time domain data...")
+            try:
+                fig = plot_2d_el_field(
+                    data_xyz=(ts, taus, data),
+                    t_wait=T_wait,  # Plot specific T_wait
+                    domain="time",
+                    use_custom_colormap=True,
+                )
+                filename = _build_2d_plot_filename(
+                    system=system_data, domain="time", t_wait=T_wait
+                )
+                save_fig(fig, filename=filename, output_dir=output_dir)
+                plt.close(fig)  # Clean up memory
+
+                # print("✅ 2D time domain plots completed!")
+            except Exception as e:
+                print(f"❌ Error in 2D time domain plotting: {e}")
+
+        if extend_for != (1, 1):
+            ts, taus, data = extend_time_axes(
+                data=data,
+                t_det=ts,
+                tau_coh=taus,
+                pad_t_det=extend_for,
+                pad_tau_coh=extend_for,
+            )
+
+        nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(ts, taus, data)
+
+        # Map local data into the global arrays with safe index mapping
+        tau_indices = np.array([np.argmin(np.abs(global_taus - v)) for v in taus])
+        t_indices = np.array([np.argmin(np.abs(global_ts - v)) for v in ts])
+        nu_tau_indices = np.array(
+            [np.argmin(np.abs(global_nu_taus - v)) for v in nu_taus]
+        )
+        nu_t_indices = np.array([np.argmin(np.abs(global_nu_ts - v)) for v in nu_ts])
+
+        # Map time domain data using time indices
+        for local_tau_idx, global_tau_idx in enumerate(tau_indices):
+            for local_t_idx, global_t_idx in enumerate(t_indices):
+                # Safe assignment with verified bounds for time domain
+                global_data_time[global_tau_idx, global_t_idx] += data[
+                    local_tau_idx, local_t_idx
+                ]
+
+        # Map frequency domain data using frequency indices
+        for local_nu_tau_idx, global_nu_tau_idx in enumerate(nu_tau_indices):
+            for local_nu_t_idx, global_nu_t_idx in enumerate(nu_t_indices):
+                # Safe assignment with verified bounds for frequency domain
+                global_data_freq[global_nu_tau_idx, global_nu_t_idx] += data_freq[
+                    local_nu_tau_idx, local_nu_t_idx
+                ]
+
+        ### Plot frequency domain data
+        if config.get("plot_frequency_domain", True):
+            # print("📊 Plotting 2D frequency domain data...")
+
+            for component in config.get(
+                "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
+            ):
+                print(nu_ts, nu_taus, data_freq, flush=True)
+                try:
                     fig = plot_2d_el_field(
-                        data_xyz=(tau_cohs, t_dets, two_d_datas[i]),
-                        domain="time",
+                        data_xyz=(nu_ts, nu_taus, data_freq),
+                        t_wait=T_wait,  # Plot specific T_wait
+                        domain="freq",
                         use_custom_colormap=True,
+                        component=component,
+                        section=section,
                     )
                     filename = _build_2d_plot_filename(
-                        system=system_data, domain="time", t_wait=T_wait
+                        system=system_data,
+                        domain="freq",
+                        component=component,
+                        t_wait=T_wait,
                     )
                     save_fig(fig, filename=filename, output_dir=output_dir)
-                    plt.show(fig)  # Show plot for interactive use
                     plt.close(fig)  # Clean up memory
 
-            print("✅ 2D time domain plots completed!")
+                    # print(f"✅ 2D {component} component plots completed!")
+                except Exception as e:
+                    print(
+                        f"❌ Error plotting 2D {component} component: {e}"
+                    )  # Clean up memory
+
+    # Normalize by number of valid results
+    global_data_time /= len(valid_results)
+    global_data_freq /= len(valid_results)
+
+    # Plot the global results
+    """
+    if config.get("plot_time_domain", True):
+        # print("📊 Plotting 2D time domain data...")
+        try:
+            fig = plot_2d_el_field(
+                data_xyz=(ts, taus, data),
+                domain="time",
+                use_custom_colormap=True,
+            )
+            filename = _build_2d_plot_filename(
+                system=system_data, domain="time", t_wait=T_wait
+            )
+            save_fig(fig, filename=filename, output_dir=output_dir)
+            plt.close(fig)  # Clean up memory
+
+            # print("✅ 2D time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in 2D time domain plotting: {e}")
+    """
 
-    ### Plot frequency domain data
     if config.get("plot_frequency_domain", True):
-        print("📊 Plotting 2D frequency domain data...")
+        # print("📊 Plotting 2D frequency domain data...")
 
         for component in config.get(
             "spectral_components_to_plot", ["real", "imag", "abs", "phase"]
         ):
             try:
-                for i, T_wait in enumerate(times_T):
-                    if two_d_datas[i] is not None:
-                        # Apply extend_for and section processing                        extend_for = config.get("extend_for", (1, 3))
-                        section = config.get("section", (1.4, 1.8, 1.4, 1.8))
-                        tau_cohs, t_dets = get_tau_cohs_and_t_dets_for_T_wait(
-                            times, T_wait
-                        )
-                        t_dets_ext, tau_cohs_ext, data_ext = extend_time_axes(
-                            data=two_d_datas[i],
-                            t_det=t_dets,
-                            tau_coh=tau_cohs,
-                            pad_t_det=extend_for,
-                            pad_tau_coh=extend_for,
-                        )
-                        # PLOT THE time domain data
-                        """fig = plot_2d_el_field(
-                            data_xyz=(t_dets_ext, tau_cohs_ext, data_ext),
-                            t_wait=T_wait,  # Plot specific T_wait
-                            times_T=times_T,
-                            times=times,
-                            component=component,
-                            extend_for=extend_for,
-                            section=section,
-                        )"""
+                fig = plot_2d_el_field(
+                    data_xyz=(global_nu_ts, global_nu_taus, global_data_freq),
+                    domain="freq",
+                    use_custom_colormap=True,
+                    component=component,
+                    section=section,
+                )
+                filename = _build_2d_plot_filename(
+                    system=system_data,
+                    domain="freq",
+                    component=component,
+                )
+                save_fig(fig, filename=filename, output_dir=output_dir)
+                plt.close(fig)  # Clean up memory
 
-                        fig = plot_2d_el_field(
-                            data_xyz=(t_dets_ext, tau_cohs_ext, data_ext),
-                            t_wait=T_wait,  # Plot specific T_wait
-                            times_T=times_T,
-                            times=times,
-                            component=component,
-                            extend_for=extend_for,
-                            section=section,
-                        )
-                        filename = _build_2d_plot_filename(
-                            system=system_data,
-                            domain="freq",
-                            component=component,
-                            t_wait=T_wait,
-                        )
-                        save_fig(fig, filename=filename, output_dir=output_dir)
-                        plt.close(fig)  # Clean up memory
-
-                print(f"✅ 2D {component} component plots completed!")
+                # print(f"✅ 2D {component} component plots completed!")
             except Exception as e:
                 print(
                     f"❌ Error plotting 2D {component} component: {e}"

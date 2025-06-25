@@ -361,51 +361,45 @@ def plot_example_evo(
     Plot the evolution of the electric field and expectation values for a given tau_coh and T_wait.
 
     Parameters:
-        times_plot (np.ndarray): Time axis for the plot. Comprised of three time ranges for the three pulses.
+        times_plot (np.ndarray): Time axis for the plot.
         datas (list): List of arrays of expectation values to plot.
         pulse_seq_f: PulseSequence object for the final pulse sequence.
         tau_coh (float): Coherence time.
         T_wait (float): Waiting time.
         system: System object containing all relevant parameters.
+        **kwargs: Additional keyword arguments for annotation.
 
     Returns:
         matplotlib.figure.Figure: The figure object.
     """
-    # =============================
-    # PREPARE TIME AXIS AND FIELD
-    # =============================
-    # Choose field function depending on RWA
+    # Choose field function based on RWA setting
     if getattr(system, "RWA_laser", False):
         field_func = E_pulse
     else:
         field_func = Epsilon_pulse
 
-    # Compute total electric field using the pulse sequence
-    E_total = np.zeros_like(times_plot, dtype=np.complex128)
-    # =============================
-    # Calculate total electric field for each pulse in the sequence
-    # =============================
+    # Calculate total electric field
     E0 = pulse_seq_f.pulses[0].pulse_amplitude
     E_total = np.array([field_func(t, pulse_seq_f) / E0 for t in times_plot])
 
-    # =============================
-    # PLOTTING
-    # =============================
+    # Create plot with appropriate size
     fig, axes = plt.subplots(
         len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True
-    )  # Plot electric field
+    )
+
+    # Plot electric field
     axes[0].plot(
         times_plot,
         np.real(E_total),
-        color=list(COLORS.keys())[0],  # "C0"
-        linestyle=LINE_STYLES[0],  # "solid"
+        color=list(COLORS.keys())[0],
+        linestyle=LINE_STYLES[0],
         label=r"$\mathrm{Re}[E(t)]$",
     )
     axes[0].plot(
         times_plot,
         np.imag(E_total),
-        color=list(COLORS.keys())[1],  # "C1"
-        linestyle=LINE_STYLES[1],  # "dashed"
+        color=list(COLORS.keys())[1],
+        linestyle=LINE_STYLES[1],
         label=r"$\mathrm{Im}[E(t)]$",
     )
     axes[0].set_ylabel(r"$E(t) / E_0$")
@@ -414,72 +408,283 @@ def plot_example_evo(
     # Plot expectation values
     for idx, data in enumerate(datas):
         ax = axes[idx + 1]
+
+        # Determine observable label
         if hasattr(system, "observable_strs") and idx < len(system.observable_strs):
-            label = (
-                r"$\mathrm{Re}\langle"
-                + " "
-                + system.observable_strs[idx]
-                + " "
-                + r"\rangle$"
-            )
+            observable_str = system.observable_strs[idx]
         else:
-            label = r"$\mathrm{Re}\langle \mu \rangle$"
+            observable_str = r"\mu"
+
+        # Plot real part
         ax.plot(
-            times_plot, data, color=f"C{(idx+5)%10}", linestyle=LINE_STYLES[0]
-        )  # "solid"
-        ax.axvline(
-            0, color=list(COLORS.keys())[2], linestyle=LINE_STYLES[1], label="Pulse0"
-        )  # "C2", "dashed"
-        ax.axvline(
-            tau_coh,
-            color=list(COLORS.keys())[3],
-            linestyle=LINE_STYLES[2],
-            label="Pulse1",
-        )  # "C3", "dashdot"
-        ax.axvline(
-            tau_coh + T_wait,
-            color=list(COLORS.keys())[4],
-            linestyle=LINE_STYLES[3],
-            label="Pulse2",
-        )  # "C4", "dotted"
-        ax.set_ylabel(label)
+            times_plot,
+            np.real(data),
+            color=list(COLORS.keys())[0],
+            linestyle=LINE_STYLES[0],
+            label=r"$\mathrm{Re}\langle" + " " + observable_str + " " + r"\rangle$",
+        )
 
-    # Set x-label only on the bottom subplot
-    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
+        # Plot imaginary part
+        ax.plot(
+            times_plot,
+            np.imag(data),
+            color=list(COLORS.keys())[1],
+            linestyle=LINE_STYLES[1],
+            label=r"$\mathrm{Im}\langle" + " " + observable_str + " " + r"\rangle$",
+        )
 
+        ax.set_ylabel(r"$\langle" + observable_str + r"\rangle$")
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+
+    # Add parameter information as text box if kwargs provided
     if kwargs:
-        # Format additional parameters
         text_lines = []
         for key, value in kwargs.items():
-            if isinstance(value, (int, float)):
-                if isinstance(value, float):
-                    text_lines.append(f"{key}: {value:.3g}")
-                else:
-                    text_lines.append(f"{key}: {value}")
-            else:
-                text_lines.append(f"{key}: {value}")
+            text_lines.append(f"{key}: {str(value)}"[:30])
 
-        # Add text box with small font
-        info_text = "\n".join(text_lines)
         plt.text(
             0.8,
             0.98,
-            info_text,
+            "\n".join(text_lines),
             transform=plt.gca().transAxes,
             fontsize=12,
             verticalalignment="top",
             bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
         )
 
+    # Set x-label only on the bottom subplot
+    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
+
+    # Add title and finalize plot
     plt.suptitle(
         rf"$\tau = {tau_coh:.2f}\,\mathrm{{fs}},\quad T = {T_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {system.ODE_Solver}"
     )
     plt.tight_layout()
 
-    plt.show()
+    return fig
+
+
+''' NEWER VERSION  THAT DOESNT WORK
+def plot_2d_el_field(
+    data_xyz: tuple[np.ndarray, np.ndarray, np.ndarray],
+    t_wait: float = np.inf,
+    domain: Literal["time", "freq"] = "time",
+    component: Literal["real", "imag", "abs", "phase"] = "real",
+    use_custom_colormap: bool = False,
+    section: Union[tuple[float, float, float, float], None] = None,
+) -> Union[plt.Figure, None]:
+    """
+    Create a color plot of 2D electric field data for positive x and y values.
+
+    This function plots 2D spectroscopic data where x represents detection time,
+    y represents coherence time, and the data represents polarization expectation values.
+
+    Parameters
+    ----------
+    data_xyz : tuple[np.ndarray, np.ndarray, np.ndarray]
+        Tuple of (x, y, data) where x and y are 1D arrays representing time/frequency
+        grids and data is a 2D complex array with shape (len(y), len(x)).
+    t_wait : float, default np.inf
+        Waiting time T (fs) to include in plot title and filename. If np.inf,
+        no waiting time is displayed.
+    domain : {"time", "freq"}, default "time"
+        Domain of the data. "time" for time-domain plots (fs), "freq" for
+        frequency-domain plots (10^4 cm^-1).
+    component : {"real", "imag", "abs", "phase"}, default "real"
+        Component of complex data to plot. Used for both title and data processing.
+    use_custom_colormap : bool, default False
+        If True, uses custom red-white-blue colormap centered at zero.
+        Automatically set to True for "real", "imag", and "phase" components.
+    section : tuple[float, float, float, float] or None, optional
+        Crop section as (x_min, x_max, y_min, y_max) to zoom into specific region.
+
+    Returns
+    -------
+    matplotlib.figure.Figure or None
+        The generated figure object, or None if an error occurs.
+
+    Raises
+    ------
+    ValueError
+        If data_xyz is not a 3-tuple, data is all zeros, array dimensions mismatch,
+        invalid domain/component values, or output_dir doesn't exist when saving.
+
+    Examples
+    --------
+    >>> x = np.linspace(0, 100, 50)
+    >>> y = np.linspace(0, 50, 25)
+    >>> data = np.random.complex128((25, 50))
+    >>> plot_2d_el_field((x, y, data), domain="time", component="real")
+    """
+    # =============================
+    # VALIDATE INPUT
+    # =============================
+    if not isinstance(data_xyz, tuple) or len(data_xyz) != 3:
+        raise ValueError("data_xyz must be a tuple of (x, y, data)")
+
+    x, y, data = data_xyz
+
+    # Check for empty arrays
+    if x.size == 0 or y.size == 0 or data.size == 0:
+        print(
+            f"❌ Warning: Empty arrays detected in plot_2d_el_field. x.shape={x.shape}, y.shape={y.shape}, data.shape={data.shape}"
+        )
+        return None
+
+    # Convert to real arrays for plotting
+    x = np.real(x)
+    y = np.real(y)
+
+    # Ensure data is a valid 2D array with matching dimensions
+    if data.shape != (len(y), len(x)):
+        print(
+            f"❌ Warning: Data shape mismatch. Expected {(len(y), len(x))}, got {data.shape}"
+        )
+        # Try to reshape or transpose if possible
+        if data.size >= len(y) * len(x):
+            try:
+                data = data[: len(y), : len(x)]
+                print(f"Reshaped data to {data.shape}")
+            except Exception as e:
+                print(f"Cannot reshape data: {e}")
+                return None
+        else:
+            return None
+
+    # Extract the requested component of the data
+    try:
+        if component == "real":
+            z = np.real(data)
+            use_custom_colormap = True
+        elif component == "imag":
+            z = np.imag(data)
+            use_custom_colormap = True
+        elif component == "abs":
+            z = np.abs(data)
+        elif component == "phase":
+            z = np.angle(data)
+            use_custom_colormap = True
+        else:
+            raise ValueError(f"Invalid component: {component}")
+    except Exception as e:
+        print(f"❌ Error extracting {component} component: {e}")
+        return None
+
+    # Check for NaN or inf values
+    if np.isnan(z).any() or np.isinf(z).any():
+        print(f"❌ Warning: Data contains NaN or inf values. Replacing with zeros.")
+        z = np.nan_to_num(z, nan=0.0, posinf=0.0, neginf=0.0)
+
+    # Check if z is empty after processing
+    if z.size == 0:
+        print(f"❌ Error: Empty data array after processing component {component}")
+        return None
+
+    # Create the figure
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    # Apply section if provided
+    if section is not None:
+        if len(section) == 4:
+            x_min, x_max, y_min, y_max = section
+
+            # Find indices with better validation
+            x_indices = np.where((x >= x_min) & (x <= x_max))[0]
+            y_indices = np.where((y >= y_min) & (y <= y_max))[0]
+
+            # Check if we have valid indices
+            if len(x_indices) == 0 or len(y_indices) == 0:
+                print(f"❌ Warning: Section {section} doesn't contain any data points")
+                # Don't apply section if it would result in empty arrays
+            else:
+                x_min_idx, x_max_idx = x_indices[0], x_indices[-1] + 1  # +1 for slicing
+                y_min_idx, y_max_idx = y_indices[0], y_indices[-1] + 1  # +1 for slicing
+
+                # Double check that indices are valid
+                if x_min_idx >= x_max_idx or y_min_idx >= y_max_idx:
+                    print(
+                        f"❌ Warning: Invalid section indices: x[{x_min_idx}:{x_max_idx}], y[{y_min_idx}:{y_max_idx}]"
+                    )
+                elif x_max_idx > len(x) or y_max_idx > len(y):
+                    print(
+                        f"❌ Warning: Section indices out of bounds: x[{x_min_idx}:{x_max_idx}], y[{y_min_idx}:{y_max_idx}]"
+                    )
+                else:
+                    # Apply the section
+                    x = x[x_min_idx:x_max_idx]
+                    y = y[y_min_idx:y_max_idx]
+                    z = z[y_min_idx:y_max_idx, x_min_idx:x_max_idx]
+                    print(
+                        f"ℹ️ Applied section: x[{x_min_idx}:{x_max_idx}], y[{y_min_idx}:{y_max_idx}]"
+                    )
+
+    # Check if z is empty after sectioning
+    if z.size == 0:
+        print(f"❌ Error: Empty data array after applying section {section}")
+        return None
+
+    # Create colormap based on data
+    try:
+        if use_custom_colormap:
+            # Find maximum absolute value for symmetric color scale
+            # Check if z is not empty before finding max
+            if z.size > 0:
+                z_max = np.max(np.abs(z))
+                if z_max == 0:
+                    z_max = 1.0  # Avoid division by zero
+
+                # Use TwoSlopeNorm for centered colormap
+                try:
+                    norm = TwoSlopeNorm(vmin=-z_max, vcenter=0, vmax=z_max)
+                    cmap = plt.cm.RdBu_r
+                except Exception as e:
+                    print(
+                        f"Warning: Cannot use TwoSlopeNorm with vmin={-z_max}, vcenter=0, vmax={z_max}. Using default normalization."
+                    )
+                    norm = None
+                    cmap = plt.cm.viridis
+            else:
+                norm = None
+                cmap = plt.cm.viridis
+        else:
+            norm = None
+            cmap = plt.cm.viridis
+    except Exception as e:
+        print(f"❌ Error setting up colormap: {e}")
+        norm = None
+        cmap = plt.cm.viridis
+
+    # Create the plot with meshgrid for proper 2D representation
+    try:
+        X, Y = np.meshgrid(x, y)
+        im = ax.pcolormesh(X, Y, z, cmap=cmap, norm=norm, shading="auto")
+        plt.colorbar(im, ax=ax)
+    except Exception as e:
+        print(f"❌ Error creating pcolormesh: {e}")
+        print(f"X shape: {X.shape}, Y shape: {Y.shape}, z shape: {z.shape}")
+        # Try fallback plotting method
+        try:
+            im = ax.imshow(
+                z,
+                extent=[x.min(), x.max(), y.min(), y.max()],
+                origin="lower",
+                aspect="auto",
+                cmap=cmap,
+            )
+            plt.colorbar(im, ax=ax)
+        except Exception as e2:
+            print(f"❌ Fallback plotting also failed: {e2}")
+            return None
+
+    # Add labels and title
+    ax.set_xlabel(r"$t_{\text{det}}$ [fs]")
+    ax.set_ylabel(r"$\tau_{\text{coh}}$ [fs]")
+    ax.set_title(r"2D Electric Field Data")
+
+    plt.tight_layout()
 
     return fig
+'''
 
 
 def plot_2d_el_field(

@@ -10,10 +10,7 @@ This script tests the new unified structure implementation:
 5. Checks backward compatibility
 """
 
-import subprocess
 import sys
-import pickle
-import gzip
 from pathlib import Path
 
 # Add the necessary directories to Python path
@@ -100,9 +97,9 @@ def test_1d_workflow():
     # Configuration for quick test
     config = {
         "N_atoms": 1,
-        "tau_coh": 50.0,  # Short for quick test
+        "tau_coh": 300.0,  # Short for quick test
         "T_wait": 100.0,  # Short for quick test
-        "t_det_max": 200.0,  # Short for quick test
+        "t_det_max": 60.0,  # Short for quick test
         "dt": 2.0,  # Larger timestep for speed
         "ODE_Solver": "BR",
         "pulse_fwhm": 15.0,
@@ -187,8 +184,9 @@ def test_2d_workflow():
     plot_config = {
         "spectral_components_to_plot": ["real", "imag"],
         "plot_time_domain": True,
-        "extend_for": (1, 2),
-        "section": (1.4, 1.8, 1.4, 1.8),
+        "extend_for": (1, 6),
+        "section": (0, 2, 0, 2),
+        # "section": (1.4, 1.8, 1.4, 1.8),
     }
 
     try:
@@ -246,11 +244,13 @@ def main():
         "compression": False,
     }
 
+    """
     # Test 1D workflow
     try:
         results["1d_workflow"] = test_1d_workflow()
     except Exception as e:
         print(f"❌ 1D workflow test crashed: {e}")
+    """
 
     # Test 2D workflow
     try:

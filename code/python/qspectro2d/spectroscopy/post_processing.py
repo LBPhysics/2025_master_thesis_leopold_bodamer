@@ -352,11 +352,6 @@ def extend_and_plot_results(
     -------
     None
     """
-    # Debug prints:
-    print(f"Debug - save: {plot_args_freq.get('save', 'NOT_SET')}")
-    print(f"Debug - output_dir: {plot_args_freq.get('output_dir', 'NOT_SET')}")
-    print(f"Debug - system: {plot_args_freq.get('system', 'NOT_SET')}")
-    print(f"Debug - system is None: {plot_args_freq.get('system') is None}")
 
     # Filter out None values from averaged_results
     valid_results = [res for res in averaged_results if res is not None]
@@ -368,25 +363,15 @@ def extend_and_plot_results(
         print("No valid results to plot")
         return
 
-    # Find the first valid T_wait index to initialize global arrays
-    first_valid_idx = next(
-        (i for i, res in enumerate(averaged_results) if res is not None), None
-    )
-    if first_valid_idx is None:
-        print("No valid results found in averaged_results")
-        return
-
     # =============================
     # Combine all data arrays into global arrays for time and frequency domains
     # =============================
     # Initialize global arrays with zeros
-    # global_ts and global_taus are the largest axes (from the first valid T_wait)    
-    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(
-        times, times_T[first_valid_idx]
-    )
+    # global_ts and global_taus are the largest axes (from the first valid T_wait)
+    global_ts, global_taus = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
     global_data_time = np.zeros((len(global_taus), len(global_ts)), dtype=np.complex64)
 
-    if extend_for is not None:
+    if extend_for != (1, 1):
         global_ts, global_taus, global_data_time = extend_time_axes(
             data=global_data_time,
             t_det=global_ts,
@@ -400,9 +385,10 @@ def extend_and_plot_results(
     )
 
     for i, data in enumerate(valid_results):
-        T_wait = valid_T_waits[i]        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
+        T_wait = valid_T_waits[i]
+        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
 
-        if extend_for is not None:
+        if extend_for != (1, 1):
             ts, taus, data = extend_time_axes(
                 data=data,
                 t_det=ts,
