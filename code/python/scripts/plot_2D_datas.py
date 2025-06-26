@@ -5,19 +5,14 @@ This script loads and plots 2D electronic spectroscopy data from pickle files
 in various formats (real, imaginary, absolute, phase) for analysis and visualization.
 
 Usage modes:
-1. Direct file path: python plot_2D_datas.py /path/to/file.pkl
-2. Relative path (feed-forward): python plot_2D_datas.py special_dir/filename.pkl
-3. No arguments: Use search configuration (original behavior)
+1. Direct relative path: python plot_2D_datas.py 2d_spectroscopy/N2_atoms/mesolve/special_dir
+2. No arguments: Use search configuration (looking in standard directories)
 """
 
 import sys
 from pathlib import Path
-from common_fcts import (
-    plot_spectroscopy_data,
-    plot_2d_from_filepath,
-    plot_2d_from_relative_path,
-)
-from config.paths import DATA_DIR
+from common_fcts import load_latest_data, _plot_2d_data
+from config.paths import DATA_DIR, FIGURES_PYTHON_DIR, FIGURES_2D_DIR
 
 
 # =============================
@@ -26,162 +21,174 @@ from config.paths import DATA_DIR
 def main():
     """Main function to run the 2D spectroscopy plotting."""
 
-    # Check if filepath was provided as command line argument
+    # Check if relative directory path was provided as command line argument
     if len(sys.argv) > 1:
-        # Mode 1: Plot from specific filepath or relative path
-        path_arg = sys.argv[1]
+        # Mode 1: Plot from specific relative directory
+        relative_dir_str = sys.argv[1]
+        relative_dir = Path(relative_dir_str)
 
-        # Check if it's a relative path (contains no path separators or starts with simulation type)
-        if "/" in path_arg or "\\" in path_arg:
-            if path_arg.startswith(("1d_spectroscopy", "2d_spectroscopy")):
-                # This is a relative path from DATA_DIR (feed-forward mode)
-                plot_from_relative_path(path_arg)
-            else:
-                # This is an absolute or other relative path
-                filepath = Path(path_arg)
-                plot_from_filepath(filepath)
-        else:
-            # Single filename, treat as direct path
-            filepath = Path(path_arg)
-            plot_from_filepath(filepath)
+        print(
+            f"🚀 Starting 2D Electronic Spectroscopy Plotting from relative path: {relative_dir}"
+        )
+
+        # Plot with the new workflow
+        plot_from_relative_dir(relative_dir)
     else:
-        # Mode 2: Plot using search configuration (original behavior)
+        # Mode 2: Plot using search configuration
         plot_with_search_config()
 
 
-def plot_from_relative_path(relative_path_str: str):
-    """Plot 2D data from a relative path string (feed-forward mode)."""
+def plot_from_relative_dir(relative_dir: Path):
+    """
+    Plot 2D data from a specific relative directory using the new workflow.
+
+    Args:
+        relative_dir: Relative directory path where the data is stored
+    """
     print(
-        f"🚀 Starting 2D Electronic Spectroscopy Plotting from relative path: {relative_path_str}"
+        f"🔍 Looking for latest data in: {DATA_DIR / "2d_spectroscopy" / relative_dir}"
     )
 
-    ### Plotting configuration
+    # Plotting configuration
     config = {
         "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
         "plot_time_domain": True,
-        "extend_for": (1, 3),
+        "extend_for": (1, 20),
         "section": (1.4, 1.8, 1.4, 1.8),
     }
 
-    # Call the feed-forward plotting function
-    plot_2d_from_relative_path(relative_path_str, config)
+    try:
+        # Load the latest data file from the relative directory
+        data = load_latest_data(relative_dir)
 
-    print("✅ 2D Spectroscopy plotting completed!")
-
-
-def plot_from_filepath(filepath: Path):
-    """Plot 2D data from a specific filepath or directory."""
-    print(f"🚀 Starting 2D Electronic Spectroscopy Plotting from: {filepath}")
-
-    ### Plotting configuration
-    config = {
-        "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
-        "plot_time_domain": True,
-        "extend_for": (1, 3),
-        "section": (1.4, 1.8, 1.4, 1.8),
-        "output_subdir": "",
-    }
-
-    # Resolve the full path using DATA_DIR
-    full_path = DATA_DIR / filepath
-
-    print(f"Looking for data in: {full_path}")
-
-    # Check if it's a directory or file
-    if full_path.is_dir():
-        # Find all .pkl files in the directory
-        pkl_files = list(full_path.glob("*.pkl"))
-        if not pkl_files:
-            print(f"❌ No .pkl files found in directory: {full_path}")
+        # Extract system and plotting data
+        system = data.get("system")
+        if system is None:
+            print("❌ Error: Loaded data does not contain system information")
             return
 
-        print(f"Found {len(pkl_files)} .pkl files:")
-        for pkl_file in pkl_files:
-            print(f"  - {pkl_file.name}")
+        # Create figure directory if it doesn't exist
+        figure_dir = FIGURES_PYTHON_DIR / relative_dir  # ADDED THIS figures_from_python
+        figure_dir.mkdir(
+            parents=True, exist_ok=True
+        )  # Plot the data using the _plot_2d_data function directly
 
-        # Find and plot only the latest file (highest counter)
-        from common_fcts import find_latest_file_with_counter
+        # Create figure directory if it doesn't exist
+        _plot_2d_data(data, config, figure_dir)
 
-        latest_file = find_latest_file_with_counter(pkl_files)
-        print(f"\n📊 Plotting latest file: {latest_file.name}")
-        plot_2d_from_filepath(latest_file, config)
+        print(f"✅ Figures saved to: {figure_dir}")
 
-    elif full_path.is_file():
-        # Direct file path provided
-        plot_2d_from_filepath(full_path, config)
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
 
-    else:
-        print(f"❌ Path does not exist: {full_path}")
-        return
 
-    print("✅ 2D Spectroscopy plotting completed!")
+def find_latest_data_recursive(base_dir: Path, max_depth: int = 3) -> tuple:
+    """
+    Recursively search for data files in a directory and its subdirectories.
+
+    Args:
+        base_dir: The base directory to start searching
+        max_depth: Maximum directory depth to search
+
+    Returns:
+        tuple: (found data dictionary, relative directory where found)
+              or (None, None) if no data found
+    """
+    import os
+
+    # First try base directory
+    try:
+        print(f"🔍 Trying directory: {base_dir}")
+        data = load_latest_data("2d_spectroscopy" / base_dir)
+        return data, base_dir
+    except FileNotFoundError:
+        print(f"   No data files found in {base_dir}, searching subdirectories...")
+
+    # If not found, and we haven't reached max depth, search subdirectories
+    if max_depth > 0:
+        # Get all subdirectories in the data directory
+        full_base_dir = DATA_DIR / "2d_spectroscopy" / base_dir
+
+        try:
+            # List all subdirectories
+            subdirs = [
+                d
+                for d in os.listdir(full_base_dir)
+                if os.path.isdir(os.path.join(full_base_dir, d))
+            ]
+
+            # Sort subdirectories by modification time (newest first)
+            subdirs.sort(
+                key=lambda d: os.path.getmtime(os.path.join(full_base_dir, d)),
+                reverse=True,
+            )
+
+            # Check each subdirectory
+            for subdir in subdirs:
+                next_dir = base_dir / Path(subdir)
+                try:
+                    data, found_dir = find_latest_data_recursive(
+                        next_dir, max_depth - 1
+                    )
+                    if data:
+                        return data, found_dir
+                except Exception as e:
+                    print(f"   Skipping {next_dir}: {e}")
+        except FileNotFoundError:
+            print(f"   Base directory {full_base_dir} does not exist")
+        except Exception as e:
+            print(f"   Error searching subdirectories: {e}")
+
+    # If we get here, no data was found
+    return None, None
 
 
 def plot_with_search_config():
-    """Plot 2D data using search configuration (original behavior)."""
+    """Plot 2D data using search configuration (looking in standard directories)."""
 
     # =============================
     # PLOTTING PARAMETERS - MODIFY HERE
     # =============================
 
-    ### Data source configuration
-    data_subdir = (
-        "2d_spectroscopy/N_1/paper_eqs/t_max_100fs"  # Data subdirectory to search
-    )
-    file_pattern = "*.pkl"  # File pattern to match
+    # Base directory to search
+    base_dir = Path("")  # Empty string means start at the root of 2d_spectroscopy
 
-    ### Output configuration
-    output_subdir = "2d_spectroscopy"  # Output figures subdirectory
+    print(f"🔍 Starting search in 2d_spectroscopy directory and subdirectories")
 
-    ### Plot types to generate
-    spectral_components_to_plot = [
-        "real",
-        "imag",
-        "abs",
-        "phase",
-    ]  # Available: real, imag, abs, phase
-
-    ### Additional plotting options
-    plot_time_domain = True  # Plot time domain data
-    extend_for = (1, 3)  # Extend frequency range for plotting
-    section = (
-        1.4,
-        1.8,
-        1.4,
-        1.8,
-    )  # Section to focus on (freq_min, freq_max, freq_min, freq_max)
-
-    # =============================
-    # BUILD CONFIGURATION DICTIONARY
-    # =============================
+    # Configuration for plotting
     config = {
-        "data_subdir": data_subdir,
-        "file_pattern": file_pattern,
-        "output_subdir": output_subdir,
-        "spectral_components_to_plot": spectral_components_to_plot,
-        "plot_time_domain": plot_time_domain,
-        "extend_for": extend_for,
-        "section": section,
+        "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
+        "plot_time_domain": True,
+        "extend_for": (1, 30),
+        "section": (1.4, 1.8, 1.4, 1.8),
     }
 
-    # =============================
-    # PRINT CONFIGURATION SUMMARY
-    # =============================
-    print(f"🚀 Starting 2D Electronic Spectroscopy Plotting...")
-    print(f"  Data source: {data_subdir}")
-    print(f"  Plot types: {spectral_components_to_plot}")
-    print(f"  Time domain: {plot_time_domain}")
-    print(f"  Extend for: {extend_for}")
-    print(f"  Section: {section}")
-    print(f"  Output: {output_subdir}")
-    print("")
+    # Try to find data recursively
+    data, found_dir = find_latest_data_recursive(base_dir)
 
-    # =============================
-    # RUN PLOTTING
-    # =============================
-    plot_spectroscopy_data(config, simulation_type="2d")
+    if data:
+        print(f"✅ Found data in directory: {found_dir}")
 
-    print("✅ 2D Spectroscopy plotting completed!")
+        # Extract system information
+        system = data.get("system")
+        if system is None:
+            print("❌ Error: Loaded data does not contain system information")
+            return
+
+        # Create figure directory
+        figure_dir = FIGURES_2D_DIR / found_dir
+        figure_dir.mkdir(parents=True, exist_ok=True)
+
+        # Plot the data
+        _plot_2d_data(data, config, figure_dir)
+
+        print(f"✅ Figures saved to: {figure_dir}")
+    else:
+        print(
+            "❌ No suitable data files found in 2d_spectroscopy directory or subdirectories"
+        )
 
 
 if __name__ == "__main__":

@@ -712,8 +712,6 @@ def plot_2d_el_field(
     plt.gca().spines["bottom"].set_linewidth(1.5)
     plt.gca().spines["left"].set_linewidth(1.5)"""
 
-    plt.show()
-
     return fig
 
 
@@ -803,8 +801,6 @@ def plot_example_polarization(
         )
 
     plt.tight_layout()
-    plt.show()
-
     return fig
 
 

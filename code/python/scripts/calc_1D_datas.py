@@ -5,15 +5,18 @@ This script computes 1D electronic spectroscopy data using parallel processing
 and saves results in pickle format. All parameters are defined directly in main().
 """
 
-# =============================
-# IMPORTS
-# =============================
-from common_fcts import run_1d_simulation_with_config
+import time
+from pathlib import Path
+from common_fcts import (
+    create_system_parameters,
+    run_simulation,
+    get_max_workers,
+    print_simulation_header,
+    print_simulation_summary,
+    save_data_with_unique_path,
+)
 
 
-# =============================
-# MAIN FUNCTION
-# =============================
 def main():
     """Main function to run the 1D spectroscopy simulation."""
 
@@ -31,22 +34,30 @@ def main():
     t_det_max = 600.0  # Additional time buffer [fs]
     dt = 2.0  # Time step [fs]
 
+    ### System-specific parameters
+    if N_atoms == 1:
+        pulse_fwhm = 15.0  # Pulse FWHM for single atom [fs]
+    elif N_atoms == 2:
+        pulse_fwhm = 5.0  # Pulse FWHM for two atoms [fs]
+    else:
+        raise ValueError(f"Unsupported number of atoms: {N_atoms}")
+
     ### Spectroscopy parameters
     n_phases = 4  # Number of phases for phase cycling
-    n_freqs = 1  # Number of frequencies for inhomogeneous broadening
+    n_freqs = 10  # Number of frequencies for inhomogeneous broadening
     Delta_cm = 200  # Inhomogeneous broadening [cm⁻¹]
     envelope_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
     E0 = 0.005  # Electric field amplitude
-    pulse_fwhm = 15.0  # Pulse FWHM for Gaussian envelope [fs]
     RWA_laser = True  # Use RWA for laser interaction
 
     ### Generate dynamic output path
-    output_subdir = f"N_{N_atoms}/{ODE_Solver.lower()}_tau{tau_coh:.0f}_T{T_wait:.0f}"
+    output_subdir = f"{T_wait:.0f}_{tau_coh:.0f}fs"
 
     # =============================
     # BUILD CONFIGURATION DICTIONARY
     # =============================
     config = {
+        "simulation_type": "1d",  # Explicitly specify simulation type
         "N_atoms": N_atoms,
         "ODE_Solver": ODE_Solver,
         "tau_coh": tau_coh,
@@ -78,12 +89,32 @@ def main():
     # =============================
     # RUN SIMULATION
     # =============================
-    run_1d_simulation_with_config(config)
+    start_time = time.time()
 
-    # Print the output subdirectory for SLURM script to capture
-    print(f"OUTPUT_SUBDIR:{output_subdir}")
+    # Get parallel processing configuration
+    max_workers = get_max_workers()
 
-    return output_subdir
+    # Print simulation header
+    print_simulation_header(config, max_workers, "1d")
+
+    # Create system parameters
+    system = create_system_parameters(config)
+    print(f"System configuration:")
+    system.summary()
+
+    # Run simulation (returns standardized payload)
+    payload = run_simulation(config, system, "1d")
+
+    # Save data using the new workflow
+    print("\nSaving simulation data...")
+    relative_dir = save_data_with_unique_path(payload, config, system)
+
+    # Print simulation summary
+    elapsed_time = time.time() - start_time
+    print_simulation_summary(elapsed_time, payload["data"], relative_dir, "1d")
+
+    # Print the relative path for feed-forward to plotting script
+    print(f"SAVED_DATA_PATH:{relative_dir}")
 
 
 if __name__ == "__main__":

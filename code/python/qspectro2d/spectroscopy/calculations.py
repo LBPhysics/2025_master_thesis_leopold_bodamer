@@ -126,6 +126,21 @@ def compute_pulse_evolution(
 '''
 
 
+def complex_polarization(rho: Qobj, system: SystemParameters) -> np.ndarray:
+    Dip = system.Dipole_moment
+    if system.N_atoms == 1:
+        # For a single atom, the polarization is simply the expectation value of the dipole operator
+        return Dip[1, 0] * rho[0, 1]
+    elif system.N_atoms == 2:
+        return (
+            Dip[1, 0] * rho[0, 1]
+            + Dip[2, 0] * rho[0, 2]
+            + Dip[3, 1] * rho[1, 3]
+            + Dip[3, 2] * rho[2, 3]
+        )
+    return 0  # TODO GENERAL CASE FOR N>2
+
+
 def compute_pulse_evolution(
     psi_ini: Qobj,
     times: np.ndarray,
@@ -153,7 +168,6 @@ def compute_pulse_evolution(
 
     # Add default options if not already present
     default_options = {
-        "store_states": True,
         "progress_bar": "",
         # Increasing max steps and atol/rtol for better stability
         "nsteps": 200000,
@@ -691,6 +705,15 @@ def compute_2d_polarization(
     Returns:
         tuple: (t_det_vals, tau_coh_vals, data)
     """
+    plot_example = kwargs.get("plot_example", False)
+    solver_options = {}
+    if (
+        plot_example
+    ):  # only store all the states if we want to plot the example, otherwise only for the final states
+        solver_options = {
+            "save_states": True,
+        }
+
     # Extra input validation
     if not isinstance(times, np.ndarray):
         raise TypeError(f"Expected times to be numpy.ndarray, got {type(times)}")
@@ -724,7 +747,7 @@ def compute_2d_polarization(
         times_0 = times[:2]
 
     data_0 = compute_pulse_evolution(
-        system.psi_ini, times_0, pulse_seq_0, system=system
+        system.psi_ini, times_0, pulse_seq_0, system=system, **solver_options
     )
 
     for tau_idx, tau_coh in enumerate(tau_coh_vals):
@@ -748,7 +771,9 @@ def compute_2d_polarization(
                 (1, t_peak_pulse1, phi_1),  # pulse 1
             ],
         )
-        data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
+        data_1 = compute_pulse_evolution(
+            rho_1, times_1, pulse_seq_1, system=system, **solver_options
+        )
 
         idx_start_pulse2_in_times_1 = idx_start_pulse2 - idx_start_pulse1
         rho_2 = data_1.states[idx_start_pulse2_in_times_1]
@@ -766,12 +791,16 @@ def compute_2d_polarization(
                 (2, t_peak_pulse2, phi_2),  # pulse 2
             ],
         )
-        data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
+        final_solver_options = {
+            "store_states": True,
+        }
+        data_f = compute_pulse_evolution(
+            rho_2, times_2, pulse_seq_f, system=system, **final_solver_options
+        )
 
         # Just in case I want to plot an example evolution
-        plot_example = kwargs.get("plot_example", False)
         if plot_example:
-            tau_example = kwargs.get(
+            tau_example = kwargs.get(  # get an example tau_coh for plotting
                 "tau_example", tau_coh_vals[len(tau_coh_vals) // 3]
             )
             if tau_coh == tau_example:
@@ -819,31 +848,26 @@ def compute_2d_polarization(
         for t_idx, t_det in enumerate(t_det_vals):
             actual_det_time = t_peak_pulse2 + t_det
 
-            # Only compute polarization if:
-            # 1. tau_coh + t_det <= t_max -> if the result is in the time range
-            # 2. tau_coh + t_det < time_cut -> if the result is physically valid
-            # 3. We have enough elements in our data arrays
+            # Pre-calculate condition values before the if statement
             time_cut = kwargs.get("time_cut", np.inf)
-            if (
-                t_idx + tau_idx
-                < len(
-                    tau_coh_vals
-                )  # and actual_det_time < system.t_max  # Not needed anymore?
-                and actual_det_time < time_cut
-                and len(times_2) > 0
-                and len(data_f.states) > 0
-            ):
+            index_in_range = t_idx + tau_idx < len(tau_coh_vals)
+            time_in_range = actual_det_time < time_cut
+            data_available = len(times_2) > 0 and len(data_f.states) > 0
 
-                # Safety check for index bounds
+            if index_in_range and time_in_range and data_available:
+                # Find closest time index using vectorized operations
                 t_idx_in_times_2 = np.abs(times_2 - actual_det_time).argmin()
+
+                """# Bounds check
                 if t_idx_in_times_2 >= len(data_f.states):
                     print(
                         f"WARNING: Index {t_idx_in_times_2} out of bounds for states array of length {len(data_f.states)}",
                         flush=True,
                     )
                     continue
+                """
 
-                # FINAL STATE
+                # Get final state and apply RWA if needed
                 rho_f = data_f.states[t_idx_in_times_2]
 
                 if system.RWA_laser:
@@ -852,9 +876,9 @@ def compute_2d_polarization(
                         times_2[t_idx_in_times_2],
                         system=system,
                     )
-
-                value = expect(system.Dip_op, rho_f)
-                data[tau_idx, t_idx] = np.real(value)
+                # Calculate the complex polarization value
+                value = complex_polarization(rho_f, system=system)
+                data[tau_idx, t_idx] = value
                 # AXIS 0: tau_coh, AXIS 1: t_det
 
     return (

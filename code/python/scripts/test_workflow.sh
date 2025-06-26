@@ -10,6 +10,8 @@
 # - Direct feed-forward compatibility between calculation and plotting
 # - Consistent directory structure between data and figures
 # - Supports both new SAVED_DATA_PATH and legacy OUTPUT_SUBDIR formats
+#
+# Usage: bash test_workflow.sh
 
 echo "=========================================="
 echo "TESTING 2D CALCULATION AND PLOTTING WORKFLOW"
@@ -60,7 +62,7 @@ echo "Current working directory: $(pwd)"
 echo "Checking required packages..."
 python3 -c "
 try:
-    from common_fcts import run_2d_simulation_with_config
+    from common_fcts import run_simulation_with_config
     print('✅ common_fcts imported successfully')
 except ImportError as e:
     print(f'❌ Import error: {e}')
@@ -69,6 +71,11 @@ except ImportError as e:
     echo "❌ Required packages not available. Please install dependencies."
     exit 1
 }
+
+# Ensure we're using a non-interactive backend for matplotlib
+# This prevents the "invalid command name ".!canvas"" error when running on servers
+# or when the terminal session might be interrupted
+export MPLBACKEND="Agg"
 
 echo ""
 echo "=== STEP 1: Testing calculation phase ==="

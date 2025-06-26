@@ -5,10 +5,12 @@
 
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
+#SBATCH --partition=GPGPU
+#SBATCH --nodelist= orion00
 
-#SBATCH --time=3-00:00:00
+#SBATCH --time=7-00:00:00
 #SBATCH --mem=30G
-#SBATCH -c 12
+#SBATCH -c 16
 
 # =============================
 # UNIFIED 2D SPECTROSCOPY: CALCULATION + PLOTTING
@@ -41,16 +43,17 @@ echo "=========================================="
 echo "Start time: $(date)"
 
 # Run calculation and capture output
-calc_output=$(python3 calc_2D_datas.py)
+calc_output=$(python3 calc_2D_datas.py 2>&1)
+calc_exit_code=$?
 echo "$calc_output"
 
-# Extract the output subdirectory from the output
-output_subdir=$(echo "$calc_output" | grep "OUTPUT_SUBDIR:" | cut -d':' -f2)
+# Extract the data path (new workflow)
+saved_data_path=$(echo "$calc_output" | grep "SAVED_DATA_PATH:" | cut -d':' -f2 | tr -d '[:space:]')
 
 # Check if calculation completed successfully
-if [ $? -eq 0 ] && [ ! -z "$output_subdir" ]; then
+if [ $calc_exit_code -eq 0 ] && [ -n "$saved_data_path" ]; then
     echo "✅ 2D data calculation completed successfully at: $(date)"
-    echo "📁 Data saved to subdirectory: $output_subdir"
+    echo "📁 Data saved to path: $saved_data_path"
 else
     echo "❌ 2D data calculation failed at: $(date)"
     echo "Exiting without plotting..."
@@ -65,9 +68,9 @@ echo "=========================================="
 echo "STEP 2: Starting 2D data plotting..."
 echo "=========================================="
 echo "Start time: $(date)"
-echo "📊 Plotting data from subdirectory: $output_subdir"
+echo "📊 Plotting data from path: $saved_data_path"
 
-python3 plot_2D_datas.py "$output_subdir"
+python3 plot_2D_datas.py "$saved_data_path"
 
 # Check if plotting completed successfully
 if [ $? -eq 0 ]; then
