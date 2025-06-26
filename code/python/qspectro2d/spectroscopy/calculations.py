@@ -126,8 +126,10 @@ def compute_pulse_evolution(
 '''
 
 
-def complex_polarization(rho: Qobj, system: SystemParameters) -> np.ndarray:
-    Dip = system.Dipole_moment
+def complex_polarization(rho: Qobj, system: SystemParameters) -> np.complex128:
+    Dip = system.Dip_op
+    """Compute the complex polarization of the system.
+    """
     if system.N_atoms == 1:
         # For a single atom, the polarization is simply the expectation value of the dipole operator
         return Dip[1, 0] * rho[0, 1]
@@ -168,7 +170,6 @@ def compute_pulse_evolution(
 
     # Add default options if not already present
     default_options = {
-        "progress_bar": "",
         # Increasing max steps and atol/rtol for better stability
         "nsteps": 200000,
         "atol": 1e-6,
@@ -706,7 +707,9 @@ def compute_2d_polarization(
         tuple: (t_det_vals, tau_coh_vals, data)
     """
     plot_example = kwargs.get("plot_example", False)
-    solver_options = {}
+    solver_options = {
+        "progress_bar": "",
+    }
     if (
         plot_example
     ):  # only store all the states if we want to plot the example, otherwise only for the final states
@@ -791,9 +794,17 @@ def compute_2d_polarization(
                 (2, t_peak_pulse2, phi_2),  # pulse 2
             ],
         )
+
+        if tau_idx % max(len(tau_coh_vals) // 20, 1) == 0:
+            bar = "enhanced"
+        else:
+            bar = None
+
         final_solver_options = {
             "store_states": True,
+            "progress_bar": bar,
         }
+
         data_f = compute_pulse_evolution(
             rho_2, times_2, pulse_seq_f, system=system, **final_solver_options
         )
