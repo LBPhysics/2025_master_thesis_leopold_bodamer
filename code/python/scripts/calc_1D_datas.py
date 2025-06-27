@@ -48,7 +48,7 @@ def main():
     Delta_cm = 200  # Inhomogeneous broadening [cm⁻¹]
     envelope_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
     E0 = 0.005  # Electric field amplitude
-    RWA_laser = False  # Use RWA for laser interaction
+    RWA_laser = True  # Use RWA for laser interaction
 
     ### Generate dynamic output path
     output_subdir = f"{T_wait:.0f}_{tau_coh:.0f}fs"

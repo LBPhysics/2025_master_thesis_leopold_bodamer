@@ -23,9 +23,7 @@ from typing import Optional, Literal, Union, Dict, Any
 ### Project-specific imports
 from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
-    parallel_compute_2d_E_with_inhomogenity,
     check_the_solver,
-    get_tau_cohs_and_t_dets_for_T_wait,
 )
 from qspectro2d.core.system_parameters import SystemParameters
 from config.paths import DATA_DIR, FIGURES_DIR
@@ -33,12 +31,10 @@ from config.mpl_tex_settings import DEFAULT_FIG_FORMAT, save_fig
 
 from qspectro2d.visualization.plotting import (
     plot_1d_el_field,
-    plot_2d_el_field,
 )
 from qspectro2d.spectroscopy.post_processing import (
     compute_1d_fft_wavenumber,
     extend_time_axes,
-    compute_2d_fft_wavenumber,
 )
 
 
@@ -379,36 +375,6 @@ def build_1d_payload(
     }
 
 
-def build_2d_payload(
-    two_d_datas: list,
-    times: np.ndarray,
-    times_T: np.ndarray,
-    config: dict,
-    system: SystemParameters,
-) -> dict:
-    """Build standardized 2D data payload."""
-    # Get tau_coh and t_det arrays for the first T_wait for axes info
-    tau_coh_vals, t_det_vals = get_tau_cohs_and_t_dets_for_T_wait(times, times_T[0])
-
-    return {
-        "data": two_d_datas,
-        "axes": {
-            "t_det": t_det_vals,
-            "tau_coh": tau_coh_vals,
-            "T_wait": times_T,
-        },
-        "system": system,
-        "config": config,
-        "metadata": {
-            "timestamp": datetime.now().isoformat(),
-            "simulation_type": "2d",
-            "n_phases": config["n_phases"],
-            "n_freqs": config["n_freqs"],
-            "n_times_T": config["n_times_T"],
-        },
-    }
-
-
 # =============================
 # BACKWARD COMPATIBILITY WRAPPERS
 # =============================
@@ -428,7 +394,7 @@ def save_2d_data(
     system: SystemParameters,
 ) -> Path:
     """Save 2D polarization simulation data - wrapper for unified function."""
-    payload = build_2d_payload(two_d_datas, times, times_T, config, system)
+    payload = 1  # build_2d_payload(two_d_datas, times, times_T, config, system)
     return save_data(payload, config, system, "2d")
 
 
@@ -509,8 +475,9 @@ def run_simulation(
         t_det_vals, data_avg = _run_1d_simulation(config, system, max_workers)
         return build_1d_payload(t_det_vals, data_avg, config, system)
     elif simulation_type == "2d":
-        two_d_datas, times, times_T = _run_2d_simulation(config, system, max_workers)
-        return build_2d_payload(two_d_datas, times, times_T, config, system)
+        print(1)
+        # two_d_datas, times, times_T = _run_2d_simulation(config, system, max_workers)
+        # return build_2d_payload(two_d_datas, times, times_T, config, system)
     else:
         raise ValueError(f"Unsupported simulation type: {simulation_type}")
 
@@ -538,49 +505,18 @@ def _run_1d_simulation(
     print("Computing 1D polarization with parallel processing...")
 
     try:
+
         t_det_vals, data_avg = parallel_compute_1d_E_with_inhomogenity(
             n_freqs=config["n_freqs"],
             n_phases=config["n_phases"],
             tau_coh=config["tau_coh"],
             T_wait=config["T_wait"],
-            times=times,
+            t_det_max=config["t_det_max"],
             system=system,
             max_workers=max_workers,
         )
         print("✅ Parallel computation completed successfully!")
         return t_det_vals, data_avg
-    except Exception as e:
-        print(f"❌ ERROR: Simulation failed: {e}")
-        raise
-
-
-def _run_2d_simulation(
-    config: dict, system: SystemParameters, max_workers: int
-) -> list:
-    """Run 2D spectroscopy simulation."""
-    ### Create time arrays
-    fwhms = system.fwhms
-    times = np.arange(-1 * fwhms[0], system.t_max, system.dt)
-    times_T = np.linspace(0, config["T_wait_max"], config["n_times_T"])
-
-    ### Validate solver
-    time_cut = validate_solver(system, times)
-
-    print("Computing 2D polarization with parallel processing...")
-    kwargs = {"plot_example": False, "time_cut": time_cut}
-
-    try:
-        two_d_datas = parallel_compute_2d_E_with_inhomogenity(
-            n_freqs=config["n_freqs"],
-            n_phases=config["n_phases"],
-            times_T=times_T,
-            times=times,
-            system=system,
-            max_workers=max_workers,
-            **kwargs,
-        )
-        print("✅ Parallel computation completed successfully!")
-        return two_d_datas, times, times_T
     except Exception as e:
         print(f"❌ ERROR: Simulation failed: {e}")
         raise
@@ -864,7 +800,8 @@ def plot_from_filepath(
     if simulation_type == "1d":
         _plot_1d_data(loaded_data, config, output_dir)
     else:  # simulation_type == "2d"
-        _plot_2d_data(loaded_data, config, output_dir)
+        print(1)
+        # _plot_2d_data(loaded_data, config, output_dir)
 
     print(f"🎯 All {simulation_type.upper()} plots saved to: {output_dir}")
 
@@ -943,116 +880,6 @@ def _plot_1d_data(data: dict, config: dict, output_dir: Path) -> None:
             plt.close(fig)
 
         print("✅ Frequency domain plots completed!")
-
-    # Clean up memory
-    plt.close("all")
-    gc.collect()
-
-
-def _plot_2d_data(data: dict, config: dict, output_dir: Path) -> None:
-    """Plot 2D spectroscopy data using standardized data structure.
-
-    Args:
-        data: Dictionary with standardized 2D data structure
-        config: Plotting configuration
-        output_dir: Directory to save plots
-    """
-    # Extract data from standardized structure
-    two_d_datas = data["data"]
-    axes = data["axes"]
-    times_T = axes["T_wait"]
-    system_data = data["system"]
-
-    # Get simulation parameters
-    fwhm0 = system_data.fwhms[0] if hasattr(system_data, "fwhms") else 100  # Default
-    times = np.arange(-1 * fwhm0, system_data.t_max, system_data.dt)
-
-    # Get configuration values
-    extend_for = config.get("extend_for", (1, 1))
-    section = config.get("section", (1.4, 1.8, 1.4, 1.8))
-    spectral_components = config.get("spectral_components_to_plot", ["abs"])
-
-    print(f"✅ 2D data loaded successfully!")
-    print(f"   Times shape: {times.shape}")
-    print(f"   Times_T shape: {times_T.shape}")
-    print(f"   Data shape: {two_d_datas[0].shape if two_d_datas else 'None'}")
-
-    # Filter out None values from averaged_results
-    valid_results = [res for res in two_d_datas if res is not None]
-    valid_T_waits = [times_T[i] for i, res in enumerate(two_d_datas) if res is not None]
-
-    if not valid_results:
-        print("❌ No valid results to plot")
-        return
-
-    # Process each valid waiting time
-    for i, data_array in enumerate(valid_results):
-        T_wait = valid_T_waits[i]
-        ts, taus = get_tau_cohs_and_t_dets_for_T_wait(times, T_wait)
-
-        # Plot time domain data
-        if config.get("plot_time_domain", True):
-            try:
-                fig = plot_2d_el_field(
-                    data_x=ts,
-                    data_y=taus,
-                    data_z=data_array,
-                    t_wait=T_wait,
-                    domain="time",
-                    use_custom_colormap=True,
-                )
-                filename = build_plot_filename(
-                    system=system_data, domain="time", dimension="2D", t_wait=T_wait
-                )
-                save_fig(fig, filename=filename, output_dir=output_dir)
-                plt.close(fig)
-            except Exception as e:
-                print(f"❌ Error in 2D time domain plotting: {e}")
-
-        # Handle frequency domain processing
-        if config.get("plot_frequency_domain", True):
-            try:
-                # Extend time axes if needed
-                if extend_for != (1, 1):
-                    extended_ts, extended_taus, extended_data = extend_time_axes(
-                        data=data_array,
-                        t_det=ts,
-                        tau_coh=taus,
-                        pad_t_det=extend_for,
-                        pad_tau_coh=extend_for,
-                    )
-                else:
-                    extended_ts, extended_taus, extended_data = ts, taus, data_array
-
-                # Compute FFT
-                nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(
-                    extended_ts, extended_taus, extended_data
-                )
-
-                # Plot each component
-                for component in spectral_components:
-                    fig = plot_2d_el_field(
-                        data_x=nu_ts,
-                        data_y=nu_taus,
-                        data_z=data_freq,
-                        t_wait=T_wait,
-                        domain="freq",
-                        use_custom_colormap=True,
-                        component=component,
-                        section=section,
-                    )
-                    filename = build_plot_filename(
-                        system=system_data,
-                        domain="freq",
-                        component=component,
-                        dimension="2D",
-                        t_wait=T_wait,
-                    )
-                    save_fig(fig, filename=filename, output_dir=output_dir)
-                    plt.close(fig)
-
-            except Exception as e:
-                print(f"❌ Error plotting 2D {component} component: {e}")
 
     # Clean up memory
     plt.close("all")
