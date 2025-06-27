@@ -8,8 +8,8 @@
 #SBATCH --partition=GPGPU
 #SBATCH --nodelist= orion00
 
-#SBATCH --time=7-00:00:00
-#SBATCH --mem=30G
+#SBATCH --time=0-01:00:00
+#SBATCH --mem=1G
 #SBATCH -c 16
 
 # =============================

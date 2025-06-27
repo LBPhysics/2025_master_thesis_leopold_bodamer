@@ -27,7 +27,7 @@ def main():
     ### Main system configuration
     N_atoms = 2  # Number of atoms (1 or 2)
     t_max = 20  # Maximum time [fs]
-    dt = 0.1  # Time step [fs]
+    dt = 1  # Time step [fs]
     ODE_Solver = "BR"  # ODE solver type
 
     ### System-specific parameters
