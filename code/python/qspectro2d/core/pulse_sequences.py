@@ -57,6 +57,9 @@ class PulseSequence:
     """
 
     pulses: list = field(default_factory=list)  # List of Pulse objects
+    pulse_specs: List[Tuple[int, float, float]] = field(
+        default_factory=list
+    )  # Optional: store specs
 
     @staticmethod
     def from_pulse_specs(
@@ -124,7 +127,7 @@ class PulseSequence:
                 )
             )
 
-        return PulseSequence(pulses=pulses)
+        return PulseSequence(pulses=pulses, pulse_specs=pulse_specs)
 
     @staticmethod
     def create_sequence(
@@ -282,3 +285,6 @@ class PulseSequence:
             ],
             "pulse_indices": [i for i, _ in active_pulses],
         }
+
+
+# TODO please add something such that i can access: pulse0_specs = (0, timings["pulse0"], full_sequence.pulse_specs[0][2])

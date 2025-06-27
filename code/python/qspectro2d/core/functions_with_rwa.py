@@ -48,7 +48,17 @@ def H_int(
     return H_int
 
 
-def apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj:
+def apply_RWA_phase_factors(
+    states: list, times: np.ndarray, system: SystemParameters
+) -> list:
+    """Apply RWA phase factors to states."""
+    return [
+        _apply_RWA_phase_factors(state, time, system=system)
+        for state, time in zip(states, times)
+    ]
+
+
+def _apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj:
     """
     Apply time-dependent phase factors to the density matrix entries.
     Dispatches to the appropriate implementation based on N_atoms.

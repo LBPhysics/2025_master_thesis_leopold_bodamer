@@ -2,6 +2,7 @@
 
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from typing import List, Union
 import numpy as np
 from qutip import Qobj, Result, liouvillian, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
@@ -126,21 +127,73 @@ def compute_pulse_evolution(
 '''
 
 
-def complex_polarization(rho: Qobj, system: SystemParameters) -> np.complex128:
-    Dip = system.Dip_op
-    """Compute the complex polarization of the system.
+def complex_polarization(
+    system: SystemParameters, state: Union[Qobj, List[Qobj]]
+) -> Union[complex, np.ndarray]:
     """
+    Calculate the complex polarization for state(s) using the dipole operator.
+    The polarization is defined as the expectation value of the dipole operator
+    with the given quantum state(s) or density matrix(es).
+
+    Parameters
+    ----------
+    system : SystemParameters
+        System parameters containing dipole operator information.
+
+    state : Qobj/array-like
+        A single or a `list` of quantum states or density matrices.
+
+    Returns
+    -------
+    polarization : complex/array-like
+        Complex polarization value(s). A (nested) array of polarization values
+        if ``state`` is an array.
+
+    Examples
+    --------
+    >>> complex_polarization(system, rho) # Single density matrix
+    >>> complex_polarization(system, [rho1, rho2, rho3]) # Multiple states
+
+    """
+    if isinstance(state, Qobj):
+        return _single_qobj_polarization(system, state)
+
+    elif isinstance(state, (list)):
+        return np.array(
+            [_single_qobj_polarization(system, s) for s in state], dtype=np.complex128
+        )
+
+    raise TypeError("State must be a quantum object or array of quantum objects")
+
+
+def _single_qobj_polarization(system: SystemParameters, state: Qobj) -> complex:
+    """
+    Private function used by complex_polarization to calculate polarization values of Qobjs.
+    """
+    if not (state.isket or state.isoper):
+        raise TypeError("State must be a ket or density matrix")
+
+    Dip = system.Dip_op
+
     if system.N_atoms == 1:
         # For a single atom, the polarization is simply the expectation value of the dipole operator
-        return Dip[1, 0] * rho[0, 1]
+        return Dip[1, 0] * state[0, 1]
     elif system.N_atoms == 2:
         return (
-            Dip[1, 0] * rho[0, 1]
-            + Dip[2, 0] * rho[0, 2]
-            + Dip[3, 1] * rho[1, 3]
-            + Dip[3, 2] * rho[2, 3]
+            Dip[1, 0] * state[0, 1]
+            + Dip[2, 0] * state[0, 2]
+            + Dip[3, 1] * state[1, 3]
+            + Dip[3, 2] * state[2, 3]
         )
-    return 0  # TODO GENERAL CASE FOR N>2
+    else:
+        # General case for N>2
+        pol = 0j
+        dim = state.shape[0]
+        for i in range(dim):
+            for j in range(dim):
+                if i != j and abs(Dip[i, j]) > 0:
+                    pol += Dip[i, j] * state[j, i]
+        return pol
 
 
 def compute_pulse_evolution(
@@ -180,7 +233,6 @@ def compute_pulse_evolution(
     for key, value in default_options.items():
         if key not in options:
             options[key] = value
-
     # Initialize result storage for different regions
     all_states = []
     all_times = []
@@ -266,25 +318,46 @@ def compute_pulse_evolution(
                 options=options,
             )
 
-        # Store states - exclude last point for all but the final segment
-        if i < len(split_times) - 1:
-            # Not the last segment: exclude the last state/time to avoid duplication
-            all_states.extend(result.states[:-1])
-            all_times.extend(result.times[:-1])
+        if hasattr(result, "states") and result.states:
+            # Store states - exclude last point for all but the final segment
+            if i < len(split_times) - 1:
+                # Not the last segment: exclude the last state/time to avoid duplication
+                all_states.extend(result.states[:-1])
+                all_times.extend(result.times[:-1])
+            else:
+                # Last segment: include all states and times
+                all_states.extend(result.states)
+                all_times.extend(result.times)
+
+            # Update current state for next evolution
+            current_state = result.states[-1]
+        elif hasattr(result, "final_state"):
+            current_state = result.final_state
         else:
-            # Last segment: include all states and times
-            all_states.extend(result.states)
-            all_times.extend(result.times)
-
-        # Update current state for next evolution
-        current_state = result.states[-1]
-
+            raise RuntimeError(
+                "No valid state found in result object for next evolution step."
+            )
     # =============================
     # Create combined result object using first result as base
     # =============================
     result_ = result
-    result_.states = all_states
-    result_.times = np.array(all_times)
+
+    if all_states:
+        # store_states=True: assign all collected states/times
+        result_.states = all_states
+        result_.times = np.array(all_times)
+    else:
+        # store_states=False: assign only the final state/time
+        if hasattr(result_, "final_state"):
+            result_.states = [result_.final_state]
+            # Optionally, assign the last time point if available
+            if hasattr(result_, "times") and len(result_.times) > 0:
+                result_.times = [result_.times[-1]]
+            else:
+                result_.times = []
+        else:
+            result_.states = []
+            result_.times = []
 
     return result_
 
@@ -327,25 +400,27 @@ def check_the_solver(
     # =============================
     # CONSTRUCT PULSE SEQUENCE (refactored)
     # =============================
-
     # Define pulse parameters
     phi_0 = np.pi / 2
     phi_1 = np.pi / 4
-    phi_2 = 0
-    t_peak_pulse1 = times[-1] / 2
-    t_peak_pulse2 = times[-1] / 1.1
+    DETECTION_PHASE = 0
+    pulse1_t_peak = times[-1] / 2
+    pulse2_t_peak = times[-1] / 1.1
 
     # Use the from_pulse_specs static method to construct the sequence
     pulse_seq = PulseSequence.from_pulse_specs(
         system=system,
         pulse_specs=[
-            (0, 0, phi_0),  # preprev: pulse 0 at t=0
-            (1, t_peak_pulse1, phi_1),  # prev: pulse 1 at middle time
-            (2, t_peak_pulse2, phi_2),  # curr: pulse 2 at end time
+            (0, 0, phi_0),  # pulse 0 at t=0
+            (1, pulse1_t_peak, phi_1),  # pulse 1 at middle time
+            (2, pulse2_t_peak, DETECTION_PHASE),  # pulse 2 at end time
         ],
     )
 
-    result = compute_pulse_evolution(system.psi_ini, times, pulse_seq, system=system)
+    result = compute_pulse_evolution(
+        system.psi_ini, times, pulse_seq, system=system, **{"store_states": True}
+    )
+    states = result.states
     # =============================
     # CHECK THE RESULT
     # =============================
@@ -361,10 +436,10 @@ def check_the_solver(
     # =============================
     strg = ""
     time_cut = np.inf  # time after which the checks failed
-    for index, state in enumerate(result.states):
-        # Apply RWA phase factors if needed
-        if getattr(system, "RWA_laser", False):
-            state = apply_RWA_phase_factors(state, times[index], system)
+    # Apply RWA phase factors if needed
+    if getattr(system, "RWA_laser", False):
+        states = apply_RWA_phase_factors(states, times, system)
+    for index, state in enumerate(states):
         time = times[index]
         if not state.isherm:
             strg += f"Density matrix is not Hermitian after t = {time}.\n"
@@ -384,14 +459,72 @@ def check_the_solver(
             break
     else:
         print(
-            "Checks passed. Solver appears to be called correctly, and density matrix remains Hermitian and positive.",
+            "Checks passed. DM remains Hermitian and positive.",
             flush=True,
         )
 
     return result, time_cut
 
 
+def _compute_next_start_point(
+    psi_initial: Qobj,
+    times: np.ndarray,
+    pulse_specs: List,
+    system: SystemParameters,
+    **kwargs,
+) -> Qobj:
+    """
+    Compute the final state after a single pulse evolution.
+
+    Parameters
+    psi_initial : Qobj
+        Initial quantum state before the pulse.
+    times : np.ndarray
+        Time array for the pulse evolution.
+    pulse_specs : list[index: int, t_peak: float, phase: float]
+
+    system : SystemParameters
+        System parameters object.
+    Returns
+    -------
+    Qobj
+        Final quantum state after pulse evolution.
+
+    """
+
+    if times.size == 0:
+        raise ValueError("Times array cannot be empty")
+
+    # =============================
+    # PULSE SEQUENCE CREATION
+    # =============================
+    pulse_seq = PulseSequence.from_pulse_specs(system=system, pulse_specs=pulse_specs)
+
+    # =============================
+    # EVOLUTION COMPUTATION
+    # =============================
+    evolution_options = {
+        "store_final_state": True,
+        "store_states": False,  # Only need final state for efficiency
+    }
+    evolution_options.update(kwargs)  # Allow override of options
+
+    evolution_data = compute_pulse_evolution(
+        psi_initial, times, pulse_seq, system=system, **evolution_options
+    )
+
+    return evolution_data.final_state
+
+
+def _create_single_pulse_sequence(system, pulse_idx, t_peak, phase):
+    """Create a pulse sequence with a single pulse."""
+    return PulseSequence.from_pulse_specs(
+        system=system, pulse_specs=[(pulse_idx, t_peak, phase)]
+    )
+
+
 # 1D polarization calculation for given tau_coh, T_wait, varialbe t_det
+'''
 def compute_1d_polarization(
     tau_coh: float,
     T_wait: float,
@@ -425,85 +558,89 @@ def compute_1d_polarization(
         (t_det_vals, data) where t_det_vals are the detection times (shifted to start at zero)
         and data is the corresponding computed observable.
     """
-    idx_start_pulse1 = np.abs(times - (tau_coh - system.fwhms[1])).argmin()
+    time_cut = kwargs.get("time_cut", np.inf)
+    plot_example = kwargs.get("plot_example", False)
+    first_and_second_options = {
+        "store_final_state": True,  # Store the final state after the first and second pulse, because tau and T are fixed
+    }
+    final_options = {  # For the 1d spectroscopy calculations, we need to only access all the states after the last pulse
+        "store_states": True,
+    }
+
+    pulse1_start_idx = np.abs(times - (tau_coh - system.fwhms[1])).argmin()
 
     times_0 = times[
-        : idx_start_pulse1 + 1
+        : pulse1_start_idx + 1
     ]  # definetly not empty except for when T_wait >= t_max
     if times_0.size == 0:
-        times_0 = times[:2]  # idx_end_pulse0 + 1
+        times_0 = times[:2]
+        print(
+            "Warning: times_0 is empty, using first two time points to avoid errors.",
+            flush=True,
+        )
 
     # calculate the evolution of the first pulse in the desired range for tau_coh
-
-    # First pulse
-    t_peak_pulse0 = 0
-    pulse_seq_0 = PulseSequence.from_pulse_specs(
-        system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
-    )
-    data_0 = compute_pulse_evolution(
-        system.psi_ini, times_0, pulse_seq_0, system=system
-    )
-
-    rho_1 = data_0.states[idx_start_pulse1]
+    pulse0_t_peak = 0  # First pulse at t=0
+    data_0 = #TODO!
+    rho_1 = data_0.final_state
 
     # select range  ->  to reduce computation time
-    idx_start_pulse2 = np.abs(times - (tau_coh + T_wait - system.fwhms[2])).argmin()
-    t_start_pulse2 = times[idx_start_pulse2]  # the time at which the third pulse starts
+    pulse2_start_idx = np.abs(times - (tau_coh + T_wait - system.fwhms[2])).argmin()
+    t_start_pulse2 = times[pulse2_start_idx]  # the time at which the third pulse starts
 
     times_1 = times[
-        idx_start_pulse1 : idx_start_pulse2 + 1
+        pulse1_start_idx : pulse2_start_idx + 1
     ]  # like this: also take the overlap into account;
 
     if times_1.size == 0:
         times_1 = [
-            times[idx_start_pulse1]
+            times[pulse1_start_idx]
         ]  # Handle overlapping pulses: If the second pulse starts before the first pulse ends, combine their contributions
-    t_peak_pulse1 = tau_coh
+    pulse1_t_peak = tau_coh
     pulse_seq_1 = PulseSequence.from_pulse_specs(
         system=system,
         pulse_specs=[
-            (0, t_peak_pulse0, phi_0),  # prev: pulse 0
-            (1, t_peak_pulse1, phi_1),  # curr: pulse 1
+            (0, pulse0_t_peak, phi_0),  # pulse 0
+            (1, pulse1_t_peak, phi_1),  # pulse 1
         ],
     )
-    data_1 = compute_pulse_evolution(rho_1, times_1, pulse_seq_1, system=system)
+    data_1 = compute_pulse_evolution(
+        rho_1, times_1, pulse_seq_1, system=system, **first_and_second_options
+    )
 
-    idx_start_pulse2_in_times_1 = np.abs(times_1 - (t_start_pulse2)).argmin()
+    pulse2_start_idx_in_times_1 = np.abs(times_1 - (t_start_pulse2)).argmin()
 
-    rho_2 = data_1.states[
-        idx_start_pulse2_in_times_1
-    ]  # == state where the third pulse starts
+    rho_2 = data_1.final_state
 
-    times_2 = times[idx_start_pulse2:]
+    times_2 = times[pulse2_start_idx:]
     if times_2.size == 0:
         times_2 = [
             times[-1]
-        ]  # idx_start_pulse2 : idx_end_pulse2 + 1    # If the second pulse starts before the first pulse ends, combine their contributions
-    phi_2 = 0  # FIXED PHASE!
-    t_peak_pulse2 = tau_coh + T_wait
+        ]  # pulse2_start_idx : idx_end_pulse2 + 1    # If the second pulse starts before the first pulse ends, combine their contributions
+    DETECTION_PHASE = 0  # FIXED PHASE!
+    pulse2_t_peak = tau_coh + T_wait
     pulse_seq_f = PulseSequence.from_pulse_specs(
         system=system,
         pulse_specs=[
-            (0, t_peak_pulse0, phi_0),  # preprev: pulse 0
-            (1, t_peak_pulse1, phi_1),  # prev: pulse 1
-            (2, t_peak_pulse2, phi_2),  # curr: pulse 2
+            (0, pulse0_t_peak, phi_0),  # pulse 0
+            (1, pulse1_t_peak, phi_1),  # pulse 1
+            (2, pulse2_t_peak, DETECTION_PHASE),  # pulse 2
         ],
     )
-    data_f = compute_pulse_evolution(rho_2, times_2, pulse_seq_f, system=system)
+    data_f = compute_pulse_evolution(
+        rho_2, times_2, pulse_seq_f, system=system, **final_options
+    )
 
-    # TODO add time_cut to avoid numerical issues
-
-    # Just in case I want to plot an example evolution
-    plot_example = kwargs.get("plot_example", False)
+    # In case I want to plot an example evolution
     if plot_example:
         data_1_expects = get_expect_vals_with_RWA(
-            data_0.states[: idx_start_pulse1 + 1],
-            data_0.times[: idx_start_pulse1 + 1],
+            data_0.states[: pulse1_start_idx + 1],
+            data_0.times[: pulse1_start_idx + 1],
             system,
         )
         data_2_expects = get_expect_vals_with_RWA(
-            data_1.states[: idx_start_pulse2_in_times_1 + 1],
-            data_1.times[: idx_start_pulse2_in_times_1 + 1],
+            data_1.states[: pulse2_start_idx_in_times_1 + 1],
+            data_1.times[: pulse2_start_idx_in_times_1 + 1],
             system,
         )
         data_f_expects = get_expect_vals_with_RWA(data_f.states, data_f.times, system)
@@ -520,14 +657,14 @@ def compute_1d_polarization(
         ]
         times_plot = np.concatenate(
             [
-                times_0[: idx_start_pulse1 + 1],
-                times_1[: idx_start_pulse2_in_times_1 + 1],
+                times_0[: pulse1_start_idx + 1],
+                times_1[: pulse2_start_idx_in_times_1 + 1],
                 times_2,
             ]
         )
 
         additional_info = {
-            "phases": (phi_0, phi_1, phi_2),
+            "phases": (phi_0, phi_1, DETECTION_PHASE),
             "tau_coh": tau_coh,
             "T_wait": T_wait,
             # "system": system,
@@ -541,30 +678,32 @@ def compute_1d_polarization(
         )
 
     # =============================
-    # SUBTRACT THE LINEAR SIGNALS for all the combinations (phi_1, phi_2):
+    # SUBTRACT THE LINEAR SIGNALS
     # =============================
-    t_det_start_idx_in_times = np.abs(times - (t_peak_pulse2)).argmin()
+    t_det_start_idx_in_times = np.abs(times - (pulse2_t_peak)).argmin()
     t_det_start_idx_in_times_2 = np.abs(
-        times_2 - (t_peak_pulse2)
-    ).argmin()  # detection time index in times_2    # JUST FIRST PULSE
+        times_2 - (pulse2_t_peak)
+    ).argmin()  # detection time index in times_2
+    # JUST FIRST PULSE
     psi_0 = system.psi_ini
-    pulse_seq_just0 = PulseSequence.from_pulse_specs(
-        system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
-    )
+    pulse_seq_just0 = pulse_seq_0
     data_only_pulse0 = compute_pulse_evolution(
-        psi_0, times, pulse_seq_just0, system=system
-    )  # JUST SECOND PULSE
-    pulse_seq_just1 = PulseSequence.from_pulse_specs(
-        system=system, pulse_specs=[(1, t_peak_pulse1, phi_1)]
+        psi_0, times, pulse_seq_just0, system=system, **final_options
+    )
+
+    # JUST SECOND PULSE
+    pulse_seq_just1 = _create_single_pulse_sequence(
+        system=system, pulse_idx=1, t_peak=pulse1_t_peak, phase=phi_1
     )
     data_only_pulse1 = compute_pulse_evolution(
-        psi_0, times, pulse_seq_just1, system=system
-    )  # JUST THIRD PULSE
-    pulse_seq_just2 = PulseSequence.from_pulse_specs(
-        system=system, pulse_specs=[(2, t_peak_pulse2, phi_2)]
+        psi_0, times, pulse_seq_just1, system=system, **final_options
+    )
+    # JUST THIRD PULSE
+    pulse_seq_just2 = _create_single_pulse_sequence(
+        system=system, pulse_idx=2, t_peak=pulse2_t_peak, phase=DETECTION_PHASE
     )
     data_only_pulse2 = compute_pulse_evolution(
-        psi_0, times, pulse_seq_just2, system=system
+        psi_0, times, pulse_seq_just2, system=system, **final_options
     )
 
     actual_det_times = data_f.times[t_det_start_idx_in_times_2:]
@@ -597,15 +736,35 @@ def compute_1d_polarization(
             for state, time in zip(states_only_pulse2, actual_det_times)
         ]
 
-    for t_idx, t_det in enumerate(actual_det_times):
-        # only if we are still in the physical regime
-        if t_det < kwargs.get("time_cut", np.inf):
+    # Calculate polarizations directly without preprocessing
+    valid_indices = [i for i, t in enumerate(actual_det_times) if t < time_cut]
+    if valid_indices:
+        # Extract valid states
+        valid_states_full = [states_full[i] for i in valid_indices]
+        valid_states_only_pulse0 = [states_only_pulse0[i] for i in valid_indices]
+        valid_states_only_pulse1 = [states_only_pulse1[i] for i in valid_indices]
+        valid_states_only_pulse2 = [states_only_pulse2[i] for i in valid_indices]
 
-            # complex Polarization calculation -> only extract the third order into data
-            P_full[t_idx] = system.Dip_op[1, 0] * states_full[t_idx][0, 1]
-            P_only0[t_idx] = system.Dip_op[1, 0] * states_only_pulse0[t_idx][0, 1]
-            P_only1[t_idx] = system.Dip_op[1, 0] * states_only_pulse1[t_idx][0, 1]
-            P_only2[t_idx] = system.Dip_op[1, 0] * states_only_pulse2[t_idx][0, 1]
+        # Calculate complex polarizations
+        P_values = {
+            "full": complex_polarization(valid_states_full, system),
+            "pulse0": complex_polarization(valid_states_only_pulse0, system),
+            "pulse1": complex_polarization(valid_states_only_pulse1, system),
+            "pulse2": complex_polarization(valid_states_only_pulse2, system),
+        }
+
+        # Assign values to the full arrays
+        for idx, orig_idx in enumerate(valid_indices):
+            if len(valid_indices) > 1:
+                P_full[orig_idx] = P_values["full"][idx]
+                P_only0[orig_idx] = P_values["pulse0"][idx]
+                P_only1[orig_idx] = P_values["pulse1"][idx]
+                P_only2[orig_idx] = P_values["pulse2"][idx]
+            else:
+                P_full[orig_idx] = P_values["full"]
+                P_only0[orig_idx] = P_values["pulse0"]
+                P_only1[orig_idx] = P_values["pulse1"]
+                P_only2[orig_idx] = P_values["pulse2"]
             """
             # real Polarization:
             P_full[t_idx] = np.real(expect(system.Dip_op, states_full[t_idx]))
@@ -627,6 +786,323 @@ def compute_1d_polarization(
     data = P_full - (P_only0 + P_only1 + P_only2)
 
     return np.array(actual_det_times) - actual_det_times[0], data
+'''
+
+
+def compute_1d_polarization(
+    tau_coh: float,
+    T_wait: float,
+    phi_0: float,
+    phi_1: float,
+    times: np.ndarray,
+    system: SystemParameters,
+    **kwargs,
+) -> tuple:
+    """
+    Compute the data for a fixed tau_coh and T_wait.
+    """
+    time_cut = kwargs.get("time_cut", np.inf)
+
+    # =============================
+    # PULSE TIMING AND SEQUENCES
+    # =============================
+    pulse_timings = _get_pulse_timings(tau_coh, T_wait)
+    pulse_sequences = _create_pulse_sequences(system, phi_0, phi_1, pulse_timings)
+
+    # =============================
+    # COMPUTE EVOLUTION STATES
+    # =============================
+    evolution_data = _compute_three_pulse_evolution(
+        times, system, pulse_timings, pulse_sequences["full"]
+    )
+
+    # =============================
+    # COMPUTE LINEAR SIGNALS
+    # =============================
+    linear_signals = _compute_linear_signals(
+        times, system, pulse_sequences["individual"], pulse_timings["detection"]
+    )
+
+    # =============================
+    # EXTRACT AND PROCESS DETECTION DATA
+    # =============================
+    detection_data = _extract_detection_data(
+        evolution_data, linear_signals, pulse_timings["detection"], time_cut, system
+    )
+
+    # Return based on plotting flag
+    if kwargs.get("plot_example_polarization", False):
+        return detection_data["plot_data"]
+
+    return detection_data["times"], detection_data["nonlinear_signal"]
+
+
+def _get_pulse_timings(tau_coh: float, T_wait: float) -> dict:
+    """Extract pulse timing information."""
+    return {
+        "pulse0": 0,
+        "pulse1": tau_coh,
+        "detection": tau_coh + T_wait,
+    }
+
+
+def _create_pulse_sequences(
+    system: SystemParameters, phi_0: float, phi_1: float, timings: dict
+) -> dict:
+    """Create all required pulse sequences."""
+    DETECTION_PHASE = 0  # Fixed phase for detection pulse
+
+    # Full three-pulse sequence specs
+    full_specs = [
+        (0, timings["pulse0"], phi_0),
+        (1, timings["pulse1"], phi_1),
+        (2, timings["detection"], DETECTION_PHASE),
+    ]
+
+    # Individual pulse sequences for linear signal subtraction
+    individual_sequences = {
+        "pulse0": _create_single_pulse_sequence(system, 0, timings["pulse0"], phi_0),
+        "pulse1": _create_single_pulse_sequence(system, 1, timings["pulse1"], phi_1),
+        "pulse2": _create_single_pulse_sequence(
+            system, 2, timings["detection"], DETECTION_PHASE
+        ),
+    }
+
+    return {
+        "full": PulseSequence.from_pulse_specs(system=system, pulse_specs=full_specs),
+        "individual": individual_sequences,
+    }
+
+
+def _compute_three_pulse_evolution(
+    times: np.ndarray,
+    system: SystemParameters,
+    timings: dict,
+    full_sequence: PulseSequence,
+) -> dict:
+    """Compute the three-pulse evolution using segmented approach."""
+    # Segment 1: First pulse evolution
+    pulse1_start_idx = np.abs(times - (timings["pulse1"] - system.fwhms[1])).argmin()
+    times_0 = _ensure_valid_times(times[: pulse1_start_idx + 1], times)
+
+    pulse0_specs = (0, timings["pulse0"], full_sequence.pulse_specs[0][2])
+    rho_1 = _compute_next_start_point(
+        psi_initial=system.psi_ini,
+        times=times_0,
+        pulse_specs=[pulse0_specs],
+        system=system,
+    )
+
+    # Segment 2: Second pulse evolution
+    pulse2_start_idx = np.abs(times - (timings["detection"] - system.fwhms[2])).argmin()
+    times_1 = times[pulse1_start_idx : pulse2_start_idx + 1]
+    times_1 = _ensure_valid_times(times_1, times, pulse1_start_idx)
+
+    pulse1_specs = (1, timings["pulse1"], full_sequence.pulse_specs[1][2])
+    rho_2 = _compute_next_start_point(
+        psi_initial=rho_1,
+        times=times_1,
+        pulse_specs=[pulse0_specs, pulse1_specs],
+        system=system,
+    )
+
+    # Segment 3: Final evolution with detection
+    times_2 = _ensure_valid_times(times[pulse2_start_idx:], times, pulse2_start_idx)
+    data_final = compute_pulse_evolution(
+        rho_2, times_2, full_sequence, system=system, store_states=True
+    )
+
+    return {
+        "final_data": data_final,
+        "times_2": times_2,
+        "detection_start_idx": pulse2_start_idx,
+    }
+
+
+def _compute_linear_signals(
+    times: np.ndarray,
+    system: SystemParameters,
+    pulse_sequences: dict,
+    detection_time: float,
+) -> dict:
+    """Compute all linear signal contributions."""
+    linear_data = {}
+    detection_idx = np.abs(times - detection_time).argmin()
+
+    for pulse_name, sequence in pulse_sequences.items():
+        data = compute_pulse_evolution(
+            system.psi_ini, times, sequence, system=system, store_states=True
+        )
+        linear_data[pulse_name] = data.states[detection_idx:]
+
+    return linear_data
+
+
+def _ensure_valid_times(
+    times_segment: np.ndarray, full_times: np.ndarray, fallback_idx: int = 0
+) -> np.ndarray:
+    """
+    Ensure time segment is not empty to prevent computation errors.
+
+    Parameters
+    ----------
+    times_segment : np.ndarray
+        The time segment that might be empty
+    full_times : np.ndarray
+        The complete time array as backup
+    fallback_idx : int
+        Index to use if times_segment is empty
+
+    Returns
+    -------
+    np.ndarray
+        Valid time array (either original or fallback)
+    """
+    # Check if the time segment has no elements
+    if times_segment.size == 0:
+        # First fallback: try to use a single time point at fallback_idx
+        if fallback_idx < len(full_times):
+            return np.array([full_times[fallback_idx]])
+        # Second fallback: use first two time points from full array
+        return full_times[:2]
+
+    # Time segment is valid, return as-is
+    return times_segment
+
+
+def _calculate_all_polarizations(
+    states_full: list,
+    linear_signals: dict,
+    times: np.ndarray,
+    time_cut: float,
+    system: SystemParameters,
+) -> dict:
+    """Calculate polarizations for all signal components."""
+    valid_indices = [i for i, t in enumerate(times) if t < time_cut]
+
+    if not valid_indices:
+        return {
+            key: np.zeros(len(times), dtype=np.complex64)
+            for key in ["full", "pulse0", "pulse1", "pulse2"]
+        }
+
+    # Extract valid states
+    valid_states = {
+        "full": [states_full[i] for i in valid_indices],
+        "pulse0": [linear_signals["pulse0"][i] for i in valid_indices],
+        "pulse1": [linear_signals["pulse1"][i] for i in valid_indices],
+        "pulse2": [linear_signals["pulse2"][i] for i in valid_indices],
+    }
+
+    # Calculate polarizations
+    polarizations = {}
+    for key, states in valid_states.items():
+        P_array = np.zeros(len(times), dtype=np.complex64)
+        P_values = complex_polarization(system, states)
+
+        # Handle scalar vs array results
+        if np.isscalar(P_values):
+            P_array[valid_indices[0]] = P_values
+        else:
+            for idx, orig_idx in enumerate(valid_indices):
+                P_array[orig_idx] = P_values[idx]
+
+        polarizations[key] = P_array
+
+    return polarizations
+
+
+def _extract_detection_data(
+    evolution_data: dict,
+    linear_signals: dict,
+    detection_time: float,
+    time_cut: float,
+    system: SystemParameters,
+) -> dict:
+    """Extract and process detection time data."""
+    # =============================
+    # DEBUG PRINTS FOR ARRAY LENGTHS
+    # =============================
+    final_data = evolution_data["final_data"]
+    detection_start_idx = np.abs(final_data.times - detection_time).argmin()
+    actual_det_times = final_data.times[detection_start_idx:]
+    states_full = final_data.states[detection_start_idx:]
+
+    # Apply RWA phase factors if needed
+    if system.RWA_laser:
+        states_full = apply_RWA_phase_factors(states_full, actual_det_times, system)
+        for key in linear_signals:
+            linear_signals[key] = apply_RWA_phase_factors(
+                linear_signals[key], actual_det_times, system
+            )
+
+    # Calculate polarizations
+    polarizations = _calculate_all_polarizations(
+        states_full, linear_signals, actual_det_times, time_cut, system
+    )
+
+    # Calculate nonlinear signal
+    nonlinear_signal = (
+        polarizations["full"]
+        - polarizations["pulse0"]
+        - polarizations["pulse1"]
+        - polarizations["pulse2"]
+    )
+
+    return {
+        "times": actual_det_times - actual_det_times[0],
+        "nonlinear_signal": nonlinear_signal,
+        "plot_data": (
+            actual_det_times - actual_det_times[0],
+            polarizations["full"],
+            polarizations["pulse0"],
+            polarizations["pulse1"],
+            polarizations["pulse2"],
+        ),
+    }
+
+
+def _calculate_all_polarizations(
+    states_full: list,
+    linear_signals: dict,
+    times: np.ndarray,
+    time_cut: float,
+    system: SystemParameters,
+) -> dict:
+    """Calculate polarizations for all signal components."""
+
+    valid_indices = [i for i, t in enumerate(times) if t < time_cut]
+
+    if not valid_indices:
+        return {
+            key: np.zeros(len(times), dtype=np.complex64)
+            for key in ["full", "pulse0", "pulse1", "pulse2"]
+        }
+
+    # Extract valid states
+    valid_states = {
+        "full": [states_full[i] for i in valid_indices],
+        "pulse0": [linear_signals["pulse0"][i] for i in valid_indices],
+        "pulse1": [linear_signals["pulse1"][i] for i in valid_indices],
+        "pulse2": [linear_signals["pulse2"][i] for i in valid_indices],
+    }
+
+    # Calculate polarizations
+    polarizations = {}
+    for key, states in valid_states.items():
+        P_array = np.zeros(len(times), dtype=np.complex64)
+        P_values = complex_polarization(system, states)
+
+        # Handle scalar vs array results
+        if np.isscalar(P_values):
+            P_array[valid_indices[0]] = P_values
+        else:
+            for idx, orig_idx in enumerate(valid_indices):
+                P_array[orig_idx] = P_values[idx]
+
+        polarizations[key] = P_array
+
+    return polarizations
 
 
 def get_tau_cohs_and_t_dets_for_T_wait(
@@ -707,15 +1183,10 @@ def compute_2d_polarization(
         tuple: (t_det_vals, tau_coh_vals, data)
     """
     plot_example = kwargs.get("plot_example", False)
-    solver_options = {
-        "progress_bar": "",
+
+    first_and_final_options = {  # For the 2d spectroscopy calculations, we need to access all the states after the first pulse
+        "store_states": True,  # Store states for the final evolution
     }
-    if (
-        plot_example
-    ):  # only store all the states if we want to plot the example, otherwise only for the final states
-        solver_options = {
-            "save_states": True,
-        }
 
     # Extra input validation
     if not isinstance(times, np.ndarray):
@@ -736,9 +1207,9 @@ def compute_2d_polarization(
     data = np.zeros(
         (len(tau_coh_vals), len(t_det_vals)), dtype=np.complex64
     )  # information about the first pulse
-    t_peak_pulse0 = 0
+    pulse0_t_peak = 0
     pulse_seq_0 = PulseSequence.from_pulse_specs(
-        system=system, pulse_specs=[(0, t_peak_pulse0, phi_0)]
+        system=system, pulse_specs=[(0, pulse0_t_peak, phi_0)]
     )
 
     idx_pulse1_max_peak = np.abs(
@@ -750,79 +1221,75 @@ def compute_2d_polarization(
         times_0 = times[:2]
 
     data_0 = compute_pulse_evolution(
-        system.psi_ini, times_0, pulse_seq_0, system=system, **solver_options
+        system.psi_ini,
+        times_0,
+        pulse_seq_0,
+        system=system,
+        **first_and_final_options,
     )
 
     for tau_idx, tau_coh in enumerate(tau_coh_vals):
-        idx_start_pulse1 = np.abs(
+        pulse1_start_idx = np.abs(
             times - (tau_coh - system.fwhms[1])
         ).argmin()  # from which point to start the next pulse
-        rho_1 = data_0.states[idx_start_pulse1]
+        rho_1 = data_0.states[pulse1_start_idx]
 
-        idx_start_pulse2 = np.abs(times - (tau_coh + T_wait - system.fwhms[2])).argmin()
-        t_peak_pulse2 = tau_coh + T_wait
+        pulse2_start_idx = np.abs(times - (tau_coh + T_wait - system.fwhms[2])).argmin()
+        pulse2_t_peak = tau_coh + T_wait
 
-        times_1 = times[idx_start_pulse1 : idx_start_pulse2 + 1]
+        times_1 = times[pulse1_start_idx : pulse2_start_idx + 1]
         if times_1.size == 0:  # The case if T_wait is 0
-            times_1 = [times[idx_start_pulse1]]
+            times_1 = [times[pulse1_start_idx]]
 
-        t_peak_pulse1 = tau_coh
+        pulse1_t_peak = tau_coh
         pulse_seq_1 = PulseSequence.from_pulse_specs(
             system=system,
             pulse_specs=[
-                (0, t_peak_pulse0, phi_0),  # pulse 0
-                (1, t_peak_pulse1, phi_1),  # pulse 1
+                (0, pulse0_t_peak, phi_0),  # pulse 0
+                (1, pulse1_t_peak, phi_1),  # pulse 1
             ],
         )
         data_1 = compute_pulse_evolution(
-            rho_1, times_1, pulse_seq_1, system=system, **solver_options
+            rho_1, times_1, pulse_seq_1, system=system, **{"store_final_state": True}
         )
 
-        idx_start_pulse2_in_times_1 = idx_start_pulse2 - idx_start_pulse1
-        rho_2 = data_1.states[idx_start_pulse2_in_times_1]
+        pulse2_start_idx_in_times_1 = pulse2_start_idx - pulse1_start_idx
+        rho_2 = (
+            data_1.final_state
+        )  # here i can directly access the final state of the first pulse
 
-        times_2 = times[idx_start_pulse2:]
+        times_2 = times[pulse2_start_idx:]
         if times_2.size == 0:
             times_2 = [times[-1]]
 
-        phi_2 = 0
+        DETECTION_PHASE = 0
         pulse_seq_f = PulseSequence.from_pulse_specs(
             system=system,
             pulse_specs=[
-                (0, t_peak_pulse0, phi_0),  # pulse 0
-                (1, t_peak_pulse1, phi_1),  # pulse 1
-                (2, t_peak_pulse2, phi_2),  # pulse 2
+                (0, pulse0_t_peak, phi_0),  # pulse 0
+                (1, pulse1_t_peak, phi_1),  # pulse 1
+                (2, pulse2_t_peak, DETECTION_PHASE),  # pulse 2
             ],
         )
 
-        if tau_idx % max(len(tau_coh_vals) // 20, 1) == 0:
-            bar = "enhanced"
-        else:
-            bar = None
-
-        final_solver_options = {
-            "store_states": True,
-            "progress_bar": bar,
-        }
-
         data_f = compute_pulse_evolution(
-            rho_2, times_2, pulse_seq_f, system=system, **final_solver_options
+            rho_2, times_2, pulse_seq_f, system=system, **first_and_final_options
         )
 
-        # Just in case I want to plot an example evolution
+        # In case I want to plot an example evolution
         if plot_example:
             tau_example = kwargs.get(  # get an example tau_coh for plotting
                 "tau_example", tau_coh_vals[len(tau_coh_vals) // 3]
             )
             if tau_coh == tau_example:
                 data_1_expects = get_expect_vals_with_RWA(
-                    data_0.states[: idx_start_pulse1 + 1],
-                    data_0.times[: idx_start_pulse1 + 1],
+                    data_0.states[: pulse1_start_idx + 1],
+                    data_0.times[: pulse1_start_idx + 1],
                     system,
                 )
                 data_2_expects = get_expect_vals_with_RWA(
-                    data_1.states[: idx_start_pulse2_in_times_1 + 1],
-                    data_1.times[: idx_start_pulse2_in_times_1 + 1],
+                    data_1.states[: pulse2_start_idx_in_times_1 + 1],
+                    data_1.times[: pulse2_start_idx_in_times_1 + 1],
                     system,
                 )
                 data_f_expects = get_expect_vals_with_RWA(
@@ -839,10 +1306,10 @@ def compute_2d_polarization(
                     for idx in range(len(system.observable_ops) + 1)
                 ]
                 times_plot = np.concatenate(
-                    [times_0[: idx_start_pulse1 + 1], times_1, times_2]
+                    [times_0[: pulse1_start_idx + 1], times_1, times_2]
                 )
                 additional_info = {
-                    "phases": (phi_0, phi_1, phi_2),
+                    "phases": (phi_0, phi_1, DETECTION_PHASE),
                     "tau_coh": tau_coh,
                     "T_wait": T_wait,
                     "system": system,
@@ -857,7 +1324,7 @@ def compute_2d_polarization(
 
         # get the 2D Polarization data:
         for t_idx, t_det in enumerate(t_det_vals):
-            actual_det_time = t_peak_pulse2 + t_det
+            actual_det_time = pulse2_t_peak + t_det
 
             # Pre-calculate condition values before the if statement
             time_cut = kwargs.get("time_cut", np.inf)
@@ -883,12 +1350,12 @@ def compute_2d_polarization(
 
                 if system.RWA_laser:
                     rho_f = apply_RWA_phase_factors(
-                        rho_f,
-                        times_2[t_idx_in_times_2],
+                        [rho_f],
+                        [times_2[t_idx_in_times_2]],
                         system=system,
                     )
                 # Calculate the complex polarization value
-                value = complex_polarization(rho_f, system=system)
+                value = complex_polarization(system, rho_f)
                 data[tau_idx, t_idx] = value
                 # AXIS 0: tau_coh, AXIS 1: t_det
 
@@ -1500,10 +1967,12 @@ def extract_ift_signal_component(
 
     # Compute the IFT
     for phi1_idx, phi_1 in enumerate(phases):
-        for phi2_idx, phi_2 in enumerate(phases):
+        for phi2_idx, DETECTION_PHASE in enumerate(phases):
             if results_matrix[phi1_idx, phi2_idx] is not None:
                 # IFT phase factor with parameterized coefficients
-                phase_factor = np.exp(-1j * (l * phi_1 + m * phi_2))  # n * phi_3 is 0!
+                phase_factor = np.exp(
+                    -1j * (l * phi_1 + m * DETECTION_PHASE)
+                )  # n * phi_3 is 0!
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 
     # Normalize by number of phase combinations

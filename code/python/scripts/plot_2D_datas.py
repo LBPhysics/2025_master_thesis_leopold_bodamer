@@ -1,3 +1,4 @@
+# TODO SOMEHOW THERE IS A BUG, when i put the whole dir of the data, it also saves in the data directory
 """
 2D Electronic Spectroscopy Data Plotting Script
 

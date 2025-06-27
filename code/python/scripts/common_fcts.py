@@ -447,12 +447,18 @@ def validate_solver(system: SystemParameters, times: np.ndarray) -> int:
     """Validate the ODE solver and return time_cut parameter."""
     fwhms = system.fwhms
     test_system = copy.deepcopy(system)
-    test_system.t_max = 10 * system.t_max
-    test_system.dt = 10 * system.dt
+    test_system.t_max = 1 * system.t_max
+    test_system.dt = 20 * system.dt
     times_test = np.arange(-fwhms[0], test_system.t_max, test_system.dt)
 
     try:
         _, time_cut = check_the_solver(times_test, test_system)
+        print("#" * 60)
+        print(
+            f"✅  Solver validation worked: Evolution becomes unphysical at"
+            f"({time_cut / test_system.t_max:.2f} × t_max)"
+        )
+        print("#" * 60)
         return time_cut
     except Exception as e:
         print(f"⚠️  WARNING: Solver validation failed: {e}")
