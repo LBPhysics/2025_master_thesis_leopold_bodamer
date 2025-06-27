@@ -310,7 +310,10 @@ DEFAULT_DPI = 100  # 100 is very high, 10 is good for notebooks
 # Default font size calculation based on standard 11pt LaTeX document
 # Uncomment and adjust as needed:
 DEFAULT_FONT_SIZE = _calculate_matching_font_size(LATEX_FONT_SIZE)  # For 11pt LaTeX
-DEFAULT_FIGSIZE = set_size(width_pt=LATEX_DOC_WIDTH, fraction=0.5, subplots=(1, 1))
+DEFAULT_FIGSIZE = (
+    10,
+    8,
+)  # set_size(width_pt=LATEX_DOC_WIDTH, fraction=0.5, subplots=(1, 1))
 DEFAULT_TRANSPARENCY = True  # True for transparent background, False for white
 COLORS = {
     "C0": "#1f77b4",

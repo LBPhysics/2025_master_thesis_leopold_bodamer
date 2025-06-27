@@ -26,7 +26,7 @@ def main():
 
     ### Main system configuration
     N_atoms = 1  # Number of atoms
-    ODE_Solver = "BR"  # ODE solver type ("BR" or "Paper_eqs")
+    ODE_Solver = "Paper_eqs"  # ODE solver type ("BR" or "Paper_eqs")
 
     ### Time parameters
     tau_coh = 300.0  # Coherence time [fs]

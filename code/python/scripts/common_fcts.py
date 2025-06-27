@@ -45,7 +45,7 @@ from qspectro2d.spectroscopy.post_processing import (
 # =============================
 # FILENAME GENERATION AND DATA MANAGEMENT
 # =============================
-def get_data_subdir(config: dict, system) -> Path:
+def get_data_subdir(config: dict, system: SystemParameters) -> Path:
     """
     Generate standardized subdirectory path based on system and configuration.
 
@@ -71,6 +71,9 @@ def get_data_subdir(config: dict, system) -> Path:
 
     # Add solver if available
     parts.append(system.ODE_Solver.lower())
+
+    # Add RWA if available
+    parts.append("RWA" if system.RWA_laser else "no_RWA")
 
     # Add output subdirectory if specified
     if "output_subdir" in config:
