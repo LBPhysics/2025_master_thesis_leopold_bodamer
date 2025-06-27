@@ -47,7 +47,7 @@ def plot_from_relative_dir(relative_dir: Path):
         relative_dir: Relative directory path where the data is stored
     """
     print(
-        f"🔍 Looking for latest data in: {DATA_DIR / "2d_spectroscopy" / relative_dir}"
+        f"🔍 Looking for latest data in: {DATA_DIR / '2d_spectroscopy' / relative_dir}"
     )
 
     # Plotting configuration
