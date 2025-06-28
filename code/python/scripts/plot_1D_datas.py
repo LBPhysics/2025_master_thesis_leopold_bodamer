@@ -1,18 +1,83 @@
 """
 1D Electronic Spectroscopy Data Plotting Script
 
-This script loads and plots 1D electronic spectroscopy data from pickle files
+This script loads and plots 1D electronic spectroscopy data from numpy/pickle files
 in various formats (real, imaginary, absolute, phase) for analysis and visualization.
 
 Usage modes:
-1. Direct relative path: python plot_1D_datas.py 1d_spectroscopy/N2_atoms/mesolve/special_dir
-2. No arguments: Use search configuration (looking in standard directories)
+1. Direct file paths (feedforward from calculation script):
+   python plot_1D_datas.py --data-path path/to/data.npz --info-path path/to/info.pkl
+
+2. Relative directory search:
+   python plot_1D_datas.py --relative-dir 1d_spectroscopy/N1_atoms/Paper_eqs/RWA
+
+3. Auto-search mode (no arguments):
+   python plot_1D_datas.py
 """
 
 import sys
+import argparse
 from pathlib import Path
-from common_fcts import load_latest_data, _plot_1d_data
+from common_fcts import load_latest_data, load_data_from_paths, plot_1d_data
 from config.paths import DATA_DIR, FIGURES_1D_DIR
+
+
+# =============================
+# ARGUMENT PARSING
+# =============================
+def create_parser() -> argparse.ArgumentParser:
+    """Create and configure the argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Plot 1D electronic spectroscopy data",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Direct file paths (feedforward from calculation script)
+  python plot_1D_datas.py --data-path data/1d_spectroscopy/data.npz --info-path data/1d_spectroscopy/info.pkl
+  
+  # Relative directory search
+  python plot_1D_datas.py --relative-dir 1d_spectroscopy/N1_atoms/Paper_eqs/RWA
+  
+  # Auto-search mode (finds latest data)
+  python plot_1D_datas.py
+        """,
+    )
+
+    # Mutually exclusive group for different input modes
+    input_group = parser.add_mutually_exclusive_group()
+
+    input_group.add_argument(
+        "--data-path", type=Path, help="Direct path to the data file (.npz)"
+    )
+
+    parser.add_argument(
+        "--info-path",
+        type=Path,
+        help="Direct path to the info file (.pkl) - required when using --data-path",
+    )
+
+    input_group.add_argument(
+        "--relative-dir",
+        type=Path,
+        help="Relative directory path to search for latest data files",
+    )
+
+    # Optional plotting parameters
+    parser.add_argument(
+        "--save-plots",
+        action="store_true",
+        default=True,
+        help="Save plots to figures directory (default: True)",
+    )
+
+    parser.add_argument(
+        "--show-plots",
+        action="store_true",
+        default=False,
+        help="Display plots interactively (default: False)",
+    )
+
+    return parser
 
 
 # =============================
@@ -20,173 +85,113 @@ from config.paths import DATA_DIR, FIGURES_1D_DIR
 # =============================
 def main():
     """Main function to run the 1D spectroscopy plotting."""
+    parser = create_parser()
+    args = parser.parse_args()
 
-    # Check if relative directory path was provided as command line argument
-    if len(sys.argv) > 1:
-        # Mode 1: Plot from specific relative directory
-        relative_dir_str = sys.argv[1]
-        relative_dir = Path(relative_dir_str)
-
-        print(
-            f"🚀 Starting 1D Electronic Spectroscopy Plotting from relative path: {relative_dir}"
-        )
-
-        # Plot with the new workflow
-        plot_from_relative_dir(relative_dir)
-    else:
-        # Mode 2: Plot using search configuration
-        plot_with_search_config()
-
-
-def plot_from_relative_dir(relative_dir: Path):
-    """
-    Plot 1D data from a specific relative directory using the new workflow.
-
-    Args:
-        relative_dir: Relative directory path where the data is stored
-    """
-    print(
-        f"🔍 Looking for latest data in: {DATA_DIR / '1d_spectroscopy' / relative_dir}"
-    )
-
-    # Plotting configuration
-    config = {
-        "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
-        "plot_time_domain": True,
-        "extend_for": (1, 3),
-        "section": (1.4, 1.8, 1.4, 1.8),
-    }
+    # Validate arguments
+    if args.data_path and not args.info_path:
+        parser.error("--info-path is required when using --data-path")
 
     try:
-        # Load the latest data file from the relative directory
-        data = load_latest_data(relative_dir)
+        # =============================
+        # LOAD DATA BASED ON INPUT MODE
+        # =============================
+        if args.data_path and args.info_path:
+            ### Direct file paths mode (feedforward from calculation script)
+            print(f"📁 Loading data from direct paths:")
+            print(f"   Data: {args.data_path}")
+            print(f"   Info: {args.info_path}")
 
-        # Extract system and plotting data
-        system = data.get("system")
-        if system is None:
-            print("❌ Error: Loaded data does not contain system information")
-            return
+            # Validate paths exist
+            if not args.data_path.exists():
+                raise FileNotFoundError(f"Data file not found: {args.data_path}")
+            if not args.info_path.exists():
+                raise FileNotFoundError(f"Info file not found: {args.info_path}")
 
-        # Create figure directory if it doesn't exist
-        figure_dir = FIGURES_1D_DIR / relative_dir
-        figure_dir.mkdir(parents=True, exist_ok=True)
+            data_dict = load_data_from_paths(args.data_path, args.info_path)
 
-        # Plot the data using the _plot_1d_data function directly
-        _plot_1d_data(data, config, figure_dir)
+            # Debug: Print available keys
+            print(f"🔍 Available data keys: {list(data_dict.keys())}")
+            if "axes" in data_dict:
+                print(f"🔍 Available axes keys: {list(data_dict['axes'].keys())}")
 
-        print(f"✅ Figures saved to: {figure_dir}")
+        elif args.relative_dir:
+            ### Relative directory search mode
+            print(f"📁 Searching for latest data in: {args.relative_dir}")
+            data_dict = load_latest_data(args.relative_dir)
+
+        else:
+            ### Auto-search mode - find latest data in default directory
+            print("🔍 Auto-search mode: Looking for latest 1D spectroscopy data...")
+            default_search_dir = Path("1d_spectroscopy")
+            data_dict = load_latest_data(
+                default_search_dir
+            )  # =============================
+        # EXTRACT DATA FOR PLOTTING
+        # =============================
+        ### Extract standardized data structure
+        t_det_vals = data_dict["axes"]["axs1"]  # Detection time axis
+        E_field_data = data_dict["data"]  # Complex electric field data
+
+        # Print data information
+        print(f"✅ Data loaded successfully:")
+        print(f"   Shape: {E_field_data.shape}")
+        print(f"   Time points: {len(t_det_vals)}")
+        print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
+
+        # =============================
+        # CONFIGURE PLOTTING
+        # =============================
+        ### Set up plotting configuration
+        plot_config = {
+            "save_plots": args.save_plots,
+            "show_plots": args.show_plots,
+            "formats": ["real", "imag", "abs", "phase"],  # Plot all formats
+            "use_tex": True,  # Use LaTeX formatting
+        }  # Determine output directory
+        if args.relative_dir:
+            output_dir = FIGURES_1D_DIR / args.relative_dir
+        else:
+            # Create output directory based on system parameters
+            system = data_dict["system"]
+            # Handle both dict and SystemParameters object formats
+            if hasattr(system, "N_atoms"):
+                N_atoms = system.N_atoms
+            else:
+                N_atoms = system.get("N_atoms", 1)  # Default to 1 if not found
+            output_dir = FIGURES_1D_DIR / f"N{N_atoms}_atoms" / "latest_plots"
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # =============================
+        # GENERATE PLOTS
+        # =============================
+        print(f"📊 Generating 1D spectroscopy plots...")
+        print(f"   Output directory: {output_dir}")
+
+        plot_1d_data(
+            ax1=t_det_vals,
+            data=E_field_data,
+            data_dict=data_dict,
+            plot_config=plot_config,
+            output_dir=output_dir,
+        )
+
+        print("✅ 1D spectroscopy plotting completed successfully!")
 
     except FileNotFoundError as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ File not found: {e}")
+        sys.exit(1)
+    except KeyError as e:
+        print(f"❌ Missing required data key: {e}")
+        print("   Check that the data file contains the expected structure")
+        sys.exit(1)
     except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        print(f"❌ Error during plotting: {e}")
+        import traceback
 
-
-def find_latest_data_recursive(base_dir: Path, max_depth: int = 3) -> tuple:
-    """
-    Recursively search for data files in a directory and its subdirectories.
-
-    Args:
-        base_dir: The base directory to start searching
-        max_depth: Maximum directory depth to search
-
-    Returns:
-        tuple: (found data dictionary, relative directory where found)
-              or (None, None) if no data found
-    """
-    import os
-
-    # First try base directory
-    try:
-        print(f"🔍 Trying directory: {base_dir}")
-        data = load_latest_data("1d_spectroscopy" / base_dir)
-        return data, base_dir
-    except FileNotFoundError:
-        print(f"   No data files found in {base_dir}, searching subdirectories...")
-
-    # If not found, and we haven't reached max depth, search subdirectories
-    if max_depth > 0:
-        # Get all subdirectories in the data directory
-        full_base_dir = DATA_DIR / "1d_spectroscopy" / base_dir
-
-        try:
-            # List all subdirectories
-            subdirs = [
-                d
-                for d in os.listdir(full_base_dir)
-                if os.path.isdir(os.path.join(full_base_dir, d))
-            ]
-
-            # Sort subdirectories by modification time (newest first)
-            subdirs.sort(
-                key=lambda d: os.path.getmtime(os.path.join(full_base_dir, d)),
-                reverse=True,
-            )
-
-            # Check each subdirectory
-            for subdir in subdirs:
-                next_dir = base_dir / Path(subdir)
-                try:
-                    data, found_dir = find_latest_data_recursive(
-                        next_dir, max_depth - 1
-                    )
-                    if data:
-                        return data, found_dir
-                except Exception as e:
-                    print(f"   Skipping {next_dir}: {e}")
-        except FileNotFoundError:
-            print(f"   Base directory {full_base_dir} does not exist")
-        except Exception as e:
-            print(f"   Error searching subdirectories: {e}")
-
-    # If we get here, no data was found
-    return None, None
-
-
-def plot_with_search_config():
-    """Plot 1D data using search configuration (looking in standard directories)."""
-
-    # =============================
-    # PLOTTING PARAMETERS - MODIFY HERE
-    # =============================
-
-    # Base directory to search
-    base_dir = Path("")  # Empty string means start at the root of 1d_spectroscopy
-
-    print(f"🔍 Starting search in 1d_spectroscopy directory and subdirectories")
-
-    # Configuration for plotting
-    config = {
-        "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
-        "plot_time_domain": True,
-        "extend_for": (1, 3),
-        "section": (1.4, 1.8, 1.4, 1.8),
-    }
-
-    # Try to find data recursively
-    data, found_dir = find_latest_data_recursive(base_dir)
-
-    if data:
-        print(f"✅ Found data in directory: {found_dir}")
-
-        # Extract system information
-        system = data.get("system")
-        if system is None:
-            print("❌ Error: Loaded data does not contain system information")
-            return
-
-        # Create figure directory
-        figure_dir = FIGURES_1D_DIR / found_dir
-        figure_dir.mkdir(parents=True, exist_ok=True)
-
-        # Plot the data
-        _plot_1d_data(data, config, figure_dir)
-
-        print(f"✅ Figures saved to: {figure_dir}")
-    else:
-        print(
-            "❌ No suitable data files found in 1d_spectroscopy directory or subdirectories"
-        )
+        traceback.print_exc()
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -5,16 +5,26 @@ This script computes 2D electronic spectroscopy data using parallel processing
 and saves results in pickle format. All parameters are defined directly in main().
 """
 
+import os
+import sys
 import time
-from pathlib import Path
+
+# Change the working directory to the script's directory
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
+
+# Add the script's directory to sys.path to ensure imports work
+sys.path.append(script_dir)
+
 from common_fcts import (
     create_system_parameters,
-    run_simulation,
+    run_2d_simulation,
     get_max_workers,
     print_simulation_header,
     print_simulation_summary,
-    save_data_with_unique_path,
+    save_simulation_data,
 )
+from config.paths import DATA_DIR
 
 
 def main():
@@ -25,10 +35,11 @@ def main():
     # =============================
 
     ### Main system configuration
-    N_atoms = 1  # Number of atoms (1 or 2)
-    t_max = 20  # Maximum time [fs]
-    dt = 1  # Time step [fs]
+    N_atoms = 2  # Number of atoms (1 or 2)
     ODE_Solver = "BR"  # ODE solver type
+    RWA_laser = True  # Use RWA for laser interaction
+    t_det_max = 6.0  # Additional time buffer [fs]
+    dt = 1  # Time step [fs]
 
     ### System-specific parameters
     if N_atoms == 1:
@@ -39,10 +50,8 @@ def main():
         raise ValueError(f"Unsupported number of atoms: {N_atoms}")
 
     ### 2D spectroscopy parameters
-    RWA_laser = False  # Use RWA for laser interaction
-    T_wait_max = t_max / 2  # Maximum waiting time [fs]
-    n_times_T = 1  # Number of T_wait values
-    n_phases = 2  # Number of phases for phase cycling
+    T_wait = 0  # Number of T_wait values
+    n_phases = 4  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
     Delta_cm = 0  # Inhomogeneous broadening [cm⁻¹]
     envelope_type = "gaussian"  # Pulse envelope type
@@ -54,13 +63,12 @@ def main():
     config = {
         "simulation_type": "2d",  # Explicitly specify simulation type
         "N_atoms": N_atoms,
-        "t_max": t_max,
         "dt": dt,
+        "t_det_max": t_det_max,
         "ODE_Solver": ODE_Solver,
         "pulse_fwhm": pulse_fwhm,
         "RWA_laser": RWA_laser,
-        "T_wait_max": T_wait_max,
-        "n_times_T": n_times_T,
+        "T_wait": T_wait,
         "n_phases": n_phases,
         "n_freqs": n_freqs,
         "Delta_cm": Delta_cm,
@@ -71,6 +79,7 @@ def main():
     # =============================
     # PRINT CONFIGURATION SUMMARY
     # =============================
+    t_max = config["T_wait"] + 2 * config["t_det_max"]
     print(f"Running 2D spectroscopy simulation with:")
     print(f"  N_atoms: {N_atoms}")
     print(f"  Solver: {ODE_Solver}")
@@ -95,18 +104,30 @@ def main():
     system.summary()
 
     # Run simulation (returns standardized payload)
-    payload = run_simulation(config, system, "2d")
+    tau_coh, t_det, data = run_2d_simulation(config, system, max_workers)
 
-    # Save data using the new workflow
-    print("\nSaving simulation data...")
-    relative_dir = save_data_with_unique_path(payload, config, system)
+    # Save data using the unified save function    print("\nSaving simulation data...")
+    data_path, info_path = save_simulation_data(
+        system=system, config=config, data=data, axs2=tau_coh, axs1=t_det
+    )
 
     # Print simulation summary
     elapsed_time = time.time() - start_time
-    print_simulation_summary(elapsed_time, payload["data"], relative_dir, "2d")
+    print_simulation_summary(elapsed_time, data, data_path, "2d")
 
-    # Print the relative path for feed-forward to plotting script
-    print(f"SAVED_DATA_PATH:{relative_dir}")
+    # Print the paths for feed-forward to plotting script
+    print(f"\n{'='*60}")
+    print("DATA SAVED SUCCESSFULLY")
+    print(f"{'='*60}")
+    print(f"Data file: {data_path}")
+    print(f"Info file: {info_path}")
+    print(f"\n🎯 To plot this data, run:")
+    print(
+        f'python plot_2D_datas.py --data-path "{data_path}" --info-path "{info_path}"'
+    )
+    print(f"{'='*60}")
+
+    return data_path, info_path
 
 
 if __name__ == "__main__":

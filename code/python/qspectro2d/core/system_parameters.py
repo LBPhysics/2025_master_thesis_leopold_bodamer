@@ -732,6 +732,38 @@ class SystemParameters:
         print(self.observable_strs)
         print("\n=== End of Summary ===")
 
+    def to_dict(self) -> dict:
+        """
+        Convert the SystemParameters instance into a dictionary representation.
+
+        Returns:
+            dict: Dictionary containing all attributes of the instance.
+        """
+        return {
+            "hbar": self.hbar,
+            "Boltzmann": self.Boltzmann,
+            "Temp": self.Temp,
+            "cutoff_": self.cutoff_,
+            "N_atoms": self.N_atoms,
+            "ODE_Solver": self.ODE_Solver,
+            "RWA_laser": self.RWA_laser,
+            "bath": self.bath,
+            "E0": self.E0,
+            "envelope_type": self.envelope_type,
+            "pulse_fwhm": self.pulse_fwhm,
+            "omega_laser_cm": self.omega_laser_cm,
+            "t_max": self.t_max,
+            "dt": self.dt,
+            "Delta_cm": self.Delta_cm,
+            "omega_A_cm": self.omega_A_cm,
+            "mu_A": self.mu_A,
+            "omega_B_cm": self.omega_B_cm,
+            "mu_B": self.mu_B,
+            "J_cm": self.J_cm,
+            "gamma_0": self.gamma_0,
+            "gamma_phi": self.gamma_phi,
+        }
+
 
 if __name__ == "__main__":
     """

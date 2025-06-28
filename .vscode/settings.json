@@ -226,4 +226,14 @@
         "**/TSWLatexianTemp*": true
     },
     "explorerExclude.backup": {},
+    "python.pythonPath": "C:\\Users\\leopo\\anaconda3\\python.exe",
+    "python.defaultInterpreterPath": "C:\\Users\\leopo\\anaconda3\\python.exe",
+    "python.analysis.extraPaths": [
+        "./code/python",
+        "./code/python/scripts",
+        "./code/python/qspectro2d"
+    ],
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.autoSearchPaths": true,
+    "python.analysis.diagnosticMode": "workspace"
 }

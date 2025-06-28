@@ -1,9 +1,9 @@
 #!/bin/bash
-# Test script for 2D calculation and plotting workflow
+# Test script for 1D calculation and plotting workflow
 #
 # This script tests the new feed-forward workflow where:
-# 1. calc_2D_datas.py outputs both data_path and info_path
-# 2. plot_2D_datas.py accepts these paths as --data-path and --info-path arguments
+# 1. calc_1D_datas.py outputs both data_path and info_path
+# 2. plot_1D_datas.py accepts these paths as --data-path and --info-path arguments
 # 3. Figures are automatically saved in matching directory structure
 #
 # New workflow benefits:
@@ -11,10 +11,10 @@
 # - Consistent directory structure between data and figures
 # - Supports both data and info file paths for complete data loading
 #
-# Usage: bash test_workflow.sh
+# Usage: bash test_1d_workflow.sh
 
 echo "=========================================="
-echo "TESTING 2D CALCULATION AND PLOTTING WORKFLOW"
+echo "TESTING 1D CALCULATION AND PLOTTING WORKFLOW"
 echo "=========================================="
 
 # Configuration - Get paths from Python configuration
@@ -67,14 +67,14 @@ export MPLBACKEND="Agg"
 
 echo ""
 echo "=== STEP 1: Testing calculation phase ==="
-echo "Running: python calc_2D_datas.py"
+echo "Running: python calc_1D_datas.py"
 
-# Run calc_2D_datas.py and capture both data and info paths
-CALC_OUTPUT=$(python calc_2D_datas.py)
+# Run calc_1D_datas.py and capture both data and info paths
+CALC_OUTPUT=$(python calc_1D_datas.py)
 CALC_EXIT_CODE=$?
 
 if [[ $CALC_EXIT_CODE -ne 0 ]]; then
-    echo "❌ Error: calc_2D_datas.py failed with exit code $CALC_EXIT_CODE"
+    echo "❌ Error: calc_1D_datas.py failed with exit code $CALC_EXIT_CODE"
     exit 1
 fi
 
@@ -84,14 +84,14 @@ INFO_PATH=$(echo "$CALC_OUTPUT" | grep "Info file:" | cut -d':' -f2- | xargs)
 
 # Validate that both paths were captured
 if [[ -z "$DATA_PATH" ]]; then
-    echo "❌ Error: No data file path returned from calc_2D_datas.py"
+    echo "❌ Error: No data file path returned from calc_1D_datas.py"
     echo "Full output:"
     echo "$CALC_OUTPUT"
     exit 1
 fi
 
 if [[ -z "$INFO_PATH" ]]; then
-    echo "❌ Error: No info file path returned from calc_2D_datas.py"
+    echo "❌ Error: No info file path returned from calc_1D_datas.py"
     echo "Full output:"
     echo "$CALC_OUTPUT"
     exit 1
@@ -115,13 +115,13 @@ echo "✅ Both data files verified to exist"
 
 echo ""
 echo "=== STEP 2: Testing plotting phase ==="
-echo "Running: python plot_2D_datas.py --data-path \"$DATA_PATH\" --info-path \"$INFO_PATH\""
+echo "Running: python plot_1D_datas.py --data-path \"$DATA_PATH\" --info-path \"$INFO_PATH\""
 
-# Run plot_2D_datas.py with the captured file paths
-python plot_2D_datas.py --data-path "$DATA_PATH" --info-path "$INFO_PATH"
+# Run plot_1D_datas.py with the captured file paths
+python plot_1D_datas.py --data-path "$DATA_PATH" --info-path "$INFO_PATH"
 
 if [[ $? -ne 0 ]]; then
-    echo "❌ Error: plot_2D_datas.py failed"
+    echo "❌ Error: plot_1D_datas.py failed"
     exit 1
 fi
 
