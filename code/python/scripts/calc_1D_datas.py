@@ -30,7 +30,7 @@ def main():
 
     ### Main system configuration
     N_atoms = 1  # Number of atoms
-    ODE_Solver = "Paper_eqs"  # ODE solver type ("BR" or "Paper_eqs")
+    ODE_Solver = "BR"  # ODE solver type ("BR" or "Paper_eqs")
     RWA_laser = True  # Use RWA for laser interaction
 
     ### Time parameters
@@ -48,8 +48,8 @@ def main():
         raise ValueError(f"Unsupported number of atoms: {N_atoms}")
 
     ### Spectroscopy parameters
-    n_phases = 2  # Number of phases for phase cycling
-    n_freqs = 1  # Number of frequencies for inhomogeneous broadening
+    n_phases = 4  # Number of phases for phase cycling
+    n_freqs = 100  # Number of frequencies for inhomogeneous broadening
     Delta_cm = 200  # Inhomogeneous broadening [cm⁻¹]
     envelope_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
     E0 = 0.005  # Electric field amplitude

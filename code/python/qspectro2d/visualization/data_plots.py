@@ -107,12 +107,15 @@ def plot_1d_data(
     data_config = extracted["data_config"]
     tau_coh = data_config["tau_coh"]
     T_wait = data_config["T_wait"]
+    n_freqs = data_config.get("n_freqs", 1)
 
     print(f"✅ Data loaded with shape: {data.shape}")
     print(f"   Time points: {len(t_det_vals)}")
     print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
 
-    spectral_components = plot_config.get("spectral_components_to_plot", ["abs"])
+    spectral_components_to_plot = plot_config.get(
+        "spectral_components_to_plot", ["abs"]
+    )
     extend_for = plot_config.get("extend_for", (1, 1))
 
     ### Plot time domain data
@@ -126,6 +129,8 @@ def plot_1d_data(
                 component="abs",  # Use first component for time domain
                 tau_coh=tau_coh,
                 T_wait=T_wait,
+                n_freqs=n_freqs,
+                function_symbol="E_{k_s}",
             )
             filename = generate_unique_plot_filename(
                 system,
@@ -133,7 +138,8 @@ def plot_1d_data(
                 domain="time",
                 component="abs",
             )
-            save_fig(fig, filename=filename, output_dir=output_dir)
+
+            save_fig(fig, filename=filename)
             plt.close(fig)
             print("✅ Time domain plots completed!")
         except Exception as e:
@@ -154,22 +160,24 @@ def plot_1d_data(
 
         frequencies, data_fft = compute_1d_fft_wavenumber(extended_x, extended_data)
         # Plot each spectral component separately
-        for component in spectral_components:
-            fig = plot_1d_el_field(
-                data_x=frequencies,
-                data_y=data_fft,
-                domain="freq",
-                component=component,
-            )
-            filename = generate_unique_plot_filename(
-                system,
-                data_config=data_config,
-                domain="freq",
-                component=component,
-            )
-
-            save_fig(fig, filename=filename, output_dir=output_dir)
-            plt.close(fig)
+        for component in spectral_components_to_plot:
+            try:
+                fig = plot_1d_el_field(
+                    data_x=frequencies,
+                    data_y=data_fft,
+                    domain="freq",
+                    component=component,
+                )
+                filename = generate_unique_plot_filename(
+                    system,
+                    data_config=data_config,
+                    domain="freq",
+                    component=component,
+                )
+                save_fig(fig, filename=filename)
+                plt.close(fig)
+            except Exception as e:
+                print(f"❌ Error plotting {component} component: {e}")
 
         print("✅ Frequency domain plots completed!")
 
@@ -200,14 +208,17 @@ def plot_2d_data(
     T_wait = data_config["T_wait"]
 
     # Get configuration values
-    spectral_components = plot_config.get("spectral_components_to_plot", ["abs"])
+    spectral_components_to_plot = plot_config.get(
+        "spectral_components_to_plot", ["abs"]
+    )
     extend_for = plot_config.get("extend_for", (1, 1))
     section = plot_config.get("section", (0, 2, 0, 2))
 
     print(f"✅ 2D data loaded successfully!")
 
-    # Plot time domain data
+    ### Plot time domain data
     if plot_config.get("plot_time_domain", True):
+        print("📊 Plotting 2D time domain data...")
         try:
             fig = plot_2d_el_field(
                 data_x=t_det_vals,
@@ -220,13 +231,16 @@ def plot_2d_data(
             filename = generate_unique_plot_filename(
                 system=system, data_config=data_config, domain="time"
             )
-            save_fig(fig, filename=filename, output_dir=output_dir)
+
+            save_fig(fig, filename=filename)
             plt.close(fig)
+            print("✅ 2D time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in 2D time domain plotting: {e}")
 
-    # Handle frequency domain processing
+    ### Handle frequency domain processing
     if plot_config.get("plot_frequency_domain", True):
+        print("📊 Plotting 2D frequency domain data...")
         try:
             # Extend time axes if needed
             if extend_for != (1, 1):
@@ -249,8 +263,8 @@ def plot_2d_data(
                 extended_ts, extended_taus, extended_data
             )
 
-            # Plot each component
-            for component in spectral_components:
+            # Plot each spectral component separately
+            for component in spectral_components_to_plot:
                 try:
                     fig = plot_2d_el_field(
                         data_x=nu_ts,
@@ -268,10 +282,13 @@ def plot_2d_data(
                         domain="freq",
                         component=component,
                     )
-                    save_fig(fig, filename=filename, output_dir=output_dir)
+
+                    save_fig(fig, filename=filename)
                     plt.close(fig)
                 except Exception as e:
                     print(f"❌ Error plotting 2D {component} component: {e}")
+
+            print("✅ 2D frequency domain plots completed!")
 
         except Exception as e:
             print(f"❌ Error in 2D frequency domain processing: {e}")

@@ -311,8 +311,8 @@ DEFAULT_DPI = 100  # 100 is very high, 10 is good for notebooks
 # Uncomment and adjust as needed:
 DEFAULT_FONT_SIZE = _calculate_matching_font_size(LATEX_FONT_SIZE)  # For 11pt LaTeX
 DEFAULT_FIGSIZE = (
-    10,
     8,
+    6,
 )  # set_size(width_pt=LATEX_DOC_WIDTH, fraction=0.5, subplots=(1, 1))
 DEFAULT_TRANSPARENCY = True  # True for transparent background, False for white
 COLORS = {
@@ -398,8 +398,7 @@ def save_fig(
     formats: list = [DEFAULT_FIG_FORMAT],
     dpi: int = DEFAULT_DPI,
     transparent: bool = DEFAULT_TRANSPARENCY,
-    figsize: tuple = DEFAULT_FIGSIZE,
-    output_dir: Optional[Union[str, Path]] = DEFAULT_FIG_PATH,
+    figsize: tuple = None,
 ) -> None:
     """
     Save a matplotlib figure in multiple formats.
@@ -409,40 +408,34 @@ def save_fig(
     fig : matplotlib.figure.Figure
         The figure to save
     filename : str
-        The name of the file without extension
+        Full path including directory without extension
     formats : list, optional
         List of file formats to save
     dpi : int, optional
         Resolution for raster formats
     transparent : bool, optional
         Whether to save with transparent background
-    output_dir : str or Path, optional
-        Direct path to save the figure
     figsize : tuple, optional
         Figure dimensions (width, height) in inches. If provided, the figure size
-        will be updated before saving. Useful for maintaining consistent sizes across
-        multiple figures or customizing size for specific output formats.
+        will be updated before saving.
     """
     if figsize is not None:
         fig.set_size_inches(figsize)
 
-    # Direct path provided in filename
-    output_dir = Path(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    full_path = output_dir / filename
-
     # Save in all requested formats
     for fmt in formats:
         fig.savefig(
-            f"{full_path}.{fmt}",
+            f"{filename}.{fmt}",
             format=fmt,
             dpi=dpi,
             bbox_inches="tight",
             transparent=transparent,
         )
 
-    print(f"Figure saved as: {full_path} ({', '.join(formats)})", flush=True)
+    print(
+        f"Figure saved as: {filename} ({', '.join(formats)})",
+        flush=True,
+    )
 
 
 __all__ = [

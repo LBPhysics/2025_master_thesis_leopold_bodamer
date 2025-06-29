@@ -13,7 +13,7 @@ from typing import Union
 
 ### Project-specific imports
 from qspectro2d.core.system_parameters import SystemParameters
-from config.paths import DATA_DIR, FIGURES_DIR
+from config.paths import DATA_DIR, FIGURES_DIR, FIGURES_PYTHON_DIR
 
 
 # =============================
@@ -45,6 +45,7 @@ def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
         f"dt_{system.dt:.1f}",
         f"{data_config.get('n_phases', 0)}ph",
         f"{data_config.get('n_freqs', 1)}freq",
+        f"1",
     ]
 
     return "_".join(parts)
@@ -99,6 +100,7 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
 
     # Add solver if available
     parts.append(system.ODE_Solver)
+    parts.append(f"ta_max{system.t_max:.1f}fs")
 
     # Add RWA if available
     parts.append("RWA" if system.RWA_laser else "noRWA")
@@ -148,13 +150,25 @@ def generate_unique_plot_filename(
     Returns:
         str: Standardized base filename for the plot (without extension)
     """
+    # Validate domain
+    if domain not in {"time", "freq"}:
+        raise ValueError(f"Invalid domain '{domain}'. Expected 'time' or 'freq'.")
+
+    # Validate component if provided
+    if component and component not in {"real", "imag", "abs", "phase"}:
+        raise ValueError(
+            f"Invalid component '{component}'. Expected one of 'real', 'imag', 'abs', 'phase'."
+        )
+
     # Start with basic structure
     relative_path = generate_base_sub_dir(data_config, system)
-    path = FIGURES_DIR / relative_path
+    path = FIGURES_PYTHON_DIR / relative_path
+    path.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+
     base_name = _generate_base_filename(system, data_config)
     base_name += f"_{domain}_domain"
     if component:
-        base_name += f"_{component}_comp"
+        base_name += f"_{component}"
 
     filename = _generate_unique_filename(path, base_name)
     return filename

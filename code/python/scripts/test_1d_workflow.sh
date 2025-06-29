@@ -21,8 +21,8 @@ echo "📊 Step 1: Running 1D simulation..."
 echo ""
 
 # Run the calculation and capture the output
-echo "Executing: python calc_1D_datas.py"
-python calc_1D_datas.py > calc_output.log 2>&1
+echo "Executing: python3 calc_1D_datas.py"
+python3 calc_1D_datas.py > calc_output.log 2>&1
 
 # Check if simulation completed successfully
 if [ $? -eq 0 ]; then
@@ -39,7 +39,7 @@ echo ""
 echo "📂 Step 2: Extracting file paths..."
 
 # Extract the plotting command from the output
-PLOT_CMD=$(grep "python plot_1D_datas.py" calc_output.log | tail -1)
+PLOT_CMD=$(grep "python3 plot_1D_datas.py" calc_output.log | tail -1)
 
 if [ -z "$PLOT_CMD" ]; then
     echo "❌ Could not find plotting command in output!"

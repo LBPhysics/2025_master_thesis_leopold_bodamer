@@ -59,7 +59,7 @@ def complex_polarization(
 
     elif isinstance(state, (list)):
         return np.array(
-            [_single_qobj_polarization(system, s) for s in state], dtype=np.complex128
+            [_single_qobj_polarization(system, s) for s in state], dtype=np.complex64
         )
 
     raise TypeError("State must be a quantum object or array of quantum objects")
@@ -698,10 +698,10 @@ def _extract_detection_data(
         - polarizations["pulse2"]
     )
 
-    if len(actual_det_times) != len(t_det_values):
-        print(
-            f"Warning: interpolated t_det length {len(actual_det_times)} ≠ {len(t_det_values)}"
-        )
+    # if len(actual_det_times) != len(t_det_values):
+    #     print(
+    #         f"Warning: interpolated t_det length {len(actual_det_times)} ≠ {len(t_det_values)}"
+    #     )
     # 1D linear interpolation to match the canonical grid
     data_interp = np.interp(
         t_det_values, actual_det_times - actual_det_times[0], nonlinear_signal.real
