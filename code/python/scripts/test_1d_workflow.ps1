@@ -1,107 +1,97 @@
-# Test script for 1D calculation and plotting workflow (PowerShell)
-#
-# This script tests the new feed-forward workflow where:
-# 1. calc_1D_datas.py outputs both data_path and info_path
-# 2. plot_1D_datas.py accepts these paths as --data-path and --info-path arguments
-# 3. Figures are automatically saved in matching directory structure
+# =============================================================================
+# 1D Spectroscopy Workflow Test Script (PowerShell version)
+# =============================================================================
+# This script runs the complete 1D spectroscopy workflow:
+# 1. Generate data with calc_1D_datas.py
+# 2. Automatically plot the results with plot_1D_datas.py
 #
 # Usage: .\test_1d_workflow.ps1
+# =============================================================================
 
-Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "TESTING 1D CALCULATION AND PLOTTING WORKFLOW" -ForegroundColor Cyan
-Write-Host "==========================================" -ForegroundColor Cyan
+$ErrorActionPreference = "Stop"  # Exit on any error
 
-# Check Python environment
-Write-Host "Checking Python environment..." -ForegroundColor Yellow
-if ($env:VIRTUAL_ENV) {
-    Write-Host "✅ Virtual environment detected: $env:VIRTUAL_ENV" -ForegroundColor Green
-} elseif ($env:CONDA_DEFAULT_ENV) {
-    Write-Host "✅ Conda environment detected: $env:CONDA_DEFAULT_ENV" -ForegroundColor Green
-} else {
-    Write-Host "⚠️  No virtual environment detected, using system Python" -ForegroundColor Yellow
-}
+Write-Host "Starting 1D Spectroscopy Workflow Test" -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Green
 
-try {
-    $pythonVersion = python --version 2>&1
-    Write-Host "Python version: $pythonVersion" -ForegroundColor White
-} catch {
-    Write-Host "❌ Python not found" -ForegroundColor Red
-    exit 1
-}
-
-# Set matplotlib backend to non-interactive
-$env:MPLBACKEND = "Agg"
-
+# =============================
+# STEP 1: RUN SIMULATION
+# =============================
 Write-Host ""
-Write-Host "=== STEP 1: Testing calculation phase ===" -ForegroundColor Yellow
-Write-Host "Running: python calc_1D_datas.py" -ForegroundColor White
+Write-Host "Step 1: Running 1D simulation..." -ForegroundColor Yellow
+Write-Host ""
 
-# Run calc_1D_datas.py and capture output
+# Run the calculation and capture the output
+Write-Host "Executing: python calc_1D_datas.py"
 try {
-    $calcOutput = python calc_1D_datas.py 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
-        throw "calc_1D_datas.py failed with exit code $LASTEXITCODE"
+    python calc_1D_datas.py > calc_output.log 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "Simulation completed successfully!" -ForegroundColor Green
     }
-} catch {
-    Write-Host "❌ Error: $_" -ForegroundColor Red
-    exit 1
-}
-
-# Extract data and info paths from the output
-$dataPath = ($calcOutput | Select-String "Data file: (.+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }).Trim()
-$infoPath = ($calcOutput | Select-String "Info file: (.+)" | ForEach-Object { $_.Matches[0].Groups[1].Value }).Trim()
-
-# Validate that both paths were captured
-if (-not $dataPath) {
-    Write-Host "❌ Error: No data file path returned from calc_1D_datas.py" -ForegroundColor Red
-    Write-Host "Full output:" -ForegroundColor Red
-    Write-Host $calcOutput -ForegroundColor Gray
-    exit 1
-}
-
-if (-not $infoPath) {
-    Write-Host "❌ Error: No info file path returned from calc_1D_datas.py" -ForegroundColor Red
-    Write-Host "Full output:" -ForegroundColor Red
-    Write-Host $calcOutput -ForegroundColor Gray
-    exit 1
-}
-
-Write-Host "✅ DATA_PATH: $dataPath" -ForegroundColor Green
-Write-Host "✅ INFO_PATH: $infoPath" -ForegroundColor Green
-
-# Verify files exist
-if (-not (Test-Path $dataPath)) {
-    Write-Host "❌ Error: Data file does not exist: $dataPath" -ForegroundColor Red
-    exit 1
-}
-
-if (-not (Test-Path $infoPath)) {
-    Write-Host "❌ Error: Info file does not exist: $infoPath" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "✅ Both data files verified to exist" -ForegroundColor Green
-
-Write-Host ""
-Write-Host "=== STEP 2: Testing plotting phase ===" -ForegroundColor Yellow
-Write-Host "Running: python plot_1D_datas.py --data-path `"$dataPath`" --info-path `"$infoPath`"" -ForegroundColor White
-
-# Run plot_1D_datas.py with the captured file paths
-try {
-    python plot_1D_datas.py --data-path "$dataPath" --info-path "$infoPath"
-    if ($LASTEXITCODE -ne 0) {
-        throw "plot_1D_datas.py failed with exit code $LASTEXITCODE"
+    else {
+        throw "Simulation failed with exit code $LASTEXITCODE"
     }
-} catch {
-    Write-Host "❌ Error: $_" -ForegroundColor Red
+}
+catch {
+    Write-Host "Simulation failed! Check calc_output.log for details." -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✅ Plotting completed successfully" -ForegroundColor Green
-
+# =============================
+# STEP 2: EXTRACT PATHS FROM OUTPUT
+# =============================
 Write-Host ""
-Write-Host "=== WORKFLOW TEST COMPLETED ===" -ForegroundColor Cyan
-Write-Host "✅ Successfully tested the complete calculation → plotting workflow" -ForegroundColor Green
-Write-Host "✅ Data files: $dataPath" -ForegroundColor Green
-Write-Host "✅ Info files: $infoPath" -ForegroundColor Green
-Write-Host "✅ Plots should be saved in the figures directory" -ForegroundColor Green
+Write-Host "Step 2: Extracting file paths..." -ForegroundColor Yellow
+
+# Extract the plotting command from the output
+$plotCmd = Get-Content calc_output.log | Select-String "python plot_1D_datas.py" | Select-Object -Last 1
+
+if (-not $plotCmd) {
+    Write-Host "Could not find plotting command in output!" -ForegroundColor Red
+    Write-Host "Last few lines of calc_output.log:"
+    Get-Content calc_output.log | Select-Object -Last 10
+    exit 1
+}
+
+Write-Host "Found plotting command: $($plotCmd.Line)"
+
+# =============================
+# STEP 3: RUN PLOTTING
+# =============================
+Write-Host ""
+Write-Host "Step 3: Running plotting script..." -ForegroundColor Yellow
+Write-Host "Executing: $($plotCmd.Line)"
+
+# Execute the plotting command
+try {
+    Invoke-Expression $plotCmd.Line
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host ""
+        Write-Host "Plotting completed successfully!" -ForegroundColor Green
+    }
+    else {
+        throw "Plotting failed with exit code $LASTEXITCODE"
+    }
+}
+catch {
+    Write-Host "Plotting failed!" -ForegroundColor Red
+    exit 1
+}
+
+# =============================
+# WORKFLOW COMPLETE
+# =============================
+Write-Host ""
+Write-Host "1D Spectroscopy Workflow Completed Successfully!" -ForegroundColor Green
+Write-Host "=================================================" -ForegroundColor Green
+Write-Host ""
+Write-Host "Generated files:"
+Get-Content calc_output.log | Select-String "Data file:" | Select-Object -Last 1
+Get-Content calc_output.log | Select-String "Info file:" | Select-Object -Last 1
+Write-Host ""
+Write-Host "Plots saved to: figures/1d_spectroscopy/subdir/"
+Write-Host ""
+Write-Host "Full simulation log available in: calc_output.log"
+Write-Host "=================================================" -ForegroundColor Green
+
+# Clean up
+Remove-Item calc_output.log -ErrorAction SilentlyContinue

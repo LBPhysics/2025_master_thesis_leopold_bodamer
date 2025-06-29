@@ -76,6 +76,7 @@ if __name__ == "__main__":
     print(f"Project root: {PROJECT_ROOT}")
     print(f"Data directory: {DATA_DIR}")
     print(f"Figures directory: {FIGURES_DIR}")
+    print(f"Figures Python directory: {FIGURES_PYTHON_DIR}")
     print(f"Python code directory: {PYTHON_CODE_DIR}")
     print(f"Scripts directory: {SCRIPTS_DIR}")
     print(f"Notebooks directory: {NOTEBOOKS_DIR}")

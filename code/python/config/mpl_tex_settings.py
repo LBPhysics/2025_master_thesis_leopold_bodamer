@@ -304,7 +304,7 @@ def _setup_backend():
 # =============================
 # PLOTTING SETTINGS
 # =============================
-
+DEFAULT_FIG_PATH = FIGURES_DIR / "tests"
 DEFAULT_FIG_FORMAT = "svg"  # pdf, png, svg
 DEFAULT_DPI = 100  # 100 is very high, 10 is good for notebooks
 # Default font size calculation based on standard 11pt LaTeX document
@@ -399,7 +399,7 @@ def save_fig(
     dpi: int = DEFAULT_DPI,
     transparent: bool = DEFAULT_TRANSPARENCY,
     figsize: tuple = DEFAULT_FIGSIZE,
-    output_dir: Optional[Union[str, Path]] = None,
+    output_dir: Optional[Union[str, Path]] = DEFAULT_FIG_PATH,
 ) -> None:
     """
     Save a matplotlib figure in multiple formats.
@@ -427,18 +427,10 @@ def save_fig(
         fig.set_size_inches(figsize)
 
     # Direct path provided in filename
-    if filename and os.path.dirname(filename):
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        full_path = filename
-    # Specific output directory provided
-    elif output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-        full_path = os.path.join(output_dir, filename)
-    # Default to FIGURES_DIR/tests
-    else:
-        output_dir = FIGURES_DIR / "tests"
-        os.makedirs(output_dir, exist_ok=True)
-        full_path = os.path.join(output_dir, filename)
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    full_path = output_dir / filename
 
     # Save in all requested formats
     for fmt in formats:

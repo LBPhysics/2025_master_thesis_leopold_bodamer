@@ -9,21 +9,15 @@ import os
 import sys
 import time
 
-# Change the working directory to the script's directory
-script_dir = os.path.dirname(os.path.abspath(__file__))
-os.chdir(script_dir)
-
-# Add the script's directory to sys.path to ensure imports work
-sys.path.append(script_dir)
-
-from common_fcts import (
+# Modern imports from reorganized package structure
+from qspectro2d.simulation import (
     create_system_parameters,
     run_2d_simulation,
     get_max_workers,
     print_simulation_header,
     print_simulation_summary,
-    save_simulation_data,
 )
+from qspectro2d.data import save_simulation_data
 from config.paths import DATA_DIR
 
 
@@ -35,10 +29,10 @@ def main():
     # =============================
 
     ### Main system configuration
-    N_atoms = 2  # Number of atoms (1 or 2)
-    ODE_Solver = "BR"  # ODE solver type
+    N_atoms = 1  # Number of atoms (1 or 2)
+    ODE_Solver = "Paper_eqs"  # ODE solver type
     RWA_laser = True  # Use RWA for laser interaction
-    t_det_max = 6.0  # Additional time buffer [fs]
+    t_det_max = 10.0  # Additional time buffer [fs]
     dt = 1  # Time step [fs]
 
     ### System-specific parameters
@@ -60,7 +54,7 @@ def main():
     # =============================
     # BUILD CONFIGURATION DICTIONARY
     # =============================
-    config = {
+    data_config = {
         "simulation_type": "2d",  # Explicitly specify simulation type
         "N_atoms": N_atoms,
         "dt": dt,
@@ -79,7 +73,7 @@ def main():
     # =============================
     # PRINT CONFIGURATION SUMMARY
     # =============================
-    t_max = config["T_wait"] + 2 * config["t_det_max"]
+    t_max = data_config["T_wait"] + 2 * data_config["t_det_max"]
     print(f"Running 2D spectroscopy simulation with:")
     print(f"  N_atoms: {N_atoms}")
     print(f"  Solver: {ODE_Solver}")
@@ -96,31 +90,37 @@ def main():
     max_workers = get_max_workers()
 
     # Print simulation header
-    print_simulation_header(config, max_workers, "2d")
+    print_simulation_header(data_config, max_workers, "2d")
 
     # Create system parameters
-    system = create_system_parameters(config)
+    system = create_system_parameters(data_config)
     print(f"System configuration:")
     system.summary()
 
     # Run simulation (returns standardized payload)
-    tau_coh, t_det, data = run_2d_simulation(config, system, max_workers)
+    tau_coh, t_det, data = run_2d_simulation(data_config, system, max_workers)
 
     # Save data using the unified save function    print("\nSaving simulation data...")
     data_path, info_path = save_simulation_data(
-        system=system, config=config, data=data, axs2=tau_coh, axs1=t_det
+        system=system, data_config=data_config, data=data, axs2=tau_coh, axs1=t_det
     )
 
     # Print simulation summary
     elapsed_time = time.time() - start_time
-    print_simulation_summary(elapsed_time, data, data_path, "2d")
+    print_simulation_summary(
+        elapsed_time, data, data_path, "2d"
+    )  # Print the paths for feed-forward to plotting script
+    # For shell scripts, we need absolute paths for file existence checks
+    from config.paths import DATA_DIR
 
-    # Print the paths for feed-forward to plotting script
+    abs_data_path = DATA_DIR / data_path
+    abs_info_path = DATA_DIR / info_path
+
     print(f"\n{'='*60}")
     print("DATA SAVED SUCCESSFULLY")
     print(f"{'='*60}")
-    print(f"Data file: {data_path}")
-    print(f"Info file: {info_path}")
+    print(f"Data file: {abs_data_path}")
+    print(f"Info file: {abs_info_path}")
     print(f"\n🎯 To plot this data, run:")
     print(
         f'python plot_2D_datas.py --data-path "{data_path}" --info-path "{info_path}"'

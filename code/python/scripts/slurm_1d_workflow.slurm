@@ -5,10 +5,12 @@
 
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
+#SBATCH --partition=GPGPU
+#SBATCH --nodelist=orion00
 
-#SBATCH --time=12:00:00
-#SBATCH --mem=8G
-#SBATCH -c 4
+#SBATCH --time=0-01:00:00
+#SBATCH --mem=1G
+#SBATCH -c 16
 
 # =============================
 # UNIFIED 1D SPECTROSCOPY: CALCULATION + PLOTTING
@@ -40,20 +42,30 @@ echo "STEP 1: Starting 1D spectroscopy calculation..."
 echo "=========================================="
 echo "Start time: $(date)"
 
-# Run calculation and capture the filepath
-calc_output=$(python3 calc_1D_datas.py)
+# Run calculation and capture output
+calc_output=$(python3 calc_1D_datas.py 2>&1)
+calc_exit_code=$?
 echo "$calc_output"
 
-# Extract the saved filepath from the output
-saved_filepath=$(echo "$calc_output" | grep "SAVED_FILEPATH:" | cut -d':' -f2)
-
 # Check if calculation completed successfully
-if [ $? -eq 0 ] && [ ! -z "$saved_filepath" ]; then
+if [ $calc_exit_code -eq 0 ]; then
     echo "✅ 1D data calculation completed successfully at: $(date)"
-    echo "📁 Data saved to: $saved_filepath"
+    
+    # Extract plotting command from output (workflow method)
+    plot_cmd=$(echo "$calc_output" | grep "python plot_1D_datas.py" | tail -1)
+    
+    if [ -n "$plot_cmd" ]; then
+        echo "📁 Found plotting command: $plot_cmd"
+    else
+        echo "❌ Could not extract plotting command from calculation output"
+        echo "Last few lines of calculation output:"
+        echo "$calc_output" | tail -10
+        exit 1
+    fi
 else
     echo "❌ 1D data calculation failed at: $(date)"
-    echo "Exiting without plotting..."
+    echo "Calculation output:"
+    echo "$calc_output"
     exit 1
 fi
 
@@ -65,12 +77,14 @@ echo "=========================================="
 echo "STEP 2: Starting 1D data plotting..."
 echo "=========================================="
 echo "Start time: $(date)"
-echo "📊 Plotting data from: $saved_filepath"
+echo "📊 Executing: $plot_cmd"
 
-python3 plot_1D_datas.py "$saved_filepath"
+# Execute the plotting command
+eval $plot_cmd
+plot_exit_code=$?
 
 # Check if plotting completed successfully
-if [ $? -eq 0 ]; then
+if [ $plot_exit_code -eq 0 ]; then
     echo "✅ 1D data plotting completed successfully at: $(date)"
 else
     echo "❌ 1D data plotting failed at: $(date)"
@@ -84,6 +98,12 @@ echo ""
 echo "=========================================="
 echo "🎉 COMPLETE: Both calculation and plotting finished successfully!"
 echo "Job completed at: $(date)"
+echo ""
+echo "📁 Generated files:"
+echo "$calc_output" | grep "Data file:" | tail -1
+echo "$calc_output" | grep "Info file:" | tail -1
+echo ""
+echo "📊 Plots saved to: figures/1d_spectroscopy/plots/"
 echo "=========================================="
 
 # Optional: Show memory usage summary

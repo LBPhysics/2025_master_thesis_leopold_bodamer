@@ -13,6 +13,9 @@ try:
     from .core import *
     from .spectroscopy import *
     from .visualization import *
+    from .data import *
+    from .simulation import *
+    from .utils import *
 except ImportError as e:
     # Graceful fallback if modules are not yet available
     print("Error")

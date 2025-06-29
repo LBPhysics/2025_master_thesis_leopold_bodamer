@@ -1,4 +1,5 @@
 #!/bin/bash
+# filepath: c:\Users\leopo\.vscode\master_thesis\code\python\scripts\slurm_2d_workflow.sh
 #SBATCH --job-name=2D_calc_plot
 #SBATCH --output=logs/2D_calc_plot_%j.out
 #SBATCH --error=logs/2D_calc_plot_%j.err
@@ -6,10 +7,10 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
 #SBATCH --partition=GPGPU
-#SBATCH --nodelist= orion00
+#SBATCH --nodelist=orion00
 
-#SBATCH --time=7-00:00:00
-#SBATCH --mem=30G
+#SBATCH --time=0-01:00:00
+#SBATCH --mem=1G
 #SBATCH -c 16
 
 # =============================
@@ -47,16 +48,25 @@ calc_output=$(python3 calc_2D_datas.py 2>&1)
 calc_exit_code=$?
 echo "$calc_output"
 
-# Extract the data path (new workflow)
-saved_data_path=$(echo "$calc_output" | grep "SAVED_DATA_PATH:" | cut -d':' -f2 | tr -d '[:space:]')
-
 # Check if calculation completed successfully
-if [ $calc_exit_code -eq 0 ] && [ -n "$saved_data_path" ]; then
+if [ $calc_exit_code -eq 0 ]; then
     echo "✅ 2D data calculation completed successfully at: $(date)"
-    echo "📁 Data saved to path: $saved_data_path"
+    
+    # Extract plotting command from output (workflow method)
+    plot_cmd=$(echo "$calc_output" | grep "python plot_2D_datas.py" | tail -1)
+    
+    if [ -n "$plot_cmd" ]; then
+        echo "📁 Found plotting command: $plot_cmd"
+    else
+        echo "❌ Could not extract plotting command from calculation output"
+        echo "Last few lines of calculation output:"
+        echo "$calc_output" | tail -10
+        exit 1
+    fi
 else
     echo "❌ 2D data calculation failed at: $(date)"
-    echo "Exiting without plotting..."
+    echo "Calculation output:"
+    echo "$calc_output"
     exit 1
 fi
 
@@ -68,12 +78,14 @@ echo "=========================================="
 echo "STEP 2: Starting 2D data plotting..."
 echo "=========================================="
 echo "Start time: $(date)"
-echo "📊 Plotting data from path: $saved_data_path"
+echo "📊 Executing: $plot_cmd"
 
-python3 plot_2D_datas.py "$saved_data_path"
+# Execute the plotting command
+eval $plot_cmd
+plot_exit_code=$?
 
 # Check if plotting completed successfully
-if [ $? -eq 0 ]; then
+if [ $plot_exit_code -eq 0 ]; then
     echo "✅ 2D data plotting completed successfully at: $(date)"
 else
     echo "❌ 2D data plotting failed at: $(date)"
@@ -87,6 +99,12 @@ echo ""
 echo "=========================================="
 echo "🎉 COMPLETE: Both calculation and plotting finished successfully!"
 echo "Job completed at: $(date)"
+echo ""
+echo "📁 Generated files:"
+echo "$calc_output" | grep "Data file:" | tail -1
+echo "$calc_output" | grep "Info file:" | tail -1
+echo ""
+echo "📊 Plots saved to: figures/2d_spectroscopy/plots/"
 echo "=========================================="
 
 # Optional: Show memory usage summary
