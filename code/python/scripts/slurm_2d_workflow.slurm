@@ -9,9 +9,9 @@
 #SBATCH --partition=GPGPU
 #SBATCH --nodelist=orion00
 
-#SBATCH --time=0-01:00:00
-#SBATCH --mem=1G
-#SBATCH -c 16
+#SBATCH --time=3-00:00:00
+#SBATCH --mem=40G
+#SBATCH -c 40
 
 # =============================
 # UNIFIED 2D SPECTROSCOPY: CALCULATION + PLOTTING
