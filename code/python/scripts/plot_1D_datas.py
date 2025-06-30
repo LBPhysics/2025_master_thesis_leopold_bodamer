@@ -21,16 +21,11 @@ import argparse
 from pathlib import Path
 
 # Modern imports from reorganized package structure
-import data
 from qspectro2d.data import (
-    load_all_data_from_directory,
     load_latest_data_from_directory,
-    load_data_from_paths,
+    load_data_from_rel_path,
 )
-from qspectro2d.data.files import generate_base_sub_dir
-
 from qspectro2d.visualization import plot_1d_data
-from config.paths import DATA_DIR, FIGURES_PYTHON_DIR
 
 
 def main():
@@ -46,41 +41,27 @@ def main():
     parser = argparse.ArgumentParser(
         description="Plot 1D electronic spectroscopy data"
     )  # Input options
+    # Input options
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
-        "--data-path", type=str, help="Specific data file path (relative to DATA_DIR)"
-    )
-
-    # Info path (required when using --data-path)
-    parser.add_argument(
-        "--info-path",
-        type=str,
-        help="Specific info file path (required with --data-path)",
+        "--rel-path", type=str, help="Specific data file path (relative to DATA_DIR)"
     )
 
     args = parser.parse_args()
-
-    # Validate arguments
-    if args.data_path and not args.info_path:
-        print("❌ Error: --info-path is required when using --data-path")
-        sys.exit(1)
 
     try:
         # =============================
         # LOAD DATA
         # =============================
-        if args.data_path:
+        if args.rel_path:
             print(f"📁 Loading specific files:")
-            print(f"  Data: {args.data_path}")
-            print(f"  Info: {args.info_path}")
-            data_dict = load_data_from_paths(
-                data_path=DATA_DIR / args.data_path, info_path=DATA_DIR / args.info_path
-            )
+            print(f"  Data and Info at: {args.rel_path}")
+            data_dict = load_data_from_rel_path(relative_path=args.rel_path)
 
         else:
             # Default: load latest from 1d_spectroscopy
             print("🔍 Auto-mode: Loading latest from 1d_spectroscopy...")
-            data_dict = load_latest_data_from_directory(Path("1d_spectroscopy"))
+            data_dict = load_latest_data_from_directory("1d_spectroscopy")
 
         # =============================
         # EXTRACT DATA AND PLOT
@@ -89,20 +70,10 @@ def main():
             f"✅ Data: {data_dict['data'].shape}, Time: {data_dict['axes']['axs1'][0]:.1f} to {data_dict['axes']['axs1'][-1]:.1f} fs"
         )
 
-        # Output directory
-        data_config = data_dict["data_config"]
-        system = data_dict["system"]
-        sub_dir = generate_base_sub_dir(data_config, system)
-        output_dir = FIGURES_PYTHON_DIR / sub_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        print(f"📊 Plotting to: {output_dir}")
-
         # plot_1d_data handles all plotting and saving automatically
         plot_1d_data(
             loaded_data=data_dict,
             plot_config=plot_config,
-            output_dir=output_dir,
         )
 
         print("✅ Plotting completed!")

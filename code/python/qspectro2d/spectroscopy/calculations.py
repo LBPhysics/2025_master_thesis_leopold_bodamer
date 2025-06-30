@@ -1,19 +1,30 @@
 # -*- coding: utf-8 -*-
 
+# =============================
+# STANDARD LIBRARY IMPORTS
+# =============================
 from copy import deepcopy
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Optional
+import logging
+
+# =============================
+# THIRD-PARTY IMPORTS
+# =============================
 import numpy as np
 from qutip import Qobj, Result, liouvillian, mesolve, brmesolve, expect
 from qutip.core import QobjEvo
+
+# =============================
+# LOCAL IMPORTS
+# =============================
 from qspectro2d.core.system_parameters import SystemParameters
 from qspectro2d.core.pulse_sequences import PulseSequence
 from qspectro2d.core.pulse_functions import (
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
-from qspectro2d.core.pulse_functions import *
 from qspectro2d.core.solver_fcts import (
     matrix_ODE_paper,
     R_paper,
@@ -21,11 +32,72 @@ from qspectro2d.core.solver_fcts import (
 from qspectro2d.spectroscopy.inhomogenity import sample_from_sigma
 from qspectro2d.core.functions_with_rwa import (
     H_int,
-    get_expect_vals_with_RWA,
     apply_RWA_phase_factors,
 )
 
 
+# =============================
+# CONSTANTS AND CONFIGURATION
+# =============================
+DEFAULT_SOLVER_OPTIONS = {
+    "nsteps": 200000,
+    "atol": 1e-6,
+    "rtol": 1e-4,
+}
+
+SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
+PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
+IFT_TOLERANCE = 1e-3
+
+# =============================
+# LOGGING CONFIGURATION
+# =============================
+logger = logging.getLogger(__name__)
+
+
+# =============================
+# VALIDATION HELPERS
+# =============================
+def _validate_computation_inputs(
+    times: np.ndarray,
+    system: SystemParameters,
+    n_freqs: int = None,
+    n_phases: int = None,
+) -> None:
+    """Validate common inputs for computation functions."""
+    if not isinstance(times, np.ndarray):
+        raise TypeError("times must be a numpy array")
+
+    if len(times) < 2:
+        raise ValueError("times array must have at least 2 elements")
+
+    if not hasattr(system, "ODE_Solver"):
+        raise AttributeError("system must have ODE_Solver attribute")
+
+    if n_freqs is not None and n_freqs <= 0:
+        raise ValueError("n_freqs must be positive")
+
+    if n_phases is not None and n_phases not in [2, 4, 8]:
+        logger.warning(
+            f"n_phases={n_phases} may not be optimal. Consider using 2, 4, or 8."
+        )
+
+
+def _validate_system_state(system: SystemParameters) -> None:
+    """Validate system parameters for consistency."""
+    required_attrs = ["psi_ini", "observable_ops", "H0_diagonalized"]
+
+    for attr in required_attrs:
+        if not hasattr(system, attr):
+            raise AttributeError(f"system missing required attribute: {attr}")
+
+    if not isinstance(system.psi_ini, Qobj):
+        raise TypeError("psi_ini must be a Qobj")
+
+
+# =============================
+# POLARIZATION CALCULATIONS
+# =============================
 def complex_polarization(
     system: SystemParameters, state: Union[Qobj, List[Qobj]]
 ) -> Union[complex, np.ndarray]:
@@ -38,227 +110,302 @@ def complex_polarization(
     ----------
     system : SystemParameters
         System parameters containing dipole operator information.
-
-    state : Qobj/array-like
-        A single or a `list` of quantum states or density matrices.
+    state : Union[Qobj, List[Qobj]]
+        A single quantum state/density matrix or list of states.
 
     Returns
     -------
-    polarization : complex/array-like
-        Complex polarization value(s). A (nested) array of polarization values
-        if ``state`` is an array.
+    Union[complex, np.ndarray]
+        Complex polarization value(s). Returns complex for single state,
+        complex array for multiple states.
+
+    Raises
+    ------
+    TypeError
+        If state is not a Qobj or list of Qobj.
 
     Examples
     --------
-    >>> complex_polarization(system, rho) # Single density matrix
-    >>> complex_polarization(system, [rho1, rho2, rho3]) # Multiple states
-
+    >>> pol = complex_polarization(system, rho)  # Single density matrix
+    >>> pols = complex_polarization(system, [rho1, rho2])  # Multiple states
     """
     if isinstance(state, Qobj):
         return _single_qobj_polarization(system, state)
 
-    elif isinstance(state, (list)):
+    if isinstance(state, list):
         return np.array(
-            [_single_qobj_polarization(system, s) for s in state], dtype=np.complex64
+            [_single_qobj_polarization(system, s) for s in state],
+            dtype=np.complex128,  # Use higher precision
         )
 
-    raise TypeError("State must be a quantum object or array of quantum objects")
+    raise TypeError(f"State must be a Qobj or list of Qobj, got {type(state)}")
 
 
 def _single_qobj_polarization(system: SystemParameters, state: Qobj) -> complex:
     """
-    Private function used by complex_polarization to calculate polarization values of Qobjs.
+    Calculate polarization for a single quantum state or density matrix.
+
+    Parameters
+    ----------
+    system : SystemParameters
+        System parameters containing dipole operator.
+    state : Qobj
+        Quantum state (ket) or density matrix.
+
+    Returns
+    -------
+    complex
+        Complex polarization value.
+
+    Raises
+    ------
+    TypeError
+        If state is not a ket or density matrix.
+    ValueError
+        If number of atoms is not supported.
     """
     if not (state.isket or state.isoper):
         raise TypeError("State must be a ket or density matrix")
 
-    Dip = system.Dip_op
+    dip_op = system.Dip_op
+    n_atoms = system.N_atoms
 
-    if system.N_atoms == 1:
-        # For a single atom, the polarization is simply the expectation value of the dipole operator
-        return Dip[1, 0] * state[0, 1]
-    elif system.N_atoms == 2:
-        return (
-            Dip[1, 0] * state[0, 1]
-            + Dip[2, 0] * state[0, 2]
-            + Dip[3, 1] * state[1, 3]
-            + Dip[3, 2] * state[2, 3]
-        )
+    # Dispatch to specialized methods for better performance
+    if n_atoms == 1:
+        return _single_atom_polarization(dip_op, state)
+    elif n_atoms == 2:
+        return _two_atom_polarization(dip_op, state)
     else:
-        # General case for N>2
-        pol = 0j
-        dim = state.shape[0]
-        for i in range(dim):
-            for j in range(dim):
-                if i != j and abs(Dip[i, j]) > 0:
-                    pol += Dip[i, j] * state[j, i]
-        return pol
+        return _multi_atom_polarization(dip_op, state)
+
+
+def _single_atom_polarization(dip_op: Qobj, state: Qobj) -> complex:
+    """Calculate polarization for single atom system."""
+    return dip_op[1, 0] * state[0, 1]
+
+
+def _two_atom_polarization(dip_op: Qobj, state: Qobj) -> complex:
+    """Calculate polarization for two-atom system."""
+    return (
+        dip_op[1, 0] * state[0, 1]
+        + dip_op[2, 0] * state[0, 2]
+        + dip_op[3, 1] * state[1, 3]
+        + dip_op[3, 2] * state[2, 3]
+    )
+
+
+def _multi_atom_polarization(dip_op: Qobj, state: Qobj) -> complex:
+    """Calculate polarization for multi-atom system (N > 2)."""
+    polarization = 0j
+    dim = state.shape[0]
+
+    for i in range(dim):
+        for j in range(dim):
+            if i != j and abs(dip_op[i, j]) > 0:  # Fixed: use 0 not IFT_TOLERANCE
+                polarization += dip_op[i, j] * state[j, i]
+
+    return polarization
 
 
 def compute_pulse_evolution(
     psi_ini: Qobj,
     times: np.ndarray,
     pulse_seq: PulseSequence,
-    system: SystemParameters = None,
+    system: SystemParameters,
     **solver_options: dict,
 ) -> Result:
     """
     Compute the evolution of the system for a given pulse sequence.
 
-    Parameters:
-        psi_ini (Qobj): Initial quantum state.
-        times (np.ndarray): Time array for the evolution.
-        pulse_seq (PulseSequence): PulseSequence object.
-        system (SystemParameters): System parameters.
+    Parameters
+    ----------
+    psi_ini : Qobj
+        Initial quantum state.
+    times : np.ndarray
+        Time array for the evolution.
+    pulse_seq : PulseSequence
+        PulseSequence object defining the pulse sequence.
+    system : SystemParameters
+        System parameters containing Hamiltonian and solver configuration.
+    **solver_options : dict
+        Additional solver options that override defaults.
 
-    Returns:
-        Result: Result of the evolution.
+    Returns
+    -------
+    Result
+        QuTiP Result object containing evolution data.
+
+    Raises
+    ------
+    ValueError
+        If unknown ODE solver is specified.
     """
     # =============================
-    # Set solver options
+    # CONFIGURE SOLVER OPTIONS
     # =============================
-    # Initialize with provided solver_options or empty dict
-    options = solver_options.copy() if solver_options else {}
+    options = _configure_solver_options(solver_options)
 
-    # Add default options if not already present
-    default_options = {
-        # Increasing max steps and atol/rtol for better stability
-        "nsteps": 200000,
-        "atol": 1e-6,
-        "rtol": 1e-4,
-    }
+    # =============================
+    # VALIDATE SOLVER TYPE
+    # =============================
+    if system.ODE_Solver not in SUPPORTED_SOLVERS:
+        raise ValueError(
+            f"Unknown ODE solver: {system.ODE_Solver}. "
+            f"Supported solvers: {SUPPORTED_SOLVERS}"
+        )
 
-    # Update options with defaults only if not already set
-    for key, value in default_options.items():
-        if key not in options:
-            options[key] = value
-    # Initialize result storage for different regions
-    all_states = []
-    all_times = []
+    # =============================
+    # INITIALIZE EVOLUTION COMPONENTS
+    # =============================
     current_state = psi_ini
 
-    # Build Hamiltonian components
-    H_free = system.H0_diagonalized  # already includes the RWA, if present!
-    H_int_evo = QobjEvo(
-        lambda t, args=None: H_free + H_int(t, pulse_seq, system)
-    )  # also add H_int, with potential RWA
+    # Build Hamiltonian components that already include the RWA if present
+    H_free = system.H0_diagonalized
+    H_int_evo = QobjEvo(lambda t, args=None: H_free + H_int(t, pulse_seq, system))
 
     # =============================
-    # Choose solver and compute the evolution
+    # CONFIGURE SOLVER-SPECIFIC PARAMETERS
     # =============================
-    if system.ODE_Solver not in ["ME", "BR", "Paper_eqs", "Paper_BR"]:
-        raise ValueError(f"Unknown ODE solver: {system.ODE_Solver}")
-
     if system.ODE_Solver == "Paper_eqs":
-        c_ops_list = []
-        if not system.RWA_laser:
-            print(
-                "The equations of the paper only make sense with RWA -> switched it on!",
-                flush=True,
-            )
-            system.RWA_laser = True
-        # For Paper_eqs, we need to define the full Liouville operator, which includes the decay channels
-        EVO_obj = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
-        # no explicit c_ops, matrix_ODE represents the full Liouville operator
+        _configure_paper_equations_solver(system)
 
     # =============================
-    # Split evolution by pulse regions for Paper_eqs
+    # SPLIT EVOLUTION BY PULSE REGIONS
     # =============================
-    # Find pulse regions in the time array using the dedicated function
+    return _execute_segmented_evolution(
+        times, pulse_seq, system, current_state, H_free, H_int_evo, options
+    )
+
+
+def _execute_segmented_evolution(  # TODO during "final_state" solving -> take coarser time steps
+    times: np.ndarray,
+    pulse_seq: PulseSequence,
+    system: SystemParameters,
+    current_state: Qobj,
+    H_free: Qobj,
+    H_int_evo: QobjEvo,
+    options: dict,
+) -> Result:
+    """Execute evolution split by pulse regions."""
+    all_states, all_times = [], []
+
+    # Find pulse regions and split time array
     pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
-    # BASED ON THIS split the time range into regions where the pulse envelope is zero
     split_times = split_by_active_regions(times, pulse_regions)
 
     for i, times_ in enumerate(split_times):
         # Extend times_ by one point if not the last segment
         if i < len(split_times) - 1:
-            # Find the first time point of the next segment
             next_times = split_times[i + 1]
             if len(next_times) > 0:
-                # Extend current times_ with the first point of the next segment
                 times_ = np.append(times_, next_times[0])
 
         # Find the indices in the original times array for this split
         start_idx = np.abs(times - times_[0]).argmin()
-
-        # Check if this region has an active pulse by looking at the first time point
         has_pulse = pulse_regions[start_idx]
 
-        # Set up collapse operators based on solver type; no c_ops for "BR"
-        if system.ODE_Solver == "ME":
-            if has_pulse:
-                c_ops_list = []
-                EVO_obj = H_free
-            else:
-                c_ops_list = system.me_decay_channels  # explicit c_ops
-                EVO_obj = H_int_evo  # For ME, we use the Hamiltonian evolution operator directly
-        elif system.ODE_Solver == "Paper_BR":
-            # no explicit c_ops for Paper_BR, but we need to define the R operator
-            c_ops_list = []
-            EVO_obj = liouvillian(H_int_evo) + R_paper(
-                system
-            )  # TODO PROBLEM SOMEHOW INCLUDES RWA twice? -> double the oscillation
+        # Configure evolution object and collapse operators
+        EVO_obj, c_ops_list = _configure_evolution_objects(
+            system, has_pulse, H_free, H_int_evo, pulse_seq
+        )
 
-        if system.ODE_Solver == "BR":
-            a_ops_list = system.br_decay_channels
-            result = brmesolve(
-                H_int_evo,
-                current_state,
-                times_,
-                a_ops=a_ops_list,
-                options=options,
-            )
-        else:
-            result = mesolve(
-                EVO_obj,
-                current_state,
-                times_,
-                c_ops=c_ops_list,
-                options=options,
-            )
+        # Execute evolution for this time segment
+        result = _execute_single_evolution_segment(
+            system, EVO_obj, c_ops_list, current_state, times_, H_int_evo, options
+        )
 
+        # Store results
         if hasattr(result, "states") and result.states:
-            # Store states - exclude last point for all but the final segment
             if i < len(split_times) - 1:
-                # Not the last segment: exclude the last state/time to avoid duplication
                 all_states.extend(result.states[:-1])
                 all_times.extend(result.times[:-1])
             else:
-                # Last segment: include all states and times
                 all_states.extend(result.states)
                 all_times.extend(result.times)
-
-            # Update current state for next evolution
             current_state = result.states[-1]
         elif hasattr(result, "final_state"):
             current_state = result.final_state
         else:
             raise RuntimeError(
-                "No valid state found in result object for next evolution step."
+                "No valid state found in result for next evolution step."
             )
-    # =============================
-    # Create combined result object using first result as base
-    # =============================
-    result_ = result
 
-    if all_states:
-        # store_states=True: assign all collected states/times
-        result_.states = all_states
-        result_.times = np.array(all_times)
-    else:
-        # store_states=False: assign only the final state/time
-        if hasattr(result_, "final_state"):
-            result_.states = [result_.final_state]
-            # Optionally, assign the last time point if available
-            if hasattr(result_, "times") and len(result_.times) > 0:
-                result_.times = [result_.times[-1]]
-            else:
-                result_.times = []
+    # Create combined result object
+    result.states = all_states if all_states else []
+    result.times = np.array(all_times) if all_times else []
+
+    return result
+
+
+def _configure_evolution_objects(
+    system: SystemParameters,
+    has_pulse: bool,
+    H_free: Qobj,
+    H_int_evo: QobjEvo,
+    pulse_seq: PulseSequence,
+) -> tuple[Union[Qobj, QobjEvo], list]:
+    """Configure evolution objects and collapse operators based on solver type.
+
+    Returns
+    -------
+    tuple[Union[Qobj, QobjEvo], list]
+        (evolution_object, collapse_operators_list)
+    """
+    if system.ODE_Solver == "ME":
+        if has_pulse:
+            return (
+                H_int_evo,
+                system.me_decay_channels,
+            )
         else:
-            result_.states = []
-            result_.times = []
+            return (
+                H_free,
+                system.me_decay_channels,
+            )
+    elif system.ODE_Solver == "BR":
+        # BR solver handles a_ops, it is handled in _execute_single_evolution_segment
+        return (
+            H_int_evo,
+            [],
+        )
+    elif system.ODE_Solver == "Paper_BR":
+        # Paper BR combines Liouvillian with custom R operator
+        EVO_obj = liouvillian(H_int_evo) + R_paper(
+            system
+        )  # TODO THIS IS WRONG UNFORTUNATELY
+        return EVO_obj, []
+    elif system.ODE_Solver == "Paper_eqs":
+        # Paper equations use custom matrix ODE
+        EVO_obj = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+        return EVO_obj, []
 
-    return result_
+
+def _execute_single_evolution_segment(
+    system: SystemParameters,
+    EVO_obj: Union[Qobj, QobjEvo],
+    c_ops_list: list,
+    current_state: Qobj,
+    times_: np.ndarray,
+    H_int_evo: QobjEvo,
+    options: dict,
+) -> Result:
+    """Execute evolution for a single time segment."""
+    if system.ODE_Solver == "BR":
+        return brmesolve(
+            H_int_evo,
+            current_state,
+            times_,
+            a_ops=system.br_decay_channels,
+            options=options,
+        )
+    else:
+        return mesolve(
+            EVO_obj,
+            current_state,
+            times_,
+            c_ops=c_ops_list,
+            options=options,
+        )
 
 
 def check_the_solver(system: SystemParameters) -> tuple[Result, float]:
@@ -436,7 +583,7 @@ def compute_1d_polarization(
     **kwargs,
 ) -> tuple:
     """
-    Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_max
+    Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_MAX
     """
     time_cut = kwargs.get("time_cut", np.inf)
 
@@ -786,6 +933,8 @@ def parallel_compute_1d_E_with_inhomogenity(
     t_det_max: np.ndarray,
     system,
     max_workers: int = None,
+    apply_ift: bool = True,
+    ift_component: tuple = (-1, 1, 0),
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
@@ -816,18 +965,21 @@ def parallel_compute_1d_E_with_inhomogenity(
     tuple
         (t_det_vals, photon_echo_signal) where signal is averaged and IFT-processed.
     """
+    # Configure parallel processing
     if max_workers is None:
-        max_workers = mp.cpu_count()
+        max_workers = min(mp.cpu_count(), 8)  # Limit to 8 to avoid memory issues
 
-    phases = [k * np.pi / 2 for k in range(n_phases)]  # [0, π/2, π, 3π/2]
+    # Configure phase cycling
+    phases = PHASE_CYCLING_PHASES[:n_phases]  # Use predefined phases
     if n_phases != 4:
-        print(f"Warning: Phases {phases} may not be optimal for IFT", flush=True)
+        logger.warning(
+            f"Phase cycling with {n_phases} phases may not be optimal for IFT"
+        )
 
-    print(
-        f"Processing {n_freqs} frequencies with {n_phases}×{n_phases} phase combinations",
-        flush=True,
+    logger.info(
+        f"Processing {n_freqs} frequencies with {n_phases}×{n_phases} phase combinations"
     )
-    print(f"Using {max_workers} parallel workers", flush=True)
+    logger.info(f"Using {max_workers} parallel workers")
 
     # Sample frequency offsets for inhomogeneous broadening
     N_atoms = system.N_atoms
@@ -886,25 +1038,45 @@ def parallel_compute_1d_E_with_inhomogenity(
                 t_det_vals, data = future.result()
                 results[(omega_idx, phi1_idx, phi2_idx)] = data
             except Exception as exc:
-                print(
-                    f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}",
-                    flush=True,
+                logger.error(
+                    f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}"
                 )
+                # You might want to handle this more gracefully, e.g., using default values
 
     # Fill 3D result array
     results_cube = np.zeros((n_freqs, n_phases, n_phases), dtype=object)
     for (omega_idx, phi1_idx, phi2_idx), data in results.items():
-        results_cube[omega_idx, phi1_idx, phi2_idx] = data
+        results_cube[omega_idx, phi1_idx, phi2_idx] = data * 1j  # E ~ iP
 
-    # Average over frequencies before IFT
+    # Average over frequencies before IFT or phase-average
     results_matrix_avg = np.mean(results_cube, axis=0)
 
-    # Final IFT
-    photon_echo_signal = extract_ift_signal_component(
-        results_matrix=results_matrix_avg, phases=phases, component=(-1, 1, 0)
-    )
+    if apply_ift:
+        # Final IFT extraction for the specified component
+        photon_echo_signal = extract_ift_signal_component(
+            results_matrix=results_matrix_avg, phases=phases, component=ift_component
+        )
+    else:
+        # Phase-averaged raw signal E = i*P
+        phase_signals = []
+        for phi1_idx in range(n_phases):
+            for phi2_idx in range(n_phases):
+                if results_matrix_avg[phi1_idx, phi2_idx] is not None:
+                    phase_signals.append(results_matrix_avg[phi1_idx, phi2_idx])
+        if phase_signals:
+            photon_echo_signal = np.mean(np.array(phase_signals), axis=0)
+        else:
+            photon_echo_signal = (
+                np.zeros_like(results_matrix_avg[0, 0])
+                if results_matrix_avg[0, 0] is not None
+                else np.array([])
+            )
+            print(
+                "Warning: No valid phase signals found, returning empty signal.",
+                flush=True,
+            )
 
-    return t_det_vals, photon_echo_signal * 1j  # because E ~ i P
+    return t_det_vals, photon_echo_signal
 
 
 def parallel_compute_2d_E_with_inhomogenity(
@@ -914,6 +1086,8 @@ def parallel_compute_2d_E_with_inhomogenity(
     t_det_max: np.ndarray,
     system,
     max_workers: int = None,
+    apply_ift: bool = True,
+    ift_component: tuple = (-1, 1, 0),
     **kwargs,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -933,6 +1107,12 @@ def parallel_compute_2d_E_with_inhomogenity(
         Simulation parameters.
     max_workers : int, optional
         Number of workers for parallel processing (default: CPU count).
+    apply_ift : bool, optional
+        Whether to apply IFT signal extraction (default: True).
+        If True, returns the specific signal component via extract_ift_signal_component.
+        If False, returns the raw phase-averaged signal E = i*P.
+    ift_component : tuple, optional
+        Component to extract when apply_ift=True (default: (-1, 1, 0)).
     **kwargs : dict
         Additional arguments passed to the pulse sequence simulation function.
 
@@ -945,6 +1125,8 @@ def parallel_compute_2d_E_with_inhomogenity(
             Detection time axis.
         data_avg_2d : np.ndarray
             2D signal array of shape (len(tau_coh), len(t_det)), complex-valued.
+            If apply_ift=True: specific IFT signal component.
+            If apply_ift=False: phase-averaged raw signal E = i*P.
     """
     dt = system.dt
     tau_coh_vals = np.arange(0, t_det_max, dt)
@@ -1040,11 +1222,11 @@ def parallel_compute_2d_E_with_inhomogenity(
     n_tau = len(tau_coh_vals)
     signal_tensor = np.empty((n_freqs, n_tau, n_phases, n_phases), dtype=object)
     for (omega_idx, tau_idx, phi1_idx, phi2_idx), data in results.items():
-        signal_tensor[omega_idx, tau_idx, phi1_idx, phi2_idx] = data
+        signal_tensor[omega_idx, tau_idx, phi1_idx, phi2_idx] = data * 1j  # E ~ iP
 
     # === Build final 2D signal: one row per τ, after averaging and IFT ===
-    data_avg_2d = []
-    for tau_idx in reversed(range(n_tau)):  # latest τ on top # HERE I CHANGED: ordering
+    data_list_1d = []
+    for tau_idx in range(n_tau):
         results_matrix = np.empty((n_phases, n_phases), dtype=object)
         for phi1_idx in range(n_phases):
             for phi2_idx in range(n_phases):
@@ -1062,14 +1244,39 @@ def parallel_compute_2d_E_with_inhomogenity(
                         f"Averaging failed at τ={tau_idx}, φ=({phi1_idx},{phi2_idx}): {e}"
                     )
 
-        # Apply IFT to this averaged phase matrix
-        signal_2d = extract_ift_signal_component(
-            results_matrix=results_matrix, phases=phases, component=(-1, 1, 0)
-        )
-        data_avg_2d.append(signal_2d * 1j)  # E ~ iP
+        # Apply IFT or return raw signal based on flag
+        if apply_ift:
+            signal_2d = extract_ift_signal_component(
+                results_matrix=results_matrix, phases=phases, component=ift_component
+            )
+        else:
+            # Return phase-averaged raw signal E = i*P
+            # Collect all valid phase combination arrays for this τ
+            phase_signals = []
+            for phi1_idx in range(n_phases):
+                for phi2_idx in range(n_phases):
+                    if results_matrix[phi1_idx, phi2_idx] is not None:
+                        phase_signals.append(results_matrix[phi1_idx, phi2_idx])
+
+            if phase_signals:
+                # Stack and average along phase axis (axis=0) to preserve t_det dimensions
+                signal_2d = np.mean(np.array(phase_signals), axis=0)
+            else:
+                # Fallback: create zero array with correct shape
+                signal_2d = (
+                    np.zeros_like(results_matrix[0, 0])
+                    if results_matrix[0, 0] is not None
+                    else np.array([])
+                )
+                print(
+                    "Warning: No valid phase signals found, returning empty signal.",
+                    flush=True,
+                )
+
+        data_list_1d.append(signal_2d)
 
     # Final stacking
-    data_avg_2d = np.vstack(data_avg_2d)
+    data_avg_2d = np.vstack(data_list_1d)
     return tau_coh_vals, t_det_vals, data_avg_2d
 
 
@@ -1137,3 +1344,21 @@ def extract_ift_signal_component(
     signal /= n_phases * n_phases
 
     return signal
+
+
+def _configure_solver_options(solver_options: dict) -> dict:
+    """Configure solver options with defaults."""
+    options = solver_options.copy() if solver_options else {}
+
+    # Update options with defaults only if not already set
+    for key, value in DEFAULT_SOLVER_OPTIONS.items():
+        options.setdefault(key, value)
+
+    return options
+
+
+def _configure_paper_equations_solver(system: SystemParameters) -> None:
+    """Configure system for paper equations solver."""
+    if not system.RWA_laser:
+        logger.info("Paper equations require RWA - enabling RWA_laser")
+        system.RWA_laser = True

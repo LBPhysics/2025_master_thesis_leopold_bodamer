@@ -50,7 +50,7 @@ class SystemParameters:
     # Laser field parameters
     # =============================
     E0: float = 0.05
-    envelope_type: str = "cos2"  # 'cos2' or 'gaussian'
+    pulse_type: str = "cos2"  # 'cos2' or 'gaussian'
 
     # =============================
     # Pulse and time grid parameters
@@ -749,7 +749,7 @@ class SystemParameters:
             "RWA_laser": self.RWA_laser,
             "bath": self.bath,
             "E0": self.E0,
-            "envelope_type": self.envelope_type,
+            "pulse_type": self.pulse_type,
             "pulse_fwhm": self.pulse_fwhm,
             "omega_laser_cm": self.omega_laser_cm,
             "t_max": self.t_max,

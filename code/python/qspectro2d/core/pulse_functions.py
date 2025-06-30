@@ -13,7 +13,7 @@ def pulse_envelope(
     Now uses pulse_peak_time as t_peak (peak time) where cos²/gaussian is maximal.
     Pulse is zero outside [t_peak - fwhm, t_peak + fwhm] == outside of 2 fwhm.
 
-    Uses the envelope_type from each pulse to determine which envelope function to use:
+    Uses the pulse_type from each pulse to determine which envelope function to use:
     - 'cos2': cosine squared envelope
     - 'gaussian': Gaussian envelope, shifted so that:
       - The Gaussian is zero at t_peak ± fwhm boundaries: (actually about <= 1%)
@@ -40,8 +40,8 @@ def pulse_envelope(
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time
         fwhm = pulse.pulse_fwhm
-        envelope_type = getattr(
-            pulse, "envelope_type", "cos2"
+        pulse_type = getattr(
+            pulse, "pulse_type", "cos2"
         )  # Default to cos2 for backward compatibility
 
         if fwhm is None or fwhm <= 0:
@@ -53,12 +53,12 @@ def pulse_envelope(
         if not (t_peak - fwhm <= t <= t_peak + fwhm):
             continue
 
-        if envelope_type == "cos2":
+        if pulse_type == "cos2":
             ### Cosine squared envelope
             arg = np.pi * (t - t_peak) / (2 * fwhm)
             envelope += np.cos(arg) ** 2
 
-        elif envelope_type == "gaussian":
+        elif pulse_type == "gaussian":
             ### Gaussian envelope
             sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
             gaussian_val = np.exp(-((t - t_peak) ** 2) / (2 * sigma**2))
@@ -70,7 +70,7 @@ def pulse_envelope(
 
         else:
             raise ValueError(
-                f"Unknown envelope_type: {envelope_type}. Use 'cos2' or 'gaussian'."
+                f"Unknown pulse_type: {pulse_type}. Use 'cos2' or 'gaussian'."
             )
 
     return envelope

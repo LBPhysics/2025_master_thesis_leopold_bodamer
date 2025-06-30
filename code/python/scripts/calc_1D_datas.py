@@ -5,8 +5,6 @@ This script computes 1D electronic spectroscopy data using parallel processing
 and saves results in pickle format. All parameters are defined directly in main().
 """
 
-import os
-import sys
 import time
 
 # Modern imports from reorganized package structure
@@ -18,7 +16,6 @@ from qspectro2d.simulation import (
     print_simulation_summary,
 )
 from qspectro2d.data import save_simulation_data
-from config.paths import DATA_DIR
 
 
 def main():
@@ -49,9 +46,9 @@ def main():
 
     ### Spectroscopy parameters
     n_phases = 2  # Number of phases for phase cycling
-    n_freqs = 10  # Number of frequencies for inhomogeneous broadening
-    Delta_cm = 200  # Inhomogeneous broadening [cm⁻¹]
-    envelope_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
+    n_freqs = 1  # Number of frequencies for inhomogeneous broadening
+    Delta_cm = 0  # Inhomogeneous broadening [cm⁻¹]
+    pulse_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
     E0 = 0.005  # Electric field amplitude
 
     # =============================
@@ -68,7 +65,7 @@ def main():
         "n_phases": n_phases,
         "n_freqs": n_freqs,
         "Delta_cm": Delta_cm,
-        "envelope_type": envelope_type,
+        "pulse_type": pulse_type,
         "E0": E0,
         "pulse_fwhm": pulse_fwhm,
         "RWA_laser": RWA_laser,
@@ -94,7 +91,7 @@ def main():
     max_workers = get_max_workers()
 
     # Print simulation header
-    print_simulation_header(data_config, max_workers, "1d")
+    print_simulation_header(data_config, max_workers)
 
     # Create system parameters
     system = create_system_parameters(data_config)
@@ -106,23 +103,20 @@ def main():
 
     # Save data using the new workflow
     print("\nSaving simulation data...")
-    data_path, info_path = save_simulation_data(
+    rel_path = save_simulation_data(
         system=system, data_config=data_config, data=data, axs1=t_det
     )  # Print simulation summary
     elapsed_time = time.time() - start_time
-    print_simulation_summary(elapsed_time, data, data_path, "1d")
+    print_simulation_summary(elapsed_time, data, rel_path, "1d")
     print(f"\n{'='*60}")
     print("DATA SAVED SUCCESSFULLY")
     print(f"{'='*60}")
-    print(f"Data file: {data_path}")
-    print(f"Info file: {info_path}")
+    print(f"Data file: {rel_path}")
     print(f"\n🎯 To plot this data, run:")
-    print(
-        f'python plot_1D_datas.py --data-path "{data_path}" --info-path "{info_path}"'
-    )
+    print(f'python plot_1D_datas.py --rel-path "{rel_path}"')
     print(f"{'='*60}")
 
-    return data_path, info_path
+    return rel_path
 
 
 if __name__ == "__main__":

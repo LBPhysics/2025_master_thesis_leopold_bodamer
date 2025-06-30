@@ -12,9 +12,7 @@ Example:
 """
 
 import os
-from pathlib import Path
-from typing import Optional, Union, List
-
+from typing import Optional
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -22,13 +20,11 @@ import os
 import sys
 import shutil
 import subprocess
-from matplotlib import font_manager as fm
 from matplotlib import rcParams
-from config.paths import FIGURES_DIR
+from qspectro2d.config.paths import FIGURES_PYTHON_DIR, FIGURES_TESTS_DIR
 
 LATEX_DOC_WIDTH = 441.01775  # 510  # Default LaTeX document width in points (pt); FIND OUT WITH "The width of this document is: \the\textwidth"
 LATEX_FONT_SIZE = 11  # Default LaTeX font size in points (pt)
-
 
 # =============================
 # HELPER FUNCTIONS
@@ -252,36 +248,6 @@ def _check_latex_available():
             return False
 
 
-def _get_available_fonts(keywords):
-    """Return a list of available fonts that match given keywords."""
-    available = set()
-    for f in fm.fontManager.ttflist:
-        for kw in keywords:
-            if kw in f.name.lower():
-                available.add(f.name)
-    return sorted(available)
-
-
-def _set_best_serif_font():
-    preferred_order = [
-        "palatino linotype",
-        "palatino",
-        "cmu serif",  # latex imitate
-        "times new roman",
-    ]
-    available = _get_available_fonts(preferred_order)
-    for pref in preferred_order:
-        match = next((f for f in available if pref == f.lower()), None)
-        if match:
-            rcParams["font.family"] = match
-            global font_to_use
-            font_to_use = match
-            print(f"✔️ Using font: {match}")
-            return
-    print("⚠️ No preferred serif fonts found.")
-    font_to_use = "serif"
-
-
 # BACKEND SELECTION - AUTOMATIC BASED ON ENVIRONMENT
 def _setup_backend():
     if mpl.get_backend() not in ["", "agg"]:
@@ -304,7 +270,7 @@ def _setup_backend():
 # =============================
 # PLOTTING SETTINGS
 # =============================
-DEFAULT_FIG_PATH = FIGURES_DIR / "tests"
+DEFAULT_FIG_PATH = FIGURES_TESTS_DIR
 DEFAULT_FIG_FORMAT = "svg"  # pdf, png, svg
 DEFAULT_DPI = 100  # 100 is very high, 10 is good for notebooks
 # Default font size calculation based on standard 11pt LaTeX document
@@ -332,9 +298,7 @@ LINE_STYLES = ["solid", "dashed", "dashdot", "dotted", (0, (3, 1, 1, 1)), (0, (5
 MARKERS = ["o", "s", "^", "v", "D", "p", "*", "X", "+", "x"]
 
 
-# Initialize font_to_use
-font_to_use = "serif"  # fall back
-_set_best_serif_font()  # update font to use
+# SYSTEM CHECKS FOR FAILSAFE
 latex_available = _check_latex_available()
 
 # =============================
@@ -344,7 +308,6 @@ base_settings = {
     # font
     "font.family": "serif",
     "font.serif": [
-        font_to_use,
         "cmu serif",
         "times new roman",
         "serif",
@@ -366,9 +329,6 @@ base_settings = {
     "legend.framealpha": 0.8,
     "savefig.bbox": "tight",
     "savefig.transparent": DEFAULT_TRANSPARENCY,
-    # "figure.facecolor": "white", # Uncomment if you want white background, but only with transparent=False
-    #    "axes.facecolor": "white",
-    #    "savefig.facecolor": "white",
     # Quality of the plot:
     "savefig.format": DEFAULT_FIG_FORMAT,
     "savefig.dpi": DEFAULT_DPI,
@@ -419,6 +379,11 @@ def save_fig(
         Figure dimensions (width, height) in inches. If provided, the figure size
         will be updated before saving.
     """
+    # Ensure the directory exists
+    directory = os.path.dirname(filename)
+    if directory:  # Only create if directory is not empty string
+        os.makedirs(directory, exist_ok=True)
+
     if figsize is not None:
         fig.set_size_inches(figsize)
 
@@ -432,8 +397,13 @@ def save_fig(
             transparent=transparent,
         )
 
+    # Print the path relative to FIGURES_PYTHON_DIR
+    try:
+        rel_path = os.path.relpath(filename, FIGURES_PYTHON_DIR)
+    except Exception:
+        rel_path = filename
     print(
-        f"Figure saved as: {filename} ({', '.join(formats)})",
+        f"Figure saved as: {rel_path} ({', '.join(formats)})",
         flush=True,
     )
 
@@ -452,22 +422,31 @@ __all__ = [
     "MARKERS",
     # settings
     "latex_available",
-    "font_to_use",
     # functions
     "set_size",
     "format_sci_notation",
     "save_fig",
 ]
 
+"""
+from matplotlib import font_manager
+# List all available fonts
+available_fonts = [f.name for f in font_manager.fontManager.ttflist]
+print("Available fonts:")
+print("\n".join(sorted(set(available_fonts))))
+"""
+
 
 def main():
-    print(f"📊 Matplotlib settings loaded")
-    print(
-        f"   - LaTeX rendering: {'Enabled' if latex_available else 'Disabled (fallback to mathtext)'}"
-    )
-    print(f"   - Font: {font_to_use}")
-    print(f"   - Backend: {mpl.get_backend()}")
-    print(f"   - Default figure size: {DEFAULT_FIGSIZE}")
+    try:
+        print(f"📊 Matplotlib settings loaded")
+        print(
+            f"   - LaTeX rendering: {'Enabled' if latex_available else 'Disabled (fallback to mathtext)'}"
+        )
+        print(f"   - Backend: {mpl.get_backend()}")
+        print(f"   - Default figure size: {DEFAULT_FIGSIZE}")
+    except Exception as e:
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":

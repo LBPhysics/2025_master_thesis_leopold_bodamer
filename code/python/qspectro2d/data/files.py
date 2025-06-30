@@ -13,7 +13,7 @@ from typing import Union
 
 ### Project-specific imports
 from qspectro2d.core.system_parameters import SystemParameters
-from config.paths import DATA_DIR, FIGURES_DIR, FIGURES_PYTHON_DIR
+from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR  # , FIGURES_DIR,
 
 
 # =============================
@@ -30,47 +30,46 @@ def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
     Returns:
         str: Base filename without path
     """
-    simulation_type = data_config.get("simulation_type", "spectroscopy")
-    N_atoms = system.N_atoms
-
-    parts = [simulation_type]
-    parts.append(f"N{N_atoms}")
-    parts.append(f"wA{system.omega_A:.2f}")
-
-    if N_atoms == 2:
-        parts.append(f"T_wait{data_config.get('t_wait', 0)}fs")
+    # N_atoms = system.N_atoms
+    # simulation_type = data_config.get("simulation_type", "spectroscopy")
+    # parts.append(simulation_type)
+    # parts.append(f"N{N_atoms}")
+    n_freqs = data_config.get("n_freqs", 1)
+    parts = []
 
     parts += [
-        f"t_det_max_{data_config.get('t_det_max', 0)}",
-        f"dt_{system.dt:.1f}",
-        f"{data_config.get('n_phases', 0)}ph",
-        f"{data_config.get('n_freqs', 1)}freq",
-        f"1",
+        f"t_MAX_{data_config.get('t_det_max', 0)}",
+        f"wait_{data_config.get('t_wait', 0)}",
+        f"dt_{system.dt:.1f}fs",
     ]
-
+    parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4cmm1")
+    if n_freqs > 1:
+        parts.append(
+            f"{n_freqs}freqs_Delta{data_config.get('Delta_cm', 0)/1e3:.2f}e3cmm1"
+        )
     return "_".join(parts)
 
 
 def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
     """
-    Generate a unique filename in the specified directory.
+    Generate a unique base filename in the specified directory, regardless of extension.
 
     Args:
         path (str or Path): Directory where the file will be saved
         base_name (str): Base name for the file (without extension)
 
     Returns:
-        str: Unique filename with full path
+        str: Unique base filename (without extension)
     """
     path = Path(path)
-    save_path = path / base_name
+    candidate = path / base_name
     counter = 1
 
-    while save_path.exists():
-        save_path = path / f"{base_name}_{counter}"
+    while (path / candidate.name).exists() or list(path.glob(f"{candidate.name}.*")):
+        candidate = path / f"{base_name}_{counter}"
         counter += 1
 
-    return str(save_path)
+    return str(candidate)
 
 
 def generate_base_sub_dir(data_config: dict, system) -> Path:
@@ -169,6 +168,134 @@ def generate_unique_plot_filename(
     base_name += f"_{domain}_domain"
     if component:
         base_name += f"_{component}"
-
     filename = _generate_unique_filename(path, base_name)
     return filename
+
+
+def main():
+    """
+    Test function for filename generation utilities.
+    """
+    # =============================
+    # TEST SETUP
+    # =============================
+
+    ### Create mock system parameters
+    class MockSystemParameters:
+        def __init__(self):
+            self.N_atoms = 2
+            self.omega_A_cm = 1.5
+            self.Delta_cm = 0.0
+            self.dt = 0.1
+            self.t_max = 100.0
+            self.ODE_Solver = "runge_kutta"
+            self.RWA_laser = True
+
+    system = MockSystemParameters()
+
+    ### Create mock data configuration
+    data_config = {
+        "simulation_type": "2d",
+        "t_wait": 50,
+        "t_det_max": 200,
+        "n_phases": 32,
+        "n_freqs": 64,
+    }
+
+    # =============================
+    # TEST UNIQUENESS
+    # =============================
+
+    print("Testing filename uniqueness:")
+    print("=" * 50)
+
+    ### Test data filename uniqueness
+    print("\n### Testing data filename uniqueness:")
+    data_filenames = []
+    for i in range(5):
+        filename = generate_unique_data_filename(system, data_config)
+        data_filenames.append(filename)
+        print(f"Generated #{i+1}: {filename}")
+
+        # Create the file to test uniqueness
+        Path(filename).touch()
+
+    ### Verify all filenames are unique
+    unique_data_files = set(data_filenames)
+    print(
+        f"\nGenerated {len(data_filenames)} filenames, {len(unique_data_files)} unique"
+    )
+    assert len(data_filenames) == len(
+        unique_data_files
+    ), "Data filenames are not unique!"
+
+    ### Test plot filename uniqueness
+    print("\n### Testing plot filename uniqueness:")
+    plot_filenames = []
+    for i in range(5):
+        filename = generate_unique_plot_filename(system, data_config, "time", "real")
+        plot_filenames.append(filename)
+        print(f"Generated #{i+1}: {filename}")
+
+        # Create the file to test uniqueness
+        Path(filename).touch()
+
+    ### Verify all plot filenames are unique
+    unique_plot_files = set(plot_filenames)
+    print(
+        f"\nGenerated {len(plot_filenames)} filenames, {len(unique_plot_files)} unique"
+    )
+    assert len(plot_filenames) == len(
+        unique_plot_files
+    ), "Plot filenames are not unique!"
+
+    ### Test base unique function directly
+    print("\n### Testing _generate_unique_filename directly:")
+    test_dir = Path("test_unique_dir")
+    test_dir.mkdir(exist_ok=True)
+
+    base_name = "test_file"
+    unique_filenames = []
+
+    for i in range(3):
+        filename = _generate_unique_filename(test_dir, base_name)
+        unique_filenames.append(filename)
+        print(f"Generated #{i+1}: {filename}")
+
+        # Create the file to test uniqueness
+        Path(filename).touch()
+
+    ### Verify uniqueness
+    unique_test_files = set(unique_filenames)
+    print(
+        f"\nGenerated {len(unique_filenames)} filenames, {len(unique_test_files)} unique"
+    )
+    assert len(unique_filenames) == len(
+        unique_test_files
+    ), "Base unique function failed!"
+
+    # =============================
+    # CLEANUP
+    # =============================
+
+    ### Clean up created test files
+    print("\n### Cleaning up test files...")
+    for filename in data_filenames + plot_filenames + unique_filenames:
+        try:
+            Path(filename).unlink()
+            print(f"Removed: {filename}")
+        except FileNotFoundError:
+            pass  # File already removed or doesn't exist
+
+    # Remove test directory
+    try:
+        test_dir.rmdir()
+        print(f"Removed directory: {test_dir}")
+    except (FileNotFoundError, OSError):
+        pass  # Directory not empty or doesn't exist
+
+    print("\n✅ All uniqueness tests passed!")
+
+
+if __name__ == "__main__":
+    main()

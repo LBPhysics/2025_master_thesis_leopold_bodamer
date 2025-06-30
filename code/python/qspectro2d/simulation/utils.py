@@ -64,7 +64,7 @@ def create_system_parameters(data_config: dict) -> SystemParameters:
         dt=data_config.get("dt", 1),
         bath=data_config.get("bath", "paper"),
         E0=data_config.get("E0", 1),
-        envelope_type=data_config.get("envelope_type", "gaussian"),
+        pulse_type=data_config.get("pulse_type", "gaussian"),
         pulse_fwhm=data_config.get("pulse_fwhm", 15),
         omega_laser_cm=data_config.get("omega_laser_cm", 16000),
         Delta_cm=data_config.get("Delta_cm", 0),
@@ -81,8 +81,9 @@ def create_system_parameters(data_config: dict) -> SystemParameters:
 # =============================
 # REPORTING FUNCTIONS
 # =============================
-def print_simulation_header(data_config: dict, max_workers: int, simulation_type: str):
+def print_simulation_header(data_config: dict, max_workers: int):
     """Print simulation header with configuration info."""
+    simulation_type = data_config.get("simulation_type", "spectroscopy")
     title = f"{simulation_type.upper()} ELECTRONIC SPECTROSCOPY SIMULATION"
     print("=" * 60)
     print(title)

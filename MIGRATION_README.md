@@ -12,8 +12,8 @@ NEW LOCATIONS:
 - Plotting functions → qspectro2d.visualization.data_plots
 
 UPDATED IMPORTS:
-Instead of: from common_fcts import load_data_from_paths, save_simulation_data
-Use: from qspectro2d.data import load_data_from_paths, save_simulation_data
+Instead of: from common_fcts import load_data_from_rel_path, save_simulation_data
+Use: from qspectro2d.data import load_data_from_rel_path, save_simulation_data
 
 Instead of: from common_fcts import run_1d_simulation, create_system_parameters
 Use: from qspectro2d.simulation import run_1d_simulation, create_system_parameters

@@ -13,28 +13,30 @@ import pickle
 import os
 import glob
 from pathlib import Path
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional, Union
 from collections import defaultdict
 from datetime import datetime
 
 ### Project-specific imports
 from qspectro2d.core.system_parameters import SystemParameters
-from config.paths import DATA_DIR, FIGURES_DIR
-from .files import (
-    generate_unique_data_filename,
-)
+from qspectro2d.config.paths import DATA_DIR  # , FIGURES_DIR
+
+# Handle both relative imports (when imported as module) and absolute imports (when run directly)
+try:
+    from .files import generate_unique_data_filename
+except ImportError:
+    from qspectro2d.data.files import generate_unique_data_filename
 
 
 # =============================
 # DATA LOADING FUNCTIONS
 # =============================
-def load_data_from_paths(data_path: Path, info_path: Path) -> dict:
+def load_data_from_rel_path(relative_path: str) -> dict:
     """
     Load simulation data from specific data and info file paths.
 
     Args:
-        data_path: Relative path to DATA_DIR for the numpy data file (.npz)
-        info_path: Relative path to DATA_DIR for the info file (.pkl)
+        relative_path: Relative path to DATA_DIR for the numpy data file (.npz) and info file (.pkl)
 
     Returns:
         dict: Dictionary containing loaded data, axes, system, and data_config
@@ -42,9 +44,8 @@ def load_data_from_paths(data_path: Path, info_path: Path) -> dict:
     # =============================
     # Convert relative paths to absolute paths
     # =============================
-    abs_data_path = DATA_DIR / data_path
-    abs_info_path = DATA_DIR / info_path
-
+    abs_data_path = DATA_DIR / (str(relative_path) + "_data.npz")
+    abs_info_path = DATA_DIR / (str(relative_path) + "_info.pkl")
     # Load data file (numpy format)
     try:
         with np.load(abs_data_path, allow_pickle=True) as data_file:
@@ -82,7 +83,9 @@ def load_data_from_paths(data_path: Path, info_path: Path) -> dict:
     return result
 
 
-def load_all_data_from_directory(base_dir: Path) -> Dict[str, dict]:
+def load_all_data_from_directory(
+    base_dir: Path,
+) -> Dict[str, dict]:  # TODO GET RID OF THIS
     """
     Recursively search through a base directory and all subdirectories to find
     and load only the newest data file from each subdirectory.
@@ -150,9 +153,8 @@ def load_all_data_from_directory(base_dir: Path) -> Dict[str, dict]:
         info_file_name = data_path.name.replace("_data.npz", "_info.pkl")
         info_path = data_path.parent / info_file_name
 
-        # Convert to relative paths for load_data_from_paths
-        rel_data_path = data_path.relative_to(DATA_DIR)
-        rel_info_path = info_path.relative_to(DATA_DIR)
+        # Convert to relative paths for load_data_from_rel_path
+        rel_path = data_path.relative_to(DATA_DIR)
 
         # Check if info file exists
         if not info_path.exists():
@@ -162,13 +164,11 @@ def load_all_data_from_directory(base_dir: Path) -> Dict[str, dict]:
 
         # Try to load the data
         try:
-            loaded_data[str(rel_data_path)] = load_data_from_paths(
-                rel_data_path, rel_info_path
-            )
+            loaded_data[str(rel_path)] = load_data_from_rel_path(rel_path)
             successful_loads += 1
-            print(f"✅ Loaded newest from {rel_data_path.parent}: {rel_data_path.name}")
+            print(f"✅ Loaded newest from {rel_path.parent}: {rel_path.name}")
         except Exception as e:
-            print(f"❌ Failed to load {rel_data_path}: {e}")
+            print(f"❌ Failed to load {rel_path}: {e}")
             failed_loads += 1
 
     # =============================
@@ -182,12 +182,12 @@ def load_all_data_from_directory(base_dir: Path) -> Dict[str, dict]:
     return loaded_data
 
 
-def load_latest_data_from_directory(base_dir: Path) -> dict:
+def load_latest_data_from_directory(base_dir: str) -> dict:
     """
     Find and load the most recent data file from a base directory and all subdirectories.
 
     Args:
-        base_dir: Base directory path relative to DATA_DIR (e.g., Path("1d_spectroscopy"))
+        base_dir: Base directory path relative to DATA_DIR (e.g., "1d_spectroscopy")
 
     Returns:
         dict: The loaded data dictionary from the most recent file
@@ -217,23 +217,17 @@ def load_latest_data_from_directory(base_dir: Path) -> dict:
     latest_file = max(data_files, key=os.path.getmtime)
     latest_path = Path(latest_file)
 
-    # Construct corresponding info file path
-    info_file_name = latest_path.name.replace("_data.npz", "_info.pkl")
-    info_path = latest_path.parent / info_file_name
-
-    if not info_path.exists():
-        raise FileNotFoundError(f"Corresponding info file not found: {info_path}")
-
-    # Convert to relative paths
-    rel_data_path = latest_path.relative_to(DATA_DIR)
-    rel_info_path = info_path.relative_to(DATA_DIR)
-
-    print(f"📅 Loading latest file: {rel_data_path}")
+    # Convert to relative path string without _data.npz
+    rel_path = latest_path.relative_to(DATA_DIR)
+    rel_path_str = str(rel_path)
+    if rel_path_str.endswith("_data.npz"):
+        rel_path_str = rel_path_str[:-9]  # Remove '_data.npz'
+    print(f"📅 Loading latest file: {rel_path_str}")
 
     # =============================
     # Load and return the data
     # =============================
-    return load_data_from_paths(rel_data_path, rel_info_path)
+    return load_data_from_rel_path(rel_path_str)
 
 
 def list_available_data_files(base_dir: Path) -> Dict[str, dict]:
@@ -314,7 +308,7 @@ def save_simulation_data(
     data: np.ndarray,
     axs1: np.ndarray,
     axs2: Optional[np.ndarray] = None,
-) -> Tuple[Path, Path]:
+) -> Path:
     """
     Save spectroscopy simulation data (numpy arrays) along with known axes in one file,
     and system parameters and configuration in another file.
@@ -361,9 +355,121 @@ def save_simulation_data(
         raise
 
     # =============================
-    # Return relative paths to DATA_DIR
+    # Return relative path to DATA_DIR
     # =============================
-    data_rel_path = data_path.relative_to(DATA_DIR)
-    info_rel_path = info_path.relative_to(DATA_DIR)
+    # Remove both the suffix and the trailing '_data' from the filename for rel_path
+    rel_path = data_path.with_suffix("")
+    rel_path_str = str(rel_path)
+    if rel_path_str.endswith("_data"):
+        rel_path_str = rel_path_str[:-5]  # Remove '_data'
+    rel_path = Path(rel_path_str).relative_to(DATA_DIR)
+    return rel_path
 
-    return data_rel_path, info_rel_path
+
+# =============================
+# TEST CODE (when run directly)
+# =============================
+if __name__ == "__main__":
+    print("🧪 Testing qspectro2d.data.io module...")
+    print("=" * 50)
+
+    # Test 1: List available data files
+    print("\n📋 Test 1: Listing available data files...")
+    try:
+        # Try to list files in common directories
+        test_dirs = ["1d_spectroscopy", "2d_spectroscopy", "bath_correlator", "tests"]
+
+        for test_dir in test_dirs:
+            try:
+                print(f"\n🔍 Checking directory: {test_dir}")
+                file_info = list_available_data_files(Path(test_dir))
+                if file_info:
+                    print(f"   Found {len(file_info)} files")
+                else:
+                    print(f"   No files found in {test_dir}")
+            except FileNotFoundError:
+                print(f"   Directory {test_dir} does not exist")
+            except Exception as e:
+                print(f"   Error accessing {test_dir}: {e}")
+
+    except Exception as e:
+        print(f"❌ Error in test 1: {e}")
+
+    # Test 2: Try to load latest data from a directory
+    print("\n📅 Test 2: Loading latest data...")
+    try:
+        # Try common directories
+        for test_dir in ["1d_spectroscopy", "2d_spectroscopy", "tests"]:
+            try:
+                print(f"\n🔍 Attempting to load latest from: {test_dir}")
+                data = load_latest_data_from_directory(Path(test_dir))
+                print(f"   ✅ Successfully loaded data with keys: {list(data.keys())}")
+
+                # Print some basic info about the loaded data
+                if "data" in data and data["data"] is not None:
+                    print(f"   📊 Data shape: {data['data'].shape}")
+                if "axes" in data and data["axes"]:
+                    print(f"   📏 Axes: {list(data['axes'].keys())}")
+                if "system" in data and data["system"]:
+                    print(
+                        f"   ⚙️  System: N_atoms={getattr(data['system'], 'N_atoms', 'Unknown')}"
+                    )
+
+                # Only test the first successful load to avoid too much output
+                break
+
+            except FileNotFoundError:
+                print(f"   No data files found in {test_dir}")
+            except Exception as e:
+                print(f"   Error loading from {test_dir}: {e}")
+
+    except Exception as e:
+        print(f"❌ Error in test 2: {e}")
+
+    # Test 3: Test load_all_data_from_directory
+    print("\n📂 Test 3: Loading all newest data from directories...")
+    try:
+        for test_dir in ["tests", "1d_spectroscopy"]:
+            try:
+                print(f"\n🔍 Loading all newest from: {test_dir}")
+                all_data = load_all_data_from_directory(Path(test_dir))
+                if all_data:
+                    print(f"   ✅ Loaded {len(all_data)} datasets")
+                    for path, data in list(all_data.items())[:3]:  # Show first 3
+                        print(
+                            f"   📁 {path}: shape={data['data'].shape if data['data'] is not None else 'None'}"
+                        )
+                    if len(all_data) > 3:
+                        print(f"   ... and {len(all_data) - 3} more")
+                else:
+                    print(f"   No data loaded from {test_dir}")
+
+                # Only test the first successful directory
+                if all_data:
+                    break
+
+            except FileNotFoundError:
+                print(f"   Directory {test_dir} does not exist")
+            except Exception as e:
+                print(f"   Error loading from {test_dir}: {e}")
+
+    except Exception as e:
+        print(f"❌ Error in test 3: {e}")
+
+    # Test 4: Show DATA_DIR information
+    print(f"\n📁 Test 4: DATA_DIR information...")
+    try:
+        print(f"   DATA_DIR: {DATA_DIR}")
+        print(f"   Exists: {DATA_DIR.exists()}")
+        if DATA_DIR.exists():
+            subdirs = [d for d in DATA_DIR.iterdir() if d.is_dir()]
+            print(
+                f"   Subdirectories: {[d.name for d in subdirs[:10]]}"
+            )  # Show first 10
+            if len(subdirs) > 10:
+                print(f"   ... and {len(subdirs) - 10} more")
+    except Exception as e:
+        print(f"❌ Error in test 4: {e}")
+
+    print("\n" + "=" * 50)
+    print("🏁 Testing complete!")

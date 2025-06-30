@@ -5,11 +5,7 @@ This script computes 2D electronic spectroscopy data using parallel processing
 and saves results in pickle format. All parameters are defined directly in main().
 """
 
-import os
-import sys
 import time
-
-# Modern imports from reorganized package structure
 from qspectro2d.simulation import (
     create_system_parameters,
     run_2d_simulation,
@@ -18,7 +14,6 @@ from qspectro2d.simulation import (
     print_simulation_summary,
 )
 from qspectro2d.data import save_simulation_data
-from config.paths import DATA_DIR
 
 
 def main():
@@ -29,10 +24,10 @@ def main():
     # =============================
 
     ### Main system configuration
-    N_atoms = 2  # Number of atoms (1 or 2)
+    N_atoms = 1  # Number of atoms (1 or 2)
     ODE_Solver = "BR"  # ODE solver type
     RWA_laser = True  # Use RWA for laser interaction
-    t_det_max = 300  # Additional time buffer [fs]
+    t_det_max = 10  # Additional time buffer [fs]
     dt = 1  # Time step [fs]
 
     ### System-specific parameters
@@ -48,7 +43,7 @@ def main():
     n_phases = 4  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
     Delta_cm = 0  # Inhomogeneous broadening [cm⁻¹]
-    envelope_type = "gaussian"  # Pulse envelope type
+    pulse_type = "gaussian"  # Pulse envelope type
     E0 = 0.005  # Electric field amplitude
 
     # =============================
@@ -66,7 +61,7 @@ def main():
         "n_phases": n_phases,
         "n_freqs": n_freqs,
         "Delta_cm": Delta_cm,
-        "envelope_type": envelope_type,
+        "pulse_type": pulse_type,
         "E0": E0,
     }
 
@@ -90,7 +85,7 @@ def main():
     max_workers = get_max_workers()
 
     # Print simulation header
-    print_simulation_header(data_config, max_workers, "2d")
+    print_simulation_header(data_config, max_workers)
 
     # Create system parameters
     system = create_system_parameters(data_config)
@@ -101,33 +96,26 @@ def main():
     tau_coh, t_det, data = run_2d_simulation(data_config, system, max_workers)
 
     # Save data using the unified save function    print("\nSaving simulation data...")
-    data_path, info_path = save_simulation_data(
+    rel_path = save_simulation_data(
         system=system, data_config=data_config, data=data, axs2=tau_coh, axs1=t_det
     )
 
     # Print simulation summary
     elapsed_time = time.time() - start_time
     print_simulation_summary(
-        elapsed_time, data, data_path, "2d"
+        elapsed_time, data, rel_path, "2d"
     )  # Print the paths for feed-forward to plotting script
     # For shell scripts, we need absolute paths for file existence checks
-    from config.paths import DATA_DIR
-
-    abs_data_path = DATA_DIR / data_path
-    abs_info_path = DATA_DIR / info_path
 
     print(f"\n{'='*60}")
     print("DATA SAVED SUCCESSFULLY")
     print(f"{'='*60}")
-    print(f"Data file: {abs_data_path}")
-    print(f"Info file: {abs_info_path}")
+    print(f"Data file: {rel_path}")
     print(f"\n🎯 To plot this data, run:")
-    print(
-        f'python plot_2D_datas.py --data-path "{data_path}" --info-path "{info_path}"'
-    )
+    print(f'python plot_2D_datas.py --rel-path "{rel_path}"')
     print(f"{'='*60}")
 
-    return data_path, info_path
+    return rel_path
 
 
 if __name__ == "__main__":

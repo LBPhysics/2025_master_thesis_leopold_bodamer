@@ -1,15 +1,11 @@
-from matplotlib.colors import TwoSlopeNorm, LinearSegmentedColormap
+from matplotlib.colors import TwoSlopeNorm
 import numpy as np
 from qspectro2d.core.system_parameters import SystemParameters
 from qspectro2d.core.pulse_functions import *
 from qspectro2d.core.pulse_sequences import PulseSequence
 import matplotlib.pyplot as plt
-import os
 from typing import Literal, Union
-import sys
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-from config.mpl_tex_settings import COLORS, LINE_STYLES, MARKERS
+from qspectro2d.config.mpl_tex_settings import COLORS, LINE_STYLES
 
 
 def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):

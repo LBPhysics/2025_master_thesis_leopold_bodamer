@@ -25,7 +25,7 @@ from qspectro2d.spectroscopy.post_processing import (
     compute_2d_fft_wavenumber,
 )
 from qspectro2d.data.files import generate_unique_plot_filename
-from config.mpl_tex_settings import save_fig
+from qspectro2d.config.mpl_tex_settings import save_fig
 
 
 # =============================
@@ -38,7 +38,7 @@ def _validate_and_extract_data_structure(
     Validate and extract standardized data structure for plotting functions.
 
     Args:
-        loaded_data: Dictionary from load_data_from_paths
+        loaded_data: Dictionary from load_data_from_rel_path
         expected_dim: Expected dimensionality ("1d", "2d", or "auto")
 
     Returns:
@@ -90,14 +90,12 @@ def _validate_and_extract_data_structure(
 def plot_1d_data(
     loaded_data: dict,
     plot_config: dict,
-    output_dir: Path,
 ) -> None:
     """Plot 1D spectroscopy data using standardized data structure.
 
     Args:
-        loaded_data: Dictionary containing data, axes, system, and config from load_data_from_paths
+        loaded_data: Dictionary containing data, axes, system, and config from load_data_from_rel_path
         plot_config: Plotting configuration
-        output_dir: Directory to save plots
     """
     # Validate and extract data structure
     extracted = _validate_and_extract_data_structure(loaded_data, expected_dim="1d")
@@ -141,7 +139,7 @@ def plot_1d_data(
 
             save_fig(fig, filename=filename)
             plt.close(fig)
-            print("✅ Time domain plots completed!")
+            print("✅ 1D Time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
 
@@ -179,7 +177,7 @@ def plot_1d_data(
             except Exception as e:
                 print(f"❌ Error plotting {component} component: {e}")
 
-        print("✅ Frequency domain plots completed!")
+        print("✅ 1D Frequency domain plots completed!")
 
     # Clean up memory
     plt.close("all")
@@ -189,14 +187,12 @@ def plot_1d_data(
 def plot_2d_data(
     loaded_data: dict,
     plot_config: dict,
-    output_dir: Path,
 ) -> None:
     """Plot 2D spectroscopy data using standardized data structure.
 
     Args:
-        loaded_data: Dictionary containing data, axes, system, and config from load_data_from_paths
+        loaded_data: Dictionary containing data, axes, system, and config from load_data_from_rel_path
         plot_config: Plotting configuration
-        output_dir: Directory to save plots
     """
     # Validate and extract data structure
     extracted = _validate_and_extract_data_structure(loaded_data, expected_dim="2d")
@@ -231,7 +227,6 @@ def plot_2d_data(
             filename = generate_unique_plot_filename(
                 system=system, data_config=data_config, domain="time"
             )
-
             save_fig(fig, filename=filename)
             plt.close(fig)
             print("✅ 2D time domain plots completed!")

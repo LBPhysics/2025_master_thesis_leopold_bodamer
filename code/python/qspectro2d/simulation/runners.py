@@ -8,6 +8,7 @@ spectroscopy simulations with proper error handling and validation.
 # =============================
 # IMPORTS
 # =============================
+from encodings.punycode import T
 import numpy as np
 
 ### Project-specific imports
@@ -122,10 +123,13 @@ def run_2d_simulation(
 
     try:
         tau_coh_vals, t_det_vals, data_2d = parallel_compute_2d_E_with_inhomogenity(
-            n_freqs=data_config["n_freqs"],
+            n_freqs=data_config.get("n_freqs", 1),
             n_phases=data_config["n_phases"],
             T_wait=data_config["T_wait"],
             t_det_max=data_config["t_det_max"],
+            apply_ift=data_config.get(
+                "apply_ift", True
+            ),  # TODO also do this to 1d case
             system=system,
             max_workers=max_workers,
             **kwargs,

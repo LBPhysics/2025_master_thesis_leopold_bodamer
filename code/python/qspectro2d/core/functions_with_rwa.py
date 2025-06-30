@@ -6,6 +6,7 @@ and other utilities using a Rotating Wave Approximation.
 """
 
 import numpy as np
+from typing import Union, List, overload
 from qutip import Qobj, expect
 from qspectro2d.core.system_parameters import SystemParameters
 from qspectro2d.core.pulse_sequences import PulseSequence
@@ -48,14 +49,50 @@ def H_int(
     return H_int
 
 
+@overload
 def apply_RWA_phase_factors(
-    states: list, times: np.ndarray, system: SystemParameters
-) -> list:
-    """Apply RWA phase factors to states."""
-    return [
-        _apply_RWA_phase_factors(state, time, system=system)
-        for state, time in zip(states, times)
-    ]
+    states: List[Qobj], times: np.ndarray, system: SystemParameters
+) -> List[Qobj]: ...
+
+
+@overload
+def apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj: ...
+
+
+def apply_RWA_phase_factors(
+    states_or_rho: Union[List[Qobj], Qobj],
+    times_or_t: Union[np.ndarray, float],
+    system: SystemParameters,
+) -> Union[List[Qobj], Qobj]:
+    """
+    Apply RWA phase factors to states.
+
+    Parameters:
+        states_or_rho: Either a list of density matrices or a single density matrix
+        times_or_t: Either an array of times or a single time value
+        system: System parameters
+
+    Returns:
+        Either a list of modified density matrices or a single modified density matrix
+    """
+    # Handle single density matrix case
+    if isinstance(states_or_rho, Qobj) and isinstance(times_or_t, (float, int)):
+        return _apply_RWA_phase_factors(states_or_rho, times_or_t, system=system)
+
+    # Handle list of density matrices case
+    elif isinstance(states_or_rho, list) and isinstance(times_or_t, np.ndarray):
+        return [
+            _apply_RWA_phase_factors(state, time, system=system)
+            for state, time in zip(states_or_rho, times_or_t)
+        ]
+
+    # Handle invalid input combinations
+    else:
+        raise TypeError(
+            "Invalid input combination. Expected either:\n"
+            "- (Qobj, float, SystemParameters) for single state\n"
+            "- (List[Qobj], np.ndarray, SystemParameters) for multiple states"
+        )
 
 
 def _apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj:
@@ -210,6 +247,8 @@ if __name__ == "__main__":
     from qspectro2d.core.pulse_sequences import Pulse
 
     test_pulse = Pulse(
+        pulse_index=0,
+        pulse_type="gaussian",
         pulse_peak_time=2.0,
         pulse_fwhm=1.0,
         pulse_phase=0.0,

@@ -6,7 +6,7 @@ simulation data files.
 """
 
 from .io import (
-    load_data_from_paths,
+    load_data_from_rel_path,
     load_all_data_from_directory,
     load_latest_data_from_directory,
     list_available_data_files,
@@ -14,7 +14,7 @@ from .io import (
 )
 
 __all__ = [
-    "load_data_from_paths",
+    "load_data_from_rel_path",
     "load_all_data_from_directory",
     "load_latest_data_from_directory",
     "list_available_data_files",

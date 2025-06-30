@@ -4,7 +4,6 @@
 from qspectro2d.core.system_parameters import SystemParameters
 from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple
-import numpy as np
 
 
 @dataclass
@@ -22,7 +21,7 @@ class Pulse:
     pulse_amplitude: float  # Peak amplitude of the electric field [V/m]
     pulse_freq: float  # Central frequency of the pulse [rad/fs]
     pulse_index: int  # Index indicating which pulse this is in a sequence (0-based)
-    envelope_type: str = "cos2"  # Envelope shape: 'cos2' or 'gaussian'
+    pulse_type: str = "cos2"  # Envelope shape: 'cos2' or 'gaussian'
 
     @property
     def active_time_range(self) -> Tuple[float, float]:
@@ -95,7 +94,7 @@ class PulseSequence:
         pulse_freq = system.omega_laser
         fwhms = system.fwhms
         E_amps = system.E_amps
-        envelope_type = system.envelope_type
+        pulse_type = system.pulse_type
 
         # Validate inputs
         if not pulse_specs:
@@ -123,7 +122,7 @@ class PulseSequence:
                     pulse_amplitude=E_amps[pulse_index],
                     pulse_freq=pulse_freq,
                     pulse_index=pulse_index,
-                    envelope_type=envelope_type,
+                    pulse_type=pulse_type,
                 )
             )
 
@@ -285,6 +284,3 @@ class PulseSequence:
             ],
             "pulse_indices": [i for i, _ in active_pulses],
         }
-
-
-# TODO please add something such that i can access: pulse0_specs = (0, timings["pulse0"], full_sequence.pulse_specs[0][2])
