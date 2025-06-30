@@ -37,7 +37,7 @@ def main():
     tau_coh = 300.0  # Coherence time [fs]
     T_wait = 1000.0  # Waiting time [fs]
     t_det_max = 600.0  # Additional time buffer [fs]
-    dt = 2.0  # Time step [fs]
+    dt = 20.0  # Time step [fs]
 
     ### System-specific parameters
     if N_atoms == 1:
@@ -48,8 +48,8 @@ def main():
         raise ValueError(f"Unsupported number of atoms: {N_atoms}")
 
     ### Spectroscopy parameters
-    n_phases = 4  # Number of phases for phase cycling
-    n_freqs = 100  # Number of frequencies for inhomogeneous broadening
+    n_phases = 2  # Number of phases for phase cycling
+    n_freqs = 10  # Number of frequencies for inhomogeneous broadening
     Delta_cm = 200  # Inhomogeneous broadening [cm⁻¹]
     envelope_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
     E0 = 0.005  # Electric field amplitude

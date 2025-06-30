@@ -35,10 +35,11 @@ def main():
     """Main function to run the 2D spectroscopy plotting."""
     # Simple plot config
     plot_config = {
-        "plot_time_domain": True,
-        "plot_frequency_domain": True,
-        "extend_for": (1, 4),
+        "plot_time_domain": True,  # TODO CHANGE TO True
+        "plot_frequency_domain": False,
+        "extend_for": (1, 10),
         "spectral_components_to_plot": ["abs", "real", "imag"],
+        "section": (1.5, 1.7, 1.5, 1.7),  # (x_min, x_max, y_min, y_max)
     }
 
     parser = argparse.ArgumentParser(

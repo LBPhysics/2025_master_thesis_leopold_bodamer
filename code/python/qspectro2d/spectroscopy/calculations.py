@@ -840,6 +840,7 @@ def parallel_compute_1d_E_with_inhomogenity(
         )
     else:
         raise ValueError("Unsupported number of atoms")
+    print(f"Using frequency samples ={freq_samples}")
 
     # Prepare all jobs: one per (omega_idx, phi1_idx, phi2_idx)
     combinations = []
@@ -973,6 +974,7 @@ def parallel_compute_2d_E_with_inhomogenity(
             sample_from_sigma(n_freqs, system.Delta_cm, system.omega_A_cm),
             sample_from_sigma(n_freqs, system.Delta_cm, system.omega_B_cm),
         )
+        print(f"Using frequency samples ={freq_samples}")
     else:
         raise ValueError("Unsupported number of atoms")
 
@@ -1042,7 +1044,7 @@ def parallel_compute_2d_E_with_inhomogenity(
 
     # === Build final 2D signal: one row per τ, after averaging and IFT ===
     data_avg_2d = []
-    for tau_idx in reversed(range(n_tau)):  # latest τ on top
+    for tau_idx in reversed(range(n_tau)):  # latest τ on top # HERE I CHANGED: ordering
         results_matrix = np.empty((n_phases, n_phases), dtype=object)
         for phi1_idx in range(n_phases):
             for phi2_idx in range(n_phases):
@@ -1061,10 +1063,10 @@ def parallel_compute_2d_E_with_inhomogenity(
                     )
 
         # Apply IFT to this averaged phase matrix
-        signal_1d = extract_ift_signal_component(
+        signal_2d = extract_ift_signal_component(
             results_matrix=results_matrix, phases=phases, component=(-1, 1, 0)
         )
-        data_avg_2d.append(signal_1d * 1j)  # E ~ iP
+        data_avg_2d.append(signal_2d * 1j)  # E ~ iP
 
     # Final stacking
     data_avg_2d = np.vstack(data_avg_2d)

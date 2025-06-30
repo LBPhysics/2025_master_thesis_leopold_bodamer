@@ -100,7 +100,7 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
 
     # Add solver if available
     parts.append(system.ODE_Solver)
-    parts.append(f"ta_max{system.t_max:.1f}fs")
+    parts.append(f"t_max{system.t_max:.1f}fs")
 
     # Add RWA if available
     parts.append("RWA" if system.RWA_laser else "noRWA")
