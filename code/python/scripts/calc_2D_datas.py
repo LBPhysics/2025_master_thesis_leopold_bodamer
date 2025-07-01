@@ -24,11 +24,11 @@ def main():
     # =============================
 
     ### Main system configuration
-    N_atoms = 2  # Number of atoms (1 or 2)
+    N_atoms = 1  # Number of atoms (1 or 2)
     ODE_Solver = "BR"  # ODE solver type
     RWA_laser = True  # Use RWA for laser interaction
-    t_det_max = 400  # Additional time buffer [fs]
-    dt = 0.1  # Time step [fs]
+    t_det_max = 40  # Additional time buffer [fs]
+    dt = 1  # Time step [fs]
 
     ### System-specific parameters
     if N_atoms == 1:
@@ -40,7 +40,7 @@ def main():
 
     ### 2D spectroscopy parameters
     T_wait = 0  # Number of T_wait values
-    n_phases = 4  # Number of phases for phase cycling
+    n_phases = 2  # Number of phases for phase cycling
     n_freqs = 1  # Number of frequencies for inhomogeneous broadening
     Delta_cm = 0  # Inhomogeneous broadening [cm⁻¹]
     pulse_type = "gaussian"  # Pulse envelope type

@@ -53,7 +53,7 @@ from qspectro2d.simulation import (
     print_simulation_summary,
 )
 from qspectro2d.data import save_simulation_data
-N_ATOMS = 2  # Number of atoms in the system, can be changed to 1 or 2
+N_ATOMS = 1  # Number of atoms in the system, can be changed to 1 or 2
 
 def run_single_tau(tau_coh: float, t_det_max: float, dt: float):
     print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
@@ -62,10 +62,11 @@ def run_single_tau(tau_coh: float, t_det_max: float, dt: float):
         ### Main system configuration
         "simulation_type": "1d",
         # solver parameters
-        "ODE_Solver": "BR",
+        "ODE_Solver": "Paper_eqs",
         "RWA_laser": True,        
         
         "N_atoms": N_ATOMS,
+        "J_cm": 300 if N_ATOMS == 2 else 0,  # Coupling strength [cm⁻¹]
         # time parameters
         "tau_coh": float(tau_coh),
         "T_wait": 0.0,
@@ -80,7 +81,6 @@ def run_single_tau(tau_coh: float, t_det_max: float, dt: float):
         # inhomogeneous broadening
         "n_freqs": 1,
         "Delta_cm": 0,
-
     }
 
     start_time = time.time()
