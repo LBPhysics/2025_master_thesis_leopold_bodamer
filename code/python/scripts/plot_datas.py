@@ -3,14 +3,14 @@ Unified 1D/2D Electronic Spectroscopy Data Plotting Script
 
 Usage:
     # Auto mode (latest data)
-    python plot_spectro_data.py --dim 1
-    python plot_spectro_data.py --dim 2
+    python plot_datas.py --dim 1
+    python plot_datas.py --dim 2
 
     # Load specific files
-    python plot_spectro_data.py --dim 1 --rel-path "relative/path/to/data"
+    python plot_datas.py --dim 1 --rel-path "relative/path/to/data"
 
     # Load from directory
-    python plot_spectro_data.py --dim 2 --latest-from DIR
+    python plot_datas.py --dim 2 --latest-from DIR
 """
 
 import sys

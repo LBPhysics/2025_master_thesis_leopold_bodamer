@@ -21,7 +21,7 @@ This script is designed for both local development and HPC batch execution.
 Results are saved automatically using the qspectro2d I/O framework.
 """
 # ==============
-# ANALYSIS:
+# ANALYSIS: for f in batch_*.slurm; do sbatch "$f"; done
 # ==============
 # FOR N_ATOMS = 1, ODE_SOLVER=BR, RWA=TRUE
 # for t_det_max=100, dt=0.1, one 1d calculation takes about 2-3 seconds, so
