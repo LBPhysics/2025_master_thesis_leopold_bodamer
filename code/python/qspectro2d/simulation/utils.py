@@ -22,12 +22,13 @@ from qspectro2d.core.system_parameters import SystemParameters
 def get_max_workers() -> int:
     """Get the maximum number of workers for parallel processing."""
     # Use SLURM environment variable if available, otherwise detect automatically
-    slurm_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 0))
-    local_cpus = psutil.cpu_count(logical=True)
-    max_workers = max(slurm_cpus, local_cpus)
-    if max_workers < 1:
-        max_workers = 1
-    return max_workers
+    try:
+        slurm_cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 0))
+    except ValueError:
+        slurm_cpus = 0
+
+    local_cpus = psutil.cpu_count(logical=True) or 1
+    return slurm_cpus if slurm_cpus > 0 else local_cpus
 
 
 def create_system_parameters(data_config: dict) -> SystemParameters:

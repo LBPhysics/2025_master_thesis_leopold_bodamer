@@ -6,15 +6,15 @@ It supports two modes of execution:
 
 1. Single tau_coh mode:
    Run the simulation for one specific coherence time using:
-       --tau-coh <value>
+       --tau_coh <value>
 
 2. Batch mode:
    Split the tau_coh range [0, t_det_max) into n_batches equal parts.
    The specified batch index processes only its assigned subarray using:
-       --batch-idx <index> --n-batches <total>
+       --batch_idx <index> --n_batches <total>
 
 Additional optional arguments:
-   --t-det-max <fs>   : Maximum detection time (default: 600.0 fs)
+   --t_det_max <fs>   : Maximum detection time (default: 600.0 fs)
    --dt <fs>          : Spacing between tau_coh values (default: 10.0 fs)
 
 This script is designed for both local development and HPC batch execution.
@@ -72,12 +72,12 @@ def main():
     parser = argparse.ArgumentParser(description="Run 1D spectroscopy.")
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--tau-coh", type=float, help="Single tau_coh value (fs)")
-    group.add_argument("--batch-idx", type=int, help="Batch index for tau_coh sweep")
+    group.add_argument("--tau_coh", type=float, help="Single tau_coh value (fs)")
+    group.add_argument("--batch_idx", type=int, help="Batch index for tau_coh sweep")
 
-    parser.add_argument("--n-batches", type=int, default=1, help="Number of batches")
+    parser.add_argument("--n_batches", type=int, default=1, help="Number of batches")
     parser.add_argument(
-        "--t-det-max", type=float, default=600.0, help="Detection time window (fs)"
+        "--t_det_max", type=float, default=600.0, help="Detection time window (fs)"
     )
     parser.add_argument("--dt", type=float, default=10.0, help="tau_coh spacing (fs)")
 

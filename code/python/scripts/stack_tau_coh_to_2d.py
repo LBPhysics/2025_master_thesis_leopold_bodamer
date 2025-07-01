@@ -11,7 +11,6 @@ import sys
 
 def main():
     base_dir = "1d_spectroscopy"
-    abs_base = DATA_DIR / base_dir
 
     print("\n🔍 Scanning available files:")
     files_info = list_available_data_files(Path(base_dir))

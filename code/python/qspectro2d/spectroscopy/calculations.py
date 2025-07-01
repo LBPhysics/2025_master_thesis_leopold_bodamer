@@ -583,7 +583,7 @@ def compute_1d_polarization(
     **kwargs,
 ) -> tuple:
     """
-    Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_MAX
+    Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_max
     """
     time_cut = kwargs.get("time_cut", np.inf)
 

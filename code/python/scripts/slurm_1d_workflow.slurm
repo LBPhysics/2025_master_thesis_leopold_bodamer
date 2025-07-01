@@ -10,7 +10,7 @@
 
 #SBATCH --time=0-01:00:00
 #SBATCH --mem=1G
-#SBATCH -c 16
+#SBATCH --cpus-per-task=16
 
 # =============================
 # UNIFIED 1D SPECTROSCOPY: CALCULATION + PLOTTING
