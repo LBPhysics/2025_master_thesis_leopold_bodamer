@@ -75,6 +75,7 @@ def run_1d_simulation(
             system=system,
             max_workers=max_workers,
             time_cut=time_cut,
+            apply_ift=data_config.get("apply_ift", True)
         )
         print("✅ Parallel computation completed successfully!")
         return t_det_vals, data

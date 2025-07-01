@@ -141,19 +141,9 @@ dmypy.json
 *.pdf
 
 
-# Data files (but keep small example datasets)
-data/processed/*
-data/raw/*
-!data/processed/.gitkeep
-!data/raw/.gitkeep
-!data/processed/examples/
-!data/raw/examples/
-
+# Data files
+data/
 # Results and output directories
-results/
-output/
-# figures/figures_from_python/
-plots/
 
 # Temporary files
 *.tmp

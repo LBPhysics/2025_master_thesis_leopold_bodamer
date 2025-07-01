@@ -337,7 +337,7 @@ base_settings = {
 if latex_available:
     latex_settings = {
         "text.usetex": True,
-        "text.latex.preamble": r"\usepackage{amsmath}\usepackage{physics}\usepackage{mathpazo}",
+        "text.latex.preamble": r"\usepackage{amsmath}\usepackage{mathpazo}",
     }
     base_settings.update(latex_settings)
 else:
@@ -406,6 +406,24 @@ def save_fig(
         f"Figure saved as: {rel_path} ({', '.join(formats)})",
         flush=True,
     )
+
+    # Display figure if running in an interactive GUI environment
+    if mpl.is_interactive():
+        plt.draw()
+        plt.pause(0.001)
+        plt.close(fig)
+    else:
+        backend = mpl.get_backend().lower()
+        if not any(x in backend for x in ("agg", "pdf", "svg")):
+            try:
+                plt.show(block=True)
+                plt.close(fig)
+            except Exception as e:
+                print(f"Warning: Could not display figure interactively: {e}")
+                plt.close(fig)
+        else:
+            # Non-interactive/headless: just close
+            plt.close(fig)
 
 
 __all__ = [

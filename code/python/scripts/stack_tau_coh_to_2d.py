@@ -16,10 +16,10 @@ def main():
     files_info = list_available_data_files(Path(base_dir))
 
     # Collect rel_paths from info keys (strip _data.npz for rel_path compatibility)
-    rel_paths = [
+    rel_paths = list({ # set to avoid duplicates
         str(Path(p).with_suffix("").with_name(Path(p).stem[:-5]))
         for p in files_info.keys()
-    ]
+    })
 
     if not rel_paths:
         print("❌ No valid data files found.")

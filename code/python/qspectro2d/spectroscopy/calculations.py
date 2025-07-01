@@ -425,7 +425,7 @@ def check_the_solver(system: SystemParameters) -> tuple[Result, float]:
     t_max = 2 * system.t_max
     dt = 10 * system.dt
     t0 = -system.fwhms[0]
-    times = np.arange(t0, t_max, dt)
+    times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
     print(f"Checking '{system.ODE_Solver}' solver ", flush=True)
 
@@ -589,9 +589,11 @@ def compute_1d_polarization(
 
     dt = system.dt
     t0 = -system.fwhms[0]
-    times = np.arange(t0, tau_coh + T_wait + t_det_max, dt)
+    t_max = tau_coh + T_wait + t_det_max
+    times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
+
     # Force 1d times to a canonical grid
-    t_det_values = np.arange(0, t_det_max, system.dt)
+    t_det_values = np.linspace(0, t_det_max, int((t_det_max - 0) / dt) + 1)
 
     # =============================
     # PULSE TIMING AND SEQUENCES
@@ -1129,8 +1131,8 @@ def parallel_compute_2d_E_with_inhomogenity(
             If apply_ift=False: phase-averaged raw signal E = i*P.
     """
     dt = system.dt
-    tau_coh_vals = np.arange(0, t_det_max, dt)
-    t_det_vals = None
+    t_det_vals = np.linspace(0, t_det_max, int((t_det_max - 0) / dt) + 1)
+    tau_coh_vals = t_det_vals
 
     if max_workers is None:
         max_workers = mp.cpu_count()

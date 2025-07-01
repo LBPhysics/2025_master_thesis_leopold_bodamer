@@ -43,7 +43,9 @@ def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
         f"dt_{system.dt:.1f}fs",
     ]
     if data_config.get("simulation_type") == "1d":
-        parts.append("tau_" + str(data_config["tau_coh"]))
+        # Round tau_coh to 2 decimal places for filename clarity
+        tau_val = round(float(data_config["tau_coh"]), 2)
+        parts.append(f"tau_{tau_val}")
 
     parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4cmm1")
     if n_freqs > 1:

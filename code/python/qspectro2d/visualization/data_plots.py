@@ -137,8 +137,7 @@ def plot_1d_data(
                 component="abs",
             )
 
-            save_fig(fig, filename=filename)
-            plt.close(fig)
+            save_fig(fig, filename=filename, formats=["png"]) # easy to work with, because data is too big
             print("✅ 1D Time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
@@ -173,7 +172,6 @@ def plot_1d_data(
                     component=component,
                 )
                 save_fig(fig, filename=filename)
-                plt.close(fig)
             except Exception as e:
                 print(f"❌ Error plotting {component} component: {e}")
 
@@ -227,8 +225,7 @@ def plot_2d_data(
             filename = generate_unique_plot_filename(
                 system=system, data_config=data_config, domain="time"
             )
-            save_fig(fig, filename=filename)
-            plt.close(fig)
+            save_fig(fig, filename=filename, formats=["png"])  # PNG for large data
             print("✅ 2D time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in 2D time domain plotting: {e}")
@@ -279,7 +276,6 @@ def plot_2d_data(
                     )
 
                     save_fig(fig, filename=filename)
-                    plt.close(fig)
                 except Exception as e:
                     print(f"❌ Error plotting 2D {component} component: {e}")
 
