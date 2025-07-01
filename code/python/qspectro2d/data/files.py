@@ -42,6 +42,9 @@ def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
         f"wait_{data_config.get('t_wait', 0)}",
         f"dt_{system.dt:.1f}fs",
     ]
+    if data_config.get("simulation_type") == "1d":
+        parts.append("tau_" + str(data_config["tau_coh"]))
+
     parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4cmm1")
     if n_freqs > 1:
         parts.append(
@@ -99,11 +102,11 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
 
     # Add solver if available
     parts.append(system.ODE_Solver)
-    parts.append(f"t_max{system.t_max:.1f}fs")
 
     # Add RWA if available
     parts.append("RWA" if system.RWA_laser else "noRWA")
 
+    # parts.append(f"t_max{system.t_max:.1f}fs")
     # Join all parts with path separator
     return Path(*parts)
 

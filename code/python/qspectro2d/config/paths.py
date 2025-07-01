@@ -33,7 +33,7 @@ def find_project_root():
 PROJECT_ROOT = find_project_root()
 
 # Define directory paths
-DATA_DIR = PROJECT_ROOT / "code" / "python" / "data"
+DATA_DIR = PROJECT_ROOT / "data"
 FIGURES_DIR = PROJECT_ROOT / "figures"
 
 # Create directories if they don't exist

@@ -1,13 +1,30 @@
 """
-1D Electronic Spectroscopy Simulation Script - Direct Parameter Version
+1D Electronic Spectroscopy Simulation Script – Flexible Execution Mode
 
-This script computes 1D electronic spectroscopy data using parallel processing
-and saves results in pickle format. All parameters are defined directly in main().
+This script computes 1D spectroscopy data for a given set of simulation parameters.
+It supports two modes of execution:
+
+1. Single tau_coh mode:
+   Run the simulation for one specific coherence time using:
+       --tau-coh <value>
+
+2. Batch mode:
+   Split the tau_coh range [0, t_det_max) into n_batches equal parts.
+   The specified batch index processes only its assigned subarray using:
+       --batch-idx <index> --n-batches <total>
+
+Additional optional arguments:
+   --t-det-max <fs>   : Maximum detection time (default: 600.0 fs)
+   --dt <fs>          : Spacing between tau_coh values (default: 10.0 fs)
+
+This script is designed for both local development and HPC batch execution.
+Results are saved automatically using the qspectro2d I/O framework.
 """
 
 import time
+import argparse
+import numpy as np
 
-# Modern imports from reorganized package structure
 from qspectro2d.simulation import (
     create_system_parameters,
     run_1d_simulation,
@@ -18,105 +35,67 @@ from qspectro2d.simulation import (
 from qspectro2d.data import save_simulation_data
 
 
-def main():
-    """Main function to run the 1D spectroscopy simulation."""
+def run_single_tau(tau_coh: float, t_det_max: float, dt: float):
+    print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
 
-    # =============================
-    # SIMULATION PARAMETERS - MODIFY HERE
-    # =============================
-
-    ### Main system configuration
-    N_atoms = 1  # Number of atoms
-    ODE_Solver = "BR"  # ODE solver type ("BR" or "Paper_eqs")
-    RWA_laser = True  # Use RWA for laser interaction
-
-    ### Time parameters
-    tau_coh = 300.0  # Coherence time [fs]
-    T_wait = 1000.0  # Waiting time [fs]
-    t_det_max = 600.0  # Additional time buffer [fs]
-    dt = 20.0  # Time step [fs]
-
-    ### System-specific parameters
-    if N_atoms == 1:
-        pulse_fwhm = 15.0  # Pulse FWHM for single atom [fs]
-    elif N_atoms == 2:
-        pulse_fwhm = 5.0  # Pulse FWHM for two atoms [fs]
-    else:
-        raise ValueError(f"Unsupported number of atoms: {N_atoms}")
-
-    ### Spectroscopy parameters
-    n_phases = 2  # Number of phases for phase cycling
-    n_freqs = 1  # Number of frequencies for inhomogeneous broadening
-    Delta_cm = 0  # Inhomogeneous broadening [cm⁻¹]
-    pulse_type = "gaussian"  # Pulse envelope type ('cos2' or 'gaussian')
-    E0 = 0.005  # Electric field amplitude
-
-    # =============================
-    # BUILD CONFIGURATION DICTIONARY
-    # =============================
-    data_config = {
-        "simulation_type": "1d",  # Explicitly specify simulation type
-        "N_atoms": N_atoms,
-        "ODE_Solver": ODE_Solver,
-        "tau_coh": tau_coh,
-        "T_wait": T_wait,
+    config = {
+        "simulation_type": "1d",
+        "N_atoms": 1,
+        "ODE_Solver": "BR",
+        "tau_coh": float(tau_coh),
+        "T_wait": 0.0,
         "t_det_max": t_det_max,
         "dt": dt,
-        "n_phases": n_phases,
-        "n_freqs": n_freqs,
-        "Delta_cm": Delta_cm,
-        "pulse_type": pulse_type,
-        "E0": E0,
-        "pulse_fwhm": pulse_fwhm,
-        "RWA_laser": RWA_laser,
+        "n_phases": 2,
+        "n_freqs": 1,
+        "Delta_cm": 0,
+        "pulse_type": "gaussian",
+        "E0": 0.005,
+        "pulse_fwhm": 15.0,
+        "RWA_laser": True,
     }
 
-    # =============================
-    # PRINT CONFIGURATION SUMMARY
-    # =============================
-    print(f"Running 1D spectroscopy simulation with:")
-    print(f"  N_atoms: {N_atoms}")
-    print(f"  Solver: {ODE_Solver}")
-    print(f"  Times: τ_coh={tau_coh} fs, T_wait={T_wait} fs, dt={dt} fs")
-    print(f"  Total time: {tau_coh + T_wait + t_det_max} fs")
-    print(f"  Pulse FWHM: {pulse_fwhm} fs")
-    print("")
-
-    # =============================
-    # RUN SIMULATION
-    # =============================
     start_time = time.time()
-
-    # Get parallel processing configuration
     max_workers = get_max_workers()
+    print_simulation_header(config, max_workers)
 
-    # Print simulation header
-    print_simulation_header(data_config, max_workers)
-
-    # Create system parameters
-    system = create_system_parameters(data_config)
-    print(f"System configuration:")
+    system = create_system_parameters(config)
     system.summary()
 
-    # Run simulation (returns standardized payload)
-    t_det, data = run_1d_simulation(data_config, system, max_workers)
+    t_det, data = run_1d_simulation(config, system, max_workers)
+    rel_path = save_simulation_data(system, config, data, axs1=t_det)
+    elapsed = time.time() - start_time
+    print_simulation_summary(elapsed, data, rel_path, "1d")
 
-    # Save data using the new workflow
-    print("\nSaving simulation data...")
-    rel_path = save_simulation_data(
-        system=system, data_config=data_config, data=data, axs1=t_det
-    )  # Print simulation summary
-    elapsed_time = time.time() - start_time
-    print_simulation_summary(elapsed_time, data, rel_path, "1d")
-    print(f"\n{'='*60}")
-    print("DATA SAVED SUCCESSFULLY")
-    print(f"{'='*60}")
-    print(f"Data file: {rel_path}")
-    print(f"\n🎯 To plot this data, run:")
-    print(f'python plot_1D_datas.py --rel-path "{rel_path}"')
-    print(f"{'='*60}")
 
-    return rel_path
+def main():
+    parser = argparse.ArgumentParser(description="Run 1D spectroscopy.")
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--tau-coh", type=float, help="Single tau_coh value (fs)")
+    group.add_argument("--batch-idx", type=int, help="Batch index for tau_coh sweep")
+
+    parser.add_argument("--n-batches", type=int, default=1, help="Number of batches")
+    parser.add_argument(
+        "--t-det-max", type=float, default=600.0, help="Detection time window (fs)"
+    )
+    parser.add_argument("--dt", type=float, default=10.0, help="tau_coh spacing (fs)")
+
+    args = parser.parse_args()
+
+    if args.tau_coh is not None:
+        run_single_tau(args.tau_coh, args.t_det_max, args.dt)
+
+    elif args.batch_idx is not None:
+        tau_vals = np.arange(0, args.t_det_max, args.dt)
+        subarrays = np.array_split(tau_vals, args.n_batches)
+        tau_subarray = subarrays[args.batch_idx]
+
+        print(
+            f"🎯 Running batch {args.batch_idx + 1}/{args.n_batches} with {len(tau_subarray)} tau_coh values..."
+        )
+        for tau_coh in tau_subarray:
+            run_single_tau(tau_coh, args.t_det_max, args.dt)
 
 
 if __name__ == "__main__":

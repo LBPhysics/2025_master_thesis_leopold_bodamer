@@ -2,37 +2,21 @@
     "diffEditor.maxComputationTime": 0, // Disables computation time limits for the diff editor, useful for large diffs
     "git.autofetch": true, // Automatically fetches changes from the Git repository, keeping your local branch up-to-date
     "latex-workshop.bibtex-format.sort.enabled": true,
-    "latex-workshop.latex.tools": [
+    "latex-workshop.latex.recipes": [
         {
-            "name": "bibtex",
-            "command": "bibtex",
-            "args": [
-                "%DOCFILE%"
+            "name": "lualatexmk",
+            "tools": [
+                "lualatexmk"
             ]
         },
         {
-            "name": "pdflatex",
-            "command": "pdflatex",
-            "args": [ // Arguments passed to the pdflatex command
-                "-synctex=1", // Enables SyncTeX, allowing forward and reverse synchronization between the PDF and .tex file
-                "-interaction=nonstopmode", // Continues compilation despite errors, useful for quick iterations
-                "-file-line-error", // Improves error messages by showing file and line number
-                "-output-directory=%OUTDIR%", // Output directory is generated
-                "%DOC%" // Placeholder for the document's main.tex file
-            ],
-            "env": {}
+            "name": "latexmk (PDF)",
+            "tools": [
+                "latexmk"
+            ]
         },
         {
-            "name": "biber", // Name of the tool (biber)
-            "command": "biber", // Command to execute (biber)
-            "args": [
-                "%DOCFILE%"
-            ] // Argument passed to the biber command (placeholder for the .tex file)
-        }
-    ],
-    "latex-workshop.latex.recipes": [ // Defines the LaTeX recipes used by LaTeX Workshop
-        {
-            "name": "pdflatex -> biber -> 2*pdflatex",
+            "name": "pdflatex -> biber -> pdflatex*2", // Add this if you use biber
             "tools": [
                 "pdflatex",
                 "biber",
@@ -40,28 +24,68 @@
                 "pdflatex"
             ]
         },
-        {
-            "name": "pdflatex -> bibtex -> 2*pdflatex",
-            "tools": [
-                "pdflatex",
-                "bibtex",
-                "pdflatex",
-                "pdflatex"
-            ]
-        },
-        {
-            "name": "Quick pdflatex",
-            "tools": [
-                "pdflatex"
-            ]
-        },
-        {
-            "name": "Quick biber",
-            "tools": [
-                "biber"
-            ]
-        }
     ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "lualatexmk",
+            "command": "latexmk",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-lualatex",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "latexmk",
+            "command": "latexmk",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-pdf",
+                "-outdir=%OUTDIR%",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "bibtex",
+            "command": "bibtex",
+            "args": [
+                "%DOCFILE%"
+            ],
+            "env": {}
+        },
+    ],
+    "[latex]": {
+        "editor.defaultFormatter": "James-Yu.latex-workshop",
+        "editor.formatOnSave": true,
+        "editor.wordWrap": "bounded",
+        "editor.wordWrapColumn": 80,
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true
+    },
+    "[bibtex]": {
+        "editor.defaultFormatter": "James-Yu.latex-workshop"
+    },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
     "latex-workshop.latex.autoBuild.run": "onSave", // Automatically compiles the LaTeX document on every save
     "git.enableSmartCommit": true,
     "files.exclude": {
@@ -235,5 +259,7 @@
     ],
     "python.analysis.autoImportCompletions": true,
     "python.analysis.autoSearchPaths": true,
-    "python.analysis.diagnosticMode": "workspace"
+    "python.analysis.diagnosticMode": "workspace",
+    "editor.codeActionsOnSave": {},
+    "editor.dropIntoEditor.preferences": []
 }

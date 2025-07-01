@@ -6,7 +6,7 @@
 from copy import deepcopy
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import List, Union, Tuple, Optional
+from typing import List, Union, Tuple
 import logging
 
 # =============================

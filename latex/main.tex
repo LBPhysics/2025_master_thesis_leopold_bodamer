@@ -1,6 +1,6 @@
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 \documentclass[
 	11pt, english, singlespacing,
 %raft, 				% Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
@@ -13,25 +13,25 @@
 %consistentlayout, 	% Uncomment to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
 ]{style_thesis}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	PACKAGES
-%----------------------------------------------------------------------------------------
-\usepackage[utf8]{inputenc} % Required for inputting international characters
-\usepackage[T1]{fontenc}
-%\usepackage{mathpazo} % Use the Palatino font by default
+%-------------------------------------------------------------------------------
+\usepackage{fontspec} % For loading fonts in LuaLaTeX/XeLaTeX
+%\usepackage{mathpazo} % Use the Palatino font by default, % ONLY WORKS WITH OLD PDFLATEX VERSION? 
 	
-%-------------------------------- Define the LIBRARY ------------------------------------
-
-\usepackage[backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp]{biblatex}
+%--------------------------- Define the LIBRARY --------------------------------
+%backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp
+% actually import stzle with style=customstyle????
+\usepackage[backend=biber]{biblatex}
 %\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
 \addbibresource{bib/my_bibliography.bib}
 \addbibresource{bib/spectroscopy_refs.bib}
-\RequireBibliographyStyle{bib/style_bibiliography}
+%\RequireBibliographyStyle{bib/style_bibiliography.bbx}
 
 %\usepackage[numbers,sort&compress]{natbib}
 %\bibliographystyle{apsrev4-2}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 % Define trace operator
 \newcommand{\Tr}{\mathrm{Tr}}
@@ -51,9 +51,9 @@
 \newcommand{\todofix}[1]{\todo[inline,color=orange!70]{\textbf{FIX:} #1}}
 
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	THESIS INFORMATION
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \thesistitle{Master thesis}
 \supervisor{\href{https://ic1.ugr.es/members/dmanzano/home/}{Prof. Dr. Daniel Manzano Diosdado}}
@@ -84,9 +84,9 @@ The width of this document is: \the\textwidth
 %\input{chapters/c01_declaration}
 \input{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	ABSTRACT PAGE
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \begin{abstract}
 	\addchaptertocentry{\abstractname}
@@ -104,9 +104,9 @@ The width of this document is: \the\textwidth
 	where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
 \end{abstract}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	CONTENTS
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \mainmatter
 \pagestyle{thesis}
@@ -120,17 +120,17 @@ The width of this document is: \the\textwidth
 \include{chapters/c40_spectroscopy}
 \include{chapters/todo_example}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	APPENDICES
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \appendix
 
 %\include{appendices/_template_appendix} % corrected appendix path
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	BIBLIOGRAPHY
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \printbibliography
 %\bibliography{bib/my_bibliography}

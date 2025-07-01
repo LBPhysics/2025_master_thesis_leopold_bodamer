@@ -96,10 +96,8 @@ def print_simulation_header(data_config: dict, max_workers: int):
         f"  Times: t_det_max={data_config['t_det_max']} fs, dt={data_config['dt']} fs"
     )
     if simulation_type == "1d":
-        print(
-            f"  Times: τ_coh={data_config['tau_coh']} fs, T_wait={data_config['T_wait']} fs"
-        )
-
+        print(f"  Times: τ_coh={data_config['tau_coh']} fs")
+    print(f"  Waiting time: {data_config['T_wait']} fs")
     print(
         f"  Total combinations: {data_config['n_phases'] * data_config['n_phases'] * data_config['n_freqs']}"
     )

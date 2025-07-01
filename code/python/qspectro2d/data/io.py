@@ -83,105 +83,6 @@ def load_data_from_rel_path(relative_path: str) -> dict:
     return result
 
 
-def load_all_data_from_directory(
-    base_dir: Path,
-) -> Dict[str, dict]:  # TODO GET RID OF THIS
-    """
-    Recursively search through a base directory and all subdirectories to find
-    and load only the newest data file from each subdirectory.
-
-    Args:
-        base_dir: Base directory path relative to DATA_DIR (e.g., Path("1d_spectroscopy"))
-
-    Returns:
-        Dict[str, dict]: Dictionary where keys are relative paths to the newest data files
-                        and values are the loaded data dictionaries
-    """
-    # =============================
-    # Convert to absolute path and validate
-    # =============================
-    abs_base_dir = DATA_DIR / base_dir
-
-    if not abs_base_dir.exists():
-        raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
-
-    if not abs_base_dir.is_dir():
-        raise ValueError(f"Path is not a directory: {abs_base_dir}")
-
-    print(f"🔍 Searching for newest data files in each subdirectory of: {abs_base_dir}")
-
-    # =============================
-    # Find all data files recursively and group by directory
-    # =============================
-    # Search for all *_data.npz files recursively
-    data_pattern = str(abs_base_dir / "**" / "*_data.npz")
-    data_files = glob.glob(data_pattern, recursive=True)
-
-    if not data_files:
-        print(f"⚠️  No data files found in {abs_base_dir}")
-        return {}
-
-    print(f"📁 Found {len(data_files)} total data files")
-
-    # =============================
-    # Group files by directory and find newest in each
-    # =============================
-    files_by_dir = defaultdict(list)
-
-    for data_file in data_files:
-        data_path = Path(data_file)
-        parent_dir = data_path.parent
-        files_by_dir[parent_dir].append(data_path)
-
-    # Find newest file in each directory
-    newest_files = []
-    for directory, files in files_by_dir.items():
-        newest_file = max(files, key=os.path.getmtime)
-        newest_files.append(newest_file)
-
-    print(f"📅 Found {len(newest_files)} newest files (one per subdirectory)")
-
-    # =============================
-    # Load each newest data file with its corresponding info file
-    # =============================
-    loaded_data = {}
-    successful_loads = 0
-    failed_loads = 0
-
-    for data_path in newest_files:
-        # Construct corresponding info file path
-        info_file_name = data_path.name.replace("_data.npz", "_info.pkl")
-        info_path = data_path.parent / info_file_name
-
-        # Convert to relative paths for load_data_from_rel_path
-        rel_path = data_path.relative_to(DATA_DIR)
-
-        # Check if info file exists
-        if not info_path.exists():
-            print(f"⚠️  Skipping {rel_data_path}: corresponding info file not found")
-            failed_loads += 1
-            continue
-
-        # Try to load the data
-        try:
-            loaded_data[str(rel_path)] = load_data_from_rel_path(rel_path)
-            successful_loads += 1
-            print(f"✅ Loaded newest from {rel_path.parent}: {rel_path.name}")
-        except Exception as e:
-            print(f"❌ Failed to load {rel_path}: {e}")
-            failed_loads += 1
-
-    # =============================
-    # Summary
-    # =============================
-    print(f"\n📊 Loading Summary:")
-    print(f"   Successfully loaded: {successful_loads} files")
-    print(f"   Failed to load: {failed_loads} files")
-    print(f"   Total subdirectories: {len(newest_files)}")
-
-    return loaded_data
-
-
 def load_latest_data_from_directory(base_dir: str) -> dict:
     """
     Find and load the most recent data file from a base directory and all subdirectories.
@@ -321,7 +222,7 @@ def save_simulation_data(
         data_config (dict): Simulation configuration dictionary.
 
     Returns:
-        Tuple[Path, Path]: Relative paths to DATA_DIR for the saved numpy data file and info file.
+        Path]: Relative path to DATA_DIR for the saved numpy data file and info file.
     """
     # =============================
     # Generate unique filenames
@@ -425,36 +326,6 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"❌ Error in test 2: {e}")
-
-    # Test 3: Test load_all_data_from_directory
-    print("\n📂 Test 3: Loading all newest data from directories...")
-    try:
-        for test_dir in ["tests", "1d_spectroscopy"]:
-            try:
-                print(f"\n🔍 Loading all newest from: {test_dir}")
-                all_data = load_all_data_from_directory(Path(test_dir))
-                if all_data:
-                    print(f"   ✅ Loaded {len(all_data)} datasets")
-                    for path, data in list(all_data.items())[:3]:  # Show first 3
-                        print(
-                            f"   📁 {path}: shape={data['data'].shape if data['data'] is not None else 'None'}"
-                        )
-                    if len(all_data) > 3:
-                        print(f"   ... and {len(all_data) - 3} more")
-                else:
-                    print(f"   No data loaded from {test_dir}")
-
-                # Only test the first successful directory
-                if all_data:
-                    break
-
-            except FileNotFoundError:
-                print(f"   Directory {test_dir} does not exist")
-            except Exception as e:
-                print(f"   Error loading from {test_dir}: {e}")
-
-    except Exception as e:
-        print(f"❌ Error in test 3: {e}")
 
     # Test 4: Show DATA_DIR information
     print(f"\n📁 Test 4: DATA_DIR information...")
