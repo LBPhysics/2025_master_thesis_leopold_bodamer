@@ -1,8 +1,8 @@
 import numpy as np
 from qutip import Qobj, stacked_index
-from qspectro2d.core.system_parameters import SystemParameters
-from qspectro2d.core.pulse_sequences import PulseSequence
-from qspectro2d.core.pulse_functions import *
+from .system_parameters import SystemParameters
+from .pulse_sequences import PulseSequence
+from .pulse_functions import E_pulse
 
 
 # =============================
@@ -401,3 +401,9 @@ def _R_paper_2atom(system: SystemParameters) -> Qobj:
     R[idx_33, :] = -R[idx_00, :] - R[idx_11, :] - R[idx_22, :]
 
     return Qobj(R, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()

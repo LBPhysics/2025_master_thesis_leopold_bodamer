@@ -9,6 +9,7 @@ and directory paths for simulation data and plots.
 # IMPORTS
 # =============================
 from pathlib import Path
+from tkinter import N
 from typing import Union
 
 ### Project-specific imports
@@ -30,28 +31,30 @@ def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
     Returns:
         str: Base filename without path
     """
-    # N_atoms = system.N_atoms
+    N_atoms = system.N_atoms
     # simulation_type = data_config.get("simulation_type", "spectroscopy")
     # parts.append(simulation_type)
     # parts.append(f"N{N_atoms}")
-    n_freqs = data_config.get("n_freqs", 1)
     parts = []
 
-    parts += [
-        f"t_MAX_{data_config.get('t_det_max', 0)}",
-        f"wait_{data_config.get('t_wait', 0)}",
-        f"dt_{system.dt:.1f}fs",
-    ]
     if data_config.get("simulation_type") == "1d":
         # Round tau_coh to 2 decimal places for filename clarity
         tau_val = round(float(data_config["tau_coh"]), 2)
         parts.append(f"tau_{tau_val}")
 
-    parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4cmm1")
+    parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4")
+    parts.append(f"muA{system.mu_A:.2f}")
+    if N_atoms == 2:
+        parts.append(f"wB{system.omega_B_cm/1e4:.2f}e4")
+        parts.append(f"muB{system.mu_B:.2f}")
+        if system.J_cm > 0:
+            parts.append(f"J{system.J_cm/1e3:.2f}e3")
+
+    n_freqs = data_config.get("n_freqs", 1)
+
     if n_freqs > 1:
-        parts.append(
-            f"{n_freqs}freqs_Delta{data_config.get('Delta_cm', 0)/1e3:.2f}e3cmm1"
-        )
+        parts.append(f"Delta{system.Delta_cm/1e4:.2f}e4")
+    parts.append("cm-1")
     return "_".join(parts)
 
 
@@ -64,7 +67,7 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
         base_name (str): Base name for the file (without extension)
 
     Returns:
-        str: Unique base filename (without extension)
+        str: Unique base filename (without extension, but with the whole path)
     """
     path = Path(path)
     candidate = path / base_name
@@ -100,7 +103,8 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
         parts.append("spectroscopy")
 
     # Add system details
-    parts.append(f"N{system.N_atoms}")
+    N_atoms = system.N_atoms
+    parts.append(f"N{N_atoms}")
 
     # Add solver if available
     parts.append(system.ODE_Solver)
@@ -108,7 +112,20 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
     # Add RWA if available
     parts.append("RWA" if system.RWA_laser else "noRWA")
 
-    # parts.append(f"t_max{system.t_max:.1f}fs")
+    # Add time parameters
+    parts.append(f"T_det_MAX_{data_config.get('t_det_max', 'not provided')}")
+    parts.append(f"T_wait_{data_config.get('t_wait', 'not provided')}")
+    parts.append(f"dt_{system.dt:.1f}fs")
+
+    if N_atoms == 2:
+        # Add coupling strength if applicable
+        J_cm = system.J_cm
+        if J_cm > 0:
+            parts.append(f"Coupled")
+
+    n_freqs = data_config.get("n_freqs", 1)
+    if n_freqs > 1:
+        parts.append("inhom")
     # Join all parts with path separator
     return Path(*parts)
 

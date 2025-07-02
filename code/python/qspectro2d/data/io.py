@@ -13,8 +13,7 @@ import pickle
 import os
 import glob
 from pathlib import Path
-from typing import Dict, Tuple, Optional, Union
-from collections import defaultdict
+from typing import Dict, Optional, List
 from datetime import datetime
 
 ### Project-specific imports
@@ -31,6 +30,46 @@ except ImportError:
 # =============================
 # DATA LOADING FUNCTIONS
 # =============================
+def _load_data_file(abs_data_path: Path) -> dict:
+    """
+    Load numpy data file (.npz) from absolute path.
+
+    Args:
+        abs_data_path: Absolute path to the numpy data file (.npz)
+
+    Returns:
+        dict: Dictionary containing loaded numpy data arrays
+    """
+    try:
+        with np.load(abs_data_path, allow_pickle=True) as data_file:
+            data_dict = {key: data_file[key] for key in data_file.files}
+        print(f"✅ Loaded data from: {abs_data_path}")
+        return data_dict
+    except Exception as e:
+        print(f"❌ ERROR: Failed to load data from {abs_data_path}: {e}")
+        raise
+
+
+def _load_info_file(abs_info_path: Path) -> dict:
+    """
+    Load pickle info file (.pkl) from absolute path.
+
+    Args:
+        abs_info_path: Absolute path to the info file (.pkl)
+
+    Returns:
+        dict: Dictionary containing system parameters and data configuration
+    """
+    try:
+        with open(abs_info_path, "rb") as info_file:
+            info_dict = pickle.load(info_file)
+        print(f"✅ Loaded info from: {abs_info_path}")
+        return info_dict
+    except Exception as e:
+        print(f"❌ ERROR: Failed to load info from {abs_info_path}: {e}")
+        raise
+
+
 def load_data_from_rel_path(relative_path: str) -> dict:
     """
     Load simulation data from specific data and info file paths.
@@ -46,23 +85,12 @@ def load_data_from_rel_path(relative_path: str) -> dict:
     # =============================
     abs_data_path = DATA_DIR / (str(relative_path) + "_data.npz")
     abs_info_path = DATA_DIR / (str(relative_path) + "_info.pkl")
-    # Load data file (numpy format)
-    try:
-        with np.load(abs_data_path, allow_pickle=True) as data_file:
-            data_dict = {key: data_file[key] for key in data_file.files}
-        print(f"✅ Loaded data from: {abs_data_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to load data from {abs_data_path}: {e}")
-        raise
-
-    # Load info file (pickle format)
-    try:
-        with open(abs_info_path, "rb") as info_file:
-            info_dict = pickle.load(info_file)
-        print(f"✅ Loaded info from: {abs_info_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to load info from {abs_info_path}: {e}")
-        raise
+    
+    # =============================
+    # Load files
+    # =============================
+    data_dict = _load_data_file(abs_data_path)
+    info_dict = _load_info_file(abs_info_path)
 
     # =============================
     # Combine data and info into standardized structure
@@ -199,10 +227,103 @@ def list_available_data_files(base_dir: Path) -> Dict[str, dict]:
 
     return file_info
 
+def list_data_files_in_directory(base_dir: Path) -> List[str]:
+    """
+    List all data files in a specific directory (non-recursive) as relative paths.
+    
+    Args:
+        base_dir: Base directory path relative to DATA_DIR
+        
+    Returns:
+        List[str]: List of relative paths (without _data.npz suffix) for files in the same directory
+    """
+    # =============================
+    # Convert to absolute path and validate
+    # =============================
+    abs_base_dir = DATA_DIR / base_dir
+    
+    if not abs_base_dir.exists():
+        raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
+    
+    print(f"📋 Listing data files in: {abs_base_dir}")
+    
+    # =============================
+    # Find data files in current directory only (non-recursive)
+    # =============================
+    data_files = list(abs_base_dir.glob("*_data.npz"))
+    
+    if not data_files:
+        print(f"⚠️  No data files found in {abs_base_dir}")
+        return []
+    
+    # =============================
+    # Convert to relative paths and remove suffix
+    # =============================
+    rel_paths = []
+    
+    for data_file in data_files:
+        rel_path     = data_file.relative_to(DATA_DIR)
+        rel_path_str = str(rel_path)
+        
+        # Remove '_data.npz' suffix
+        if rel_path_str.endswith("_data.npz"):
+            rel_path_str = rel_path_str[:-9]
+            
+        rel_paths.append(rel_path_str)
+    
+    # =============================
+    # Sort paths for consistent output
+    # =============================
+    rel_paths.sort()
+    
+    print(f"📊 Found {len(rel_paths)} data files in directory")
+    for path in rel_paths:
+        print(f"   📄 {path}")
+    
+    return rel_paths
 
 # =============================
 # DATA SAVING FUNCTIONS
 # =============================
+def _save_data_file(data_path: Path, data: np.ndarray, axs1: np.ndarray, axs2: Optional[np.ndarray] = None) -> None:
+    """
+    Save numpy data and axes to compressed .npz file.
+
+    Args:
+        data_path: Absolute path for the numpy data file (.npz)
+        data: Simulation results (1D or 2D data)
+        axs1: First axis (e.g., time or frequency for 1D or 2D data)
+        axs2: Second axis (e.g., coherence time for 2D data)
+    """
+    try:
+        if axs2 is not None:
+            np.savez_compressed(data_path, data=data, axis1=axs1, axis2=axs2)
+        else:
+            np.savez_compressed(data_path, data=data, axis1=axs1)
+        print(f"✅ Data saved successfully to: {data_path}")
+    except Exception as e:
+        print(f"❌ ERROR: Failed to save data: {e}")
+        raise
+
+
+def _save_info_file(info_path: Path, system: SystemParameters, data_config: dict) -> None:
+    """
+    Save system parameters and data configuration to pickle file.
+
+    Args:
+        info_path: Absolute path for the info file (.pkl)
+        system: System parameters object
+        data_config: Simulation configuration dictionary
+    """
+    try:
+        with open(info_path, "wb") as info_file:
+            pickle.dump({"system": system, "data_config": data_config}, info_file)
+        print(f"✅ Info saved successfully to: {info_path}")
+    except Exception as e:
+        print(f"❌ ERROR: Failed to save info: {e}")
+        raise
+
+
 def save_simulation_data(
     system: SystemParameters,
     data_config: dict,
@@ -232,40 +353,21 @@ def save_simulation_data(
     info_path = Path(f"{base_path}_info.pkl")
 
     # =============================
-    # Save data and axes to numpy file
+    # Save files
     # =============================
-    try:
-        if axs2 is not None:
-            np.savez_compressed(data_path, data=data, axis1=axs1, axis2=axs2)
-        else:
-            np.savez_compressed(data_path, data=data, axis1=axs1)
-        print(f"✅ Data saved successfully to: {data_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to save data: {e}")
-        raise
-
-    # =============================
-    # Save system and data_config to info file
-    # =============================
-    try:
-        with open(info_path, "wb") as info_file:
-            pickle.dump({"system": system, "data_config": data_config}, info_file)
-        print(f"✅ Info saved successfully to: {info_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to save info: {e}")
-        raise
+    _save_data_file(data_path, data, axs1, axs2)
+    _save_info_file(info_path, system, data_config)
 
     # =============================
     # Return relative path to DATA_DIR
     # =============================
-    # Remove both the suffix and the trailing '_data' from the filename for rel_path
-    rel_path = data_path.with_suffix("")
+    ### Remove both the suffix and the trailing '_data' from the filename for rel_path
+    rel_path     = data_path.with_suffix("")
     rel_path_str = str(rel_path)
     if rel_path_str.endswith("_data"):
         rel_path_str = rel_path_str[:-5]  # Remove '_data'
     rel_path = Path(rel_path_str).relative_to(DATA_DIR)
     return rel_path
-
 
 # =============================
 # TEST CODE (when run directly)

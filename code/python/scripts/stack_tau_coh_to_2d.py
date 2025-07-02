@@ -9,11 +9,24 @@ import numpy as np
 import sys
 
 
-def main():
-    base_dir = "1d_spectroscopy"
+def main(): # TODO change -base_dir to --rel-path and everything to re_path, try to guess the dim, also in plot_datas.py
+    # TODO also want to seperate data saving to data_saving and info_saving functions, also want info & data loading function
+    # =============================
+    # Set base directory as a parameter
+    # =============================
+    import argparse
+    parser = argparse.ArgumentParser(description="Stack 1D data into 2D along tau_coh.")
+    parser.add_argument(
+        "--base_dir",
+        type=str,
+        default="1d_spectroscopy",
+        help="Base directory containing 1D data files (relative to data root)",
+    )
+    args = parser.parse_args()
+    base_dir = args.base_dir
 
     print("\n🔍 Scanning available files:")
-    files_info = list_available_data_files(Path(base_dir))
+    files_info = list_available_data_files(Path(DATA_DIR / base_dir))
 
     # Collect rel_paths from info keys (strip _data.npz for rel_path compatibility)
     rel_paths = list({ # set to avoid duplicates

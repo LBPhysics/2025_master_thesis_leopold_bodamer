@@ -8,7 +8,6 @@ spectroscopy simulations with proper error handling and validation.
 # =============================
 # IMPORTS
 # =============================
-from encodings.punycode import T
 import numpy as np
 
 ### Project-specific imports

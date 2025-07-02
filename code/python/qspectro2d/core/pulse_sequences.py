@@ -1,7 +1,7 @@
 # =============================
 # Pulse and PulseSequence classes for structured pulse handling
 # =============================
-from qspectro2d.core.system_parameters import SystemParameters
+from .system_parameters import SystemParameters
 from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple
 
@@ -284,3 +284,11 @@ class PulseSequence:
             ],
             "pulse_indices": [i for i, _ in active_pulses],
         }
+
+
+def main():
+    pass
+
+if __name__ == "__main__":
+    main()
+    
