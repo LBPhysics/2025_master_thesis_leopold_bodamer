@@ -1,7 +1,10 @@
+from platform import system
 from qspectro2d.data import (
     save_simulation_data,
     load_data_from_rel_path,
     list_available_data_files,
+    load_info_file,
+    load_data_file
 )
 from qspectro2d.config import DATA_DIR
 from pathlib import Path
@@ -9,24 +12,23 @@ import numpy as np
 import sys
 
 
-def main(): # TODO change -base_dir to --rel-path and everything to re_path, try to guess the dim, also in plot_datas.py
-    # TODO also want to seperate data saving to data_saving and info_saving functions, also want info & data loading function
+def main(): # TODO also want to seperate info & data loading function
     # =============================
     # Set base directory as a parameter
     # =============================
     import argparse
     parser = argparse.ArgumentParser(description="Stack 1D data into 2D along tau_coh.")
     parser.add_argument(
-        "--base_dir",
+        "--rel_path",
         type=str,
         default="1d_spectroscopy",
         help="Base directory containing 1D data files (relative to data root)",
     )
     args = parser.parse_args()
-    base_dir = args.base_dir
+    rel_path = args.rel_path
 
     print("\n🔍 Scanning available files:")
-    files_info = list_available_data_files(Path(DATA_DIR / base_dir))
+    files_info = list_available_data_files(Path(DATA_DIR / rel_path))
 
     # Collect rel_paths from info keys (strip _data.npz for rel_path compatibility)
     rel_paths = list({ # set to avoid duplicates
@@ -43,10 +45,16 @@ def main(): # TODO change -base_dir to --rel-path and everything to re_path, try
     print(f"\n📥 Loading {len(rel_paths)} files...\n")
     for path in rel_paths:
         try:
-            result = load_data_from_rel_path(path)
-            tau = result["data_config"]["tau_coh"]
-            results.append((tau, result))
-            print(f"   ✅ Loaded: {path} (tau_coh={tau})")
+            # only on
+            abs_data_path = DATA_DIR / (str(path) + "_data.npz")
+            data_dict = load_data_file(abs_data_path)
+            # Extract tau_coh value from filename (expects ...tau_<val>..._data.npz)
+            tau_str = str(path).split("tau_")[1]
+            tau_val = tau_str.split("_")[0]
+            tau     = float(tau_val)
+
+            results.append((tau, data_dict))
+            print(f"   ✅ Loaded: (tau_coh={tau})")
         except Exception as e:
             print(f"   ❌ Failed to load {path}: {e}")
 
@@ -60,21 +68,28 @@ def main(): # TODO change -base_dir to --rel-path and everything to re_path, try
     # Extract data
     all_data = [r[1]["data"] for r in results]
     all_tau = [r[0] for r in results]
-    t_det = results[0][1]["axes"]["axs1"]
-    system = results[0][1]["system"]
-    data_config = results[0][1]["data_config"]
-
-    # change the type to 2d
-    data_config["simulation_type"] = "2d"
-    data_config["tau_coh"] = ""
+    print(results[0][1])
+    t_det = results[0][1]["axis1"]
 
     stacked_data = np.stack(all_data, axis=0)
     tau_vals = np.array(all_tau)
 
+    abs_info_path = DATA_DIR / (str(path) + "_info.pkl")
+    info_dict = load_info_file(abs_info_path)
+    system = info_dict["system"]
+    info_config = info_dict["info_config"]
+
+    # change the type to 2d
+    print(info_config)
+    info_config["simulation_type"] = "2d"
+    info_config["tau_coh"] = ""
+    
     rel_path = save_simulation_data(
-        system, data_config, stacked_data, axs1=tau_vals, axs2=t_det
+        system, info_config, stacked_data, axis1=tau_vals, axis2=t_det
     )
     print(f"\n✅ Final 2D data saved to: {rel_path}")
+    print(f"\n🎯 To plot this data, run:")
+    print(f'python plot_datas.py --rel_path "{rel_path}"')
 
 
 if __name__ == "__main__":

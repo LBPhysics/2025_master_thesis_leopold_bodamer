@@ -23,13 +23,13 @@ from qspectro2d.core.system_parameters import SystemParameters
 # SIMULATION RUNNER FUNCTIONS
 # =============================
 def run_1d_simulation(
-    data_config: dict, system: SystemParameters, max_workers: int
+    info_config: dict, system: SystemParameters, max_workers: int
 ) -> tuple:
     """
     Run 1D spectroscopy simulation with updated calculation structure.
 
     Parameters:
-        data_config: Dictionary containing simulation parameters.
+        info_config: Dictionary containing simulation parameters.
         system: System parameters object.
         max_workers: Number of parallel workers.
 
@@ -37,9 +37,9 @@ def run_1d_simulation(
         tuple: Detection time values and averaged data.
     """
     ### Create time arrays
-    tau_coh = data_config["tau_coh"]
-    T_wait = data_config["T_wait"]
-    t_det_max = data_config["t_det_max"]
+    tau_coh = info_config["tau_coh"]
+    T_wait = info_config["t_wait"]
+    t_det_max = info_config["t_det_max"]
     t_max = system.t_max
 
     ### Validate solver
@@ -66,15 +66,15 @@ def run_1d_simulation(
 
     try:
         t_det_vals, data = parallel_compute_1d_E_with_inhomogenity(
-            n_freqs=data_config["n_freqs"],
-            n_phases=data_config["n_phases"],
+            n_freqs=info_config["n_freqs"],
+            n_phases=info_config["n_phases"],
             tau_coh=tau_coh,
             T_wait=T_wait,
             t_det_max=t_det_max,
             system=system,
             max_workers=max_workers,
             time_cut=time_cut,
-            apply_ift=data_config.get("apply_ift", True)
+            apply_ift=info_config.get("apply_ift", True)
         )
         print("✅ Parallel computation completed successfully!")
         return t_det_vals, data
@@ -84,13 +84,13 @@ def run_1d_simulation(
 
 
 def run_2d_simulation(
-    data_config: dict, system: SystemParameters, max_workers: int
+    info_config: dict, system: SystemParameters, max_workers: int
 ) -> tuple:
     """
     Run 2D spectroscopy simulation with updated calculation structure.
 
     Parameters:
-        data_config: Dictionary containing simulation parameters.
+        info_config: Dictionary containing simulation parameters.
         system: System parameters object.
         max_workers: Number of parallel workers.
 
@@ -123,11 +123,11 @@ def run_2d_simulation(
 
     try:
         tau_coh_vals, t_det_vals, data_2d = parallel_compute_2d_E_with_inhomogenity(
-            n_freqs=data_config.get("n_freqs", 1),
-            n_phases=data_config["n_phases"],
-            T_wait=data_config["T_wait"],
-            t_det_max=data_config["t_det_max"],
-            apply_ift=data_config.get(
+            n_freqs=info_config.get("n_freqs", 1),
+            n_phases=info_config["n_phases"],
+            T_wait=info_config["t_wait"],
+            t_det_max=info_config["t_det_max"],
+            apply_ift=info_config.get(
                 "apply_ift", True
             ),  # TODO also do this to 1d case
             system=system,

@@ -20,26 +20,26 @@ from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR  # , FIGURES_DI
 # =============================
 # FILENAME GENERATION FUNCTIONS
 # =============================
-def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
+def _generate_base_filename(system: SystemParameters, info_config: dict) -> str:
     """
-    Generate a universal base filename for a calculation based on system and data_config parameters.
+    Generate a universal base filename for a calculation based on system and info_config parameters.
 
     Args:
         system: System parameters object
-        data_config: Dictionary containing simulation parameters
+        info_config: Dictionary containing simulation parameters
 
     Returns:
         str: Base filename without path
     """
     N_atoms = system.N_atoms
-    # simulation_type = data_config.get("simulation_type", "spectroscopy")
+    # simulation_type = info_config.get("simulation_type", "spectroscopy")
     # parts.append(simulation_type)
     # parts.append(f"N{N_atoms}")
     parts = []
 
-    if data_config.get("simulation_type") == "1d":
+    if info_config.get("simulation_type") == "1d":
         # Round tau_coh to 2 decimal places for filename clarity
-        tau_val = round(float(data_config["tau_coh"]), 2)
+        tau_val = round(float(info_config["tau_coh"]), 2)
         parts.append(f"tau_{tau_val}")
 
     parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4")
@@ -50,7 +50,7 @@ def _generate_base_filename(system: SystemParameters, data_config: dict) -> str:
         if system.J_cm > 0:
             parts.append(f"J{system.J_cm/1e3:.2f}e3")
 
-    n_freqs = data_config.get("n_freqs", 1)
+    n_freqs = info_config.get("n_freqs", 1)
 
     if n_freqs > 1:
         parts.append(f"Delta{system.Delta_cm/1e4:.2f}e4")
@@ -80,13 +80,13 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
     return str(candidate)
 
 
-def generate_base_sub_dir(data_config: dict, system) -> Path:
+def generate_base_sub_dir(info_config: dict, system) -> Path:
     """
     Generate standardized subdirectory path based on system and configuration.
     WILL BE subdir of DATA_DIR OR FIGURES_DIR
 
     Args:
-        data_config: Dictionary containing simulation parameters
+        info_config: Dictionary containing simulation parameters
         system: System parameters object
 
     Returns:
@@ -96,8 +96,8 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
     parts = []
 
     # Add simulation dimension (1d/2d)
-    if "simulation_type" in data_config:
-        parts.append(f"{data_config['simulation_type']}_spectroscopy")
+    if "simulation_type" in info_config:
+        parts.append(f"{info_config['simulation_type']}_spectroscopy")
     else:
         # Default to the most common case
         parts.append("spectroscopy")
@@ -113,8 +113,8 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
     parts.append("RWA" if system.RWA_laser else "noRWA")
 
     # Add time parameters
-    parts.append(f"T_det_MAX_{data_config.get('t_det_max', 'not provided')}")
-    parts.append(f"T_wait_{data_config.get('t_wait', 'not provided')}")
+    parts.append(f"T_det_MAX_{info_config.get('t_det_max', 'not_provided')}")
+    parts.append(f"T_wait_{info_config.get('t_wait', 'not_provided')}")
     parts.append(f"dt_{system.dt:.1f}fs")
 
     if N_atoms == 2:
@@ -123,7 +123,7 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
         if J_cm > 0:
             parts.append(f"Coupled")
 
-    n_freqs = data_config.get("n_freqs", 1)
+    n_freqs = info_config.get("n_freqs", 1)
     if n_freqs > 1:
         parts.append("inhom")
     # Join all parts with path separator
@@ -132,30 +132,30 @@ def generate_base_sub_dir(data_config: dict, system) -> Path:
 
 def generate_unique_data_filename(
     system: SystemParameters,
-    data_config: dict,
+    info_config: dict,
 ) -> str:
     """
     Build a standardized filename for data files.
 
     Args:
         system: System parameters object
-        data_config: Dictionary containing simulation parameters
+        info_config: Dictionary containing simulation parameters
 
     Returns:
         str: Standardized base filename for the data file (without extension)
     """
     # Start with basic structure
-    relative_path = generate_base_sub_dir(data_config, system)
+    relative_path = generate_base_sub_dir(info_config, system)
     path = DATA_DIR / relative_path
     path.mkdir(parents=True, exist_ok=True)
-    base_name = _generate_base_filename(system, data_config)
+    base_name = _generate_base_filename(system, info_config)
     filename = _generate_unique_filename(path, base_name)
     return filename
 
 
 def generate_unique_plot_filename(
     system: SystemParameters,
-    data_config: dict,
+    info_config: dict,
     domain: str,
     component: str = None,
 ) -> str:
@@ -164,7 +164,7 @@ def generate_unique_plot_filename(
 
     Args:
         system: System parameters object
-        data_config: Dictionary containing simulation parameters
+        info_config: Dictionary containing simulation parameters
         domain: Data domain ("time" or "freq")
         component: Optional component name ("real", "imag", "abs", "phase")
 
@@ -182,11 +182,11 @@ def generate_unique_plot_filename(
         )
 
     # Start with basic structure
-    relative_path = generate_base_sub_dir(data_config, system)
+    relative_path = generate_base_sub_dir(info_config, system)
     path = FIGURES_PYTHON_DIR / relative_path
     path.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
 
-    base_name = _generate_base_filename(system, data_config)
+    base_name = _generate_base_filename(system, info_config)
     base_name += f"_{domain}_domain"
     if component:
         base_name += f"_{component}"
@@ -216,7 +216,7 @@ def main():
     system = MockSystemParameters()
 
     ### Create mock data configuration
-    data_config = {
+    info_config = {
         "simulation_type": "2d",
         "t_wait": 50,
         "t_det_max": 200,
@@ -235,7 +235,7 @@ def main():
     print("\n### Testing data filename uniqueness:")
     data_filenames = []
     for i in range(5):
-        filename = generate_unique_data_filename(system, data_config)
+        filename = generate_unique_data_filename(system, info_config)
         data_filenames.append(filename)
         print(f"Generated #{i+1}: {filename}")
 
@@ -255,7 +255,7 @@ def main():
     print("\n### Testing plot filename uniqueness:")
     plot_filenames = []
     for i in range(5):
-        filename = generate_unique_plot_filename(system, data_config, "time", "real")
+        filename = generate_unique_plot_filename(system, info_config, "time", "real")
         plot_filenames.append(filename)
         print(f"Generated #{i+1}: {filename}")
 

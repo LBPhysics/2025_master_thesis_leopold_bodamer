@@ -47,7 +47,7 @@ def _validate_and_extract_data_structure(
     Raises:
         ValueError: If data structure is invalid or missing required components
     """
-    required_keys = ["data", "axes", "system", "data_config"]
+    required_keys = ["data", "axes", "system", "info_config"]
     missing_keys = [key for key in required_keys if key not in loaded_data]
 
     if missing_keys:
@@ -57,29 +57,29 @@ def _validate_and_extract_data_structure(
     data = loaded_data["data"]
     axes = loaded_data["axes"]
     system = loaded_data["system"]
-    data_config = loaded_data["data_config"]
+    info_config = loaded_data["info_config"]
 
     # Validate axes structure
-    if "axs1" not in axes:
-        raise ValueError("Missing 'axs1' in axes data")
+    if "axis1" not in axes:
+        raise ValueError("Missing 'axis1' in axes data")
 
     # Determine dimensionality
-    has_axs2 = "axs2" in axes
-    actual_dim = "2d" if has_axs2 else "1d"
+    has_axis2 = "axis2" in axes
+    actual_dim = "2d" if has_axis2 else "1d"
 
     if expected_dim != "auto" and expected_dim != actual_dim:
         raise ValueError(f"Expected {expected_dim} data but got {actual_dim} data")
 
     result = {
         "data": data,
-        "axs1": axes["axs1"],
+        "axis1": axes["axis1"],
         "system": system,
-        "data_config": data_config,
+        "info_config": info_config,
         "dimension": actual_dim,
     }
 
-    if has_axs2:
-        result["axs2"] = axes["axs2"]
+    if has_axis2:
+        result["axis2"] = axes["axis2"]
 
     return result
 
@@ -100,12 +100,12 @@ def plot_1d_data(
     # Validate and extract data structure
     extracted = _validate_and_extract_data_structure(loaded_data, expected_dim="1d")
     data = extracted["data"]
-    t_det_vals = extracted["axs1"]
+    t_det_vals = extracted["axis1"]
     system = extracted["system"]
-    data_config = extracted["data_config"]
-    tau_coh = data_config["tau_coh"]
-    T_wait = data_config["T_wait"]
-    n_freqs = data_config.get("n_freqs", 1)
+    info_config = extracted["info_config"]
+    tau_coh = info_config["tau_coh"]
+    T_wait = info_config["t_wait"]
+    n_freqs = info_config.get("n_freqs", 1)
 
     print(f"✅ Data loaded with shape: {data.shape}")
     print(f"   Time points: {len(t_det_vals)}")
@@ -132,7 +132,7 @@ def plot_1d_data(
             )
             filename = generate_unique_plot_filename(
                 system,
-                data_config=data_config,
+                info_config=info_config,
                 domain="time",
                 component="abs",
             )
@@ -167,7 +167,7 @@ def plot_1d_data(
                 )
                 filename = generate_unique_plot_filename(
                     system,
-                    data_config=data_config,
+                    info_config=info_config,
                     domain="freq",
                     component=component,
                 )
@@ -195,11 +195,11 @@ def plot_2d_data(
     # Validate and extract data structure
     extracted = _validate_and_extract_data_structure(loaded_data, expected_dim="2d")
     data = extracted["data"]
-    tau_coh_vals = extracted["axs1"]  # coherence times
-    t_det_vals = extracted["axs2"]  # detection times
+    tau_coh_vals = extracted["axis1"]  # coherence times
+    t_det_vals = extracted["axis2"]  # detection times
     system = extracted["system"]
-    data_config = extracted["data_config"]
-    T_wait = data_config["T_wait"]
+    info_config = extracted["info_config"]
+    T_wait = info_config["t_wait"]
 
     # Get configuration values
     spectral_components_to_plot = plot_config.get(
@@ -223,7 +223,7 @@ def plot_2d_data(
                 use_custom_colormap=True,
             )
             filename = generate_unique_plot_filename(
-                system=system, data_config=data_config, domain="time"
+                system=system, info_config=info_config, domain="time"
             )
             save_fig(fig, filename=filename, formats=["png"])  # PNG for large data
             print("✅ 2D time domain plots completed!")
@@ -270,7 +270,7 @@ def plot_2d_data(
                     )
                     filename = generate_unique_plot_filename(
                         system=system,
-                        data_config=data_config,
+                        info_config=info_config,
                         domain="freq",
                         component=component,
                     )

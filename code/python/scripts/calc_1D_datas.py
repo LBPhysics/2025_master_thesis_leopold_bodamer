@@ -20,6 +20,7 @@ Additional optional arguments:
 This script is designed for both local development and HPC batch execution.
 Results are saved automatically using the qspectro2d I/O framework.
 """
+
 # ==============
 # ANALYSIS: for f in batch_*.slurm; do sbatch "$f"; done
 # ==============
@@ -37,42 +38,49 @@ Results are saved automatically using the qspectro2d I/O framework.
 # -> 1000 tau_coh_vals: -> split into 10 batches=10jobs of 100 each, each job will take 6s * 100 = 600s = 10 minutes
 # one 1d calculation (t_det_max=600, dt=0.1) takes about 18-19 seconds, so
 # -> 6000 tau_coh_vals: -> split into 20 batches=20jobs of 300 each, each job will take 20s * 300 = 6000s = 100 minutes < 2 hours
-# -> 6000 tau_coh_vals: -> split into 10 batches=10jobs of 600 each, each job will take 20s * 600 = 12000s = 200 minutes < 4 hours
+# -> 6000 tau_coh_vals: -> split into 10 batches=10jobs of 600 each, each job will take 20s * 600 = 12000s = 200 minutes < 4 hours, actually on proteus it ran for 6,... h
 # Estimation for RAM: 6000 tau vals * 10 batches < 40,000,000.0 complex64 numbers < 40 MB << 1 GB
-
 
 import time
 import argparse
 import numpy as np
+from pathlib import Path
 
-from qspectro2d.simulation import (
+from qspectro2d.config import DATA_DIR
+from qspectro2d.spectroscopy import (
     create_system_parameters,
     run_1d_simulation,
     get_max_workers,
     print_simulation_header,
     print_simulation_summary,
 )
-from qspectro2d.data import save_simulation_data
+from qspectro2d.data import (
+    save_data_file,
+    save_info_file,
+    generate_unique_data_filename,
+)
+
 N_ATOMS = 1  # Number of atoms in the system, can be changed to 1 or 2
 
-def run_single_tau(tau_coh: float, t_det_max: float, dt: float):
+
+def run_single_tau(
+    tau_coh: float, t_det_max: float, dt: float, save_info: bool = False
+):
     print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
 
-    config = {
+    info_config = {
         ### Main system configuration
         "simulation_type": "1d",
         # solver parameters
         "ODE_Solver": "Paper_eqs",
-        "RWA_laser": True,        
-        
+        "RWA_laser": True,
         "N_atoms": N_ATOMS,
-        "J_cm": 300 if N_ATOMS == 2 else 0,  # Coupling strength [cm⁻¹]
+        "J_cm": 300,  # Coupling strength [cm⁻¹]
         # time parameters
         "tau_coh": float(tau_coh),
-        "T_wait": 0.0,
+        "t_wait": 0.0,
         "t_det_max": t_det_max,
         "dt": dt,
-
         "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,  # Pulse FWHM for single atom [fs]
         "E0": 0.005,
         "pulse_type": "gaussian",
@@ -85,27 +93,40 @@ def run_single_tau(tau_coh: float, t_det_max: float, dt: float):
 
     start_time = time.time()
     max_workers = get_max_workers()
-    print_simulation_header(config, max_workers)
+    print_simulation_header(info_config, max_workers)
 
-    system = create_system_parameters(config)
+    system = create_system_parameters(info_config)
     system.summary()
 
-    t_det, data = run_1d_simulation(config, system, max_workers)
-    rel_path = save_simulation_data(system, config, data, axs1=t_det)
+    t_det, data = run_1d_simulation(info_config, system, max_workers)
+    abs_path = Path(generate_unique_data_filename(system, info_config))
+    data_path = Path(f"{abs_path}_data.npz")
+    print(f"\nSaving data to: {data_path}")
+    save_data_file(data_path, data, t_det)
+    if save_info:
+        info_path = Path(f"{abs_path}_info.pkl")
+        save_info_file(info_path, system, info_config)
     elapsed = time.time() - start_time
-    print_simulation_summary(elapsed, data, rel_path, "1d")
 
+    rel_path = abs_path.relative_to(DATA_DIR)
+    print_simulation_summary(
+        elapsed, data, rel_path, "1d"
+    )  # Print the paths for feed-forward to plotting script
+    # For shell scripts, we need absolute paths for file existence checks
+
+    print(f"{'='*60}")
+    print(f"\n🎯 To plot this data, run:")
+    print(f'python plot_datas.py --rel_path "{rel_path}"')
+    print(f"{'='*60}")
 
 def main():
     parser = argparse.ArgumentParser(description="Run 1D spectroscopy.")
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group(required=False)
     group.add_argument("--tau_coh", type=float, help="Single tau_coh value (fs)")
     group.add_argument("--batch_idx", type=int, help="Batch index for tau_coh sweep")
 
     parser.add_argument("--n_batches", type=int, default=1, help="Number of batches")
-
-    # additional arguments
     parser.add_argument(
         "--t_det_max", type=float, default=600.0, help="Detection time window (fs)"
     )
@@ -113,11 +134,16 @@ def main():
 
     args = parser.parse_args()
 
+    # =============================
+    # Robust argument handling
+    # =============================
     if args.tau_coh is not None:
-        run_single_tau(args.tau_coh, args.t_det_max, args.dt)
+        run_single_tau(args.tau_coh, args.t_det_max, args.dt, save_info=True)
 
     elif args.batch_idx is not None:
-        tau_coh_vals = np.linspace(0, args.t_det_max, int((args.t_det_max - 0) / args.dt) + 1)
+        tau_coh_vals = np.linspace(
+            0, args.t_det_max, int((args.t_det_max - 0) / args.dt) + 1
+        )
         subarrays = np.array_split(tau_coh_vals, args.n_batches)
         tau_subarray = subarrays[args.batch_idx]
 
@@ -125,7 +151,15 @@ def main():
             f"🎯 Running batch {args.batch_idx + 1}/{args.n_batches} with {len(tau_subarray)} tau_coh values..."
         )
         for tau_coh in tau_subarray:
-            run_single_tau(tau_coh, args.t_det_max, args.dt)
+            save_info = tau_coh == 0
+            run_single_tau(tau_coh, args.t_det_max, args.dt, save_info=save_info)
+
+    else:
+        # Default: run a standard single tau_coh simulation
+        print(
+            "No arguments specified. Running default single tau_coh simulation with tau_coh=0.0 fs."
+        )
+        run_single_tau(0.0, args.t_det_max, args.dt, save_info=True)
 
 
 if __name__ == "__main__":

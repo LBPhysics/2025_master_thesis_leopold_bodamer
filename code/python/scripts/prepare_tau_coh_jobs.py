@@ -2,8 +2,8 @@ from pathlib import Path
 # for f in batch_*.slurm; do sbatch "$f"; done
 
 TOTAL_BATCHES = 10  # You can increase/decrease this
-T_DET_MAX = 600.0  # Maximum detection time in fs
-DT = 1  # Spacing between tau_coh, and of also t_det values in fs
+T_DET_MAX = 20.0  # Maximum detection time in fs
+DT = 0.1  # Spacing between tau_coh, and of also t_det values in fs
 
 def create_batch_script(batch_idx, total_batches, job_dir, t_det_max=600, dt=10):
     """Create a batch script for SLURM to run a specific batch of calculations."""
@@ -38,7 +38,7 @@ def main():
     # =============================
     # Ensure job_dir is unique by appending a timestamp if it exists
     # =============================
-    base_job_dir = Path(f"jobs_tau_{TOTAL_BATCHES}_batches")
+    base_job_dir = Path(f"t_det_max{T_DET_MAX:.0f}_dt{DT}_with_{TOTAL_BATCHES}_batches")
     job_dir = base_job_dir
     log_dir = job_dir / "logs"
     job_dir.mkdir(parents=True, exist_ok=False)
