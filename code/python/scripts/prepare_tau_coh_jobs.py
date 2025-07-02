@@ -2,8 +2,8 @@ from pathlib import Path
 from qspectro2d.config import SCRIPTS_DIR
 # for f in batch_*.slurm; do sbatch "$f"; done
 
-TOTAL_BATCHES = 10  # You can increase/decrease this
-T_DET_MAX = 10.0  # Maximum detection time in fs
+TOTAL_BATCHES = 100  # You can increase/decrease this
+T_DET_MAX = 600.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between tau_coh, and of also t_det values in fs
 
 def create_batch_script(batch_idx, total_batches, job_dir, t_det_max=600, dt=10):

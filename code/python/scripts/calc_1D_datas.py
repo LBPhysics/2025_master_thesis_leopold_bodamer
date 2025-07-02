@@ -60,12 +60,12 @@ from qspectro2d.data import (
     generate_unique_data_filename,
 )
 
-N_ATOMS = 1  # Number of atoms in the system, can be changed to 1 or 2
+N_ATOMS = 2  # Number of atoms in the system, can be changed to 1 or 2
 
 
-def run_single_tau(
+def run_single_tau( # todo let t_wait be a parameter
     tau_coh: float, t_det_max: float, dt: float, save_info: bool = False
-):
+) -> Path:
     print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
 
     info_config = {
@@ -96,28 +96,33 @@ def run_single_tau(
     print_simulation_header(info_config, max_workers)
 
     system = create_system_parameters(info_config)
-    system.summary()
 
     t_det, data = run_1d_simulation(info_config, system, max_workers)
     abs_path = Path(generate_unique_data_filename(system, info_config))
     data_path = Path(f"{abs_path}_data.npz")
     print(f"\nSaving data to: {data_path}")
     save_data_file(data_path, data, t_det)
+
+    rel_path = abs_path.relative_to(DATA_DIR)
+
     if save_info:
         info_path = Path(f"{abs_path}_info.pkl")
         save_info_file(info_path, system, info_config)
-    elapsed = time.time() - start_time
 
-    rel_path = abs_path.relative_to(DATA_DIR)
-    print_simulation_summary(
-        elapsed, data, rel_path, "1d"
-    )  # Print the paths for feed-forward to plotting script
-    # For shell scripts, we need absolute paths for file existence checks
+        elapsed = time.time() - start_time
 
-    print(f"{'='*60}")
-    print(f"\n🎯 To plot this data, run:")
-    print(f'python plot_datas.py --rel_path "{rel_path}"')
-    print(f"{'='*60}")
+        print_simulation_summary(
+            elapsed, data, rel_path, "1d"
+        )  # Print the paths for feed-forward to plotting script
+
+        print(f"{'='*60}")
+        print(f"\n🎯 To plot this data, run:")
+        print(f'python plot_datas.py --rel_path "{rel_path}"')
+        print(f"{'='*60}")
+
+        # For shell scripts, we need absolute paths for file existence checks
+
+    return rel_path.parent
 
 def main():
     parser = argparse.ArgumentParser(description="Run 1D spectroscopy.")
@@ -138,7 +143,7 @@ def main():
     # Robust argument handling
     # =============================
     if args.tau_coh is not None:
-        run_single_tau(args.tau_coh, args.t_det_max, args.dt, save_info=True)
+        rel_dir = run_single_tau(args.tau_coh, args.t_det_max, args.dt, save_info=True)
 
     elif args.batch_idx is not None:
         tau_coh_vals = np.linspace(
@@ -152,14 +157,18 @@ def main():
         )
         for tau_coh in tau_subarray:
             save_info = tau_coh == 0
-            run_single_tau(tau_coh, args.t_det_max, args.dt, save_info=save_info)
+            rel_dir = run_single_tau(tau_coh, args.t_det_max, args.dt, save_info=save_info)
+
+        print(f"\n🎯 To stack this data, run:")
+        print(f'python stack_tau_coh_to_2d.py --rel_path "{rel_dir}"')
+
 
     else:
         # Default: run a standard single tau_coh simulation
         print(
             "No arguments specified. Running default single tau_coh simulation with tau_coh=0.0 fs."
         )
-        run_single_tau(0.0, args.t_det_max, args.dt, save_info=True)
+        rel_dir = run_single_tau(0.0, args.t_det_max, args.dt, save_info=True)
 
 
 if __name__ == "__main__":

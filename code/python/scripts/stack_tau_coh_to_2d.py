@@ -12,7 +12,7 @@ import numpy as np
 import sys
 
 
-def main(): # TODO also want to seperate info & data loading function
+def main():
     # =============================
     # Set base directory as a parameter
     # =============================
@@ -28,6 +28,8 @@ def main(): # TODO also want to seperate info & data loading function
     rel_path = args.rel_path
 
     print("\n🔍 Scanning available files:")
+    print(f"   Base directory: {rel_path}")
+    print(f"   Full path: {DATA_DIR / rel_path}")
     files_info = list_available_data_files(Path(DATA_DIR / rel_path))
 
     # Collect rel_paths from info keys (strip _data.npz for rel_path compatibility)
@@ -74,7 +76,7 @@ def main(): # TODO also want to seperate info & data loading function
     stacked_data = np.stack(all_data, axis=0)
     tau_vals = np.array(all_tau)
 
-    abs_info_path = DATA_DIR / (str(path) + "_info.pkl")
+    abs_info_path = DATA_DIR / (str(path) + "_info.pkl") # 
     info_dict = load_info_file(abs_info_path)
     system = info_dict["system"]
     info_config = info_dict["info_config"]

@@ -61,6 +61,10 @@ def load_info_file(abs_info_path: Path) -> dict:
         dict: Dictionary containing system parameters and data configuration
     """
     try:
+        # if abs_info_path is not a file, use the first file with pattern *.pkl within the same directory with the same stem
+        
+        if not abs_info_path.is_file():
+            abs_info_path = next(abs_info_path.parent.glob(f"{abs_info_path.stem}*.pkl"), None)
         with open(abs_info_path, "rb") as info_file:
             info = pickle.load(info_file)
         print(f"✅ Loaded info from: {abs_info_path}")
@@ -126,6 +130,8 @@ def load_latest_data_from_directory(base_dir: str) -> dict:
     # =============================
     abs_base_dir = DATA_DIR / base_dir
 
+    if not abs_base_dir.is_dir():
+        abs_base_dir = abs_base_dir.parent
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 
@@ -173,7 +179,10 @@ def list_available_data_files(base_dir: Path) -> Dict[str, dict]:
     # Convert to absolute path and validate
     # =============================
     abs_base_dir = DATA_DIR / base_dir
-
+    print(f"📋 Listing data files in: {abs_base_dir}")
+    if not abs_base_dir.is_dir():
+        print(f"⚠️  {abs_base_dir} is not a directory, checking parent directory.")
+        abs_base_dir = abs_base_dir.parent
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 

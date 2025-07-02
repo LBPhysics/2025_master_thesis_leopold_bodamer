@@ -35,7 +35,7 @@ def main():
     plot_config = {
             "plot_time_domain": True,
             "plot_frequency_domain": True,
-            "extend_for": (1, 5),
+            "extend_for": (1, 50),
             "spectral_components_to_plot": ["abs", "real", "imag"],
             #"section": (1.5, 1.7, 1.5, 1.7),
         }
