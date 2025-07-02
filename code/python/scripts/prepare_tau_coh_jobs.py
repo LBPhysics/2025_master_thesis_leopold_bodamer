@@ -1,8 +1,9 @@
 from pathlib import Path
+# for f in batch_*.slurm; do sbatch "$f"; done
 
 TOTAL_BATCHES = 10  # You can increase/decrease this
 T_DET_MAX = 600.0  # Maximum detection time in fs
-DT = 0.1  # Spacing between tau_coh, and of also t_det values in fs
+DT = 1  # Spacing between tau_coh, and of also t_det values in fs
 
 def create_batch_script(batch_idx, total_batches, job_dir, t_det_max=600, dt=10):
     """Create a batch script for SLURM to run a specific batch of calculations."""
@@ -17,7 +18,7 @@ def create_batch_script(batch_idx, total_batches, job_dir, t_det_max=600, dt=10)
 
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=10G # this should be more than enough
-#SBATCH --time=0-5 # 5 hours
+#SBATCH --time=0-6 # 6 hours
 
 source /home/lbodamer/miniconda3/etc/profile.d/conda.sh
 conda activate master_env
@@ -37,12 +38,8 @@ def main():
     # =============================
     # Ensure job_dir is unique by appending a timestamp if it exists
     # =============================
-    base_job_dir = Path("jobs_tau_batches")
-    job_dir      = base_job_dir
-    count        = 1
-    while job_dir.exists():
-        job_dir = Path(f"{base_job_dir}_{count}")
-        count  += 1
+    base_job_dir = Path(f"jobs_tau_{TOTAL_BATCHES}_batches")
+    job_dir = base_job_dir
     log_dir = job_dir / "logs"
     job_dir.mkdir(parents=True, exist_ok=False)
     log_dir.mkdir(parents=True, exist_ok=False)
