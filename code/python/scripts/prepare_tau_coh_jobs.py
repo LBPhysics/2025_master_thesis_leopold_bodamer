@@ -1,8 +1,9 @@
 from pathlib import Path
+from qspectro2d.config import SCRIPTS_DIR
 # for f in batch_*.slurm; do sbatch "$f"; done
 
 TOTAL_BATCHES = 10  # You can increase/decrease this
-T_DET_MAX = 20.0  # Maximum detection time in fs
+T_DET_MAX = 10.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between tau_coh, and of also t_det values in fs
 
 def create_batch_script(batch_idx, total_batches, job_dir, t_det_max=600, dt=10):
@@ -38,7 +39,11 @@ def main():
     # =============================
     # Ensure job_dir is unique by appending a timestamp if it exists
     # =============================
-    base_job_dir = Path(f"t_det_max{T_DET_MAX:.0f}_dt{DT}_with_{TOTAL_BATCHES}_batches")
+    base_job_dir = Path(SCRIPTS_DIR / f"jobs_t_det_max{T_DET_MAX:.0f}_dt{DT}_{TOTAL_BATCHES}_b")
+    # if it already exists, skip the creation
+    if base_job_dir.exists():
+        print(f"Job directory {base_job_dir} already exists. Skipping creation.")
+        return
     job_dir = base_job_dir
     log_dir = job_dir / "logs"
     job_dir.mkdir(parents=True, exist_ok=False)
