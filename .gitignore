@@ -143,6 +143,7 @@ dmypy.json
 
 # Data files
 data/
+/code/python/scripts/not_needed_scripts
 # Results and output directories
 
 # Temporary files
