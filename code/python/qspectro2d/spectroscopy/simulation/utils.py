@@ -68,9 +68,9 @@ def create_system_parameters(info_config: dict) -> SystemParameters:
         pulse_fwhm=info_config.get("pulse_fwhm", 15),
         omega_laser_cm=info_config.get("omega_laser_cm", 16000),
         Delta_cm=info_config.get("Delta_cm", 0),
-        #omega_A_cm=info_config.get("omega_A_cm", 16000),
+        # omega_A_cm=info_config.get("omega_A_cm", 16000),
         mu_A=info_config.get("mu_A", 1),
-        #omega_B_cm=info_config.get("omega_B_cm", 16000),
+        # omega_B_cm=info_config.get("omega_B_cm", 16000),
         mu_B=info_config.get("mu_B", 1),
         J_cm=info_config.get("J_cm", 0),
         gamma_0=info_config.get("gamma_0", 1 / 300),
@@ -90,14 +90,14 @@ def print_simulation_header(info_config: dict, max_workers: int):
     print("=" * 60)
     print(f"Configuration:")
     print(
-        f"  Parameters: #phases={info_config['n_phases']}, #frequencies={info_config['n_freqs']}"
+        f"  Parameters:\t#phases={info_config['n_phases']}, #frequencies={info_config['n_freqs']}"
     )
     print(
-        f"  Times: t_det_max={info_config['t_det_max']} fs, dt={info_config['dt']} fs"
+        f"  Times:\tt_det_max={info_config['t_det_max']} fs, dt={info_config['dt']} fs"
     )
     if simulation_type == "1d":
-        print(f"  Times: τ_coh={info_config['tau_coh']} fs")
-    print(f"  Waiting time: {info_config['t_wait']} fs")
+        print(f"\t\tτ_coh={info_config['tau_coh']} fs")
+    print(f"\t\tT_wait: {info_config['t_wait']} fs")
     print(
         f"  Total combinations: {info_config['n_phases'] * info_config['n_phases'] * info_config['n_freqs']}"
     )

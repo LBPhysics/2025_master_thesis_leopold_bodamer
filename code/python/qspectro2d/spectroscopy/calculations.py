@@ -8,12 +8,13 @@ import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import List, Union, Tuple
 import logging
+from tqdm import tqdm
 
 # =============================
 # THIRD-PARTY IMPORTS
 # =============================
 import numpy as np
-from qutip import Qobj, Result, liouvillian, mesolve, brmesolve, expect
+from qutip import Qobj, Result, liouvillian, mesolve, brmesolve, ket2dm
 from qutip.core import QobjEvo
 
 # =============================
@@ -99,7 +100,7 @@ def _validate_system_state(system: SystemParameters) -> None:
 # POLARIZATION CALCULATIONS
 # =============================
 def complex_polarization(
-    system: SystemParameters, state: Union[Qobj, List[Qobj]]
+    dip_op: Qobj, state: Union[Qobj, List[Qobj]]
 ) -> Union[complex, np.ndarray]:
     """
     Calculate the complex polarization for state(s) using the dipole operator.
@@ -108,8 +109,8 @@ def complex_polarization(
 
     Parameters
     ----------
-    system : SystemParameters
-        System parameters containing dipole operator information.
+    dip_op : Qobj
+        Dipole operator for the system
     state : Union[Qobj, List[Qobj]]
         A single quantum state/density matrix or list of states.
 
@@ -126,29 +127,29 @@ def complex_polarization(
 
     Examples
     --------
-    >>> pol = complex_polarization(system, rho)  # Single density matrix
-    >>> pols = complex_polarization(system, [rho1, rho2])  # Multiple states
+    >>> pol = complex_polarization(dip_op, rho)  # Single density matrix
+    >>> pols = complex_polarization(dip_op, [rho1, rho2])  # Multiple states
     """
     if isinstance(state, Qobj):
-        return _single_qobj_polarization(system, state)
+        return _single_qobj_polarization(dip_op, state)
 
     if isinstance(state, list):
         return np.array(
-            [_single_qobj_polarization(system, s) for s in state],
+            [_single_qobj_polarization(dip_op, s) for s in state],
             dtype=np.complex128,  # Use higher precision
         )
 
     raise TypeError(f"State must be a Qobj or list of Qobj, got {type(state)}")
 
 
-def _single_qobj_polarization(system: SystemParameters, state: Qobj) -> complex:
+def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
     """
     Calculate polarization for a single quantum state or density matrix.
 
     Parameters
     ----------
-    system : SystemParameters
-        System parameters containing dipole operator.
+    dip_op : Qobj
+        Dipole operator
     state : Qobj
         Quantum state (ket) or density matrix.
 
@@ -161,47 +162,22 @@ def _single_qobj_polarization(system: SystemParameters, state: Qobj) -> complex:
     ------
     TypeError
         If state is not a ket or density matrix.
-    ValueError
-        If number of atoms is not supported.
     """
     if not (state.isket or state.isoper):
         raise TypeError("State must be a ket or density matrix")
 
-    dip_op = system.Dip_op
-    n_atoms = system.N_atoms
-
-    # Dispatch to specialized methods for better performance
-    if n_atoms == 1:
-        return _single_atom_polarization(dip_op, state)
-    elif n_atoms == 2:
-        return _two_atom_polarization(dip_op, state)
-    else:
-        return _multi_atom_polarization(dip_op, state)
-
-
-def _single_atom_polarization(dip_op: Qobj, state: Qobj) -> complex:
-    """Calculate polarization for single atom system."""
-    return dip_op[1, 0] * state[0, 1]
-
-
-def _two_atom_polarization(dip_op: Qobj, state: Qobj) -> complex:
-    """Calculate polarization for two-atom system."""
-    return (
-        dip_op[1, 0] * state[0, 1]
-        + dip_op[2, 0] * state[0, 2]
-        + dip_op[3, 1] * state[1, 3]
-        + dip_op[3, 2] * state[2, 3]
-    )
-
-
-def _multi_atom_polarization(dip_op: Qobj, state: Qobj) -> complex:
-    """Calculate polarization for multi-atom system (N > 2)."""
+    # General approach that works for any system size
     polarization = 0j
-    dim = state.shape[0]
 
-    for i in range(dim):
-        for j in range(dim):
-            if i != j and abs(dip_op[i, j]) > 0:  # Fixed: use 0 not IFT_TOLERANCE
+    if state.isket:
+        # Convert ket to density matrix for consistent handling
+        state = ket2dm(state)
+
+    # For any system size, calculate polarization as sum of off-diagonal elements
+    # This works for any number of atoms without needing special cases TODO BUT NOT IN SINGLE EXCITATION SUBSPACE?
+    for i in range(dip_op.shape[0]):
+        for j in range(i):
+            if i != j and abs(dip_op[i, j]) != 0:
                 polarization += dip_op[i, j] * state[j, i]
 
     return polarization
@@ -792,10 +768,11 @@ def _calculate_all_polarizations(
     }
 
     # Calculate polarizations
+    Dip_op = system.Dip_op
     polarizations = {}
     for key, states in valid_states.items():
         P_array = np.zeros(len(times), dtype=np.complex64)
-        P_values = complex_polarization(system, states)
+        P_values = complex_polarization(Dip_op, states)
 
         # Handle scalar vs array results
         if np.isscalar(P_values):
@@ -818,9 +795,6 @@ def _extract_detection_data(
     system: SystemParameters,
 ) -> dict:
     """Extract and process detection time data."""
-    # =============================
-    # DEBUG PRINTS FOR ARRAY LENGTHS
-    # =============================
     final_data = evolution_data["final_data"]
     detection_start_idx = np.abs(final_data.times - detection_time).argmin()
     actual_det_times = final_data.times[detection_start_idx:]
@@ -1002,7 +976,7 @@ def parallel_compute_1d_E_with_inhomogenity(
         if N_atoms == 1:
             new_freqs = freq_samples[omega_idx]
         elif N_atoms == 2:
-            new_freqs = (freq_samples[0][omega_idx], freq_samples[1][omega_idx])
+            new_freqs = (freq_samples[omega_idx], freq_samples[n_freqs + omega_idx])
 
         for phi1_idx, phi1 in enumerate(phases):
             for phi2_idx, phi2 in enumerate(phases):
@@ -1209,7 +1183,7 @@ def parallel_compute_2d_E_with_inhomogenity(
             for omega_idx, tau_coh_idx, phi1_idx, phi2_idx, sys_copy, phi1, phi2, tau_coh in combinations
         }
 
-        for future in as_completed(futures):
+        for future in tqdm(as_completed(futures), total=len(futures)):
             omega_idx, tau_idx, phi1_idx, phi2_idx = futures[future]
             try:
                 t_det_vals, data = future.result()
@@ -1346,6 +1320,24 @@ def extract_ift_signal_component(
     signal /= n_phases * n_phases
 
     return signal
+
+
+def _configure_solver_options(solver_options: dict) -> dict:
+    """Configure solver options with defaults."""
+    options = solver_options.copy() if solver_options else {}
+
+    # Update options with defaults only if not already set
+    for key, value in DEFAULT_SOLVER_OPTIONS.items():
+        options.setdefault(key, value)
+
+    return options
+
+
+def _configure_paper_equations_solver(system: SystemParameters) -> None:
+    """Configure system for paper equations solver."""
+    if not system.RWA_laser:
+        logger.info("Paper equations require RWA - enabling RWA_laser")
+        system.RWA_laser = True
 
 
 def _configure_solver_options(solver_options: dict) -> dict:

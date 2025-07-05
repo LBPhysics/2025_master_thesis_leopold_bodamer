@@ -1,3 +1,4 @@
+% !TEX root = ../main.tex
 \chapter{Numerical Implementation of Two-Dimensional Electronic Spectroscopy}
 \label{chap:numerical_implementation}
 
@@ -11,12 +12,12 @@ This chapter presents the computational framework developed for simulating two-d
 The simulation framework follows a modular structure that separates quantum mechanical evolution from spectroscopic data processing. The general workflow consists of:
 
 \begin{enumerate}
-	\item Definition of quantum system parameters (energy levels, dipole moments, coupling strengths)
-	\item Generation of pulse sequences with specific time delays and phases
-	\item Evolution of the density matrix under pulse influences and environmental coupling
-	\item Calculation of the system's polarization response
-	\item Processing of time-domain data to obtain frequency-domain 2D spectra
-	\item Averaging over inhomogeneous distributions and phase cycling
+    \item Definition of quantum system parameters (energy levels, dipole moments, coupling strengths)
+    \item Generation of pulse sequences with specific time delays and phases
+    \item Evolution of the density matrix under pulse influences and environmental coupling
+    \item Calculation of the system's polarization response
+    \item Processing of time-domain data to obtain frequency-domain 2D spectra
+    \item Averaging over inhomogeneous distributions and phase cycling
 \end{enumerate}
 
 \noindent
@@ -29,17 +30,17 @@ This modular approach enables systematic investigation of different physical par
 The core calculation computes the third-order polarization response by iterating through coherence times ($\tau_{\text{coh}}$) and detection times ($t_{\text{det}}$) for a given waiting time ($T_{\text{wait}}$):
 
 \begin{equation}
-	\label{eq:polarization_third_order}
-	P^{(3)}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}}) = \Tr[\hat{\mu} \cdot \hat{\rho}^{(3)}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}})]
+    \label{eq:polarization_third_order}
+    P^{(3)}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}}) = \Tr[\hat{\mu} \cdot \hat{\rho}^{(3)}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}})]
 \end{equation}
 
 \noindent
 where $\hat{\mu}$ is the dipole operator and $\hat{\rho}^{(3)}$ is the third-order density matrix. This calculation implements the three-pulse sequence through sequential evolution steps:
 
 \begin{enumerate}
-	\item Apply the first pulse with phase $\phi_0$ and evolve for coherence time $\tau_{\text{coh}}$
-	\item Apply the second pulse with phase $\phi_1$ and evolve for waiting time $T_{\text{wait}}$
-	\item Apply the third pulse with phase $\phi_2$ and measure response during detection time $t_{\text{det}}$
+    \item Apply the first pulse with phase $\phi_0$ and evolve for coherence time $\tau_{\text{coh}}$
+    \item Apply the second pulse with phase $\phi_1$ and evolve for waiting time $T_{\text{wait}}$
+    \item Apply the third pulse with phase $\phi_2$ and measure response during detection time $t_{\text{det}}$
 \end{enumerate}
 
 \noindent
@@ -52,8 +53,8 @@ The temporal evolution utilizes either custom equations derived from literature 
 To accurately model molecular systems, the simulation accounts for inhomogeneous broadening by averaging over a distribution of transition frequencies. The distribution follows a Gaussian profile:
 
 \begin{equation}
-	\label{eq:gaussian_distribution}
-	\sigma(E - E_0) = \frac{1}{\sigma_{\text{val}}\sqrt{2\pi}} \exp\left(-\frac{(E-E_0)^2}{2\sigma_{\text{val}}^2}\right)
+    \label{eq:gaussian_distribution}
+    \sigma(E - E_0) = \frac{1}{\sigma_{\text{val}}\sqrt{2\pi}} \exp\left(-\frac{(E-E_0)^2}{2\sigma_{\text{val}}^2}\right)
 \end{equation}
 
 \noindent
@@ -63,10 +64,10 @@ where $\sigma_{\text{val}} = \Delta/(2\sqrt{2\ln{2}})$ relates the standard devi
 The sampling from this distribution employs a rejection sampling algorithm that ensures accurate representation of the broadening profile while maintaining computational efficiency. The algorithm operates by:
 
 \begin{enumerate}
-	\item Defining the sampling range $[E_{\text{min}}, E_{\text{max}}] = [E_0 - E_{\text{range}} \cdot \Delta, E_0 + E_{\text{range}} \cdot \Delta]$
-	\item Computing the maximum value $\sigma_{\text{max}}$ of $\sigma(E)$ in the range
-	\item Generating candidate values uniformly and accepting them based on the probability density
-	\item Repeating until the desired number of samples is obtained
+    \item Defining the sampling range $[E_{\text{min}}, E_{\text{max}}] = [E_0 - E_{\text{range}} \cdot \Delta, E_0 + E_{\text{range}} \cdot \Delta]$
+    \item Computing the maximum value $\sigma_{\text{max}}$ of $\sigma(E)$ in the range
+    \item Generating candidate values uniformly and accepting them based on the probability density
+    \item Repeating until the desired number of samples is obtained
 \end{enumerate}
 
 \section{Parallel Processing of Parameter Combinations}
@@ -76,8 +77,8 @@ The sampling from this distribution employs a rejection sampling algorithm that 
 The computationally intensive nature of 2DES simulations, particularly when averaging over frequency samples and phase combinations, necessitates efficient parallel processing. The averaged response is calculated as:
 
 \begin{equation}
-	\label{eq:averaged_response}
-	\langle P^{(3)}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}}) \rangle = \frac{1}{N_\omega N_\phi} \sum_{i=1}^{N_\omega} \sum_{j=1}^{N_\phi} P^{(3)}_{\omega_i, \phi_j}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}})
+    \label{eq:averaged_response}
+    \langle P^{(3)}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}}) \rangle = \frac{1}{N_\omega N_\phi} \sum_{i=1}^{N_\omega} \sum_{j=1}^{N_\phi} P^{(3)}_{\omega_i, \phi_j}(\tau_{\text{coh}}, T_{\text{wait}}, t_{\text{det}})
 \end{equation}
 
 \noindent
@@ -86,28 +87,27 @@ where $N_\omega$ represents the number of frequency samples and $N_\phi$ the num
 \section{Fourier Transformation and Spectral Analysis}
 \label{sec:fourier_transformation}
 
-\noindent
 The conversion from time-domain to frequency-domain spectra utilizes two-dimensional Fourier transformation:
 
 \begin{equation}
-	\label{eq:2d_fourier_transform}
-	S(\omega_\tau, \omega_t) = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} P^{(3)}(\tau, T, t) e^{-i\omega_\tau \tau} e^{-i\omega_t t} \, d\tau \, dt
+    \label{eq:2d_fourier_transform}
+    S(\omega_\tau, \omega_t) = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} P^{(3)}(\tau, T, t) e^{-i\omega_\tau \tau} e^{-i\omega_t t} \, d\tau \, dt
 \end{equation}
 
 \noindent
 In the discrete implementation, this becomes a Fast Fourier Transform (FFT) operation:
 
 \begin{equation}
-	\label{eq:discrete_2d_fft}
-	S[k,l] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} P^{(3)}[m,n] \exp\left(-i\frac{2\pi km}{M}\right) \exp\left(-i\frac{2\pi ln}{N}\right)
+    \label{eq:discrete_2d_fft}
+    S[k,l] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} P^{(3)}[m,n] \exp\left(-i\frac{2\pi km}{M}\right) \exp\left(-i\frac{2\pi ln}{N}\right)
 \end{equation}
 
 \noindent
 The frequency axes are converted to wavenumber units ($10^4$ cm$^{-1}$) using:
 
 \begin{equation}
-	\label{eq:frequency_to_wavenumber}
-	\nu = \frac{f}{c} \times 10^4 \text{ cm}^{-1}
+    \label{eq:frequency_to_wavenumber}
+    \nu = \frac{f}{c} \times 10^4 \text{ cm}^{-1}
 \end{equation}
 
 \noindent
@@ -120,18 +120,18 @@ where $f$ is the frequency in cycles/fs and $c = 2.998 \times 10^{-5}$ cm/fs is 
 The 2D spectra visualization system represents different aspects of the complex-valued data:
 
 \begin{itemize}
-	\item Real part: Absorptive component containing peak positions
-	\item Imaginary part: Dispersive component providing line shape information
-	\item Absolute value: Overall signal strength
-	\item Phase: Phase relationship between excitation and detection processes
+    \item Real part: Absorptive component containing peak positions
+    \item Imaginary part: Dispersive component providing line shape information
+    \item Absolute value: Overall signal strength
+    \item Phase: Phase relationship between excitation and detection processes
 \end{itemize}
 
 \noindent
 For data containing both positive and negative values, a custom white-centered colormap enhances visualization of signal features. The normalization scheme:
 
 \begin{equation}
-	\label{eq:data_normalization}
-	\text{data}_{\text{normalized}} = \frac{\text{data}}{\max(|\text{data}|)}
+    \label{eq:data_normalization}
+    \text{data}_{\text{normalized}} = \frac{\text{data}}{\max(|\text{data}|)}
 \end{equation}
 
 \noindent
@@ -144,18 +144,18 @@ ensures consistent visualization across different parameter sets while preservin
 To improve Fourier transform resolution and reduce artifacts from finite sampling, the implementation supports zero-padding of time-domain data:
 
 \begin{equation}
-	\label{eq:zero_padding_matrix}
-	\text{data}_{\text{extended}} = \begin{bmatrix}
-		0 & \cdots & 0 & \text{data} & 0 & \cdots & 0
-	\end{bmatrix}
+    \label{eq:zero_padding_matrix}
+    \text{data}_{\text{extended}} = \begin{bmatrix}
+        0 & \cdots & 0 & \text{data} & 0 & \cdots & 0
+    \end{bmatrix}
 \end{equation}
 
 \noindent
 The corresponding time axes extend proportionally:
 
 \begin{equation}
-	\label{eq:extended_time_axis}
-	t_{\text{extended}} = \{t_0 - n_{\text{pre}} \Delta t, \ldots, t_0, \ldots, t_N, \ldots, t_N + n_{\text{post}} \Delta t\}
+    \label{eq:extended_time_axis}
+    t_{\text{extended}} = \{t_0 - n_{\text{pre}} \Delta t, \ldots, t_0, \ldots, t_N, \ldots, t_N + n_{\text{post}} \Delta t\}
 \end{equation}
 
 \noindent
@@ -168,16 +168,16 @@ where $n_{\text{pre}}$ and $n_{\text{post}}$ represent the number of zero-padded
 For studies of temporal evolution in coherence phenomena, the simulation supports scanning over multiple waiting times. The local time and frequency data are mapped to global axes through:
 
 \begin{equation}
-	\label{eq:global_mapping_corrected}
-	\text{global\_data}[\text{idx}_\tau, \text{idx}_t] += \text{local\_data}[\text{local\_idx}_\tau, \text{local\_idx}_t]
+    \label{eq:global_mapping_corrected}
+    \text{global\_data}[\text{idx}_\tau, \text{idx}_t] += \text{local\_data}[\text{local\_idx}_\tau, \text{local\_idx}_t]
 \end{equation}
 
 \noindent
 where $\text{idx}_\tau$ and $\text{idx}_t$ represent indices in the global arrays corresponding to local values of $\tau_{\text{coh}}$ and $t_{\text{det}}$. The global data normalization:
 
 \begin{equation}
-	\label{eq:global_normalization}
-	\text{global\_data}_{\text{normalized}} = \frac{\text{global\_data}}{N_{T_{\text{wait}}}}
+    \label{eq:global_normalization}
+    \text{global\_data}_{\text{normalized}} = \frac{\text{global\_data}}{N_{T_{\text{wait}}}}
 \end{equation}
 
 \noindent
@@ -190,10 +190,10 @@ produces the average spectrum over all waiting times, enabling analysis of relax
 The numerical implementation directly implements the theoretical concepts established in previous chapters:
 
 \begin{itemize}
-	\item Quantum system evolution follows the Redfield master equation for open quantum systems (Chapter~\ref{Chapter:Derivation_Redfield_Equation})
-	\item Polarization calculations implement the nonperturbative approach for 2DES theory
-	\item Spectral analysis methods extract signatures of quantum coherence in biological systems
-	\item Environmental coupling effects are incorporated through systematic parameter studies
+    \item Quantum system evolution follows the Redfield master equation for open quantum systems (Chapter~\ref{Chapter:Derivation_Redfield_Equation})
+    \item Polarization calculations implement the nonperturbative approach for 2DES theory
+    \item Spectral analysis methods extract signatures of quantum coherence in biological systems
+    \item Environmental coupling effects are incorporated through systematic parameter studies
 \end{itemize}
 
 \noindent
@@ -209,10 +209,10 @@ The implementation includes validation procedures comparing simulation results a
 Special considerations for biological systems include:
 
 \begin{enumerate}
-	\item Larger inhomogeneous broadening due to complex environments
-	\item Faster dephasing from environmental coupling
-	\item Multiple chromophore contributions to the signal
-	\item Energy transfer processes on various timescales
+    \item Larger inhomogeneous broadening due to complex environments
+    \item Faster dephasing from environmental coupling
+    \item Multiple chromophore contributions to the signal
+    \item Energy transfer processes on various timescales
 \end{enumerate}
 
 \noindent

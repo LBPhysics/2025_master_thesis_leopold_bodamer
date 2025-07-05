@@ -1,7 +1,7 @@
+// Master_thesis/.vscode/settings.json
+// These are the PROJECT settings for my master thesis repository.
 {
-    "diffEditor.maxComputationTime": 0, // Disables computation time limits for the diff editor, useful for large diffs
-    "git.autofetch": true, // Automatically fetches changes from the Git repository, keeping your local branch up-to-date
-    "latex-workshop.bibtex-format.sort.enabled": true,
+    // ---- LaTeX Project Configuration ----
     "latex-workshop.latex.recipes": [
         {
             "name": "lualatexmk",
@@ -14,30 +14,33 @@
             "tools": [
                 "latexmk"
             ]
-        },
-        {
-            "name": "pdflatex -> biber -> pdflatex*2", // Add this if you use biber
-            "tools": [
-                "pdflatex",
-                "biber",
-                "pdflatex",
-                "pdflatex"
-            ]
-        },
+        }
     ],
     "latex-workshop.latex.tools": [
+        {
+            "name": "lualatex",
+            "command": "lualatex",
+            "args": [
+                "-shell-escape",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ]
+        },
         {
             "name": "lualatexmk",
             "command": "latexmk",
             "args": [
+                "-pdf",
+                "-lualatex",
+                "-shell-escape",
                 "-synctex=1",
                 "-interaction=nonstopmode",
                 "-file-line-error",
-                "-lualatex",
                 "-outdir=%OUTDIR%",
                 "%DOC%"
-            ],
-            "env": {}
+            ]
         },
         {
             "name": "latexmk",
@@ -49,36 +52,15 @@
                 "-pdf",
                 "-outdir=%OUTDIR%",
                 "%DOC%"
-            ],
-            "env": {}
-        },
-        {
-            "name": "pdflatex",
-            "command": "pdflatex",
-            "args": [
-                "-synctex=1",
-                "-interaction=nonstopmode",
-                "-file-line-error",
-                "%DOC%"
-            ],
-            "env": {}
-        },
-        {
-            "name": "bibtex",
-            "command": "bibtex",
-            "args": [
-                "%DOCFILE%"
-            ],
-            "env": {}
-        },
+            ]
+        }
     ],
+    // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
         "editor.defaultFormatter": "James-Yu.latex-workshop",
         "editor.formatOnSave": true,
         "editor.wordWrap": "bounded",
-        "editor.wordWrapColumn": 80,
-        "editor.tabSize": 4,
-        "editor.insertSpaces": true
+        "editor.wordWrapColumn": 80
     },
     "[bibtex]": {
         "editor.defaultFormatter": "James-Yu.latex-workshop"
@@ -86,11 +68,17 @@
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter"
     },
-    "latex-workshop.latex.autoBuild.run": "onSave", // Automatically compiles the LaTeX document on every save
-    "git.enableSmartCommit": true,
+    // ---- Python Project Configuration ----
+    // Use relative paths so they work on any machine.
+    "python.analysis.extraPaths": [
+        "./code/python",
+        "./code/python/scripts",
+        "./code/python/qspectro2d"
+    ],
+    "python.analysis.diagnosticMode": "workspace",
+    // ---- Hiding Build/Temporary Files from the Explorer ----
+    // This is crucial for keeping the project view clean for everyone.
     "files.exclude": {
-        "": true,
-        ".github": true,
         "**/_minted*": true,
         "**/.DS_Store": true,
         "**/.git": true,
@@ -115,6 +103,7 @@
         "**/*.auxlock": true,
         "**/*.backup": true,
         "**/*.bak": true,
+        "**/*.bak0": true,
         "**/*.bbl": true,
         "**/*.bbl-SAVE-ERROR": true,
         "**/*.bcf": true,
@@ -241,25 +230,10 @@
         "**/*Notes.bib": true,
         "**/acs-*.bib": true,
         "**/auto/*": true,
-        "**/latex.out/": true,
         "**/pythontex-files-*/": true,
         "**/rubber.cache": true,
-        "**/svg-inkscape/": true,
         "**/sympy-plots-for-*.tex/": true,
         "**/Thumbs.db": true,
         "**/TSWLatexianTemp*": true
     },
-    "explorerExclude.backup": {},
-    "python.pythonPath": "C:\\Users\\leopo\\anaconda3\\python.exe",
-    "python.defaultInterpreterPath": "C:\\Users\\leopo\\anaconda3\\python.exe",
-    "python.analysis.extraPaths": [
-        "./code/python",
-        "./code/python/scripts",
-        "./code/python/qspectro2d"
-    ],
-    "python.analysis.autoImportCompletions": true,
-    "python.analysis.autoSearchPaths": true,
-    "python.analysis.diagnosticMode": "workspace",
-    "editor.codeActionsOnSave": {},
-    "editor.dropIntoEditor.preferences": []
 }

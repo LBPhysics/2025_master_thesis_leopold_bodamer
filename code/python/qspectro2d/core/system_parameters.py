@@ -190,6 +190,18 @@ class SystemParameters:
         """
         return value * 2.998 * 2 * np.pi * 10**-5
 
+    def convert_fs_to_cm(self, value):
+        """
+        Convert angular frequency fs^-1 to wavenumber-frequencies cm^-1
+
+        Parameters:
+            value (float): Value in fs^-1
+
+        Returns:
+            float: Value in cm^-1
+        """
+        return value / (2.998 * 2 * np.pi * 10**-5)
+
     def Hamilton_tls(self) -> Qobj:
         """
         Returns:

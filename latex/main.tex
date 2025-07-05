@@ -1,9 +1,6 @@
-%-------------------------------------------------------------------------------
-%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
-%-------------------------------------------------------------------------------
 \documentclass[
 	11pt, english, singlespacing,
-%raft, 				% Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
+%draft, 				% Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
 %nolistspacing, 	% If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
 	liststotoc, 	% Uncomment to add the list of figures/tables/etc to the table of contents
 	toctotoc, 		% Uncomment to add the main table of contents to the table of contents
@@ -14,42 +11,32 @@
 ]{style_thesis}
 
 %-------------------------------------------------------------------------------
-%	PACKAGES
+%   Define the LIBRARY and other packages
 %-------------------------------------------------------------------------------
+% actually import stzle with style=customstyle???? -> not needed
+\usepackage[
+    backend=biber,      % You already have this, it's essential
+    style=phys,         % The biblatex-phys style for physics journals
+    articletitle=true,  % APS style requires article titles
+    biblabel=brackets,  % Puts numbers in brackets, e.g., [1]
+    citestyle=numeric-comp % Compresses citations, e.g., [1, 2, 3] -> [1-3]
+]{biblatex}%\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
+\addbibresource{bib/my_bibliography.bib}
+
+% Added content-related packages and definitions
+\usepackage{graphicx} % Required to include images
+\graphicspath{{../figures/figures_in_development_svg/}}
+\usepackage{amsmath, amssymb, amsfonts} % Math packages
+\usepackage{bbold} % For bold math symbols
+\usepackage{braket} % For quantum mechanics notation
 \usepackage{fontspec} % For loading fonts in LuaLaTeX/XeLaTeX
 %\usepackage{mathpazo} % Use the Palatino font by default, % ONLY WORKS WITH OLD PDFLATEX VERSION? 
-	
-%--------------------------- Define the LIBRARY --------------------------------
-%backend=biber,style=numeric,sorting=none,sortcites=true,style=numeric-comp
-% actually import stzle with style=customstyle????
-\usepackage[backend=biber]{biblatex}
-%\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
-\addbibresource{bib/my_bibliography.bib}
-\addbibresource{bib/spectroscopy_refs.bib}
-%\RequireBibliographyStyle{bib/style_bibiliography.bbx}
-
-%\usepackage[numbers,sort&compress]{natbib}
-%\bibliographystyle{apsrev4-2}
-
-%-------------------------------------------------------------------------------
-
-% Define trace operator
-\newcommand{\Tr}{\mathrm{Tr}}
-\usepackage{braket}
-
-\usepackage[autostyle=true]{csquotes}
-\usepackage{amsmath, amssymb, amsfonts}
-\usepackage{bbold}
-\usepackage{tikz}
-\usepackage[colorinlistoftodos,prependcaption,textsize=small]{todonotes}
-
-% Custom TODO commands with vibrant colors
+\newcommand{\Tr}{\mathrm{Tr}} % Define trace operator
 \newcommand{\todoimp}[1]{\todo[inline,color=red!70]{\textbf{IMPORTANT:} #1}}
 \newcommand{\todoidea}[1]{\todo[inline,color=green!60]{\textbf{IDEA:} #1}}
 \newcommand{\todoeq}[1]{\todo[inline,color=blue!50]{\textbf{EQUATION:} #1}}
 \newcommand{\todoref}[1]{\todo[inline,color=purple!50]{\textbf{REFERENCE:} #1}}
 \newcommand{\todofix}[1]{\todo[inline,color=orange!70]{\textbf{FIX:} #1}}
-
 
 %-------------------------------------------------------------------------------
 %	THESIS INFORMATION
@@ -69,19 +56,17 @@
 \group{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/physik/institute/institut-fuer-theoretische-physik/arbeitsgruppen/ag-lesanovsky/}{Theoretical Atomic Physics and Synthetic Quantum Systems}}
 \faculty{\href{https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fakultaet/}{Mathematisch-Naturwissenschaftliche Fakultät}}
 
-\AtBeginDocument{
-\hypersetup{pdftitle=\ttitle}
-\hypersetup{pdfauthor=\authorname}
-}
+
+%\includeonly{chapters/c20_derivation_redfield_eq, ...} % Place this BEFORE \begin{document} to only compile specific chapter
 
 \begin{document}
-The width of this document is: \the\textwidth
+%\ The width of this document is: \the\textwidth
 
 \frontmatter
 \pagestyle{plain}
 
 \input{chapters/c00_titlepage}
-%\input{chapters/c01_declaration}
+\input{chapters/c01_declaration}
 \input{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication}
 
 %-------------------------------------------------------------------------------
@@ -89,19 +74,19 @@ The width of this document is: \the\textwidth
 %-------------------------------------------------------------------------------
 
 \begin{abstract}
-	\addchaptertocentry{\abstractname}
-	This thesis investigates the directional routing of excitations in atomic systems using subradiant states.
-	Building on Bottarelli's quantum router
-	%\cite{Startingpoint}
-	, this thesis adapts the model to atomic systems,
-	addressing the challenges of controlling interactions in fully connected systems.
-	Atom light interactions have been heavily studied for atomic lattices
-	%\cite{Masson2022, Asenjo-Garcia2017, Needham2019, Cech2023, Jen2016}
-	.
-	In this thesis three chains, that are connected by an equilateral triangle and an isosceles triangle are studied.
-	By allowing different dipole orientations on each chain, three distinct topologies are considered.
-	The results show that controlling the topology and the initial state enables directional routing,
-	where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
+    \addchaptertocentry{\abstractname}
+    This thesis investigates the directional routing of excitations in atomic systems using subradiant states.
+    Building on Bottarelli's quantum router
+    %\cite{Startingpoint}
+    , this thesis adapts the model to atomic systems,
+    addressing the challenges of controlling interactions in fully connected systems.
+    Atom light interactions have been heavily studied for atomic lattices
+    %\cite{Masson2022, Asenjo-Garcia2017, Needham2019, Cech2023, Jen2016}
+    .
+    In this thesis three chains, that are connected by an equilateral triangle and an isosceles triangle are studied.
+    By allowing different dipole orientations on each chain, three distinct topologies are considered.
+    The results show that controlling the topology and the initial state enables directional routing,
+    where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
 \end{abstract}
 
 %-------------------------------------------------------------------------------
@@ -115,7 +100,6 @@ The width of this document is: \the\textwidth
 \include{chapters/c10_introduction}
 \include{chapters/c20_derivation_redfield_eq}
 \include{chapters/c21_part_trace_harm_osci}
-\include{chapters/c22_Rabi_osci}
 \include{chapters/c30_numerical_implementation}
 \include{chapters/c40_spectroscopy}
 \include{chapters/todo_example}
@@ -133,24 +117,12 @@ The width of this document is: \the\textwidth
 %-------------------------------------------------------------------------------
 
 \printbibliography
-%\bibliography{bib/my_bibliography}
 
 \end{document}
+% Some sources worth visiting
+%"Two-Dimensional Correlation Spectroscopy: Applications in Vibrational and Optical Spectroscopy" by R. M. B. L. McDonald and B. M. H. Lang:
+% Focuses on 2D correlation spectroscopy and its applications in various spectroscopic fields, with simpler models used to illustrate the methods.
 
-
-% https://www.bing.com/images/search?view=detailV2&ccid=QOs8jh%2FY&id=B2F27160AAD4B68E1198585266845260137E1ED1&thid=OIP.QOs8jh_YfvbZty3qEQtmMwHaFv&mediaurl=https%3A%2F%2Fpubs.acs.org%2Fcms%2F10.1021%2Facs.jpcc.1c02693%2Fasset%2Fimages%2Flarge%2Fjp1c02693_0002.jpeg&cdnurl=https%3A%2F%2Fth.bing.com%2Fth%2Fid%2FR.40eb3c8e1fd87ef6d9b72dea110b6633%3Frik%3D0R5%252bE2BShGZSWA%26pid%3DImgRaw%26r%3D0&exph=1227&expw=1582&q=two+dimensional+spectroscopy+of+open+quantum+systems&simid=608020752819562198&form=IRPRST&ck=78FA3137380D45FD044E82D5CFD9637B&selectedindex=0&itb=0&ajaxhist=0&ajaxserp=0&vt=0&sim=11
-%\begin{itemize}
-%\item "Principles of Nonlinear Optical Spectroscopy" by Shan and Kirtman:
-%\begin{itemize}
-%\item This book provides a solid introduction to nonlinear optical spectroscopy, including 2D spectroscopy, and outlines methods for simulating spectroscopic signals from simple systems.
-%\end{itemize}
-%
-%\item "Two-Dimensional Correlation Spectroscopy: Applications in Vibrational and Optical Spectroscopy" by R. M. B. L. McDonald and B. M. H. Lang:
-%
-%\begin{itemize}
-%\item Focuses on 2D correlation spectroscopy and its applications in various spectroscopic fields, with simpler models used to illustrate the methods.
-%\end{itemize}
-%
 %\item "Quantum Coherence in Systems of Atoms and Molecules: Theoretical and Experimental Studies" by A. Mukamel:
 %
 %\begin{itemize}
@@ -162,70 +134,21 @@ The width of this document is: \the\textwidth
 %\begin{itemize}
 %\item \textit{"Two-Dimensional Electronic Spectroscopy"}, by A. M. Walmsley, Y. O. I. Shim, et al. (2009).\begin{itemize}
 %\item A very detailed review of 2D electronic spectroscopy, including its application to simple systems, methods of analysis, and computational approaches.
-%\end{itemize}
-%
-%\end{itemize}
-%
-%\end{itemize}
+
 %\subsection*{2. Scientific Papers with Simulations of Simple Systems}
-%\begin{itemize}
 %\item "Two-dimensional electronic spectroscopy of molecular aggregates" by J. M. Thomas, D. V. Voronine, et al. (2013):
-%
-%\begin{itemize}
 %\item Provides a step-by-step guide to performing 2D spectroscopy on simple systems like molecular aggregates. This paper discusses both the theoretical framework and simulations.
-%\end{itemize}
-%
 %\item "Quantum Coherent Effects in Two-Dimensional Electronic Spectroscopy of Model Systems" by Y. Yan, A. Aspuru-Guzik, et al. (2010):
-%
-%\begin{itemize}
 %\item Focuses on the theoretical treatment of 2D electronic spectroscopy of small systems, including simple chromophores and model molecular systems.
-%\end{itemize}
-%
 %\item "Two-Dimensional Fourier Transform Spectroscopy of Single Chromophores" by D. V. Voronine, et al. (2012):
-%
-%\begin{itemize}
 %\item The paper discusses the application of 2D spectroscopy to individual chromophores (a simple system) and explains how to extract physical information from the experimental data.
-%\end{itemize}
-%
-%\end{itemize}
+
 %\subsection*{3. Computational Methods and Software}
 %If you're interested in simulating 2D electronic spectroscopy numerically for simple systems, the following computational tools are often used:
-%
-%\begin{itemize}
-%\item PySCF (Python for Strongly Correlated Electron Systems):
-%
-%\begin{itemize}
-%\item A computational chemistry package that can simulate molecular systems and might help you calculate the response functions used in 2D spectroscopy.
-%\end{itemize}
-%
-%\item Qutip (Quantum Toolbox in Python):
-%
-%\begin{itemize}
-%\item Useful for simulating open quantum systems, calculating time evolution, and modeling processes like those in 2D electronic spectroscopy.
-%\end{itemize}
-%
-%\item TDSCF (Time-Dependent Self-Consistent Field Theory):
-%
-%\begin{itemize}
-%\item A method often used in simulations of 2D electronic spectroscopy, this software may help in constructing a basic model for your system.
-%\end{itemize}
-%
-%\item 2D NMR (for Nuclear Systems):
-%
-%\begin{itemize}
-%\item While this focuses on nuclear magnetic resonance, many of the methods developed for 2D NMR spectroscopy can also be adapted to electronic spectroscopy, and relevant software tools include NMRPipe or MestReNova.
-%\end{itemize}
-%
-%\end{itemize}
+
 %\subsection*{4. Additional Resources}
-%\begin{itemize}
 %\item Tutorials and Lecture Notes:\begin{itemize}
 %\item Several universities offer courses on nonlinear spectroscopy and 2D electronic spectroscopy. Look for lecture notes or course material available online, which can provide step-by-step methods to simulate simple systems. For example, the MIT OpenCourseWare site often has useful resources for quantum and optical spectroscopy.
-%\end{itemize}
-%
 %\item Theoretical Approaches:\begin{itemize}
 %\item "Nonlinear Optical Spectroscopy" by O. L. Chapman: This book will provide you with insights into the theory and mathematical foundations of 2D electronic spectroscopy for simple molecular systems.
 %\item "Nonlinear Optics" by Robert W. Boyd: Boyd's book is a widely regarded source for nonlinear optics, including 2D spectroscopy, and covers applications to simpler systems such as isolated molecules or aggregates.
-%\end{itemize}
-%
-%\end{itemize}

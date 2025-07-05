@@ -1,3 +1,4 @@
+% !TEX root = ../main.tex
 \chapter{Principles of Spectroscopy} % Main chapter title
 
 \label{chap:spectroscopy} % Label for cross-referencing this chapter
@@ -9,17 +10,17 @@
 \section{Fundamentals of Spectroscopy}
 \label{sec:spectroscopy_fundamentals}
 
-\noindent Spectroscopy, in its broadest definition, is the study of the interaction between matter and electromagnetic radiation as a function of wavelength or frequency \cite{Mukamel1995}.
-This powerful analytical technique provides insights into the composition, structure, and dynamics of physical systems by examining how they absorb, emit, or scatter light. The fundamental principle underlying all spectroscopic methods is that each atom, molecule, or complex system has a unique set of energy levels, and transitions between these levels involve the absorption or emission of photons with specific energies \cite{Boyd2008}.
+\noindent Spectroscopy, in its broadest definition, is the study of the interaction between matter and electromagnetic radiation as a function of wavelength or frequency \cite{Mukamel1995PrinciplesNonlinearOptical}.
+This powerful analytical technique provides insights into the composition, structure, and dynamics of physical systems by examining how they absorb, emit, or scatter light. The fundamental principle underlying all spectroscopic methods is that each atom, molecule, or complex system has a unique set of energy levels, and transitions between these levels involve the absorption or emission of photons with specific energies \todoref{find better source}\cite{Boyd2008Chapter1Nonlinear}.
 
 \subsection{Basic Principles}
 \label{subsec:basic_principles}
 
-\noindent The foundation of spectroscopy rests on the quantization of energy in atomic and molecular systems. According to quantum mechanics, atoms and molecules can exist only in discrete energy states \cite{albashQuantumAdiabaticMarkovian2012}. The energy difference between two states, $\Delta E$, determines the frequency $\nu$ or wavelength $\lambda$ of light that can be absorbed or emitted during a transition between these states, following Planck's relation:
+\noindent The foundation of spectroscopy rests on the quantization of energy in atomic and molecular systems. According to quantum mechanics, atoms and molecules can exist only in discrete energy states \cite{AlbashEtAl2012QuantumAdiabaticMarkovian}. The energy difference between two states, $\Delta E$, determines the frequency $\nu$ or wavelength $\lambda$ of light that can be absorbed or emitted during a transition between these states, following Planck's relation:
 
 \begin{equation}
-	\Delta E = h\nu = \frac{hc}{\lambda}
-	\label{eq:planck_relation}
+    \Delta E = h\nu = \frac{hc}{\lambda}
+    \label{eq:planck_relation}
 \end{equation}
 
 \noindent where $h$ is Planck's constant and $c$ is the speed of light. This relation forms the basis for spectroscopic analysis, allowing researchers to probe the energy structure of matter by observing the spectrum of absorbed or emitted radiation.
@@ -30,10 +31,10 @@ This powerful analytical technique provides insights into the composition, struc
 \noindent Spectroscopic methods can be categorized based on various criteria:
 
 \begin{itemize}
-	\item \textbf{Nature of the interaction:} Absorption, emission, scattering, reflection
-	\item \textbf{Frequency range:} Radio-frequency, microwave, terahertz, infrared, visible, ultraviolet, X-ray, gamma-ray
-	\item \textbf{Type of energy transition:} Electronic, vibrational, rotational, nuclear
-	\item \textbf{Number of photons involved:} Linear (one-photon) vs. nonlinear (multi-photon) spectroscopy
+    \item \textbf{Nature of the interaction:} Absorption, emission, scattering, reflection
+    \item \textbf{Frequency range:} Radio-frequency, microwave, terahertz, infrared, visible, ultraviolet, X-ray, gamma-ray
+    \item \textbf{Type of energy transition:} Electronic, vibrational, rotational, nuclear
+    \item \textbf{Number of photons involved:} Linear (one-photon) vs. nonlinear (multi-photon) spectroscopy
 \end{itemize}
 
 \noindent Each spectroscopic technique provides different information about the system under study. For instance, rotational spectroscopy reveals molecular geometry, vibrational spectroscopy elucidates bonding patterns, and electronic spectroscopy probes electronic structure and excited state dynamics.
@@ -43,21 +44,21 @@ This powerful analytical technique provides insights into the composition, struc
 
 \noindent The energy of electromagnetic radiation determines the type of molecular motion or electronic transition that can be induced. According to Planck's relation,
 \begin{equation}
-	\Delta E = h\nu = \frac{hc}{\lambda}
-	\label{eq:planck_energy_frequency}
+    \Delta E = h\nu = \frac{hc}{\lambda}
+    \label{eq:planck_energy_frequency}
 \end{equation}
-higher frequency radiation carries more energy per photon, enabling interactions with progressively higher-energy molecular degrees of freedom \cite{Boyd2008, Mukamel1995}.
+higher frequency radiation carries more energy per photon, enabling interactions with progressively higher-energy molecular degrees of freedom \cite{Boyd2008Chapter1Nonlinear, Mukamel1995PrinciplesNonlinearOptical}.
 
 \noindent The electromagnetic spectrum can be systematically understood in terms of increasing photon energy and the corresponding molecular responses:
 
 \begin{itemize}
-	\item \textbf{Microwave radiation} possesses the lowest energy among the spectroscopically relevant regions and primarily affects the rotational motion of molecules. The energy scale ($\sim$ 10$^{-5}$ to 10$^{-3}$ eV) matches typical rotational energy level spacings in gas-phase molecules. Microwave absorption causes molecules to undergo transitions between rotational states, increasing their angular momentum. This principle underlies the operation of microwave ovens, where 2.45 GHz radiation induces rotational motion in water molecules, generating heat through molecular agitation.
+    \item \textbf{Microwave radiation} possesses the lowest energy among the spectroscopically relevant regions and primarily affects the rotational motion of molecules. The energy scale ($\sim$ 10$^{-5}$ to 10$^{-3}$ eV) matches typical rotational energy level spacings in gas-phase molecules. Microwave absorption causes molecules to undergo transitions between rotational states, increasing their angular momentum. This principle underlies the operation of microwave ovens, where 2.45 GHz radiation induces rotational motion in water molecules, generating heat through molecular agitation.
 
-	\item \textbf{Infrared (IR) radiation} carries higher energy than microwave radiation and couples to vibrational motion within molecules. The photon energies ($\sim$ 10$^{-3}$ to 1 eV) correspond to typical vibrational quanta in molecules. When absorbed, IR radiation excites molecular vibrations, causing bonds to stretch, bend, or undergo more complex deformation modes. This selectivity makes IR spectroscopy a powerful tool for identifying chemical functional groups and studying molecular dynamics.
+    \item \textbf{Infrared (IR) radiation} carries higher energy than microwave radiation and couples to vibrational motion within molecules. The photon energies ($\sim$ 10$^{-3}$ to 1 eV) correspond to typical vibrational quanta in molecules. When absorbed, IR radiation excites molecular vibrations, causing bonds to stretch, bend, or undergo more complex deformation modes. This selectivity makes IR spectroscopy a powerful tool for identifying chemical functional groups and studying molecular dynamics.
 
-	\item \textbf{Visible light} possesses sufficient energy ($\sim$ 1.5 to 3 eV) to promote electronic transitions, moving electrons from occupied orbitals to higher-energy unoccupied states. Upon electronic excitation, molecules often exhibit fluorescence or phosphorescence as electrons return to lower energy states, emitting photons in the process. This electronic excitation forms the basis of photochemistry and photobiology.
+    \item \textbf{Visible light} possesses sufficient energy ($\sim$ 1.5 to 3 eV) to promote electronic transitions, moving electrons from occupied orbitals to higher-energy unoccupied states. Upon electronic excitation, molecules often exhibit fluorescence or phosphorescence as electrons return to lower energy states, emitting photons in the process. This electronic excitation forms the basis of photochemistry and photobiology.
 
-	\item \textbf{Ultraviolet (UV) radiation} carries even higher energy ($\sim$ 3 to 12 eV) and can induce high-energy electronic transitions. At sufficient intensities, UV radiation possesses enough energy to break covalent bonds directly, leading to photodissociation processes. This is exemplified by the UV-induced decomposition of ozone (O$_3$) in the stratosphere, where UV photons break the O-O bonds, playing a crucial role in atmospheric chemistry.
+    \item \textbf{Ultraviolet (UV) radiation} carries even higher energy ($\sim$ 3 to 12 eV) and can induce high-energy electronic transitions. At sufficient intensities, UV radiation possesses enough energy to break covalent bonds directly, leading to photodissociation processes. This is exemplified by the UV-induced decomposition of ozone (O$_3$) in the stratosphere, where UV photons break the O-O bonds, playing a crucial role in atmospheric chemistry.
 \end{itemize}
 
 \noindent This energy hierarchy demonstrates why spectroscopic techniques using different frequency ranges provide complementary information about molecular structure and dynamics. The systematic increase in photon energy enables probing of molecular systems from their lowest-energy rotational modes to high-energy electronic excitations and bond-breaking processes.
@@ -65,13 +66,13 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Time Scales in Spectroscopy}
 \label{subsec:time_scales}
 
-\noindent Different spectroscopic methods operate on different time scales, allowing the investigation of processes ranging from ultrafast electronic motions to slow conformational changes \cite{Fuller2015, Fayer2009}:
+\noindent Different spectroscopic methods operate on different time scales, allowing the investigation of processes ranging from ultrafast electronic motions to slow conformational changes \cite{BogaczEtAl2025XrayAbsorptionSpectroscopy, FullerOgilvie2015ExperimentalImplementationsTwodimensional}:
 
 \begin{itemize}
-	\item Femtosecond (10$^{-15}$ s): Electronic transitions, vibrational coherences
-	\item Picosecond (10$^{-12}$ s): Vibrational relaxation, rotational motion
-	\item Nanosecond (10$^{-9}$ s): Fluorescence lifetimes, energy transfer
-	\item Microsecond to millisecond (10$^{-6}$ to 10$^{-3}$ s): Chemical reactions, protein folding
+    \item Femtosecond (10$^{-15}$ s): Electronic transitions, vibrational coherences
+    \item Picosecond (10$^{-12}$ s): Vibrational relaxation, rotational motion
+    \item Nanosecond (10$^{-9}$ s): Fluorescence lifetimes, energy transfer
+    \item Microsecond to millisecond (10$^{-6}$ to 10$^{-3}$ s): Chemical reactions, protein folding
 \end{itemize}
 
 \noindent The development of ultrafast laser systems has revolutionized spectroscopy by allowing direct observation of molecular dynamics on femtosecond time scales, leading to the field of femtochemistry and ultrafast spectroscopy.
@@ -79,22 +80,22 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Macroscopic Samples and Collective Dipolar Oscillations}
 \label{subsec:macroscopic_samples}
 
-\noindent When considering spectroscopic measurements on macroscopic samples, it is essential to understand how individual molecular responses combine to produce observable signals. In a typical spectroscopic experiment, the sample contains on the order of Avogadro's number ($\sim 10^{23}$) of molecules, each potentially acting as an oscillating electric dipole when interacting with electromagnetic radiation \cite{Feynman1965}.
+\noindent When considering spectroscopic measurements on macroscopic samples, it is essential to understand how individual molecular responses combine to produce observable signals. In a typical spectroscopic experiment, the sample contains on the order of Avogadro's number ($\sim 10^{23}$) of molecules, each potentially acting as an oscillating electric dipole when interacting with electromagnetic radiation \cite{Feynman1965FeynmanLecturesPhysics}.
 
 \noindent The collective behavior of these molecular dipoles determines the macroscopic polarization of the sample. When an external electromagnetic field is applied, individual molecules undergo dipole transitions, creating time-varying dipole moments. The coherent superposition of these individual dipolar oscillations produces a macroscopic polarization wave that can propagate through the medium and be detected experimentally.
 
 \noindent The macroscopic polarization $\vec{P}(\vec{r}, t)$ arises from the spatial and temporal averaging of microscopic dipole moments $\vec{\mu}_i(t)$ over the sample volume:
 
 \begin{equation}
-	\vec{P}(\vec{r}, t) = \frac{1}{V} \sum_{i} \vec{\mu}_i(t) \delta(\vec{r} - \vec{r}_i)
-	\label{eq:macroscopic_polarization}
+    \vec{P}(\vec{r}, t) = \frac{1}{V} \sum_{i} \vec{\mu}_i(t) \delta(\vec{r} - \vec{r}_i)
+    \label{eq:macroscopic_polarization}
 \end{equation}
 
 \noindent where $V$ is the sample volume, $\vec{r}_i$ is the position of the $i$-th molecule, and the sum extends over all molecules in the interaction region. This macroscopic polarization acts as a source term in Maxwell's equations, generating the electromagnetic fields that constitute the spectroscopic signal.
 
-\noindent The phase relationships between individual dipolar oscillations are crucial for understanding spectroscopic line shapes and signal intensities. In the case of inhomogeneously broadened systems, different molecules oscillate at slightly different frequencies due to variations in their local environment. The resulting dephasing of individual oscillators leads to the characteristic decay of macroscopic coherences observed in techniques such as photon echo spectroscopy \cite{Murray1978}.
+\noindent The phase relationships between individual dipolar oscillations are crucial for understanding spectroscopic line shapes and signal intensities. In the case of inhomogeneously broadened systems, different molecules oscillate at slightly different frequencies due to variations in their local environment. The resulting dephasing of individual oscillators leads to the characteristic decay of macroscopic coherences observed in techniques such as photon echo spectroscopy \cite{Mukamel1995PrinciplesNonlinearOptical}.
 
-\noindent This collective dipolar response provides the fundamental link between microscopic quantum mechanical processes in individual molecules and the macroscopic electromagnetic fields measured in spectroscopic experiments. Understanding this connection is essential for the quantitative interpretation of spectroscopic data and the extraction of molecular-level information from ensemble measurements \cite{Feynman1965}.
+\noindent This collective dipolar response provides the fundamental link between microscopic quantum mechanical processes in individual molecules and the macroscopic electromagnetic fields measured in spectroscopic experiments. Understanding this connection is essential for the quantitative interpretation of spectroscopic data and the extraction of molecular-level information from ensemble measurements \cite{Feynman1965FeynmanLecturesPhysics}.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 2: NONLINEAR OPTICS
@@ -103,7 +104,7 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \section{Nonlinear Optics}
 \label{sec:nonlinear_optics}
 
-\noindent Nonlinear optics deals with phenomena that occur when the response of a material to an applied optical field depends nonlinearly on the strength of the field \cite{Boyd2008}. This nonlinearity becomes significant at high light intensities, such as those provided by pulsed lasers.
+\noindent Nonlinear optics deals with phenomena that occur when the response of a material to an applied optical field depends nonlinearly on the strength of the field \cite{Boyd2008Contents}. This nonlinearity becomes significant at high light intensities, such as those provided by pulsed lasers.
 
 \subsection{Linear vs. Nonlinear Optical Response}
 \label{subsec:linear_vs_nonlinear}
@@ -111,8 +112,8 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent In the linear regime, the induced polarization $\vec{P}$ in a material is directly proportional to the applied electric field $\vec{E}$:
 
 \begin{equation}
-	\vec{P} = \varepsilon_0 \chi^{(1)} \vec{E}
-	\label{eq:linear_polarization}
+    \vec{P} = \varepsilon_0 \chi^{(1)} \vec{E}
+    \label{eq:linear_polarization}
 \end{equation}
 
 \noindent where $\varepsilon_0$ is the vacuum permittivity and $\chi^{(1)}$ is the linear susceptibility tensor. This relationship describes phenomena such as refraction and absorption.
@@ -120,8 +121,8 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent In the nonlinear regime, the polarization can be expressed as a power series in the electric field:
 
 \begin{equation}
-	\vec{P} = \varepsilon_0 (\chi^{(1)} \vec{E} + \chi^{(2)} \vec{E}^2 + \chi^{(3)} \vec{E}^3 + \ldots)
-	\label{eq:nonlinear_polarization}
+    \vec{P} = \varepsilon_0 (\chi^{(1)} \vec{E} + \chi^{(2)} \vec{E}^2 + \chi^{(3)} \vec{E}^3 + \ldots)
+    \label{eq:nonlinear_polarization}
 \end{equation}
 
 \noindent where $\chi^{(2)}$ and $\chi^{(3)}$ are the second- and third-order nonlinear susceptibility tensors, respectively. These higher-order terms give rise to a variety of nonlinear optical phenomena.
@@ -132,10 +133,10 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Second-order nonlinear processes, governed by the $\chi^{(2)}$ term, occur only in noncentrosymmetric materials, which lack inversion symmetry. Important second-order effects include:
 
 \begin{itemize}
-	\item \textbf{Second Harmonic Generation (SHG):} Two photons of frequency $\omega$ combine to generate a photon of frequency $2\omega$.
-	\item \textbf{Sum Frequency Generation (SFG):} Two photons of frequencies $\omega_1$ and $\omega_2$ combine to produce a photon of frequency $\omega_1 + \omega_2$.
-	\item \textbf{Difference Frequency Generation (DFG):} Two photons of frequencies $\omega_1$ and $\omega_2$ interact to create a photon of frequency $\omega_1 - \omega_2$.
-	\item \textbf{Optical Parametric Amplification (OPA):} A pump photon of frequency $\omega_p$ splits into signal ($\omega_s$) and idler ($\omega_i$) photons, such that $\omega_p = \omega_s + \omega_i$.
+    \item \textbf{Second Harmonic Generation (SHG):} Two photons of frequency $\omega$ combine to generate a photon of frequency $2\omega$.
+    \item \textbf{Sum Frequency Generation (SFG):} Two photons of frequencies $\omega_1$ and $\omega_2$ combine to produce a photon of frequency $\omega_1 + \omega_2$.
+    \item \textbf{Difference Frequency Generation (DFG):} Two photons of frequencies $\omega_1$ and $\omega_2$ interact to create a photon of frequency $\omega_1 - \omega_2$.
+    \item \textbf{Optical Parametric Amplification (OPA):} A pump photon of frequency $\omega_p$ splits into signal ($\omega_s$) and idler ($\omega_i$) photons, such that $\omega_p = \omega_s + \omega_i$.
 \end{itemize}
 
 \subsection{Third-Order Nonlinear Processes}
@@ -144,10 +145,10 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Third-order nonlinear processes, governed by the $\chi^{(3)}$ term, can occur in all materials, regardless of symmetry. Key third-order effects include:
 
 \begin{itemize}
-	\item \textbf{Third Harmonic Generation (THG):} Three photons combine to generate a photon of tripled frequency.
-	\item \textbf{Four-Wave Mixing (FWM):} Four photons interact, satisfying energy conservation.
-	\item \textbf{Nonlinear Refraction:} The refractive index depends on light intensity (Kerr effect).
-	\item \textbf{Two-Photon Absorption (TPA):} Simultaneous absorption of two photons to excite a transition.
+    \item \textbf{Third Harmonic Generation (THG):} Three photons combine to generate a photon of tripled frequency.
+    \item \textbf{Four-Wave Mixing (FWM):} Four photons interact, satisfying energy conservation.
+    \item \textbf{Nonlinear Refraction:} The refractive index depends on light intensity (Kerr effect).
+    \item \textbf{Two-Photon Absorption (TPA):} Simultaneous absorption of two photons to excite a transition.
 \end{itemize}
 
 \noindent These third-order processes form the basis for many nonlinear spectroscopic techniques, including pump-probe spectroscopy, transient grating, and various multidimensional spectroscopies.
@@ -155,37 +156,37 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Four-Level System Model for Third-Order Spectroscopy}
 \label{subsec:four_level_model}
 
-\noindent The four-level system represents the minimal complete model for describing third-order nonlinear spectroscopic phenomena \cite{Cho2009, Abramavicius2009}. While simpler models such as two-level systems (TLS) are sufficient for understanding linear spectroscopy and some basic nonlinear effects, they cannot fully capture all pathways contributing to third-order signals like those in 2D electronic spectroscopy or photon echo experiments.
+\noindent The four-level system represents the minimal complete model for describing third-order nonlinear spectroscopic phenomena \cite{Cho2009TwodimensionalOpticalSpectroscopy, AbramaviciusEtAl2009CoherentMultidimensionalOptical}. While simpler models such as two-level systems (TLS) are sufficient for understanding linear spectroscopy and some basic nonlinear effects, they cannot fully capture all pathways contributing to third-order signals like those in 2D electronic spectroscopy or photon echo experiments.
 
 \noindent In a typical four-level system, the energy states include:
 
 \begin{itemize}
-	\item $|g\rangle$: Ground state
-	\item $|e_1\rangle$ and $|e_2\rangle$: First excited states (single excitons)
-	\item $|f\rangle$: Doubly excited state (two excitons)
+    \item $|g\rangle$: Ground state
+    \item $|e_1\rangle$ and $|e_2\rangle$: First excited states (single excitons)
+    \item $|f\rangle$: Doubly excited state (two excitons)
 \end{itemize}
 
-\noindent This configuration allows modeling of all possible Liouville pathways that contribute to the third-order response function \cite{Mukamel1999}. The inclusion of multiple excited states and a doubly excited state is essential for describing phenomena such as ground-state bleaching, stimulated emission, and excited-state absorption—the three primary components of signals observed in techniques like transient absorption and 2D electronic spectroscopy.
+\noindent This configuration allows modeling of all possible Liouville pathways that contribute to the third-order response function \cite{Mukamel1995PrinciplesNonlinearOptical}. The inclusion of multiple excited states and a doubly excited state is essential for describing phenomena such as ground-state bleaching, stimulated emission, and excited-state absorption—the three primary components of signals observed in techniques like transient absorption and 2D electronic spectroscopy.
 
 \noindent The third-order polarization $P^{(3)}$ in such a system can be expressed as a sum of different pathways:
 
 \begin{equation}
-	P^{(3)} = P^{(3)}_{GSB} + P^{(3)}_{SE} + P^{(3)}_{ESA} + \ldots
-	\label{eq:third_order_contributions}
+    P^{(3)} = P^{(3)}_{GSB} + P^{(3)}_{SE} + P^{(3)}_{ESA} + \ldots
+    \label{eq:third_order_contributions}
 \end{equation}
 
-\noindent where GSB, SE, and ESA represent ground-state bleaching, stimulated emission, and excited-state absorption, respectively. The line-broadening function formalism within this four-level model enables detailed analysis of spectral lineshapes and system-bath interactions \cite{Cho2009, Abramavicius2009}.
+\noindent where GSB, SE, and ESA represent ground-state bleaching, stimulated emission, and excited-state absorption, respectively. The line-broadening function formalism within this four-level model enables detailed analysis of spectral lineshapes and system-bath interactions \cite{Cho2009TwodimensionalOpticalSpectroscopy, AbramaviciusEtAl2009CoherentMultidimensionalOptical}.
 
 \noindent While two-level systems are pedagogically valuable and simplify certain calculations, the four-level model captures the richness of nonlinear spectroscopic signals and serves as the foundation for interpreting complex experiments such as multidimensional spectroscopy.
 
 \subsection{Optical Bloch Equations}
 \label{subsec:optical_bloch}
 
-\noindent The interaction of light with matter in nonlinear spectroscopy is often described using the density matrix formalism and the optical Bloch equations \cite{Tanimura1989}. For a simple two-level system, the density matrix elements $\rho_{ij}$ evolve according to:
+\noindent The interaction of light with matter in nonlinear spectroscopy is often described using the density matrix formalism and the optical Bloch equations \cite{TanimuraMukamel1993TwodimensionalFemtosecondVibrational}. For a simple two-level system, the density matrix elements $\rho_{ij}$ evolve according to:
 
 \begin{align}
-	\frac{d\rho_{11}}{dt} & = -i\frac{\mu_{12}E(t)}{\hbar}(\rho_{21} - \rho_{12}) - \Gamma_1 \rho_{11} \label{eq:bloch_population}                        \\
-	\frac{d\rho_{12}}{dt} & = -i\omega_{12}\rho_{12} - i\frac{\mu_{12}E(t)}{\hbar}(\rho_{22} - \rho_{11}) - \Gamma_2 \rho_{12} \label{eq:bloch_coherence}
+    \frac{d\rho_{11}}{dt} & = -i\frac{\mu_{12}E(t)}{\hbar}(\rho_{21} - \rho_{12}) - \Gamma_1 \rho_{11} \label{eq:bloch_population}                        \\
+    \frac{d\rho_{12}}{dt} & = -i\omega_{12}\rho_{12} - i\frac{\mu_{12}E(t)}{\hbar}(\rho_{22} - \rho_{11}) - \Gamma_2 \rho_{12} \label{eq:bloch_coherence}
 \end{align}
 
 \noindent where $\omega_{12}$ is the transition frequency, $\mu_{12}$ is the transition dipole moment, $E(t)$ is the electric field, and $\Gamma_1$ and $\Gamma_2$ are the population relaxation and decoherence rates, respectively. These equations can be extended to describe more complex systems and higher-order nonlinear responses.
@@ -197,7 +198,7 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \section{Wavevector Phase-Matching Conditions}
 \label{sec:phase_matching}
 
-\noindent Phase-matching is a crucial concept in nonlinear optics that determines the efficiency and directionality of nonlinear optical processes \cite{Boyd2008, Scheurer2001}. It ensures that the generated signal field constructively interferes throughout the interaction medium.
+\noindent Phase-matching is a crucial concept in nonlinear optics that determines the efficiency and directionality of nonlinear optical processes \cite{Boyd2008Contents},  \todoref{find ref Scheurer2001}. It ensures that the generated signal field constructively interferes throughout the interaction medium.
 
 \subsection{Physical Meaning of Phase-Matching}
 \label{subsec:phase_matching_meaning}
@@ -207,8 +208,8 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Physically, phase-matching represents momentum conservation in the photon picture. For a general nonlinear process, the wavevector of the generated signal ($\vec{k}_s$) is determined by the vector sum of the input wavevectors:
 
 \begin{equation}
-	\vec{k}_s = \pm\vec{k}_1 \pm\vec{k}_2 \pm\vec{k}_3 \pm \ldots
-	\label{eq:phase_matching}
+    \vec{k}_s = \pm\vec{k}_1 \pm\vec{k}_2 \pm\vec{k}_3 \pm \ldots
+    \label{eq:phase_matching}
 \end{equation}
 
 \noindent The signs depend on whether the corresponding field acts as a "bra" ($-$) or a "ket" ($+$) in the quantum mechanical description, which corresponds to photon emission or absorption, respectively.
@@ -219,8 +220,8 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Four-wave mixing (FWM) is a third-order nonlinear process that plays a central role in many spectroscopic techniques. In a typical FWM experiment, three input fields with wavevectors $\vec{k}_1$, $\vec{k}_2$, and $\vec{k}_3$ generate a signal in the direction $\vec{k}_s$ given by:
 
 \begin{equation}
-	\vec{k}_s = \pm\vec{k}_1 \pm\vec{k}_2 \pm\vec{k}_3
-	\label{eq:fwm_phase_matching}
+    \vec{k}_s = \pm\vec{k}_1 \pm\vec{k}_2 \pm\vec{k}_3
+    \label{eq:fwm_phase_matching}
 \end{equation}
 
 \noindent Different combinations of signs correspond to different phase-matching conditions, leading to signals in different spatial directions. These distinct signal directions allow separation of various nonlinear optical processes.
@@ -228,12 +229,12 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Rephasing and Non-Rephasing Signals}
 \label{subsec:rephasing_nonrephasing}
 
-\noindent In the context of multidimensional spectroscopy, phase-matched signals are often classified into rephasing and non-rephasing contributions \cite{Cho2009, Jonas2003}:
+\noindent In the context of multidimensional spectroscopy, phase-matched signals are often classified into rephasing and non-rephasing contributions \cite{Cho2009TwodimensionalOpticalSpectroscopy, Jonas2003TwodimensionalFemtosecondSpectroscopy}:
 
 \begin{itemize}
-	\item \textbf{Rephasing signals} follow the phase-matching condition $\vec{k}_s = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$. During the evolution period between the first and second interactions, the phase accumulated due to different frequencies can be reversed during the period between the third interaction and signal emission. This leads to a photon echo effect.
+    \item \textbf{Rephasing signals} follow the phase-matching condition $\vec{k}_s = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$. During the evolution period between the first and second interactions, the phase accumulated due to different frequencies can be reversed during the period between the third interaction and signal emission. This leads to a photon echo effect.
 
-	\item \textbf{Non-rephasing signals} satisfy $\vec{k}_s = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$. In this case, the phase evolution continues in the same direction, and no echo is formed.
+    \item \textbf{Non-rephasing signals} satisfy $\vec{k}_s = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$. In this case, the phase evolution continues in the same direction, and no echo is formed.
 \end{itemize}
 
 \noindent The combination of rephasing and non-rephasing signals provides comprehensive information about the system's energy structure and dynamics.
@@ -241,24 +242,25 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Phase Cycling in Nonlinear Spectroscopy}
 \label{subsec:phase_cycling}
 
-\noindent While phase-matching enables the spatial isolation of desired nonlinear signals, phase cycling provides an alternative or complementary approach by distinguishing signals based on their phase characteristics rather than their spatial propagation directions \cite{Tan2008, Yan2009}. This technique is particularly valuable in experiments where spatial isolation is impractical, such as in collinear beam geometries or when studying samples with significant scattering.
+\noindent While phase-matching enables the spatial isolation of desired nonlinear signals, phase cycling provides an alternative or complementary approach by distinguishing signals based on their phase characteristics rather than their spatial propagation directions \todoref{find ref}%\cite{Tan2008, Yan2009}.
+This technique is particularly valuable in experiments where spatial isolation is impractical, such as in collinear beam geometries or when studying samples with significant scattering.
 
 \noindent In phase cycling, multiple measurements are taken with systematically varied phases of the excitation pulses. The desired nonlinear signals can then be extracted through appropriate linear combinations of these measurements. The fundamental principle relies on the fact that different nonlinear pathways respond distinctly to changes in the phases of the input fields.
 
 \noindent For a third-order signal generated by three excitation pulses with phases $\phi_1$, $\phi_2$, and $\phi_3$, the phase of the resulting signal depends on the specific pathway:
 
 \begin{equation}
-	\phi_s = \pm\phi_1 \pm\phi_2 \pm\phi_3
-	\label{eq:phase_cycling}
+    \phi_s = \pm\phi_1 \pm\phi_2 \pm\phi_3
+    \label{eq:phase_cycling}
 \end{equation}
 
 \noindent By varying the input phases through a complete cycle (typically in steps of $\pi/2$) and applying discrete Fourier transform methods to the collected data, specific pathways can be isolated based on their unique phase dependencies.
 
 \begin{figure}[ht]
-	\centering
-	% TODO: Add figure comparing phase-matching versus phase cycling experimental setups
-	\caption{Comparison of experimental setups for (a) phase-matching-based signal detection using non-collinear beam geometry and (b) phase cycling-based signal isolation using collinear geometry. Phase cycling allows for simpler experimental setups at the cost of requiring multiple measurements with varied pulse phases.}
-	\label{fig:phase_cycling_vs_matching}
+    \centering
+    % TODO: Add figure comparing phase-matching versus phase cycling experimental setups
+    \caption{Comparison of experimental setups for (a) phase-matching-based signal detection using non-collinear beam geometry and (b) phase cycling-based signal isolation using collinear geometry. Phase cycling allows for simpler experimental setups at the cost of requiring multiple measurements with varied pulse phases.}
+    \label{fig:phase_cycling_vs_matching}
 \end{figure}
 
 \noindent A common implementation is the 4-step phase cycling procedure, where each input pulse phase is cycled through values of $\{0, \pi/2, \pi, 3\pi/2\}$. For three-pulse experiments, this results in 64 possible phase combinations, although in practice, a reduced set is often sufficient to isolate signals of interest.
@@ -266,13 +268,13 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Phase cycling offers several advantages:
 
 \begin{itemize}
-	\item It allows for simpler optical setups with collinear or partially collinear beam geometries
-	\item It enables effective background suppression, particularly of scatter and lower-order contributions
-	\item It facilitates the separation of rephasing and non-rephasing pathways within the same measurement series
-	\item It can be implemented in experimental setups where traditional phase-matching is challenging, such as in multidimensional infrared spectroscopy
+    \item It allows for simpler optical setups with collinear or partially collinear beam geometries
+    \item It enables effective background suppression, particularly of scatter and lower-order contributions
+    \item It facilitates the separation of rephasing and non-rephasing pathways within the same measurement series
+    \item It can be implemented in experimental setups where traditional phase-matching is challenging, such as in multidimensional infrared spectroscopy
 \end{itemize}
 
-\noindent In modern multidimensional spectroscopy, phase cycling is often combined with phase matching to achieve optimal signal isolation and background suppression \cite{Tan2008, Tian2003}.
+\noindent In modern multidimensional spectroscopy, phase cycling is often combined with phase matching to achieve optimal signal isolation and background suppression \cite{Huang-FuEtAl2024DevelopmentPhasecyclingInterfacespecific, TianEtAl2003FemtosecondPhasecoherentTwodimensional}.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 4: PHOTON ECHO SPECTROSCOPY
@@ -281,7 +283,7 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \section{Photon Echo Spectroscopy}
 \label{sec:photon_echo}
 
-\noindent Photon echo spectroscopy is a powerful nonlinear optical technique used to eliminate inhomogeneous broadening and probe dynamic processes in complex systems \cite{Hybl1998, Mukamel1995}. It represents a time-domain analog of spectral hole-burning.
+\noindent Photon echo spectroscopy is a powerful nonlinear optical technique used to eliminate inhomogeneous broadening and probe dynamic processes in complex systems \cite{HyblEtAl1998TwodimensionalElectronicSpectroscopy, Mukamel1995PrinciplesNonlinearOptical}. It represents a time-domain analog of spectral hole-burning.
 
 \subsection{Principle of Photon Echo}
 \label{subsec:echo_principle}
@@ -289,15 +291,15 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent The photon echo phenomenon arises from the rephasing of coherences in an ensemble of quantum systems. In the simplest case of a two-pulse photon echo:
 
 \begin{enumerate}
-	\item The first pulse creates a coherent superposition between ground and excited states.
-	\item During a waiting period $\tau$, the coherences evolve at different frequencies due to inhomogeneous broadening, resulting in phase dispersion.
-	\item The second pulse, applied at time $\tau$ after the first, effectively reverses the phase evolution of the coherences.
-	\item At time $2\tau$, the phases realign (rephase), producing a macroscopic polarization that emits an echo signal.
+    \item The first pulse creates a coherent superposition between ground and excited states.
+    \item During a waiting period $\tau$, the coherences evolve at different frequencies due to inhomogeneous broadening, resulting in phase dispersion.
+    \item The second pulse, applied at time $\tau$ after the first, effectively reverses the phase evolution of the coherences.
+    \item At time $2\tau$, the phases realign (rephase), producing a macroscopic polarization that emits an echo signal.
 \end{enumerate}
 
 \noindent The echo intensity as a function of the delay time $\tau$ reveals information about the dephasing processes in the system.
 
-\noindent It is important to emphasize that static inhomogeneity is crucial for the appearance of the photon echo signal. This inhomogeneity arises from variations in the local environment of individual quantum systems within the ensemble, leading to a distribution of transition frequencies. In numerical simulations and theoretical treatments, static inhomogeneity is taken into account by averaging the results over an ensemble of different realizations of the Hamiltonian \cite{Cho2009, Mukamel1999}. Without this inhomogeneous distribution, all systems would evolve identically, and the characteristic echo phenomenon would not occur.
+\noindent It is important to emphasize that static inhomogeneity is crucial for the appearance of the photon echo signal. This inhomogeneity arises from variations in the local environment of individual quantum systems within the ensemble, leading to a distribution of transition frequencies. In numerical simulations and theoretical treatments, static inhomogeneity is taken into account by averaging the results over an ensemble of different realizations of the Hamiltonian \cite{Cho2009TwodimensionalOpticalSpectroscopy, Mukamel1995PrinciplesNonlinearOptical}. Without this inhomogeneous distribution, all systems would evolve identically, and the characteristic echo phenomenon would not occur.
 
 \subsection{Three-Pulse Photon Echo}
 \label{subsec:three_pulse_echo}
@@ -305,11 +307,11 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent The three-pulse photon echo extends the basic two-pulse technique by introducing a population period. The pulse sequence is as follows:
 
 \begin{enumerate}
-	\item The first pulse creates coherences.
-	\item After time $\tau$, the second pulse converts these coherences to populations.
-	\item During a waiting time $T$, population relaxation and spectral diffusion can occur.
-	\item The third pulse, applied at time $T$ after the second, reconverts populations to coherences.
-	\item At time $\tau$ after the third pulse, the echo signal is emitted.
+    \item The first pulse creates coherences.
+    \item After time $\tau$, the second pulse converts these coherences to populations.
+    \item During a waiting time $T$, population relaxation and spectral diffusion can occur.
+    \item The third pulse, applied at time $T$ after the second, reconverts populations to coherences.
+    \item At time $\tau$ after the third pulse, the echo signal is emitted.
 \end{enumerate}
 
 \noindent By scanning the waiting time $T$, this technique allows measurement of population dynamics and spectral diffusion processes.
@@ -317,17 +319,18 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Two-Dimensional Electronic Spectroscopy}
 \label{subsec:2d_spectroscopy}
 
-\noindent Two-dimensional electronic spectroscopy (2DES) represents the state-of-the-art in photon echo techniques \cite{Jonas2003, Brixner2005, Schlau-Cohen2011}. It correlates excitation and detection frequencies, revealing couplings between different transitions and energy transfer pathways.
+\noindent Two-dimensional electronic spectroscopy (2DES) represents the state-of-the-art in photon echo techniques \cite{Jonas2003TwodimensionalFemtosecondSpectroscopy, BrixnerEtAl2004PhasestabilizedTwodimensionalElectronic, Schlau-CohenEtAl2011TwodimensionalElectronicSpectroscopy}. It correlates excitation and detection frequencies, revealing couplings between different transitions and energy transfer pathways.
 
-\noindent In 2DES, the delay time $\tau$ between the first and second pulses is systematically varied, and the signal field is detected in a phase-resolved manner using spectral interferometry \cite{Lepetit1995, Bristow2011}. Fourier transformation with respect to $\tau$ yields the excitation frequency axis ($\omega_\tau$), while spectral resolution of the signal provides the detection frequency axis ($\omega_t$).
+\noindent In 2DES, the delay time $\tau$ between the first and second pulses is systematically varied, and the signal field is detected in a phase-resolved manner using spectral interferometry \todoref{find ref}%\cite{Lepetit1995, Bristow2011}. 
+Fourier transformation with respect to $\tau$ yields the excitation frequency axis ($\omega_\tau$), while spectral resolution of the signal provides the detection frequency axis ($\omega_t$).
 
 \noindent The resulting 2D spectrum contains peaks along the diagonal ($\omega_\tau = \omega_t$) corresponding to the linear absorption spectrum, while off-diagonal peaks reveal couplings and energy transfer between different states. The evolution of the 2D spectra with waiting time $T$ provides detailed information about energy transfer kinetics, spectral diffusion, and quantum coherence effects.
 
-\noindent In experimental implementations, 2D spectra are often presented as the absorptive spectrum, which is given by the sum of the rephasing photon echo and non-rephasing spectra \cite{Cho2009}. This representation eliminates phase-twist lineshapes and yields purely absorptive features that most directly correlate with the underlying energy level structure and couplings.
+\noindent In experimental implementations, 2D spectra are often presented as the absorptive spectrum, which is given by the sum of the rephasing photon echo and non-rephasing spectra \cite{Cho2009TwodimensionalOpticalSpectroscopy}. This representation eliminates phase-twist lineshapes and yields purely absorptive features that most directly correlate with the underlying energy level structure and couplings.
 
 \begin{equation}
-	S(\omega_\tau, T, \omega_t) = \iint dt\, d\tau\, e^{i\omega_t t} e^{-i\omega_\tau \tau} S(t, T, \tau)
-	\label{eq:2des_signal}
+    S(\omega_\tau, T, \omega_t) = \iint dt\, d\tau\, e^{i\omega_t t} e^{-i\omega_\tau \tau} S(t, T, \tau)
+    \label{eq:2des_signal}
 \end{equation}
 
 \noindent where $S(t, T, \tau)$ is the time-domain signal.
@@ -335,7 +338,7 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Heterodyne and Homodyne Detection}
 \label{subsec:heterodyne_homodyne}
 
-\noindent The detection scheme plays a crucial role in nonlinear spectroscopy, affecting both the sensitivity and the information content of the measurements. Two primary detection methods are employed in multidimensional spectroscopy: homodyne and heterodyne detection \cite{Lepetit1995, Tian2003}.
+\noindent The detection scheme plays a crucial role in nonlinear spectroscopy, affecting both the sensitivity and the information content of the measurements. Two primary detection methods are employed in multidimensional spectroscopy: homodyne and heterodyne detection \todoref{find ref}%\cite{Lepetit1995, Tian2003}.
 
 \subsubsection{Homodyne Detection}
 \label{subsubsec:homodyne}
@@ -343,17 +346,17 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent In homodyne detection, the intensity of the emitted signal field is measured directly:
 
 \begin{equation}
-	S_{\text{homodyne}} \propto |E_{\text{sig}}|^2 \propto |P^{(3)}|^2
-	\label{eq:homodyne}
+    S_{\text{homodyne}} \propto |E_{\text{sig}}|^2 \propto |P^{(3)}|^2
+    \label{eq:homodyne}
 \end{equation}
 
 \noindent where $E_{\text{sig}}$ is the signal electric field and $P^{(3)}$ is the third-order polarization. While experimentally simpler, homodyne detection has several limitations:
 
 \begin{itemize}
-	\item It measures only the signal intensity, losing phase information
-	\item The signal scales as the square of the third-order response
-	\item Background-free detection requires careful phase-matching
-	\item It is more susceptible to noise at low signal levels
+    \item It measures only the signal intensity, losing phase information
+    \item The signal scales as the square of the third-order response
+    \item Background-free detection requires careful phase-matching
+    \item It is more susceptible to noise at low signal levels
 \end{itemize}
 
 \subsubsection{Heterodyne Detection}
@@ -362,20 +365,20 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Heterodyne detection involves the interference of the signal field with a reference field (local oscillator, LO) of known amplitude and phase:
 
 \begin{equation}
-	S_{\text{heterodyne}} \propto |E_{\text{sig}} + E_{\text{LO}}|^2 \approx |E_{\text{LO}}|^2 + 2|E_{\text{LO}}||E_{\text{sig}}|\cos(\phi_{\text{LO}} - \phi_{\text{sig}}) + |E_{\text{sig}}|^2
-	\label{eq:heterodyne}
+    S_{\text{heterodyne}} \propto |E_{\text{sig}} + E_{\text{LO}}|^2 \approx |E_{\text{LO}}|^2 + 2|E_{\text{LO}}||E_{\text{sig}}|\cos(\phi_{\text{LO}} - \phi_{\text{sig}}) + |E_{\text{sig}}|^2
+    \label{eq:heterodyne}
 \end{equation}
 
-\noindent Since $|E_{\text{LO}}| \gg |E_{\text{sig}}|$, the cross-term dominates, and the signal can be extracted by phase-cycling or lock-in detection. Heterodyne detection offers several advantages \cite{Lepetit1995}:
+\noindent Since $|E_{\text{LO}}| \gg |E_{\text{sig}}|$, the cross-term dominates, and the signal can be extracted by phase-cycling or lock-in detection. Heterodyne detection offers several advantages \todoref{find ref}%\cite{Lepetit1995}:
 
 \begin{itemize}
-	\item It provides both amplitude and phase information of the signal
-	\item The signal scales linearly with the third-order response
-	\item It offers enhanced sensitivity through amplification by the local oscillator
-	\item It allows for a more direct connection to theoretical models
+    \item It provides both amplitude and phase information of the signal
+    \item The signal scales linearly with the third-order response
+    \item It offers enhanced sensitivity through amplification by the local oscillator
+    \item It allows for a more direct connection to theoretical models
 \end{itemize}
 
-\noindent In modern multidimensional spectroscopy, spectral interferometry—a form of heterodyne detection—is widely employed \cite{Hybl1998}. The signal field and a time-delayed reference pulse are spatially overlapped and spectrally resolved using a spectrometer. The resulting interferogram in the frequency domain contains the complete information about the signal field's amplitude and phase.
+\noindent In modern multidimensional spectroscopy, spectral interferometry—a form of heterodyne detection—is widely employed \cite{HyblEtAl1998TwodimensionalElectronicSpectroscopy}. The signal field and a time-delayed reference pulse are spatially overlapped and spectrally resolved using a spectrometer. The resulting interferogram in the frequency domain contains the complete information about the signal field's amplitude and phase.
 
 \subsection{Applications of Photon Echo Spectroscopy}
 \label{subsec:echo_applications}
@@ -383,10 +386,10 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \noindent Photon echo techniques have been applied to a wide range of problems across chemistry, biology, and materials science:
 
 \begin{itemize}
-	\item \textbf{Exciton dynamics} in photosynthetic complexes, revealing quantum coherent energy transfer pathways \cite{Engel2007, Schlau-Cohen2011}
-	\item \textbf{Vibrational dynamics} in proteins and liquids, elucidating structural fluctuations and hydrogen-bonding networks \cite{Hamm2011}
-	\item \textbf{Charge transfer processes} in organic photovoltaics and light-harvesting systems
-	\item \textbf{Coupling mechanisms} between electronic and vibrational degrees of freedom \cite{Khalil2003}
+    \item \textbf{Exciton dynamics} in photosynthetic complexes, revealing quantum coherent energy transfer pathways \todoref{find ref}%\cite{Engel2007, Schlau-Cohen2011}
+    \item \textbf{Vibrational dynamics} in proteins and liquids, elucidating structural fluctuations and hydrogen-bonding networks \cite{HammZanni2011ConceptsMethods2D}
+    \item \textbf{Charge transfer processes} in organic photovoltaics and light-harvesting systems
+    \item \textbf{Coupling mechanisms} between electronic and vibrational degrees of freedom \cite{KhalilEtAl2004VibrationalCoherenceTransfer}
 \end{itemize}
 
 \noindent The ability of these techniques to separate homogeneous and inhomogeneous broadening, while providing time-resolved information about energy transfer and dephasing processes, makes them indispensable tools in modern physical chemistry and biophysics.
@@ -403,51 +406,52 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Multidimensional Infrared Spectroscopy}
 \label{subsec:2dir}
 
-\noindent Similar to 2DES, two-dimensional infrared (2DIR) spectroscopy correlates vibrational transitions, providing information about molecular structure, conformational dynamics, and vibrational coupling \cite{Hamm2011, Khalil2003}. The technique is particularly powerful for studying hydrogen bonding networks, protein secondary structure, and chemical reaction dynamics.
+\noindent Similar to 2DES, two-dimensional infrared (2DIR) spectroscopy correlates vibrational transitions, providing information about molecular structure, conformational dynamics, and vibrational coupling \cite{HammZanni2011ConceptsMethods2D, KhalilEtAl2004VibrationalCoherenceTransfer}. The technique is particularly powerful for studying hydrogen bonding networks, protein secondary structure, and chemical reaction dynamics.
 
-\noindent In 2DIR, cross-peaks between different vibrational modes reveal anharmonic coupling and energy transfer pathways, while the lineshapes encode information about structural heterogeneity and dynamics \cite{Khalil2003}. Time-resolved 2DIR further allows tracking of structural changes during chemical reactions or conformational transitions \cite{Fayer2009}.
+\noindent In 2DIR, cross-peaks between different vibrational modes reveal anharmonic coupling and energy transfer pathways, while the lineshapes encode information about structural heterogeneity and dynamics \cite{KhalilEtAl2004VibrationalCoherenceTransfer}. Time-resolved 2DIR further allows tracking of structural changes during chemical reactions or conformational transitions \cite{Fayer2009DynamicsLiquidsMolecules}.
 
 \subsection{Coherent Raman Techniques}
 \label{subsec:coherent_raman}
 
-\noindent Coherent anti-Stokes Raman scattering (CARS) and stimulated Raman scattering (SRS) are nonlinear optical techniques that provide enhanced sensitivity compared to spontaneous Raman spectroscopy \cite{Boyd2008}. These methods are widely used for chemically-specific microscopy without fluorescent labels.
+\noindent Coherent anti-Stokes Raman scattering (CARS) and stimulated Raman scattering (SRS) are nonlinear optical techniques that provide enhanced sensitivity compared to spontaneous Raman spectroscopy \cite{Boyd2008Contents}. These methods are widely used for chemically-specific microscopy without fluorescent labels.
 
 \noindent In CARS, three fields with frequencies $\omega_1$, $\omega_2$, and $\omega_3$ generate a signal at frequency $\omega_s = \omega_1 - \omega_2 + \omega_3$ when the frequency difference $\omega_1 - \omega_2$ matches a vibrational resonance. The coherent nature of the process leads to signal enhancement compared to spontaneous Raman scattering.
 
 \subsection{Transient Absorption Spectroscopy}
 \label{subsec:transient_absorption}
 
-\noindent Transient absorption spectroscopy, also known as pump-probe spectroscopy, is a powerful technique for studying excited-state dynamics \cite{Shim2009}. In this method, a short pump pulse excites the sample, and a subsequent probe pulse measures the resulting changes in absorption as a function of the time delay between the pulses.
+\noindent Transient absorption spectroscopy, also known as pump-probe spectroscopy, is a powerful technique for studying excited-state dynamics \todoref{find ref}%\cite{Shim2009}. 
+In this method, a short pump pulse excites the sample, and a subsequent probe pulse measures the resulting changes in absorption as a function of the time delay between the pulses.
 
 \noindent The transient absorption signal $\Delta A$ can be expressed as:
 
 \begin{equation}
-	\Delta A(t, \lambda) = -\log\left(\frac{I_{\text{pump-on}}(t, \lambda)}{I_{\text{pump-off}}(\lambda)}\right)
-	\label{eq:transient_absorption}
+    \Delta A(t, \lambda) = -\log\left(\frac{I_{\text{pump-on}}(t, \lambda)}{I_{\text{pump-off}}(\lambda)}\right)
+    \label{eq:transient_absorption}
 \end{equation}
 
 \noindent where $I_{\text{pump-on}}$ and $I_{\text{pump-off}}$ represent the transmitted probe intensity with and without the pump pulse, respectively.
 
-\noindent Features in transient absorption spectra include ground-state bleaching, stimulated emission, excited-state absorption, and product absorption. Each of these contributions reflects different physical processes \cite{Berera2009, Megerle2009}:
+\noindent Features in transient absorption spectra include ground-state bleaching, stimulated emission, excited-state absorption, and product absorption. Each of these contributions reflects different physical processes \todoref{find ref}%\cite{Berera2009, Megerle2009}:
 
 \begin{itemize}
-	\item \textbf{Ground-State Bleaching (GSB):} The pump pulse depletes the ground state population, resulting in decreased absorption of the probe pulse from the ground state. This appears as a negative signal in transient absorption spectra, coinciding spectrally with the ground-state absorption.
+    \item \textbf{Ground-State Bleaching (GSB):} The pump pulse depletes the ground state population, resulting in decreased absorption of the probe pulse from the ground state. This appears as a negative signal in transient absorption spectra, coinciding spectrally with the ground-state absorption.
 
-	\item \textbf{Stimulated Emission (SE):} When the probe pulse interacts with molecules in the excited state, it can stimulate emission back to the ground state. This process also yields a negative signal, typically red-shifted relative to the GSB due to the Stokes shift.
+    \item \textbf{Stimulated Emission (SE):} When the probe pulse interacts with molecules in the excited state, it can stimulate emission back to the ground state. This process also yields a negative signal, typically red-shifted relative to the GSB due to the Stokes shift.
 
-	\item \textbf{Excited-State Absorption (ESA):} Molecules in the excited state can absorb the probe pulse, transitioning to even higher excited states. This process yields a positive signal in the transient absorption spectrum, as it represents additional absorption that occurs only when the sample is excited.
+    \item \textbf{Excited-State Absorption (ESA):} Molecules in the excited state can absorb the probe pulse, transitioning to even higher excited states. This process yields a positive signal in the transient absorption spectrum, as it represents additional absorption that occurs only when the sample is excited.
 \end{itemize}
 
 \begin{figure}[ht]
-	\centering
-	\includegraphics[width=0.9\textwidth]{chapters/figures/transient_absorption_pathways.pdf}
-	\caption{Schematic representation of the three primary contributions to transient absorption signals: (a) Ground-State Bleaching, (b) Stimulated Emission, and (c) Excited-State Absorption. Each pathway involves different transitions between the levels of a four-level system.}
-	\label{fig:transient_absorption_pathways}
+    \centering
+    \includegraphics[width=0.9\textwidth]{chapters/figures/transient_absorption_pathways.pdf}
+    \caption{Schematic representation of the three primary contributions to transient absorption signals: (a) Ground-State Bleaching, (b) Stimulated Emission, and (c) Excited-State Absorption. Each pathway involves different transitions between the levels of a four-level system.}
+    \label{fig:transient_absorption_pathways}
 \end{figure}
 
 \noindent Figure \ref{fig:transient_absorption_pathways} illustrates these three primary contributions to transient absorption signals.
 
-\noindent Analysis of these features as a function of time delay provides information about excited-state lifetimes, energy transfer processes, and photochemical reaction pathways. The ability to separate and identify these contributions is crucial for understanding the dynamics of complex molecular systems \cite{Berera2009, Megerle2009}.
+\noindent Analysis of these features as a function of time delay provides information about excited-state lifetimes, energy transfer processes, and photochemical reaction pathways. The ability to separate and identify these contributions is crucial for understanding the dynamics of complex molecular systems \todoref{find ref}%\cite{Berera2009, Megerle2009}.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 6: MULTIDIMENSIONAL SPECTROSCOPY APPLICATIONS
@@ -459,44 +463,44 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \subsection{Time- and Structure-Resolution Challenges}
 \label{subsec:time_structure_challenges}
 
-\noindent Scientific questions encompassing both the structure and dynamics of molecular systems present significant experimental challenges \cite{Hamm2011}. Consider fundamental processes such as protein folding, solvent fluctuations, or electron transfer reactions. In each case, researchers seek to understand the reaction pathway, which requires time-resolving the molecular structure. However, the relevant time scales can span an enormous range—from femtoseconds to hours—depending on the specific system under investigation.
+\noindent Scientific questions encompassing both the structure and dynamics of molecular systems present significant experimental challenges \cite{HammZanni2011ConceptsMethods2D}. Consider fundamental processes such as protein folding, solvent fluctuations, or electron transfer reactions. In each case, researchers seek to understand the reaction pathway, which requires time-resolving the molecular structure. However, the relevant time scales can span an enormous range—from femtoseconds to hours—depending on the specific system under investigation.
 
-\noindent Traditional spectroscopic methods face inherent limitations in simultaneously achieving high temporal and structural resolution. When dynamics occur on slow time scales, nuclear magnetic resonance (NMR) spectroscopy can provide exquisite structural information with atomic-level detail. Conversely, for fast processes, fluorescence or absorption spectroscopy can probe dynamics with exceptional temporal resolution, but with a corresponding trade-off in structural specificity \cite{Hamm2011}. Between these extremes lies an experimental gap in both time- and structure-resolution capabilities.
+\noindent Traditional spectroscopic methods face inherent limitations in simultaneously achieving high temporal and structural resolution. When dynamics occur on slow time scales, nuclear magnetic resonance (NMR) spectroscopy can provide exquisite structural information with atomic-level detail. Conversely, for fast processes, fluorescence or absorption spectroscopy can probe dynamics with exceptional temporal resolution, but with a corresponding trade-off in structural specificity \cite{HammZanni2011ConceptsMethods2D}. Between these extremes lies an experimental gap in both time- and structure-resolution capabilities.
 
 \noindent This gap becomes even more pronounced when studying dynamics in confined environments such as biological membranes, where many standard structural techniques become difficult or impossible to apply. The challenge is particularly acute for intermediate time scales (picoseconds to microseconds) and for systems where both structural changes and dynamic processes are coupled.
 
 \subsection{2D IR Spectroscopy: Bridging the Gap}
 \label{subsec:2dir_bridging_gap}
 
-\noindent Two-dimensional infrared (2D IR) spectroscopy has emerged as a powerful technique to address these limitations, providing bond-specific structural resolution across all relevant time scales \cite{Hamm2011}. This technique offers several unique advantages:
+\noindent Two-dimensional infrared (2D IR) spectroscopy has emerged as a powerful technique to address these limitations, providing bond-specific structural resolution across all relevant time scales \cite{HammZanni2011ConceptsMethods2D}. This technique offers several unique advantages:
 
 \begin{itemize}
-	\item \textbf{Temporal versatility:} 2D IR spectroscopy possesses the fast time resolution necessary to follow electron transfer and solvent dynamics on femtosecond time scales, while also being applicable in "snapshot" mode to study kinetics extending to arbitrarily long time scales.
+    \item \textbf{Temporal versatility:} 2D IR spectroscopy possesses the fast time resolution necessary to follow electron transfer and solvent dynamics on femtosecond time scales, while also being applicable in "snapshot" mode to study kinetics extending to arbitrarily long time scales.
 
-	\item \textbf{Sample flexibility:} The technique can be applied to diverse sample types, including dilute solutions, solid-state systems, and membrane-bound proteins, making it particularly valuable for biological applications.
+    \item \textbf{Sample flexibility:} The technique can be applied to diverse sample types, including dilute solutions, solid-state systems, and membrane-bound proteins, making it particularly valuable for biological applications.
 
-	\item \textbf{Structural sensitivity:} The method derives its structural information from couplings between vibrational modes that give rise to characteristic infrared bands and cross-peaks. These cross-peaks provide direct information about molecular connectivity and conformational changes.
+    \item \textbf{Structural sensitivity:} The method derives its structural information from couplings between vibrational modes that give rise to characteristic infrared bands and cross-peaks. These cross-peaks provide direct information about molecular connectivity and conformational changes.
 
-	\item \textbf{Environmental probes:} Molecular structures can be probed through hydrogen bonding patterns and electric field effects that generate dynamic 2D lineshapes, providing insights into local environments and intermolecular interactions.
+    \item \textbf{Environmental probes:} Molecular structures can be probed through hydrogen bonding patterns and electric field effects that generate dynamic 2D lineshapes, providing insights into local environments and intermolecular interactions.
 \end{itemize}
 
-\noindent The structural sensitivity of 2D IR spectroscopy stems from the fact that vibrational frequencies are exquisitely sensitive to local molecular environment, hydrogen bonding, and electrostatic interactions. Cross-peaks in 2D IR spectra arise from vibrational coupling and provide direct information about spatial proximity and connectivity between different molecular groups \cite{Hamm2011}.
+\noindent The structural sensitivity of 2D IR spectroscopy stems from the fact that vibrational frequencies are exquisitely sensitive to local molecular environment, hydrogen bonding, and electrostatic interactions. Cross-peaks in 2D IR spectra arise from vibrational coupling and provide direct information about spatial proximity and connectivity between different molecular groups \cite{HammZanni2011ConceptsMethods2D}.
 
 \subsection{Computational Integration and Future Directions}
 \label{subsec:computational_integration}
 
-\noindent A particularly powerful aspect of 2D IR spectroscopy is that the spectra can be quantitively computed from molecular dynamics simulations, providing a direct comparison between experimental observations and all-atom theoretical models \cite{Hamm2011}. This computational-experimental synergy enables:
+\noindent A particularly powerful aspect of 2D IR spectroscopy is that the spectra can be quantitively computed from molecular dynamics simulations, providing a direct comparison between experimental observations and all-atom theoretical models \cite{HammZanni2011ConceptsMethods2D}. This computational-experimental synergy enables:
 
 \begin{itemize}
-	\item Validation of molecular dynamics force fields and simulation protocols
-	\item Assignment of spectral features to specific molecular structures and conformations
-	\item Prediction of spectroscopic signatures for proposed molecular mechanisms
-	\item Development of structure-spectrum relationships for complex systems
+    \item Validation of molecular dynamics force fields and simulation protocols
+    \item Assignment of spectral features to specific molecular structures and conformations
+    \item Prediction of spectroscopic signatures for proposed molecular mechanisms
+    \item Development of structure-spectrum relationships for complex systems
 \end{itemize}
 
-\noindent While 2D IR spectroscopy can be used qualitatively as an analytical tool, a deeper understanding of nonlinear optics, vibrational potentials, and lineshape theory enables much more sophisticated interpretation of 2D spectra and expands the range of possible applications \cite{Hamm2011}.
+\noindent While 2D IR spectroscopy can be used qualitatively as an analytical tool, a deeper understanding of nonlinear optics, vibrational potentials, and lineshape theory enables much more sophisticated interpretation of 2D spectra and expands the range of possible applications \cite{HammZanni2011ConceptsMethods2D}.
 
-\noindent The principles and methods developed for 2D IR spectroscopy also extend to 2D visible spectroscopy, which probes electronic transitions and has found particular application in studying photosynthetic light-harvesting complexes and other photobiological systems. Looking toward the future, pulse sequences for three-dimensional (and higher-dimensional) spectroscopy are being developed, promising even greater structural and dynamical information content \cite{Hamm2011}.
+\noindent The principles and methods developed for 2D IR spectroscopy also extend to 2D visible spectroscopy, which probes electronic transitions and has found particular application in studying photosynthetic light-harvesting complexes and other photobiological systems. Looking toward the future, pulse sequences for three-dimensional (and higher-dimensional) spectroscopy are being developed, promising even greater structural and dynamical information content \cite{HammZanni2011ConceptsMethods2D}.
 
 \noindent The integration of multidimensional spectroscopic techniques with advanced computational methods represents a paradigm shift in how complex molecular systems can be studied, offering unprecedented insights into the relationship between molecular structure, dynamics, and function.
 
@@ -507,10 +511,12 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \section{Summary and Outlook}
 \label{sec:summary}
 
-\noindent Spectroscopy continues to evolve as a cornerstone analytical technique in physical sciences \cite{Mukamel1995, Cho2009}. From the basic principles of light-matter interaction to advanced nonlinear methods, spectroscopic approaches provide unique insights into the structure, dynamics, and function of complex systems across multiple time and length scales.
+\noindent Spectroscopy continues to evolve as a cornerstone analytical technique in physical sciences \cite{Mukamel1995PrinciplesNonlinearOptical, Cho2009TwodimensionalOpticalSpectroscopy}. From the basic principles of light-matter interaction to advanced nonlinear methods, spectroscopic approaches provide unique insights into the structure, dynamics, and function of complex systems across multiple time and length scales.
 
-\noindent Recent developments in laser technology, detection methods, and theoretical frameworks have expanded the frontiers of spectroscopy \cite{Jonas2003, Shim2009}. Attosecond spectroscopy now probes electron dynamics on their natural time scale, while quantum light sources open new possibilities for quantum-enhanced measurements.
+\noindent Recent developments in laser technology, detection methods, and theoretical frameworks have expanded the frontiers of spectroscopy \cite{Jonas2003TwodimensionalFemtosecondSpectroscopy}\todoref{find ref}%, Shim2009}.
+Attosecond spectroscopy now probes electron dynamics on their natural time scale, while quantum light sources open new possibilities for quantum-enhanced measurements.
 
-\noindent The integration of spectroscopic methods with imaging techniques, such as super-resolution microscopy and spectroscopic tomography, bridges the gap between molecular-level information and macroscopic observations \cite{Brixner2005}. Meanwhile, the application of artificial intelligence and machine learning approaches to spectral data analysis promises to reveal subtle patterns and correlations that might otherwise remain hidden.
+\noindent The integration of spectroscopic methods with imaging techniques, such as super-resolution microscopy and spectroscopic tomography, bridges the gap between molecular-level information and macroscopic observations \cite{BrixnerEtAl2004PhasestabilizedTwodimensionalElectronic}.
+Meanwhile, the application of artificial intelligence and machine learning approaches to spectral data analysis promises to reveal subtle patterns and correlations that might otherwise remain hidden.
 
 \noindent As our understanding of light-matter interactions deepens and experimental capabilities advance, spectroscopy will continue to provide critical insights across chemistry, physics, biology, and materials science, contributing to technological innovations and fundamental scientific discoveries.

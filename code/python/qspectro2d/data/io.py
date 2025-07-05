@@ -61,14 +61,32 @@ def load_info_file(abs_info_path: Path) -> dict:
         dict: Dictionary containing system parameters and data configuration
     """
     try:
-        # if abs_info_path is not a file, use the first file with pattern *.pkl within the same directory with the same stem
-        
-        if not abs_info_path.is_file():
-            abs_info_path = next(abs_info_path.parent.glob(f"{abs_info_path.stem}*.pkl"), None)
-        with open(abs_info_path, "rb") as info_file:
-            info = pickle.load(info_file)
-        print(f"✅ Loaded info from: {abs_info_path}")
-        return info
+        print(f"🔍 Loading info from: {abs_info_path}")
+
+        # 1. Try to load the file directly if it exists
+        if abs_info_path.exists():
+            with open(abs_info_path, "rb") as info_file:
+                info = pickle.load(info_file)
+            print(f"✅ Loaded info from: {abs_info_path}")
+            return info
+
+        # 2. If not found, search for any .pkl file in the same directory
+        print(f"⚠️ File not found. Searching for any .pkl file in the same directory...")
+        parent_dir = abs_info_path.parent
+
+        # Find the first .pkl file in the directory
+        pkl_files = list(parent_dir.glob("*.pkl"))
+
+        if pkl_files:
+            alt_path = pkl_files[0]  # Use the first .pkl file found
+            print(f"🔄 Using alternative file: {alt_path}")
+            with open(alt_path, "rb") as info_file:
+                info = pickle.load(info_file)
+            print(f"✅ Loaded info from: {alt_path}")
+            return info
+        else:
+            raise FileNotFoundError(f"No .pkl files found in directory: {parent_dir}")
+
     except Exception as e:
         print(f"❌ ERROR: Failed to load info from {abs_info_path}: {e}")
         raise
@@ -102,7 +120,9 @@ def load_data_from_rel_path(relative_path: str) -> dict:
     result = {
         "data": data_dict.get("data"),
         "axes": {
-            "axis1": data_dict.get("axis1"),  # Note: saved as 'axis1', loaded as 'axis1'
+            "axis1": data_dict.get(
+                "axis1"
+            ),  # Note: saved as 'axis1', loaded as 'axis1'
         },
         "system": info_dict.get("system"),
         "info_config": info_dict.get("info_config"),

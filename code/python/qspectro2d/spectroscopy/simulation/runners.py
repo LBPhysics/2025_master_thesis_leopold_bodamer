@@ -74,7 +74,7 @@ def run_1d_simulation(
             system=system,
             max_workers=max_workers,
             time_cut=time_cut,
-            apply_ift=info_config.get("apply_ift", True)
+            apply_ift=info_config.get("apply_ift", True),
         )
         print("✅ Parallel computation completed successfully!")
         return t_det_vals, data
@@ -127,9 +127,7 @@ def run_2d_simulation(
             n_phases=info_config["n_phases"],
             T_wait=info_config["t_wait"],
             t_det_max=info_config["t_det_max"],
-            apply_ift=info_config.get(
-                "apply_ift", True
-            ),  # TODO also do this to 1d case
+            apply_ift=info_config.get("apply_ift", True),
             system=system,
             max_workers=max_workers,
             **kwargs,

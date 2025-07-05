@@ -47,8 +47,9 @@ def _generate_base_filename(system: SystemParameters, info_config: dict) -> str:
     if N_atoms == 2:
         parts.append(f"wB{system.omega_B_cm/1e4:.2f}e4")
         parts.append(f"muB{system.mu_B:.2f}")
-        if system.J_cm > 0:
-            parts.append(f"J{system.J_cm/1e3:.2f}e3")
+        J_val = system.J if system.J else info_config.get("J_cm", 0)
+        if J_val > 0:
+            parts.append(f"J{J_val:.2f}au")  # TODO arbitrary units
 
     n_freqs = info_config.get("n_freqs", 1)
 
@@ -119,8 +120,8 @@ def generate_base_sub_dir(info_config: dict, system) -> Path:
 
     if N_atoms == 2:
         # Add coupling strength if applicable
-        J_cm = system.J_cm
-        if J_cm > 0:
+        J = system.J
+        if J > 0:
             parts.append(f"Coupled")
 
     n_freqs = info_config.get("n_freqs", 1)

@@ -127,8 +127,8 @@ def plot_1d_data(
                 component="abs",  # Use first component for time domain
                 tau_coh=tau_coh,
                 T_wait=T_wait,
-                n_freqs=n_freqs,
                 function_symbol="E_{k_s}",
+                n_freqs=n_freqs,
             )
             filename = generate_unique_plot_filename(
                 system,
@@ -137,7 +137,9 @@ def plot_1d_data(
                 component="abs",
             )
 
-            save_fig(fig, filename=filename, formats=["png"]) # easy to work with, because data is too big
+            save_fig(
+                fig, filename=filename, formats=["png"]
+            )  # easy to work with, because data is too big
             print("✅ 1D Time domain plots completed!")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
@@ -213,22 +215,30 @@ def plot_2d_data(
     ### Plot time domain data
     if plot_config.get("plot_time_domain", True):
         print("📊 Plotting 2D time domain data...")
-        try:
-            fig = plot_2d_el_field(
-                data_x=t_det_vals,
-                data_y=tau_coh_vals,
-                data_z=data,
-                t_wait=T_wait,
-                domain="time",
-                use_custom_colormap=True,
-            )
-            filename = generate_unique_plot_filename(
-                system=system, info_config=info_config, domain="time"
-            )
-            save_fig(fig, filename=filename, formats=["png"])  # PNG for large data
+        # Plot each spectral component separately
+        time_domain_comps = ["real", "imag", "abs", "phase"]
+        for component in time_domain_comps:
+            try:
+                fig = plot_2d_el_field(
+                    data_x=t_det_vals,
+                    data_y=tau_coh_vals,
+                    data_z=data,
+                    t_wait=T_wait,
+                    domain="time",
+                    use_custom_colormap=True,
+                    component=component,
+                )
+                filename = generate_unique_plot_filename(
+                    system=system,
+                    info_config=info_config,
+                    domain="time",
+                    component=component,
+                )
+
+                save_fig(fig, filename=filename, formats=["png"])  # PNG for large data
+            except Exception as e:
+                print(f"❌ Error in 2D time domain plotting: {e}")
             print("✅ 2D time domain plots completed!")
-        except Exception as e:
-            print(f"❌ Error in 2D time domain plotting: {e}")
 
     ### Handle frequency domain processing
     if plot_config.get("plot_frequency_domain", True):

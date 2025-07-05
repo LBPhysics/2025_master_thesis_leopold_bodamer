@@ -21,7 +21,7 @@
 %	CLASS DEFINITION AND PARAMETERS
 %----------------------------------------------------------------------------------------
 
-\NeedsTeXFormat{LaTeX2e}[1996/12/01]
+\NeedsTeXFormat{LaTeX2e}[2018/01/01]
 \newcommand{\classname}{style_thesis}
 \ProvidesClass{\classname}[2017/08/27 v1.6 LaTeXTemplates.com]
 \providecommand{\baseclass}{book}
@@ -197,6 +197,12 @@
 \RequirePackage{caption} % Required for customising the captions
 %\captionsetup{justification=centerlast,font=small,labelfont=sc,margin=50pt}        % ORIGINAL
 \captionsetup{width=1.0\textwidth, font=normal, labelfont=bf}						% My version
+
+% EDITED Load more essential packages:
+\RequirePackage{csquotes} % For quotes
+\RequirePackage{tikz} % For graphics
+\RequirePackage[colorinlistoftodos,prependcaption,textsize=small]{todonotes} % For TODO notes
+
 
 %----------------------------------------------------------------------------------------
 %	DEFINE CUSTOM THESIS INFORMATION COMMANDS
@@ -535,7 +541,7 @@ colorlinks=true,% Set to false to disable coloring links
 citecolor=magenta,% The color of citations
 linkcolor=black,% The color of references to document elements (sections, figures, etc)
 urlcolor=mdtRed,% The color of hyperlinks (URLs)
-pdfstartview={FitV},
+pdfstartview={FitH},
 unicode,
 breaklinks=true,
 }
@@ -545,6 +551,15 @@ breaklinks=true,
 }
 	}
 }{%nothing
+}
+
+% EDITED Hyperref setup (declare metadata)
+\AtBeginDocument{
+    \hypersetup{
+        pdftitle=\ttitle,          % Title of the document
+        pdfauthor=\authorname,     % Author of the document
+        pdfsubject=\subjectname,   % Subject of the document
+    }
 }
 
 %----------------------------------------------------------------------------------------

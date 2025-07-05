@@ -60,10 +60,10 @@ from qspectro2d.data import (
     generate_unique_data_filename,
 )
 
-N_ATOMS = 2  # Number of atoms in the system, can be changed to 1 or 2
+N_ATOMS = 1  # Number of atoms in the system, can be changed to 1 or 2
 
 
-def run_single_tau( # todo let t_wait be a parameter
+def run_single_tau(  # todo let t_wait be a parameter
     tau_coh: float, t_det_max: float, dt: float, save_info: bool = False
 ) -> Path:
     print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
@@ -87,8 +87,8 @@ def run_single_tau( # todo let t_wait be a parameter
         # phase cycling -> 16 parallel jobs
         "n_phases": 4,
         # inhomogeneous broadening
-        "n_freqs": 1,
-        "Delta_cm": 0,
+        "n_freqs": 100,
+        "Delta_cm": 300,
     }
 
     start_time = time.time()
@@ -124,6 +124,7 @@ def run_single_tau( # todo let t_wait be a parameter
 
     return rel_path.parent
 
+
 def main():
     parser = argparse.ArgumentParser(description="Run 1D spectroscopy.")
 
@@ -157,11 +158,12 @@ def main():
         )
         for tau_coh in tau_subarray:
             save_info = tau_coh == 0
-            rel_dir = run_single_tau(tau_coh, args.t_det_max, args.dt, save_info=save_info)
+            rel_dir = run_single_tau(
+                tau_coh, args.t_det_max, args.dt, save_info=save_info
+            )
 
         print(f"\n🎯 To stack this data, run:")
         print(f'python stack_tau_coh_to_2d.py --rel_path "{rel_dir}"')
-
 
     else:
         # Default: run a standard single tau_coh simulation
