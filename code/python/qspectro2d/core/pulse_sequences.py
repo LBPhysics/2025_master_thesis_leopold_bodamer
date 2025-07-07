@@ -4,12 +4,16 @@
 from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple, Optional, Union
 from qspectro2d.core.utils_and_config import convert_cm_to_fs
+import numpy as np
+import json
+
 
 @dataclass
 class Pulse:
     """
     Represents a single optical pulse with its temporal and spectral properties.
     """
+
     pulse_index: int
     pulse_peak_time: float
     pulse_phase: float
@@ -18,11 +22,21 @@ class Pulse:
     pulse_freq: float
     pulse_type: str = "cos2"
 
+    def __post_init__(self):
+        if self.pulse_fwhm <= 0:
+            raise ValueError("Pulse FWHM must be positive")
+        if not np.isfinite(self.pulse_amplitude):
+            raise ValueError("Pulse amplitude must be finite")
+
     @property
-    def active_time_range(self) -> Tuple[float, float]:
-        start_time = self.pulse_peak_time - self.pulse_fwhm
-        end_time = self.pulse_peak_time + self.pulse_fwhm
-        return (start_time, end_time)
+    def active_time_range(self, n_fwhm: float = 1.094) -> Tuple[float, float]:
+        """
+        Get the active time range for the pulse (default ±1.094FWHM).
+        Within +/- 1 FWHM, the 95% of the pulse energy is contained.
+        Within +/- 1.094 FWHM, the 99% of the pulse energy is contained.
+        """
+        duration = n_fwhm * self.pulse_fwhm
+        return (self.pulse_peak_time - duration, self.pulse_peak_time + duration)
 
     def summary_line(self) -> str:
         return (
@@ -34,6 +48,22 @@ class Pulse:
             f"ϕ = {self.pulse_phase:6.3f} rad | "
             f"type = {self.pulse_type:<7}"
         )
+
+    def to_dict(self) -> dict:
+        return {
+            "pulse_index": self.pulse_index,
+            "pulse_peak_time": self.pulse_peak_time,
+            "pulse_phase": self.pulse_phase,
+            "pulse_fwhm": self.pulse_fwhm,
+            "pulse_amplitude": self.pulse_amplitude,
+            "pulse_freq": self.pulse_freq,
+            "pulse_type": self.pulse_type,
+        }
+
+    @staticmethod
+    def from_dict(data: dict) -> "Pulse":
+        return Pulse(**data)
+
 
 @dataclass
 class PulseSequence:
@@ -54,7 +84,7 @@ class PulseSequence:
         self.pulse_types = [pulse.pulse_type for pulse in self.pulses]
 
     @staticmethod
-    def three_pulse_sequence(
+    def from_delays(
         delays: List[float],
         base_amplitude: float = 0.05,
         pulse_fwhm: float = 15.0,
@@ -63,6 +93,23 @@ class PulseSequence:
         relative_E0s: Optional[List[float]] = None,
         phases: Optional[List[float]] = None,
     ) -> "PulseSequence":
+        """Create a PulseSequence from a list of delays and other pulse parameters.
+
+        Args:
+            delays (List[float]): List of pulse delays.
+            base_amplitude (float, optional): Base amplitude for the pulses. Defaults to 0.05.
+            pulse_fwhm (float, optional): Full width at half maximum (FWHM) for the pulses. Defaults to 15.0.
+            carrier_freq_cm (float, optional): Carrier frequency for the pulses in cm^-1. Defaults to 16000.0.
+            pulse_type (str, optional): Type of the pulse (e.g., "gaussian"). Defaults to "gaussian".
+            relative_E0s (Optional[List[float]], optional): Relative electric field amplitudes for each pulse. Defaults to None.
+            phases (Optional[List[float]], optional): Phase shifts for each pulse in radians. Defaults to None.
+
+        Raises:
+            ValueError: If the lengths of the input lists do not match.
+
+        Returns:
+            PulseSequence: A PulseSequence object containing the defined pulses.
+        """
         n_pulses = len(delays)
         if relative_E0s is None:
             relative_E0s = [1.0] * n_pulses
@@ -80,15 +127,17 @@ class PulseSequence:
         pulse_indices = list(range(n_pulses))
         pulses = []
         for i in range(n_pulses):
-            pulses.append(Pulse(
-                pulse_index=pulse_indices[i],
-                pulse_peak_time=delays[i],
-                pulse_phase=phases[i],
-                pulse_freq=carrier_freq_fs,
-                pulse_fwhm=pulse_fwhm,
-                pulse_amplitude=base_amplitude * relative_E0s[i],
-                pulse_type=pulse_type,
-            ))
+            pulses.append(
+                Pulse(
+                    pulse_index=pulse_indices[i],
+                    pulse_peak_time=delays[i],
+                    pulse_phase=phases[i],
+                    pulse_freq=carrier_freq_fs,
+                    pulse_fwhm=pulse_fwhm,
+                    pulse_amplitude=base_amplitude * relative_E0s[i],
+                    pulse_type=pulse_type,
+                )
+            )
 
         return PulseSequence(pulses=pulses)
 
@@ -128,15 +177,17 @@ class PulseSequence:
 
         pulses = []
         for i in range(n_pulses):
-            pulses.append(Pulse(
-                pulse_index=pulse_indices[i],
-                pulse_peak_time=pulse_peak_times[i],
-                pulse_phase=pulse_phases[i],
-                pulse_freq=freq_list[i],
-                pulse_fwhm=fwhm_list[i],
-                pulse_amplitude=amp_list[i],
-                pulse_type=type_list[i],
-            ))
+            pulses.append(
+                Pulse(
+                    pulse_index=pulse_indices[i],
+                    pulse_peak_time=pulse_peak_times[i],
+                    pulse_phase=pulse_phases[i],
+                    pulse_freq=freq_list[i],
+                    pulse_fwhm=fwhm_list[i],
+                    pulse_amplitude=amp_list[i],
+                    pulse_type=type_list[i],
+                )
+            )
 
         pulses.sort(key=lambda p: p.pulse_peak_time)
         return PulseSequence(pulses=pulses)
@@ -160,6 +211,7 @@ class PulseSequence:
                 active_pulses.append((i, pulse))
 
         return active_pulses
+
     def get_total_amplitude_at_time(self, time: float) -> float:
         """
         Calculate the total electric field amplitude (E0) at a given time.
@@ -203,7 +255,6 @@ class PulseSequence:
             "pulse_indices": [i for i, _ in active_pulses],
         }
 
-
     # turn the PulseSequence into a list-like object
     def __len__(self):
         return len(self.pulses)
@@ -220,19 +271,54 @@ class PulseSequence:
         for p in self.pulses:
             print(p.summary_line())
 
+    def __str__(self) -> str:
+        return self.summary()
+
+    def to_dict(self) -> dict:
+        return {"pulses": [pulse.to_dict() for pulse in self.pulses]}
+
+    @staticmethod
+    def from_dict(data: dict) -> "PulseSequence":
+        pulses = [Pulse.from_dict(d) for d in data["pulses"]]
+        return PulseSequence(pulses=pulses)
+
+    def to_json(self, indent: int = 2) -> str:
+        import json
+
+        return json.dumps(self.to_dict(), indent=indent)
+
+    @staticmethod
+    def from_json(json_str: str) -> "PulseSequence":
+        import json
+
+        data = json.loads(json_str)
+        return PulseSequence.from_dict(data)
+
+
+# How to recreate a PulseSequence and serialize it to JSON
+"""
+seq = PulseSequence.from_delays(delays=[100.0, 200.0], pulse_fwhm=10.0)
+json_data = seq.to_json()
+print("Serialized PulseSequence:\n", json_data)
+
+reconstructed = PulseSequence.from_json(json_data)
+reconstructed.summary()
+"""
+
+
 def main():
     print("=" * 60)
     print("PULSE SEQUENCE DEMO")
     print("=" * 60)
 
     print("\n1. Three-pulse sequence:")
-    seq = PulseSequence.three_pulse_sequence(
+    seq = PulseSequence.from_delays(
         delays=[100.0, 200.0, 300.0],
         base_amplitude=0.05,
         pulse_fwhm=10.0,
         carrier_freq_cm=15800.0,
         relative_E0s=[1.0, 1.0, 0.1],
-        phases=[0.0, 0.5, 1.0]
+        phases=[0.0, 0.5, 1.0],
     )
     seq.summary()
 
@@ -243,9 +329,24 @@ def main():
         pulse_amplitudes=[0.05, 0.05, 0.05, 0.05, 0.05],
         pulse_fwhms=[10.0, 10.0, 10.0, 10.0, 10.0],
         pulse_freqs=[15800.0, 15800.0, 15800.0, 15800.0, 15800.0],
-        pulse_types=["gaussian", "gaussian", "gaussian", "gaussian", "gaussian"]
+        pulse_types=["gaussian", "gaussian", "gaussian", "gaussian", "gaussian"],
     )
     seq.summary()
+
+    print("\n2. Active time ranges for each pulse:")
+    for pulse in seq:
+        start, end = pulse.active_time_range
+        print(f"Pulse {pulse.pulse_index} active from {start:.2f} fs to {end:.2f} fs")
+
+    times_to_check = [95.0, 300.0]  # adjust as needed
+    print("\n3. Checking active pulses at various times:")
+    for t in times_to_check:
+        info = seq.get_field_info_at_time(t)
+        print(f"At time {t} fs:")
+        print(f"  Number of active pulses: {info['num_active_pulses']}")
+        print(f"  Total amplitude: {info['total_amplitude']:.3e}")
+        print(f"  Active pulse indices: {info['pulse_indices']}")
+
 
 if __name__ == "__main__":
     main()

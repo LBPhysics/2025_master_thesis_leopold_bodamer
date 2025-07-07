@@ -26,7 +26,7 @@ def main():
     ### Main system configuration
     N_atoms = 1  # Number of atoms (1 or 2)
     ODE_Solver = "BR"  # ODE solver type
-    RWA_laser = True  # Use RWA for laser interaction
+    RWA_SL = True  # Use RWA for laser interaction
     t_det_max = 4  # Additional time buffer [fs]
     dt = 1  # Time step [fs]
 
@@ -56,7 +56,7 @@ def main():
         "t_det_max": t_det_max,
         "ODE_Solver": ODE_Solver,
         "pulse_fwhm": pulse_fwhm,
-        "RWA_laser": RWA_laser,
+        "RWA_SL": RWA_SL,
         "t_wait": T_wait,
         "n_phases": n_phases,
         "n_freqs": n_freqs,

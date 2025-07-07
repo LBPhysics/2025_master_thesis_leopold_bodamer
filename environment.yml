@@ -24,8 +24,11 @@ dependencies:
   - joblib>=1.1.0
   - jupyter
   - ipython
-  - black[jupyter]>=22.0.0
+  - black[jupyter]>=22.0.0 # just my preference, also install black for python formatting?
+  - mpmath
+  - multiprocessing
   - pip
+  - json
   - pip:
     - -e ./code/python       # Local package in editable mode
     - tqdm                  # Progress bar for loops

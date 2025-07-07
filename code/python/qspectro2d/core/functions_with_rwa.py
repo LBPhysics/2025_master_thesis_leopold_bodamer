@@ -10,59 +10,23 @@ from typing import Union, List, overload
 from qutip import Qobj, expect
 from qspectro2d.core.system_parameters import SystemParameters
 from qspectro2d.core.pulse_sequences import PulseSequence
-from qspectro2d.core.pulse_functions import E_pulse, Epsilon_pulse
-
-
-def H_int(
-    t: float,
-    pulse_seq: PulseSequence,
-    system: SystemParameters,
-) -> Qobj:
-    """
-    Define the interaction Hamiltonian for the system with multiple pulses using the PulseSequence class.
-
-    Parameters:
-        t (float): Time at which the interaction Hamiltonian is evaluated.
-        pulse_seq (PulseSequence): PulseSequence object containing all pulse parameters.
-        system (SystemParameters): System parameters.
-        SM_op (Qobj): Lowering operator (system-specific).
-        Dip_op (Qobj): Dipole operator (system-specific).
-
-    Returns:
-        Qobj: Interaction Hamiltonian at time t.
-    """
-    if not isinstance(pulse_seq, PulseSequence):
-        raise TypeError("pulse_seq must be a PulseSequence instance.")
-
-    SM_op = system.SM_op  # Lowering operator
-    Dip_op = system.Dip_op
-
-    if system.RWA_laser:
-        E_field_RWA = E_pulse(t, pulse_seq)  # Combined electric field under RWA
-        H_int = -(
-            SM_op.dag() * E_field_RWA + SM_op * np.conj(E_field_RWA)
-        )  # RWA interaction Hamiltonian
-    else:
-        E_field = Epsilon_pulse(t, pulse_seq)  # Combined electric field with carrier
-        H_int = -Dip_op * (E_field + np.conj(E_field))  # Full interaction Hamiltonian
-
-    return H_int
 
 
 @overload
 def apply_RWA_phase_factors(
-    states: List[Qobj], times: np.ndarray, system: SystemParameters
+    states: List[Qobj], times: np.ndarray, N_atoms: int, omega_laser: float
 ) -> List[Qobj]: ...
-
-
 @overload
-def apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj: ...
+def apply_RWA_phase_factors(
+    rho: Qobj, t: float, N_atoms: int, omega_laser: float
+) -> Qobj: ...
 
 
 def apply_RWA_phase_factors(
     states_or_rho: Union[List[Qobj], Qobj],
     times_or_t: Union[np.ndarray, float],
-    system: SystemParameters,
+    N_atoms: int,
+    omega_laser: float,
 ) -> Union[List[Qobj], Qobj]:
     """
     Apply RWA phase factors to states.
@@ -75,122 +39,50 @@ def apply_RWA_phase_factors(
     Returns:
         Either a list of modified density matrices or a single modified density matrix
     """
-    # Handle single density matrix case
     if isinstance(states_or_rho, Qobj) and isinstance(times_or_t, (float, int)):
-        return _apply_RWA_phase_factors(states_or_rho, times_or_t, system=system)
-
-    # Handle list of density matrices case
+        return _apply_single_rwa(states_or_rho, times_or_t, N_atoms, omega_laser)
     elif isinstance(states_or_rho, list) and isinstance(times_or_t, np.ndarray):
         return [
-            _apply_RWA_phase_factors(state, time, system=system)
-            for state, time in zip(states_or_rho, times_or_t)
+            _apply_single_rwa(rho, t, N_atoms, omega_laser)
+            for rho, t in zip(states_or_rho, times_or_t)
         ]
-
-    # Handle invalid input combinations
     else:
         raise TypeError(
-            "Invalid input combination. Expected either:\n"
-            "- (Qobj, float, SystemParameters) for single state\n"
-            "- (List[Qobj], np.ndarray, SystemParameters) for multiple states"
+            "Invalid input. Expected either (Qobj, float) or (List[Qobj], np.ndarray)."
         )
 
 
-def _apply_RWA_phase_factors(rho: Qobj, t: float, system: SystemParameters) -> Qobj:
+def _apply_single_rwa(rho: Qobj, t: float, N_atoms: int, omega: float) -> Qobj:
     """
     Apply time-dependent phase factors to the density matrix entries.
     Dispatches to the appropriate implementation based on N_atoms.
-
-    Parameters:
-        rho (Qobj): Density matrix (Qobj) to modify.
-        t (float): Current time.
-        system (SystemParameters): System parameters.
-
-    Returns:
-        Qobj: Modified density matrix with phase factors applied.
     """
-    omega = system.omega_laser
-    if system.N_atoms == 1:
-        return _apply_RWA_phase_factors_1atom(rho, t, omega)
-    elif system.N_atoms == 2:
-        return _apply_RWA_phase_factors_2atom(rho, t, omega)
+    # Extract the density matrix as a NumPy array
+    rho_array = rho.full()
+    e_m_iwt = np.exp(-1j * omega * t)
+
+    # Apply the phase factors to the specified elements
+    if N_atoms == 1:
+        rho_array[1, 0] *= e_m_iwt
+        rho_array[0, 1] *= np.conj(e_m_iwt)
+
+    elif N_atoms == 2:
+        e_m_2iwt = np.exp(-1j * 2 * omega * t)
+        bar_alpha = 3
+        for alpha in range(1, 3):
+            rho_array[alpha, 0] *= e_m_iwt
+            rho_array[0, alpha] *= np.conj(e_m_iwt)
+
+            rho_array[bar_alpha, alpha] *= e_m_iwt
+            rho_array[alpha, bar_alpha] *= np.conj(e_m_iwt)
+
+        rho_array[bar_alpha, 0] *= e_m_2iwt
+        rho_array[0, bar_alpha] *= np.conj(e_m_2iwt)
+
     else:
         raise ValueError("Only N_atoms=1 or 2 are supported.")
 
-
-def _apply_RWA_phase_factors_1atom(rho: Qobj, t: float, omega: float) -> Qobj:
-    """
-    Apply time-dependent phase factors to the density matrix entries.
-
-    Parameters:
-        rho (Qobj): Density matrix (Qobj) to modify.
-        omega (float): Frequency of the phase factor.
-        t (float): Current time.
-
-    Returns:
-        Qobj: Modified density matrix with phase factors applied.
-    """
-    # Extract the density matrix as a NumPy array
-    rho_array = rho.full()
-    # print(rho.isherm)
-
-    # Apply the phase factors to the specified elements
-    phase_1 = np.exp(-1j * omega * t)  # e^(-i * omega * t)
-
-    # Modify the elements
-    rho_array[1, 0] *= phase_1  # rho_alpha_0 = sigma_alpha_0 * e^(-i * omega * t)
-    rho_array[0, 1] *= np.conj(phase_1)
-    rho_result = Qobj(rho_array, dims=rho.dims)
-    # print(rho_array[0, 1], rho_array[1,0])
-
-    # assert rho_result.isherm, "The resulting density matrix is not Hermitian."
-
-    return rho_result
-
-
-def _apply_RWA_phase_factors_2atom(rho: Qobj, t: float, omega: float) -> Qobj:
-    """
-    Apply time-dependent phase factors to the density matrix entries.
-
-    Parameters:
-        rho (Qobj): Density matrix (Qobj) to modify.
-        omega (float): Frequency of the phase factor.
-        t (float): Current time.
-
-    Returns:
-        Qobj: Modified density matrix with phase factors applied.
-    """
-    # Extract the density matrix as a NumPy array
-    rho_array = rho.full()
-    # print(rho.isherm)
-
-    # Apply the phase factors to the specified elements
-    phase_1 = np.exp(-1j * omega * t)  # e^(-i * omega * t)
-    phase_2 = np.exp(-1j * 2 * omega * t)  # e^(-i * 2 * omega * t)
-
-    # Modify the elements
-    bar_alpha = 3
-    for alpha in range(1, 3):
-        rho_array[
-            alpha, 0
-        ] *= phase_1  # rho_alpha_0 = sigma_alpha_0 * e^(-i * omega * t)
-        rho_array[0, alpha] *= np.conj(phase_1)
-
-        rho_array[
-            bar_alpha, alpha
-        ] *= phase_1  # rho_bar_alpha_alpha = sigma_bar_alpha_alpha * e^(-i * omega * t)
-        rho_array[alpha, bar_alpha] *= np.conj(phase_1)
-
-    rho_array[
-        bar_alpha, 0
-    ] *= phase_2  # rho_bar_alpha_0 = sigma_bar_alpha_0 * e^(-i * 2 * omega * t)
-    rho_array[0, bar_alpha] *= np.conj(phase_2)
-
-    rho_result = Qobj(rho_array, dims=rho.dims)
-    # print(rho_array[0, 1], rho_array[1,0])
-
-    # assert rho_result.isherm, "The resulting density matrix is not Hermitian."
-
-    return rho_result
+    return Qobj(rho_array, dims=rho.dims)
 
 
 def get_expect_vals_with_RWA(
@@ -208,17 +100,15 @@ def get_expect_vals_with_RWA(
     Returns:
         list of lists: Expectation values for each operator of len(states).
     """
-    omega = system.omega_laser
     e_ops = system.observable_ops
     if add_Dip:
         e_ops += [system.Dip_op]
 
-    if system.RWA_laser:
+    if system.RWA_SL:
+        N_atoms = system.N_atoms
+        omega_laser = PulseSequence.omega_laser
         # Apply RWA phase factors to each state
-        states = [
-            apply_RWA_phase_factors(state, time, system)
-            for state, time in zip(states, times)
-        ]
+        states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
 
     # Calculate expectation values for each state and each operator
     # This should return a list where each element corresponds to an operator
@@ -253,22 +143,17 @@ if __name__ == "__main__":
         pulse_fwhm=1.0,
         pulse_phase=0.0,
         pulse_amplitude=0.05,
-        pulse_freq=system1.omega_laser,
+        pulse_freq=system1.omega_A_cm,  # TODO MATCH THE units
     )
     pulse_seq1 = PulseSequence([test_pulse])
-
-    ### Test H_int function
-    print("\n--- Testing H_int function ---")
-    test_time = 1.0
-    H_interaction = H_int(test_time, pulse_seq1, system1)
-    print(f"H_int at t={test_time}: {type(H_interaction)}")
-    print(f"H_int dimensions: {H_interaction.dims}")
-    print(f"H_int is Hermitian: {H_interaction.isherm}")
 
     ### Test apply_RWA_phase_factors
     print("\n--- Testing apply_RWA_phase_factors ---")
     test_rho = system1.psi_ini  # Initial density matrix
-    rho_modified = apply_RWA_phase_factors(test_rho, test_time, system1)
+    test_time = 1.0
+    N_atoms = system1.N_atoms
+    omega_laser = test_pulse.omega_laser
+    rho_modified = apply_RWA_phase_factors(test_rho, test_time, N_atoms, omega_laser)
     print(f"Original rho type: {type(test_rho)}")
     print(f"Modified rho type: {type(rho_modified)}")
     print(f"Modified rho is Hermitian: {rho_modified.isherm}")
@@ -289,36 +174,13 @@ if __name__ == "__main__":
 
     ### Test with N_atoms=2
     print("\n=== Testing with N_atoms=2 ===")
-    try:
-        system2 = SystemParameters(N_atoms=2)
-        pulse_seq2 = PulseSequence([test_pulse])
+    system2 = SystemParameters(N_atoms=2)
+    pulse_seq2 = PulseSequence([test_pulse])
+    test_time = 1.0
 
-        ### Test H_int for 2-atom system
-        H_interaction2 = H_int(test_time, pulse_seq2, system2)
-        print(f"H_int for 2-atom system dimensions: {H_interaction2.dims}")
-
-        ### Test RWA phase factors for 2-atom system
-        test_rho2 = system2.psi_ini
-        rho_modified2 = apply_RWA_phase_factors(test_rho2, test_time, system2)
-        print(f"2-atom modified rho is Hermitian: {rho_modified2.isherm}")
-
-    except Exception as e:
-        print(f"Error testing 2-atom system: {e}")
-
-    ### Test error handling
-    print("\n--- Testing error handling ---")
-    try:
-        # Test with invalid pulse sequence type
-        H_int(test_time, "invalid_pulse_seq", system1)
-    except TypeError as e:
-        print(f"✓ Correctly caught TypeError: {e}")
-
-    try:
-        # Test with unsupported N_atoms
-        system_invalid = SystemParameters(N_atoms=1)
-        system_invalid.N_atoms = 3  # Manually set invalid value
-        apply_RWA_phase_factors(test_rho, test_time, system_invalid)
-    except ValueError as e:
-        print(f"✓ Correctly caught ValueError: {e}")
-
-    print("\n✅ All tests completed successfully!")
+    ### Test RWA phase factors for 2-atom system
+    test_rho2 = system2.psi_ini
+    N_atoms = system2.N_atoms
+    omega_laser = pulse_seq2.omega_laser
+    rho_modified2 = apply_RWA_phase_factors(test_rho2, test_time, N_atoms, omega_laser)
+    print(f"2-atom modified rho is Hermitian: {rho_modified2.isherm}")

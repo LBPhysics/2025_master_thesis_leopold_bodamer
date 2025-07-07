@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def convert_cm_to_fs(value):
     """
     Convert the wavenumber-frequencies from cm^-1 to angular frequency fs^-1
@@ -24,6 +25,7 @@ def convert_fs_to_cm(value):
         float: Value in cm^-1
     """
     return value / (2.998 * 2 * np.pi * 10**-5)
+
 
 # =============================
 # Fundamental constants

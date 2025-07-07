@@ -74,7 +74,7 @@ def run_single_tau(  # todo let t_wait be a parameter passed from user
         "simulation_type": "1d",
         # solver parameters
         "ODE_Solver": "Paper_eqs",
-        "RWA_laser": True,
+        "RWA_SL": True,
         "N_atoms": N_ATOMS,
         "J_cm": 300,  # Coupling strength [cm⁻¹]
         "omega_A_cm": 16000,  # Frequency of atom A [cm⁻¹]

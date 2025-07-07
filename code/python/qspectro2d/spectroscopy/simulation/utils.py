@@ -60,7 +60,7 @@ def create_system_parameters(info_config: dict) -> SystemParameters:
         cutoff_=info_config.get("cutoff_", 1),
         N_atoms=info_config.get("N_atoms", 1),
         ODE_Solver=info_config.get("ODE_Solver", "Paper_eqs"),
-        RWA_laser=info_config.get("RWA_laser", True),
+        RWA_SL=info_config.get("RWA_SL", True),
         dt=info_config.get("dt", 1),
         bath=info_config.get("bath", "paper"),
         E0=info_config.get("E0", 1),

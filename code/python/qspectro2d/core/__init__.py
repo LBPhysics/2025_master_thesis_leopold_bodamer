@@ -45,7 +45,6 @@ from .solver_fcts import (
 # RWA UTILITIES
 # =============================
 from .functions_with_rwa import (
-    H_int,
     apply_RWA_phase_factors,
     get_expect_vals_with_RWA,
 )

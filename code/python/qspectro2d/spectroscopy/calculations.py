@@ -33,7 +33,7 @@ from qspectro2d.core.solver_fcts import (
 )
 from qspectro2d.spectroscopy.inhomogenity import sample_from_sigma
 from qspectro2d.core.functions_with_rwa import (
-    H_int,
+    H_int,  # TODO update the new definition inside the SL_COUPLING class
     apply_RWA_phase_factors,
 )
 
@@ -460,8 +460,10 @@ def check_the_solver(system: SystemParameters) -> tuple[Result, float]:
     strg = ""
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
-    if getattr(system, "RWA_laser", False):
-        states = apply_RWA_phase_factors(states, times, system)
+    if getattr(system, "RWA_SL", False):
+        N_atoms = system.N_atoms
+        omega_laser = pulse_seq.omega_laser
+        states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
     for index, state in enumerate(states):
         time = times[index]
         if not state.isherm:
@@ -560,7 +562,7 @@ def compute_1d_polarization(
     """
     time_cut = kwargs.get("time_cut", np.inf)
 
-    dt = system.dt # TODO how can I seperate this from the system?
+    dt = system.dt  # TODO how can I seperate this from the system?
     fwhm = system.pulse_fwhm
     t0 = -fwhm
     t_max = tau_coh + T_wait + t_det_max
@@ -575,7 +577,9 @@ def compute_1d_polarization(
     pulse_timings = _get_pulse_timings(tau_coh, T_wait)
     # TODO add dynamical pulse parameters like fwhm, omega_L, E0, fwhm
     E0 = system.E0
-    pulse_sequences = _create_pulse_sequences(phi_0, phi_1, pulse_timings, fwhms=fwhm, E0=E0)
+    pulse_sequences = _create_pulse_sequences(
+        phi_0, phi_1, pulse_timings, fwhms=fwhm, E0=E0
+    )
 
     # =============================
     # COMPUTE EVOLUTION STATES
@@ -620,7 +624,12 @@ def _get_pulse_timings(tau_coh: float, T_wait: float) -> dict:
 
 
 def _create_pulse_sequences(
-   phi_0: float, phi_1: float, timings: dict, freqs: List[float] = None, fwhms: List[float] = None, E0: float = 0.05
+    phi_0: float,
+    phi_1: float,
+    timings: dict,
+    freqs: List[float] = None,
+    fwhms: List[float] = None,
+    E0: float = 0.05,
 ) -> dict:
     """Create all required pulse sequences."""
     DETECTION_PHASE = 0  # Fixed phase for detection pulse
@@ -797,11 +806,15 @@ def _extract_detection_data(
     states_full = final_data.states[detection_start_idx:]
 
     # Apply RWA phase factors if needed
-    if system.RWA_laser:
-        states_full = apply_RWA_phase_factors(states_full, actual_det_times, system)
+    if system.RWA_SL:
+        N_atoms = system.N_atoms
+        omega_laser = PULSE_SEQUENCE.omega_laser
+        states_full = apply_RWA_phase_factors(
+            states_full, actual_det_times, N_atoms, omega_laser
+        )
         for key in linear_signals:
             linear_signals[key] = apply_RWA_phase_factors(
-                linear_signals[key], actual_det_times, system
+                linear_signals[key], actual_det_times, N_atoms, omega_laser
             )
 
     # Calculate polarizations
@@ -1331,6 +1344,6 @@ def _configure_solver_options(solver_options: dict) -> dict:
 
 def _configure_paper_equations_solver(system: SystemParameters) -> None:
     """Configure system for paper equations solver."""
-    if not system.RWA_laser:
-        logger.info("Paper equations require RWA - enabling RWA_laser")
-        system.RWA_laser = True
+    if not system.RWA_SL:
+        logger.info("Paper equations require RWA - enabling RWA_SL")
+        system.RWA_SL = True

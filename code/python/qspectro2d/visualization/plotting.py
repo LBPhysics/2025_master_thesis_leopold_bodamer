@@ -8,7 +8,9 @@ from typing import Literal, Union
 from qspectro2d.config.mpl_tex_settings import COLORS, LINE_STYLES
 
 
-def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def plot_pulse_envelope(
+    times: np.ndarray, pulse_seq: PulseSequence, ax=None, show_legend=True
+):
     """
     Plot the combined pulse envelope over time for up to three pulses using PulseSequence.
 
@@ -88,12 +90,15 @@ def plot_pulse_envelope(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     ax.set_xlabel(r"Time $t$")
     ax.set_ylabel(r"Envelope Amplitude")
     ax.set_title(r"Pulse Envelopes for Up to Three Pulses")
-    ax.legend(loc="upper right", fontsize="small")
+    if show_legend:
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     return fig, ax
 
 
-def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def plot_e_pulse(
+    times: np.ndarray, pulse_seq: PulseSequence, ax=None, show_legend=True
+):
     """
     Plot the RWA electric field (envelope only) over time for pulses using PulseSequence.
 
@@ -144,11 +149,14 @@ def plot_e_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     ax.set_xlabel(r"Time $t$")
     ax.set_ylabel(r"Electric Field (RWA)")
     ax.set_title(r"RWA Electric Field Components")
-    ax.legend(loc="upper right")
+    if show_legend:
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     return fig, ax
 
 
-def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
+def plot_epsilon_pulse(
+    times: np.ndarray, pulse_seq: PulseSequence, ax=None, show_legend=True
+):
     """
     Plot the full electric field (with carrier) over time for pulses using PulseSequence.
 
@@ -206,7 +214,8 @@ def plot_epsilon_pulse(times: np.ndarray, pulse_seq: PulseSequence, ax=None):
     ax.set_xlabel(r"Time $t$")
     ax.set_ylabel(r"Electric Field (Full)")
     ax.set_title(r"Full Electric Field with Carrier")
-    ax.legend(loc="upper right")
+    if show_legend:
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     return fig, ax
 
 
@@ -272,7 +281,7 @@ def plot_example_evo(
         matplotlib.figure.Figure: The figure object.
     """
     # Choose field function based on RWA setting
-    if getattr(system, "RWA_laser", False):
+    if getattr(system, "RWA_SL", False):
         field_func = E_pulse
     else:
         field_func = Epsilon_pulse
