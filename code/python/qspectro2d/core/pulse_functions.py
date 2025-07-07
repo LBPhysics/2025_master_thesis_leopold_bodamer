@@ -1,5 +1,5 @@
 from qspectro2d.core.pulse_sequences import PulseSequence
-from typing import List, Tuple, Union
+from typing import Union
 import numpy as np
 
 
@@ -40,9 +40,7 @@ def pulse_envelope(
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time
         fwhm = pulse.pulse_fwhm
-        pulse_type = getattr(
-            pulse, "pulse_type", "cos2"
-        )  # Default to cos2 for backward compatibility
+        pulse_type = pulse.pulse_type
 
         if fwhm is None or fwhm <= 0:
             continue
@@ -108,7 +106,7 @@ def E_pulse(
         if phi is None or E0 is None:
             continue
         envelope = pulse_envelope(
-            t, PulseSequence([pulse])
+            t, PulseSequence(pulses=[pulse])
         )  # use pulse_envelope for each pulse
         E_total += E0 * envelope * np.exp(-1j * phi)
     return E_total
@@ -144,7 +142,7 @@ def Epsilon_pulse(
         omega = pulse.pulse_freq
         if omega is None:
             continue
-        E_field = E_pulse(t, PulseSequence([pulse]))  # use E_pulse for each pulse
+        E_field = E_pulse(t, PulseSequence(pulses=[pulse]))  # use E_pulse for each pulse
         E_total += E_field * np.exp(-1j * (omega * t))
     return E_total
 

@@ -59,36 +59,48 @@ from qspectro2d.data import (
     save_info_file,
     generate_unique_data_filename,
 )
+from spectroscopy import simulation
 
 N_ATOMS = 1  # Number of atoms in the system, can be changed to 1 or 2
 
 
-def run_single_tau(  # todo let t_wait be a parameter
+def run_single_tau(  # todo let t_wait be a parameter passed from user
     tau_coh: float, t_det_max: float, dt: float, save_info: bool = False
 ) -> Path:
     print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
 
-    info_config = {
-        ### Main system configuration
+    atomic_config = {
+        ### Atomic System parameters
         "simulation_type": "1d",
         # solver parameters
         "ODE_Solver": "Paper_eqs",
         "RWA_laser": True,
         "N_atoms": N_ATOMS,
         "J_cm": 300,  # Coupling strength [cm⁻¹]
-        # time parameters
+        "omega_A_cm": 16000,  # Frequency of atom A [cm⁻¹]
+    }
+    pulse_config = {
+        ### Pulse sequence parameters
+        "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,  # Pulse FWHM for single atom [fs]
+        "E0": 0.005,
+        "pulse_types": "gaussian",
+        "pulse_freqs": atomic_config["omega_A_cm"],
+    }
+    simulation_config = {
+        ### Simulation parameters
+        # times
         "tau_coh": float(tau_coh),
         "t_wait": 0.0,
         "t_det_max": t_det_max,
         "dt": dt,
-        "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,  # Pulse FWHM for single atom [fs]
-        "E0": 0.005,
-        "pulse_type": "gaussian",
         # phase cycling -> 16 parallel jobs
         "n_phases": 4,
         # inhomogeneous broadening
         "n_freqs": 100,
         "Delta_cm": 300,
+    }
+
+    info_config = {
     }
 
     start_time = time.time()

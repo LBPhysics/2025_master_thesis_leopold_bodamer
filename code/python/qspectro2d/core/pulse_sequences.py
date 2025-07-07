@@ -3,275 +3,143 @@
 # =============================
 from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple, Optional, Union
-
+from qspectro2d.core.utils_and_config import convert_cm_to_fs
 
 @dataclass
 class Pulse:
     """
     Represents a single optical pulse with its temporal and spectral properties.
-
-    This class defines a pulse with configurable envelope shape, timing, and spectral
-    characteristics for use in optical spectroscopy simulations.
     """
-
-    pulse_index: int  # Index indicating which pulse this is in a sequence (0-based)
-    pulse_peak_time: float  # Time when pulse reaches maximum intensity [fs]
-    pulse_phase: float  # Phase offset of the pulse [rad]
-    pulse_fwhm: float  # Full width at half maximum duration [fs]
-    pulse_amplitude: float  # Peak amplitude of the electric field []
-    pulse_freq: float  # Central frequency of the pulse [rad/fs]
-    pulse_type: str = "cos2"  # Envelope shape: 'cos2' or 'gaussian'
+    pulse_index: int
+    pulse_peak_time: float
+    pulse_phase: float
+    pulse_fwhm: float
+    pulse_amplitude: float
+    pulse_freq: float
+    pulse_type: str = "cos2"
 
     @property
     def active_time_range(self) -> Tuple[float, float]:
-        """
-        Calculate the time range where the pulse is active.
-
-        The active range is defined as the time interval where the pulse envelope
-        has significant amplitude, extending one fwhm before and after the peak time.
-
-        Returns:
-            Tuple[float, float]: (start_time, end_time) where the pulse is active
-                                start_time = t_peak - fwhm [fs]
-                                end_time = t_peak + fwhm [fs]
-        """
         start_time = self.pulse_peak_time - self.pulse_fwhm
         end_time = self.pulse_peak_time + self.pulse_fwhm
         return (start_time, end_time)
 
+    def summary_line(self) -> str:
+        return (
+            f"Pulse {self.pulse_index:>2}: "
+            f"t = {self.pulse_peak_time:6.2f} fs | "
+            f"E₀ = {self.pulse_amplitude:.3e} | "
+            f"FWHM = {self.pulse_fwhm:4.1f} fs | "
+            f"ω = {self.pulse_freq:8.2f} rad/fs | "
+            f"ϕ = {self.pulse_phase:6.3f} rad | "
+            f"type = {self.pulse_type:<7}"
+        )
 
 @dataclass
 class PulseSequence:
-    """
-    Container for managing a sequence of optical pulses.
+    pulses: List[Pulse] = field(default_factory=list)
+    pulse_indices: List[int] = field(init=False)
+    pulse_peak_times: List[float] = field(init=False)
+    pulse_phases: List[float] = field(init=False)
+    pulse_fwhms: List[float] = field(init=False)
+    pulse_freqs: List[float] = field(init=False)
+    pulse_types: List[str] = field(init=False)
 
-    provides methods for creating, manipulating, and analyzing sequences
-    of optical pulses used in spectroscopy simulations. It supports factory methods
-    for convenient pulse sequence creation and analysis methods for determining
-    pulse overlaps and field strengths.
-
-    Attributes:
-        pulses (list): List of Pulse objects in the sequence
-    """
-
-    pulses: list = field(default_factory=list)  # List of Pulse objects
-    pulse_specs: List[Tuple[int, float, float]] = field(
-        default_factory=list
-    )  # Optional: store specs
-
-    @staticmethod
-    def from_pulse_specs(
-        pulse_indices: List[int],
-        pulse_peak_times: List[float],
-        pulse_phases: List[float],
-        pulse_freqs: Union[float, List[float]],
-        pulse_fwhms: Union[float, List[float]],
-        pulse_amplitudes: Union[float, List[float]],
-        pulse_type: str = "cos2",
-    ) -> "PulseSequence":
-        """
-        Factory method to create a PulseSequence from pulse specifications.
-
-        This method directly specifies pulse indices, times, and phases
-        providing a clean and intuitive interface for pulse sequence creation.
-
-        Parameters:
-            pulse_indices (List[int]): List of pulse indices for parameter lookup
-            pulse_peak_times (List[float]): Times when pulses reach maximum intensity [fs]
-            pulse_phases (List[float]): Phase offsets of the pulses [rad]
-            pulse_freqs (Union[float, List[float]]): Central frequency(ies) [rad/fs]
-                If float: same frequency for all pulses
-                If List: individual frequency for each pulse index
-            pulse_fwhms (Union[float, List[float]]): FWHM duration(s) [fs]
-                If float: same FWHM for all pulses
-                If List: individual FWHM for each pulse index
-            pulse_amplitudes (Union[float, List[float]]): Amplitude(s) []
-                If float: same amplitude for all pulses
-                If List: individual amplitude for each pulse index
-            pulse_type (str): Envelope shape: 'cos2' or 'gaussian'
-
-        Returns:
-            PulseSequence: An instance containing the specified pulses
-
-        Example:
-            # Create a 3-pulse sequence with individual parameters
-            seq = PulseSequence.from_pulse_specs(
-                pulse_indices=[0, 1, 2],
-                pulse_peak_times=[100.0, 200.0, 300.0],
-                pulse_phases=[0.0, 1.57, 0.5],
-                pulse_freqs=[1.0, 1.1, 1.2],
-                pulse_fwhms=[50.0, 60.0, 55.0],
-                pulse_amplitudes=[1e6, 1.2e6, 0.8e6]
-            )
-        """
-        # Validate input lengths
-        if not pulse_indices:
-            raise ValueError("pulse_indices cannot be empty")
-
-        if len(pulse_peak_times) != len(pulse_indices):
-            raise ValueError("Length of pulse_peak_times must match pulse_indices")
-
-        if len(pulse_phases) != len(pulse_indices):
-            raise ValueError("Length of pulse_phases must match pulse_indices")
-
-        # Convert single values to lists if needed
-        max_index = max(pulse_indices)
-
-        if isinstance(pulse_freqs, (int, float)):
-            freq_list = [pulse_freqs] * (max_index + 1)
-        else:
-            freq_list = list(pulse_freqs)
-
-        if isinstance(pulse_fwhms, (int, float)):
-            fwhm_list = [pulse_fwhms] * (max_index + 1)
-        else:
-            fwhm_list = list(pulse_fwhms)
-
-        if isinstance(pulse_amplitudes, (int, float)):
-            amp_list = [pulse_amplitudes] * (max_index + 1)
-        else:
-            amp_list = list(pulse_amplitudes)
-
-        # Validate parameter list lengths
-        for pulse_idx in pulse_indices:
-            if (
-                pulse_idx >= len(fwhm_list)
-                or pulse_idx >= len(amp_list)
-                or pulse_idx >= len(freq_list)
-            ):
-                raise ValueError(
-                    f"Pulse index {pulse_idx} exceeds available parameters"
-                )
-
-        # Create pulses from specifications
-        pulses = []
-        pulse_specs = []  # Keep for backward compatibility
-
-        for pulse_index, peak_time, phase in zip(
-            pulse_indices, pulse_peak_times, pulse_phases
-        ):
-            pulses.append(
-                Pulse(
-                    pulse_peak_time=peak_time,
-                    pulse_phase=phase,
-                    pulse_fwhm=fwhm_list[pulse_index],
-                    pulse_amplitude=amp_list[pulse_index],
-                    pulse_freq=freq_list[pulse_index],
-                    pulse_index=pulse_index,
-                    pulse_type=pulse_type,
-                )
-            )
-            pulse_specs.append((pulse_index, peak_time, phase))
-
-        return PulseSequence(pulses=pulses, pulse_specs=pulse_specs)
+    def __post_init__(self):
+        self.pulse_indices = [pulse.pulse_index for pulse in self.pulses]
+        self.pulse_peak_times = [pulse.pulse_peak_time for pulse in self.pulses]
+        self.pulse_phases = [pulse.pulse_phase for pulse in self.pulses]
+        self.pulse_fwhms = [pulse.pulse_fwhm for pulse in self.pulses]
+        self.pulse_freqs = [pulse.pulse_freq for pulse in self.pulses]
+        self.pulse_types = [pulse.pulse_type for pulse in self.pulses]
 
     @staticmethod
-    def create_sequence(
-        times: List[float],
+    def three_pulse_sequence(
+        delays: List[float],
+        base_amplitude: float = 0.05,
+        pulse_fwhm: float = 15.0,
+        carrier_freq_cm: float = 16000.0,
+        pulse_type: str = "gaussian",
+        relative_E0s: Optional[List[float]] = None,
         phases: Optional[List[float]] = None,
-        indices: Optional[List[int]] = None,
-        pulse_freqs: Union[float, List[float]] = 0,
-        pulse_fwhms: Union[float, List[float]] = 15.0,
-        pulse_amplitudes: Union[float, List[float]] = 1,
-        pulse_type: str = "cos2",
     ) -> "PulseSequence":
-        """
-        Convenience method to create a PulseSequence with automatic indexing.
-
-        This is the simplest way to create a pulse sequence - just specify the times
-        and optionally the phases. Pulse indices are assigned automatically (0, 1, 2, ...).
-
-        Parameters:
-            times (List[float]): Peak times for each pulse [fs]
-            phases (List[float], optional): Phase for each pulse [rad]. Defaults to all zeros.
-            indices (List[int], optional): Pulse indices. Defaults to [0, 1, 2, ...]
-            pulse_freqs (Union[float, List[float]]): Central frequency(ies) [rad/fs]
-            pulse_fwhms (Union[float, List[float]]): FWHM duration(s) [fs]
-            pulse_amplitudes (Union[float, List[float]]): Amplitude(s) []
-            pulse_type (str): Envelope shape: 'cos2' or 'gaussian'
-
-        Returns:
-            PulseSequence: An instance containing the specified pulses
-
-        Example:
-            # Simple 3-pulse sequence with default parameters
-            seq = PulseSequence.create_sequence([100.0, 200.0, 300.0])
-
-            # With custom parameters
-            seq = PulseSequence.create_sequence(
-                times=[100.0, 200.0, 300.0],
-                phases=[0.0, 1.57, 0.5],
-                pulse_freqs=[1.0, 1.1, 1.2],
-                pulse_fwhms=50.0,  # Same FWHM for all
-                pulse_amplitudes=[1e6, 1.2e6, 0.8e6]
-            )
-        """
-        if not times:
-            raise ValueError("times cannot be empty")
-
-        n_pulses = len(times)
-
-        # Set default phases if not provided
+        n_pulses = len(delays)
+        if relative_E0s is None:
+            relative_E0s = [1.0] * n_pulses
         if phases is None:
             phases = [0.0] * n_pulses
-        elif len(phases) != n_pulses:
-            raise ValueError("Length of phases must match length of times")
+        if not (len(relative_E0s) == len(phases) == n_pulses):
+            raise ValueError("Lengths of delays, relative_E0s, and phases must match")
 
-        # Set default indices if not provided
-        if indices is None:
-            indices = list(range(n_pulses))
-        elif len(indices) != n_pulses:
-            raise ValueError("Length of indices must match length of times")
+        sorted_indices = sorted(range(n_pulses), key=lambda i: delays[i])
+        delays = [delays[i] for i in sorted_indices]
+        relative_E0s = [relative_E0s[i] for i in sorted_indices]
+        phases = [phases[i] for i in sorted_indices]
+        carrier_freq_fs = convert_cm_to_fs(carrier_freq_cm)
 
-        # Use the new from_pulse_specs method
-        return PulseSequence.from_pulse_specs(
-            pulse_indices=indices,
-            pulse_peak_times=times,
-            pulse_phases=phases,
-            pulse_freqs=pulse_freqs,
-            pulse_fwhms=pulse_fwhms,
-            pulse_amplitudes=pulse_amplitudes,
-            pulse_type=pulse_type,
-        )
+        pulse_indices = list(range(n_pulses))
+        pulses = []
+        for i in range(n_pulses):
+            pulses.append(Pulse(
+                pulse_index=pulse_indices[i],
+                pulse_peak_time=delays[i],
+                pulse_phase=phases[i],
+                pulse_freq=carrier_freq_fs,
+                pulse_fwhm=pulse_fwhm,
+                pulse_amplitude=base_amplitude * relative_E0s[i],
+                pulse_type=pulse_type,
+            ))
 
-    '''
-    def as_dict(self) -> dict:
-        """
-        Convert to dictionary format compatible with legacy code.
+        return PulseSequence(pulses=pulses)
 
-        Returns:
-            dict: Dictionary with key "pulses" and a list of pulse parameter dicts
-        """
-        return {"pulses": [pulse.__dict__ for pulse in self.pulses]}
+    @staticmethod
+    def from_general_specs(
+        pulse_peak_times: Union[float, List[float]],
+        pulse_phases: Union[float, List[float]],
+        pulse_amplitudes: Union[float, List[float]],
+        pulse_fwhms: Union[float, List[float]],
+        pulse_freqs: Union[float, List[float]],
+        pulse_types: Union[str, List[str]],
+        pulse_indices: Optional[List[int]] = None,
+    ) -> "PulseSequence":
+        if isinstance(pulse_peak_times, (float, int)):
+            pulse_peak_times = [pulse_peak_times]
+        n_pulses = len(pulse_peak_times)
 
-    def get_all_active_time_ranges(self) -> List[Tuple[float, float]]:
-        """
-        Get the active time ranges for all pulses in the sequence.
+        def expand(param, name):
+            if isinstance(param, (float, int, str)):
+                return [param] * n_pulses
+            elif isinstance(param, list):
+                if len(param) != n_pulses:
+                    raise ValueError(f"{name} must have length {n_pulses}")
+                return param
+            raise TypeError(f"{name} must be float, str or list")
 
-        Returns:
-            List[Tuple[float, float]]: List of (start_time, end_time) tuples for each pulse,
-                                     where each tuple represents the time range where
-                                     the corresponding pulse is active
-        """
-        return [pulse.active_time_range for pulse in self.pulses]
+        pulse_phases = expand(pulse_phases, "pulse_phases")
+        freq_list = expand(pulse_freqs, "pulse_freqs")
+        fwhm_list = expand(pulse_fwhms, "pulse_fwhms")
+        amp_list = expand(pulse_amplitudes, "pulse_amplitudes")
+        type_list = expand(pulse_types, "pulse_types")
 
-    def get_total_active_time_range(self) -> Tuple[float, float]:
-        """
-        Get the total time range covering all active pulses in the sequence.
+        if pulse_indices is None:
+            pulse_indices = list(range(n_pulses))
+        elif len(pulse_indices) != n_pulses:
+            raise ValueError("pulse_indices must match number of pulses")
 
-        Returns:
-            Tuple[float, float]: (earliest_start_time, latest_end_time) covering
-                               all pulses in the sequence
-        """
-        if not self.pulses:
-            raise ValueError("Cannot determine time range for empty pulse sequence")
+        pulses = []
+        for i in range(n_pulses):
+            pulses.append(Pulse(
+                pulse_index=pulse_indices[i],
+                pulse_peak_time=pulse_peak_times[i],
+                pulse_phase=pulse_phases[i],
+                pulse_freq=freq_list[i],
+                pulse_fwhm=fwhm_list[i],
+                pulse_amplitude=amp_list[i],
+                pulse_type=type_list[i],
+            ))
 
-        all_ranges = self.get_all_active_time_ranges()
-        earliest_start = min(start for start, _ in all_ranges)
-        latest_end = max(end for _, end in all_ranges)
-
-        return (earliest_start, latest_end)
-    '''
+        pulses.sort(key=lambda p: p.pulse_peak_time)
+        return PulseSequence(pulses=pulses)
 
     def get_active_pulses_at_time(self, time: float) -> List[Tuple[int, Pulse]]:
         """
@@ -292,7 +160,6 @@ class PulseSequence:
                 active_pulses.append((i, pulse))
 
         return active_pulses
-
     def get_total_amplitude_at_time(self, time: float) -> float:
         """
         Calculate the total electric field amplitude (E0) at a given time.
@@ -337,176 +204,48 @@ class PulseSequence:
         }
 
 
+    # turn the PulseSequence into a list-like object
+    def __len__(self):
+        return len(self.pulses)
+
+    def __getitem__(self, index):
+        return self.pulses[index]
+
+    def __iter__(self):
+        return iter(self.pulses)
+
+    def summary(self):
+        header = f"PulseSequence Summary\n{'-' * 80}"
+        print(header)
+        for p in self.pulses:
+            print(p.summary_line())
+
 def main():
-    """
-    Demonstration of Pulse and PulseSequence classes usage.
-
-    Shows various ways to create pulse sequences and analyze them.
-    """
     print("=" * 60)
-    print("PULSE SEQUENCE DEMONSTRATION")
+    print("PULSE SEQUENCE DEMO")
     print("=" * 60)
 
-    # =============================
-    # EXAMPLE 1: Simple sequence creation
-    # =============================
-    print("\n1. Creating a simple 3-pulse sequence:")
-
-    ### Define pulse times
-    times = [100.0, 200.0, 350.0]  # fs
-
-    ### Create sequence with default parameters
-    simple_seq = PulseSequence.create_sequence(times)
-
-    print(f"   Created sequence with {len(simple_seq.pulses)} pulses")
-    for i, pulse in enumerate(simple_seq.pulses):
-        print(
-            f"   Pulse {i}: t={pulse.pulse_peak_time:.1f} fs, "
-            f"FWHM={pulse.pulse_fwhm:.1f} fs, "
-            f"A={pulse.pulse_amplitude:.1e}"
-        )
-
-    # =============================
-    # EXAMPLE 2: Custom parameters for each pulse
-    # =============================
-    print("\n2. Creating sequence with individual pulse parameters:")
-
-    ### Define pulse parameters
-    times = [50.0, 150.0, 250.0, 400.0]  # fs
-    phases = [0.0, 1.57, 3.14, 4.71]  # rad (0, π/2, π, 3π/2)
-    freqs = [1.0, 1.1, 0.9, 1.05]  # rad/fs
-    fwhms = [40.0, 50.0, 60.0, 45.0]  # fs
-    amplitudes = [1e6, 1.5e6, 0.8e6, 1.2e6]  #
-
-    ### Create advanced sequence
-    advanced_seq = PulseSequence.create_sequence(
-        times=times,
-        phases=phases,
-        pulse_freqs=freqs,
-        pulse_fwhms=fwhms,
-        pulse_amplitudes=amplitudes,
-        pulse_type="gaussian",
+    print("\n1. Three-pulse sequence:")
+    seq = PulseSequence.three_pulse_sequence(
+        delays=[100.0, 200.0, 300.0],
+        base_amplitude=0.05,
+        pulse_fwhm=10.0,
+        carrier_freq_cm=15800.0,
+        relative_E0s=[1.0, 1.0, 0.1],
+        phases=[0.0, 0.5, 1.0]
     )
+    seq.summary()
 
-    print(f"   Created advanced sequence with {len(advanced_seq.pulses)} pulses")
-    for i, pulse in enumerate(advanced_seq.pulses):
-        print(
-            f"   Pulse {i}: t={pulse.pulse_peak_time:.1f} fs, "
-            f"φ={pulse.pulse_phase:.2f} rad, "
-            f"ω={pulse.pulse_freq:.2f} rad/fs, "
-            f"FWHM={pulse.pulse_fwhm:.1f} fs"
-        )
-
-    # =============================
-    # EXAMPLE 3: Using pulse specifications
-    # =============================
-    print("\n3. Creating sequence from pulse specifications:")
-
-    ### Define pulse parameters for each pulse type (index)
-    spec_freqs = [1.0, 1.2, 0.8]  # rad/fs for indices 0,1,2
-    spec_fwhms = [45.0, 55.0, 35.0]  # fs for indices 0,1,2
-    spec_amps = [1.1e6, 1.4e6, 0.9e6]  # for indices 0,1,2
-
-    ### Define the actual pulse sequence
-    spec_indices = [0, 1, 0, 2]  # Pulse types to use
-    spec_times = [80.0, 180.0, 280.0, 380.0]  # fs
-    spec_phases = [0.0, 1.57, 3.14, 0.5]  # rad
-
-    ### Create sequence from specifications
-    spec_seq = PulseSequence.from_pulse_specs(
-        pulse_indices=spec_indices,
-        pulse_peak_times=spec_times,
-        pulse_phases=spec_phases,
-        pulse_freqs=spec_freqs,
-        pulse_fwhms=spec_fwhms,
-        pulse_amplitudes=spec_amps,
-        pulse_type="cos2",
+    print("\n1. 5-pulse sequence from general specs:")
+    seq = PulseSequence.from_general_specs(
+        pulse_peak_times=[100.0, 200.0, 300.0, 400.0, 500.0],
+        pulse_phases=[0.0, 0.5, 1.0, 1.5, 2.0],
+        pulse_amplitudes=[0.05, 0.05, 0.05, 0.05, 0.05],
+        pulse_fwhms=[10.0, 10.0, 10.0, 10.0, 10.0],
+        pulse_freqs=[15800.0, 15800.0, 15800.0, 15800.0, 15800.0],
+        pulse_types=["gaussian", "gaussian", "gaussian", "gaussian", "gaussian"]
     )
-
-    print(f"   Created spec sequence with {len(spec_seq.pulses)} pulses")
-    for i, pulse in enumerate(spec_seq.pulses):
-        print(
-            f"   Pulse {i} (type {pulse.pulse_index}): "
-            f"t={pulse.pulse_peak_time:.1f} fs, "
-            f"φ={pulse.pulse_phase:.2f} rad, "
-            f"A={pulse.pulse_amplitude:.1e}"
-        )
-
-    # =============================
-    # EXAMPLE 4: Analyzing pulse overlaps
-    # =============================
-    print("\n4. Analyzing pulse field at different times:")
-
-    ### Test times to analyze
-    test_times = [75.0, 125.0, 175.0, 225.0, 275.0]  # fs
-
-    print("   Time analysis for advanced sequence:")
-    for t in test_times:
-        field_info = advanced_seq.get_field_info_at_time(t)
-        n_active = field_info["num_active_pulses"]
-        total_amp = field_info["total_amplitude"]
-
-        if n_active > 0:
-            active_indices = field_info["pulse_indices"]
-            print(
-                f"   t={t:5.1f} fs: {n_active} active pulse(s) "
-                f"(indices {active_indices}), "
-                f"total E₀={total_amp:.2e}"
-            )
-        else:
-            print(f"   t={t:5.1f} fs: No active pulses")
-
-    # =============================
-    # EXAMPLE 5: Individual pulse properties
-    # =============================
-    print("\n5. Individual pulse active time ranges:")
-
-    ### Analyze first sequence
-    print("   Simple sequence pulse ranges:")
-    for i, pulse in enumerate(simple_seq.pulses):
-        start_time, end_time = pulse.active_time_range
-        duration = end_time - start_time
-        print(
-            f"   Pulse {i}: active from {start_time:.1f} to {end_time:.1f} fs "
-            f"(duration: {duration:.1f} fs)"
-        )
-
-    # =============================
-    # EXAMPLE 6: Error handling demonstration
-    # =============================
-    print("\n6. Error handling examples:")
-
-    ### Try to create empty sequence
-    try:
-        empty_seq = PulseSequence.create_sequence([])
-    except ValueError as e:
-        print(f"   Empty sequence error: {e}")
-
-    ### Try mismatched parameter lengths
-    try:
-        bad_seq = PulseSequence.create_sequence(
-            times=[100.0, 200.0], phases=[0.0, 1.57, 3.14]  # Wrong length
-        )
-    except ValueError as e:
-        print(f"   Parameter mismatch error: {e}")
-
-    ### Try invalid pulse index in specs
-    try:
-        bad_spec_seq = PulseSequence.from_pulse_specs(
-            pulse_indices=[0, 5],  # Index 5 doesn't exist
-            pulse_peak_times=[100.0, 200.0],
-            pulse_phases=[0.0, 1.57],
-            pulse_freqs=[1.0, 1.1],
-            pulse_fwhms=[50.0, 55.0],
-            pulse_amplitudes=[1e6, 1.1e6],
-        )
-    except ValueError as e:
-        print(f"   Invalid pulse index error: {e}")
-
-    print("\n" + "=" * 60)
-    print("DEMONSTRATION COMPLETE")
-    print("=" * 60)
-
+    seq.summary()
 
 if __name__ == "__main__":
     main()

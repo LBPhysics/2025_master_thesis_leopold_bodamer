@@ -6,6 +6,7 @@
 from copy import deepcopy
 import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from tkinter import E
 from typing import List, Union, Tuple
 import logging
 from tqdm import tqdm
@@ -21,7 +22,7 @@ from qutip.core import QobjEvo
 # LOCAL IMPORTS
 # =============================
 from qspectro2d.core.system_parameters import SystemParameters
-from qspectro2d.core.pulse_sequences import PulseSequence
+from qspectro2d.core.pulse_sequences import Pulse, PulseSequence
 from qspectro2d.core.pulse_functions import (
     identify_non_zero_pulse_regions,
     split_by_active_regions,
@@ -435,12 +436,8 @@ def check_the_solver(system: SystemParameters) -> tuple[Result, float]:
 
     # Use the from_pulse_specs static method to construct the sequence
     pulse_seq = PulseSequence.from_pulse_specs(
-        system=system,
-        pulse_specs=[
-            (0, 0, phi_0),  # pulse 0 at t=0
-            (1, pulse1_t_peak, phi_1),  # pulse 1 at middle time
-            (2, pulse2_t_peak, DETECTION_PHASE),  # pulse 2 at end time
-        ],
+        pulse_peak_times=[0, pulse1_t_peak, pulse2_t_peak],
+        pulse_phases=[phi_0, phi_1, DETECTION_PHASE],
     )
 
     result = compute_pulse_evolution(
@@ -495,7 +492,7 @@ def check_the_solver(system: SystemParameters) -> tuple[Result, float]:
 def _compute_next_start_point(
     psi_initial: Qobj,
     times: np.ndarray,
-    pulse_specs: List,
+    pulse_seq: PulseSequence,
     system: SystemParameters,
     **kwargs,
 ) -> Qobj:
@@ -522,11 +519,6 @@ def _compute_next_start_point(
         raise ValueError("Times array cannot be empty")
 
     # =============================
-    # PULSE SEQUENCE CREATION
-    # =============================
-    pulse_seq = PulseSequence.from_pulse_specs(system=system, pulse_specs=pulse_specs)
-
-    # =============================
     # EVOLUTION COMPUTATION
     # =============================
     evolution_options = {
@@ -545,7 +537,12 @@ def _compute_next_start_point(
 def _create_single_pulse_sequence(system, pulse_idx, t_peak, phase):
     """Create a pulse sequence with a single pulse."""
     return PulseSequence.from_pulse_specs(
-        system=system, pulse_specs=[(pulse_idx, t_peak, phase)]
+        pulse_indices=[pulse_idx],
+        pulse_peak_times=[t_peak],
+        pulse_phases=[phase],
+        pulse_freqs=system.freqs,
+        pulse_fwhms=system.fwhms,
+        pulse_amplitudes=system.amplitudes,
     )
 
 
@@ -563,8 +560,9 @@ def compute_1d_polarization(
     """
     time_cut = kwargs.get("time_cut", np.inf)
 
-    dt = system.dt
-    t0 = -system.fwhms[0]
+    dt = system.dt # TODO how can I seperate this from the system?
+    fwhm = system.pulse_fwhm
+    t0 = -fwhm
     t_max = tau_coh + T_wait + t_det_max
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
@@ -575,7 +573,9 @@ def compute_1d_polarization(
     # PULSE TIMING AND SEQUENCES
     # =============================
     pulse_timings = _get_pulse_timings(tau_coh, T_wait)
-    pulse_sequences = _create_pulse_sequences(system, phi_0, phi_1, pulse_timings)
+    # TODO add dynamical pulse parameters like fwhm, omega_L, E0, fwhm
+    E0 = system.E0
+    pulse_sequences = _create_pulse_sequences(phi_0, phi_1, pulse_timings, fwhms=fwhm, E0=E0)
 
     # =============================
     # COMPUTE EVOLUTION STATES
@@ -620,29 +620,27 @@ def _get_pulse_timings(tau_coh: float, T_wait: float) -> dict:
 
 
 def _create_pulse_sequences(
-    system: SystemParameters, phi_0: float, phi_1: float, timings: dict
+   phi_0: float, phi_1: float, timings: dict, freqs: List[float] = None, fwhms: List[float] = None, E0: float = 0.05
 ) -> dict:
     """Create all required pulse sequences."""
     DETECTION_PHASE = 0  # Fixed phase for detection pulse
-
-    # Full three-pulse sequence specs
-    full_specs = [
-        (0, timings["pulse0"], phi_0),
-        (1, timings["pulse1"], phi_1),
-        (2, timings["detection"], DETECTION_PHASE),
-    ]
-
     # Individual pulse sequences for linear signal subtraction
+    pulse_seq = PulseSequence.from_pulse_specs(
+        pulse_peak_times=[timings["pulse0"], timings["pulse1"], timings["detection"]],
+        pulse_phases=[phi_0, phi_1, DETECTION_PHASE],
+        pulse_freqs=freqs,
+        pulse_fwhms=fwhms,
+        pulse_amplitudes=[E0, E0, E0 / 10],
+    )
+
     individual_sequences = {
-        "pulse0": _create_single_pulse_sequence(system, 0, timings["pulse0"], phi_0),
-        "pulse1": _create_single_pulse_sequence(system, 1, timings["pulse1"], phi_1),
-        "pulse2": _create_single_pulse_sequence(
-            system, 2, timings["detection"], DETECTION_PHASE
-        ),
+        "pulse0": [pulse_seq.pulses[0]],
+        "pulse1": [pulse_seq.pulses[1]],
+        "pulse2": [pulse_seq.pulses[2]],
     }
 
     return {
-        "full": PulseSequence.from_pulse_specs(system=system, pulse_specs=full_specs),
+        "full": pulse_seq,
         "individual": individual_sequences,
     }
 
@@ -658,11 +656,10 @@ def _compute_three_pulse_evolution(
     pulse1_start_idx = np.abs(times - (timings["pulse1"] - system.fwhms[1])).argmin()
     times_0 = _ensure_valid_times(times[: pulse1_start_idx + 1], times)
 
-    pulse0_specs = (0, timings["pulse0"], full_sequence.pulse_specs[0][2])
     rho_1 = _compute_next_start_point(
         psi_initial=system.psi_ini,
         times=times_0,
-        pulse_specs=[pulse0_specs],
+        pulse_seq=full_sequence.pulses[0],
         system=system,
     )
 
@@ -671,11 +668,10 @@ def _compute_three_pulse_evolution(
     times_1 = times[pulse1_start_idx : pulse2_start_idx + 1]
     times_1 = _ensure_valid_times(times_1, times, pulse1_start_idx)
 
-    pulse1_specs = (1, timings["pulse1"], full_sequence.pulse_specs[1][2])
     rho_2 = _compute_next_start_point(
         psi_initial=rho_1,
         times=times_1,
-        pulse_specs=[pulse0_specs, pulse1_specs],
+        pulse_seq=full_sequence.pulses[0:2],
         system=system,
     )
 
@@ -1320,24 +1316,6 @@ def extract_ift_signal_component(
     signal /= n_phases * n_phases
 
     return signal
-
-
-def _configure_solver_options(solver_options: dict) -> dict:
-    """Configure solver options with defaults."""
-    options = solver_options.copy() if solver_options else {}
-
-    # Update options with defaults only if not already set
-    for key, value in DEFAULT_SOLVER_OPTIONS.items():
-        options.setdefault(key, value)
-
-    return options
-
-
-def _configure_paper_equations_solver(system: SystemParameters) -> None:
-    """Configure system for paper equations solver."""
-    if not system.RWA_laser:
-        logger.info("Paper equations require RWA - enabling RWA_laser")
-        system.RWA_laser = True
 
 
 def _configure_solver_options(solver_options: dict) -> dict:

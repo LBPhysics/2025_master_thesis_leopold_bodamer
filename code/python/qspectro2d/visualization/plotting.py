@@ -567,18 +567,7 @@ def plot_2d_el_field(
     # =============================
     # VALIDATE INPUT
     # =============================
-    # For backward compatibility
-    if isinstance(data_x, tuple) and len(data_x) == 3:
-        print(
-            "⚠️ Warning: Using deprecated tuple format. Please use separate arguments instead."
-        )
-        x, y, data = data_x
-        # Shift parameters
-        data = data_y
-        y = data_x[1]
-        x = data_x[0]
-    else:
-        x, y, data = data_x, data_y, data_z
+    x, y, data = data_x, data_y, data_z
 
     # Check for empty arrays
     if x.size == 0 or y.size == 0 or data.size == 0:
