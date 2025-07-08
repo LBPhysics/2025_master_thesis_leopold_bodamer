@@ -1,15 +1,15 @@
 import numpy as np
 from qutip import Qobj, stacked_index
-from .system_parameters import SystemParameters
-from .pulse_sequences import PulseSequence
-from .pulse_functions import E_pulse
+from .atomic_system.system_class import AtomicSystem
+from .laser_system.laser_class import LaserPulseSystem
+from .laser_system.laser_fcts import E_pulse
 
 
 # =============================
 # "Paper_eqs" OWN ODE SOLVER
 # =============================
 def matrix_ODE_paper(
-    t: float, pulse_seq: PulseSequence, system: SystemParameters
+    t: float, pulse_seq: LaserPulseSystem, system: AtomicSystem
 ) -> Qobj:
     """
     Dispatches to the appropriate implementation based on N_atoms.
@@ -25,7 +25,7 @@ def matrix_ODE_paper(
 
 
 def _matrix_ODE_paper_1atom(
-    t: float, pulse_seq: PulseSequence, system: SystemParameters
+    t: float, pulse_seq: LaserPulseSystem, system: AtomicSystem
 ) -> Qobj:
     """
     Constructs the matrix L(t) for the equation
@@ -34,8 +34,8 @@ def _matrix_ODE_paper_1atom(
 
     Parameters:
         t (float): Time at which to evaluate the matrix.
-        pulse_seq (PulseSequence): PulseSequence object for the electric field.
-        system (SystemParameters): System parameters containing Gamma, gamma_0, and mu_eg.
+        pulse_seq (LaserPulseSystem): LaserPulseSystem object for the electric field.
+        system (AtomicSystem): System parameters containing Gamma, gamma_0, and mu_eg.
 
     Returns:
         Qobj: Liouvillian matrix as a Qobj.
@@ -82,8 +82,8 @@ def _matrix_ODE_paper_1atom(
 # carefull i changed this function with GPT
 def _matrix_ODE_paper_2atom(
     t: float,
-    pulse_seq: PulseSequence,
-    system: SystemParameters,
+    pulse_seq: LaserPulseSystem,
+    system: AtomicSystem,
 ) -> Qobj:
     """
     Column-stacked Liouvillian L(t) such that         d/dt vec(rho) = L(t) · vec(rho)
@@ -256,7 +256,7 @@ def _matrix_ODE_paper_2atom(
 
 
 # only use the Redfield tensor as a matrix:
-def R_paper(system: SystemParameters) -> Qobj:
+def R_paper(system: AtomicSystem) -> Qobj:
     """Dispatches to the appropriate implementation based on N_atoms."""
     if system.N_atoms == 1:
         return _R_paper_1atom(system)
@@ -266,13 +266,13 @@ def R_paper(system: SystemParameters) -> Qobj:
         raise ValueError("Only N_atoms=1 or 2 are supported.")
 
 
-def _R_paper_1atom(system: SystemParameters) -> Qobj:
+def _R_paper_1atom(system: AtomicSystem) -> Qobj:
     """
     Constructs the Redfield Tensor R for the equation drho_dt = -i(Hrho - rho H) + R * rho,
     where rho is the flattened density matrix. Uses gamma values from the provided system.
 
     Parameters:
-        system (SystemParameters): System parameters containing Gamma and gamma_0.
+        system (AtomicSystem): System parameters containing Gamma and gamma_0.
 
     Returns:
         Qobj: Redfield tensor as a Qobj.
@@ -292,7 +292,7 @@ def _R_paper_1atom(system: SystemParameters) -> Qobj:
     return Qobj(R, dims=[[[2], [2]], [[2], [2]]])
 
 
-def _R_paper_2atom(system: SystemParameters) -> Qobj:
+def _R_paper_2atom(system: AtomicSystem) -> Qobj:
     """
     including RWA
     Constructs the Redfield Tensor R for the equation drho_dt = -i(Hrho - rho H) + R * rho,
@@ -402,8 +402,10 @@ def _R_paper_2atom(system: SystemParameters) -> Qobj:
 
     return Qobj(R, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])
 
+
 def main():
     pass
+
 
 if __name__ == "__main__":
     main()

@@ -1,13 +1,13 @@
-from qspectro2d.core.pulse_sequences import PulseSequence
-from typing import Union
+from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+from typing import Union, List
 import numpy as np
 
 
 def pulse_envelope(
-    t: Union[float, np.ndarray], pulse_seq: PulseSequence
+    t: Union[float, np.ndarray], pulse_seq: LaserPulseSystem
 ) -> Union[float, np.ndarray]:
     """
-    Calculate the combined envelope of multiple pulses at time t using PulseSequence.
+    Calculate the combined envelope of multiple pulses at time t using LaserPulseSystem.
     Works with both scalar and array time inputs.
 
     Now uses pulse_peak_time as t_peak (peak time) where cos²/gaussian is maximal.
@@ -20,13 +20,13 @@ def pulse_envelope(
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
-        pulse_seq (PulseSequence): The pulse sequence
+        pulse_seq (LaserPulseSystem): The pulse sequence
 
     Returns:
         Union[float, np.ndarray]: Combined envelope value(s)
     """
-    if not isinstance(pulse_seq, PulseSequence):
-        raise TypeError("pulse_seq must be a PulseSequence instance.")
+    if not isinstance(pulse_seq, LaserPulseSystem):
+        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
 
     # Handle array input
     if isinstance(t, np.ndarray):
@@ -75,21 +75,21 @@ def pulse_envelope(
 
 
 def E_pulse(
-    t: Union[float, np.ndarray], pulse_seq: PulseSequence
+    t: Union[float, np.ndarray], pulse_seq: LaserPulseSystem
 ) -> Union[complex, np.ndarray]:
     """
-    Calculate the total electric field at time t for a set of pulses (envelope only, no carrier), using PulseSequence.
+    Calculate the total electric field at time t for a set of pulses (envelope only, no carrier), using LaserPulseSystem.
     Works with both scalar and array time inputs.
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
-        pulse_seq (PulseSequence): The pulse sequence
+        pulse_seq (LaserPulseSystem): The pulse sequence
 
     Returns:
         Union[complex, np.ndarray]: Electric field value(s)
     """
-    if not isinstance(pulse_seq, PulseSequence):
-        raise TypeError("pulse_seq must be a PulseSequence instance.")
+    if not isinstance(pulse_seq, LaserPulseSystem):
+        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
 
     # Handle array input
     if isinstance(t, np.ndarray):
@@ -106,28 +106,28 @@ def E_pulse(
         if phi is None or E0 is None:
             continue
         envelope = pulse_envelope(
-            t, PulseSequence(pulses=[pulse])
+            t, LaserPulseSystem(pulses=[pulse])
         )  # use pulse_envelope for each pulse
         E_total += E0 * envelope * np.exp(-1j * phi)
     return E_total
 
 
 def Epsilon_pulse(
-    t: Union[float, np.ndarray], pulse_seq: PulseSequence
+    t: Union[float, np.ndarray], pulse_seq: LaserPulseSystem
 ) -> Union[complex, np.ndarray]:
     """
-    Calculate the total electric field at time t for a set of pulses, including carrier oscillation, using PulseSequence.
+    Calculate the total electric field at time t for a set of pulses, including carrier oscillation, using LaserPulseSystem.
     Works with both scalar and array time inputs.
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
-        pulse_seq (PulseSequence): The pulse sequence
+        pulse_seq (LaserPulseSystem): The pulse sequence
 
     Returns:
         Union[complex, np.ndarray]: Electric field with carrier value(s)
     """
-    if not isinstance(pulse_seq, PulseSequence):
-        raise TypeError("pulse_seq must be a PulseSequence instance.")
+    if not isinstance(pulse_seq, LaserPulseSystem):
+        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
 
     # Handle array input
     if isinstance(t, np.ndarray):
@@ -142,26 +142,28 @@ def Epsilon_pulse(
         omega = pulse.pulse_freq
         if omega is None:
             continue
-        E_field = E_pulse(t, PulseSequence(pulses=[pulse]))  # use E_pulse for each pulse
+        E_field = E_pulse(
+            t, LaserPulseSystem(pulses=[pulse])
+        )  # use E_pulse for each pulse
         E_total += E_field * np.exp(-1j * (omega * t))
     return E_total
 
 
 def identify_non_zero_pulse_regions(
-    times: np.ndarray, pulse_seq: PulseSequence
+    times: np.ndarray, pulse_seq: LaserPulseSystem
 ) -> np.ndarray:
     """
     Identify regions where the pulse envelope is non-zero across an array of time values.
 
     Args:
         times (np.ndarray): Array of time values to evaluate
-        pulse_seq (PulseSequence): The pulse sequence to evaluate
+        pulse_seq (LaserPulseSystem): The pulse sequence to evaluate
 
     Returns:
         np.ndarray: Boolean array where True indicates times where envelope is non-zero
     """
-    if not isinstance(pulse_seq, PulseSequence):
-        raise TypeError("pulse_seq must be a PulseSequence instance.")
+    if not isinstance(pulse_seq, LaserPulseSystem):
+        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
 
     # Initialize an array of all False values
     active_regions = np.zeros_like(times, dtype=bool)
@@ -170,29 +172,34 @@ def identify_non_zero_pulse_regions(
     for i, t in enumerate(times):
         # A time is in an active region if any pulse contributes to the envelope
         for pulse in pulse_seq.pulses:
-            t_peak = pulse.pulse_peak_time
-            fwhm = pulse.pulse_fwhm
-
-            # Skip pulses with invalid parameters
-            if fwhm is None or fwhm <= 0 or t_peak is None:
-                continue
+            start_time, end_time = pulse.active_time_range
 
             # Check if time point falls within the pulse's active region
-            if t_peak - fwhm <= t <= t_peak + fwhm:
+            if start_time <= t <= end_time:
                 active_regions[i] = True
                 break  # Once we know this time point is active, we can move to the next
 
     return active_regions
 
 
-def split_by_active_regions(times, active_regions):
+def split_by_active_regions(
+    times: np.ndarray, active_regions: np.ndarray
+) -> List[np.ndarray]:
+    """
+    Split the time array into segments based on active regions.
+
+    Args:
+        times (np.ndarray): Array of time values.
+        active_regions (np.ndarray): Boolean array indicating active regions.
+
+    Returns:
+        List[np.ndarray]: List of time segments split by active regions.
+    """
     # Find where the active_regions changes value
     change_indices = np.where(np.diff(active_regions.astype(int)) != 0)[0] + 1
 
     # Split the times at those change points
     split_times = np.split(times, change_indices)
-    assert (
-        np.concatenate(split_times).size == times.size
-    ), "Split times do not match original times size."
-    # Return list of (times, state) tuples
-    return [times for times in split_times]
+
+    # Return list of time segments
+    return split_times

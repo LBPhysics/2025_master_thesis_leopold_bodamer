@@ -1,16 +1,17 @@
 # =============================
 # DEFINE THE SYSTEM PARAMETERS CLASS
 # =============================
+import numpy as np
+import json
 from dataclasses import dataclass, field  # for the class definiton
 from typing import Optional, List
-import numpy as np
 from qutip import basis, ket2dm, tensor, Qobj
 from qspectro2d.core.utils_and_config import convert_cm_to_fs, HBAR
 from functools import cached_property  # for caching properties
 
 
 @dataclass
-class SystemParameters:
+class AtomicSystem:
     # VITAL ATTRIBUTES
     N_atoms: int = 1
     freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
@@ -56,7 +57,7 @@ class SystemParameters:
         self.H0_undiagonalized = self.Hamilton_N_atoms()
 
         if self.psi_ini is None:
-            self.psi_ini = self.basis[0]
+            self.psi_ini = ket2dm(self.basis[0])
 
     def freqs_fs(self, i):
         """Return frequency in fs^-1 for the i-th atom."""
@@ -176,7 +177,7 @@ class SystemParameters:
                 ]
             )
         else:  # TODO IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
-            raise ValueError("Only N_atoms=1 or 2 are supported.")
+            raise NotImplementedError("N_atoms > 2 not yet implemented")
 
     @property
     def Dip_op(self):
@@ -197,16 +198,14 @@ class SystemParameters:
                 ]
             )
         else:  # TODO OVERTHINK / IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
-            return sum(
-                [self.basis[i] * self.basis[i].dag() for i in range(1, self.N_atoms)]
-            )
+            return sum([ket2dm(self.basis[i]) for i in range(1, self.N_atoms)])
 
     def omega_ij(self, i: int, j: int):
         """Return energy difference (frequency) between eigenstates i and j in fs^-1."""
         return self.eigenstates[0][i] - self.eigenstates[0][j]
 
     def summary(self):
-        print("=== SystemParameters Summary ===")
+        print("=== AtomicSystem Summary ===")
         print(f"\n# The system with:")
         print(f"    {'N_atoms':<20}: {self.N_atoms}")
 
@@ -253,14 +252,12 @@ class SystemParameters:
         Quantum objects (Qobj) and computed properties (like Hamiltonians or eigenstates)
         are not serialized and will be recomputed on deserialization.
         """
-        import json
-
         return json.dumps(self.to_dict())
 
     @classmethod
     def from_dict(cls, d):
         """
-        Create a SystemParameters object from a dictionary of parameters.
+        Create a AtomicSystem object from a dictionary of parameters.
 
         Expects keys to match those produced by to_dict().
         """
@@ -269,12 +266,10 @@ class SystemParameters:
     @classmethod
     def from_json(cls, json_str):
         """
-        Deserialize a JSON string into a SystemParameters object.
+        Deserialize a JSON string into a AtomicSystem object.
 
         Only reconstructs basic attributes. Complex internal states are recomputed on init.
         """
-        import json
-
         d = json.loads(json_str)
         return cls.from_dict(d)
 
@@ -284,25 +279,25 @@ class SystemParameters:
 # =============================
 """ HOW TO REPLICATE ONE:
 # Create an object
-sp = SystemParameters(N_atoms=2, freqs_cm=[16000, 16100], dip_moments=[1.0, 1.2])
+sp = AtomicSystem(N_atoms=2, freqs_cm=[16000, 16100], dip_moments=[1.0, 1.2])
 
 # Serialize to JSON
 json_str = sp.to_json()
 
 # Deserialize it
-sp2 = SystemParameters.from_json(json_str)
+sp2 = AtomicSystem.from_json(json_str)
 """
 if __name__ == "__main__":
-    print("Testing SystemParameters class...")
+    print("Testing AtomicSystem class...")
     print("\n=== Testing N_atoms=1 ===")
-    system1 = SystemParameters(N_atoms=1)
+    system1 = AtomicSystem(N_atoms=1)
     system1.summary()
     print("\n=== Testing N_atoms=2 ===")
-    system2 = SystemParameters(
+    system2 = AtomicSystem(
         N_atoms=2, freqs_cm=[16000.0, 15640.0], dip_moments=[1.0, 1.0]
     )
     system2.summary()
-    print("\n✅ SystemParameters tests completed successfully!")
+    print("\n✅ AtomicSystem tests completed successfully!")
 
     print("\n=== Testing JSON serialization ===")
     json_str = system1.to_json()

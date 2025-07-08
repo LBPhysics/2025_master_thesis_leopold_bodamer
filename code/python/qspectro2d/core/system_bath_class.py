@@ -6,17 +6,17 @@ from qutip import tensor, ket2dm
 # util function from qutip
 from qutip.utilities import n_thermal
 
-from qspectro2d.core.system_parameters import SystemParameters
-from qspectro2d.baths.bath_parameters import BathParameters
-from qspectro2d.baths.bath_fcts import power_spectrum_func_paper
+from core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.bath_system.bath_fcts import power_spectrum_func_paper
 
 from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
 
 
 @dataclass
 class SystemBathCoupling:
-    system: SystemParameters
-    bath: BathParameters
+    system: AtomicSystem
+    bath: BathClass
 
     # DERIVED QUANTITIES FROM SYSTEM / BATH PARAMETERS
     @property
@@ -279,38 +279,3 @@ class SystemBathCoupling:
             for j in range(self.system.N_atoms):
                 if i != j:
                     print(f"γ({i},{j}) = {self.gamma_ij(i,j):.4f} fs⁻¹")
-
-
-from qspectro2d.core.pulse_sequences import PulseSequence
-
-
-@dataclass
-class SystemLaserCoupling:
-    system: SystemParameters
-    laser: PulseSequence
-
-    # DERIVED QUANTITIES FROM SYSTEM / LASER PARAMETERS
-    @property
-    def rabi_0(self):
-        return self.system.mu_A * self.laser.E0 / HBAR
-
-    @property
-    def delta_rabi(self):
-        return self.laser.omega - self.system.omega_A
-
-    @property
-    def rabi_gen(self):
-        return np.sqrt(self.rabi_0**2 + self.delta_rabi**2)
-
-    @property
-    def t_prd(self):
-        """Calculate the period of the Rabi oscillation. (for TLS: one full cycle between |g> and |e>)"""
-        return 2 * np.pi / self.rabi_gen if self.rabi_gen != 0 else 0.0
-
-    def summary(self):
-        print("=== SystemLaserCoupling Summary ===")
-        print(f"Rabi Frequency (0th order): {self.rabi_0:.4f} fs⁻¹")
-        print(f"Detuning (Delta Rabi): {self.delta_rabi:.4f} fs⁻¹")
-        print(f"Rabi Frequency (Generalized): {self.rabi_gen:.4f} fs⁻¹")
-        print(f"Period (T_prd): {self.t_prd:.4f} fs")
-        # what about the rest of the stuff

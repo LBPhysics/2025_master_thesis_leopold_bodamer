@@ -15,17 +15,17 @@ with various bath models and pulse configurations.
 # =============================
 # SYSTEM PARAMETERS
 # =============================
-from .system_parameters import SystemParameters
+from .atomic_system.system_class import AtomicSystem
 
 # =============================
 # PULSE DEFINITIONS AND SEQUENCES
 # =============================
-from .pulse_sequences import Pulse, PulseSequence
+from .laser_system.laser_class import Pulse, LaserPulseSystem
 
 # =============================
 # PULSE FIELD FUNCTIONS
 # =============================
-from .pulse_functions import (
+from .laser_system.laser_fcts import (
     pulse_envelope,
     E_pulse,
     Epsilon_pulse,
@@ -50,14 +50,24 @@ from .functions_with_rwa import (
 )
 
 # =============================
+# UTILITIES AND CONSTANTS
+# =============================
+from .utils_and_config import (
+    convert_cm_to_fs,
+    convert_fs_to_cm,
+    HBAR,
+    BOLTZMANN,
+)
+
+# =============================
 # PUBLIC API
 # =============================
 __all__ = [
     # System configuration
-    "SystemParameters",
+    "AtomicSystem",
     # Pulse definitions
     "Pulse",
-    "PulseSequence",
+    "LaserPulseSystem",
     # Pulse field functions
     "pulse_envelope",
     "E_pulse",
@@ -68,14 +78,18 @@ __all__ = [
     "matrix_ODE_paper",
     "R_paper",
     # RWA utilities
-    "H_int",
     "apply_RWA_phase_factors",
     "get_expect_vals_with_RWA",
+    # Utilities and constants
+    "convert_cm_to_fs",
+    "convert_fs_to_cm",
+    "HBAR",
+    "BOLTZMANN",
 ]
 
 # =============================
 # VERSION INFO
 # =============================
 __version__ = "1.0.0"
-__author__ = "Leopold"
+__author__ = "Leopold Bodamer"
 __email__ = ""

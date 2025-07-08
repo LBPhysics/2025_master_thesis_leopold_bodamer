@@ -35,7 +35,7 @@ def normalized_gauss(x_vals: np.ndarray, fwhm: float, mu: float = 0.0) -> np.nda
     return norm * np.exp(exponent)
 
 
-def sample_from_sigma(
+def sample_from_gaussian(
     n_samples: int, fwhm: float, mu: float, max_detuning: float = 10.0
 ) -> np.ndarray:
     """

@@ -16,14 +16,14 @@ from qspectro2d.spectroscopy.calculations import (
     parallel_compute_2d_E_with_inhomogenity,
     check_the_solver,
 )
-from qspectro2d.core.system_parameters import SystemParameters
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
 
 
 # =============================
 # SIMULATION RUNNER FUNCTIONS
 # =============================
 def run_1d_simulation(
-    info_config: dict, system: SystemParameters, max_workers: int
+    info_config: dict, system: AtomicSystem, max_workers: int
 ) -> tuple:
     """
     Run 1D spectroscopy simulation with updated calculation structure.
@@ -84,7 +84,7 @@ def run_1d_simulation(
 
 
 def run_2d_simulation(
-    info_config: dict, system: SystemParameters, max_workers: int
+    info_config: dict, system: AtomicSystem, max_workers: int
 ) -> tuple:
     """
     Run 2D spectroscopy simulation with updated calculation structure.

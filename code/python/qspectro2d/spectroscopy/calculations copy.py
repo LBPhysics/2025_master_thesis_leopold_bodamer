@@ -3,10 +3,11 @@
 
 
 
-REMEMBER I CAN ALWAYS GO BACK TO THE LAST VERSION OF THE FILES
-I WILL DO CHANGES NOW!
+THIS IS THE NEW VERSION,
+WHERE I TRIED TO LET EVERYTHING DEPEND (almost) ONLY ON SimClassOQS
+WHICH SADLY DOESNT WORK YET
 
-
+TODO: Investigate and fix the issues
 
 
 
@@ -46,10 +47,9 @@ from qspectro2d.core.solver_fcts import (
 )
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.core.functions_with_rwa import (
-    H_int,  # TODO update the new definition inside the SL_COUPLING class
     apply_RWA_phase_factors,
 )
-
+from qspectro2d.core.simulation_class import H_int_, SimClassOQS
 
 # =============================
 # CONSTANTS AND CONFIGURATION
@@ -59,6 +59,7 @@ DEFAULT_SOLVER_OPTIONS = {
     "atol": 1e-6,
     "rtol": 1e-4,
 }
+
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 
@@ -68,12 +69,95 @@ PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 logger = logging.getLogger(__name__)
 
 
-def compute_pulse_evolution(  # probably shouldnt change this except for the system dependencies, where there are none!
-    psi_ini: Qobj,
-    times: np.ndarray,
-    pulse_seq: LaserPulseSystem,
-    system: AtomicSystem,
-    ODE_Solver: str,  # INCLUDED THIS!
+# =============================
+# POLARIZATION CALCULATIONS
+# =============================
+def complex_polarization(
+    dip_op: Qobj, state: Union[Qobj, List[Qobj]]
+) -> Union[complex, np.ndarray]:
+    """
+    Calculate the complex polarization for state(s) using the dipole operator.
+    The polarization is defined as one part of the expectation value of the dipole operator
+    with the given quantum state(s) or density matrix(es).
+
+    Parameters
+    ----------
+    dip_op : Qobj
+        Dipole operator for the system
+    state : Union[Qobj, List[Qobj]]
+        A single quantum state/density matrix or list of states.
+
+    Returns
+    -------
+    Union[complex, np.ndarray]
+        Complex polarization value(s). Returns complex for single state,
+        complex array for multiple states.
+
+    Raises
+    ------
+    TypeError
+        If state is not a Qobj or list of Qobj.
+
+    Examples
+    --------
+    >>> pol = complex_polarization(dip_op, rho)  # Single density matrix
+    >>> pols = complex_polarization(dip_op, [rho1, rho2])  # Multiple states
+    """
+    if isinstance(state, Qobj):
+        return _single_qobj_polarization(dip_op, state)
+
+    if isinstance(state, list):
+        return np.array(
+            [_single_qobj_polarization(dip_op, s) for s in state],
+            dtype=np.complex128,  # Use higher precision
+        )
+
+    raise TypeError(f"State must be a Qobj or list of Qobj, got {type(state)}")
+
+
+def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
+    """
+    Calculate polarization for a single quantum state or density matrix.
+
+    Parameters
+    ----------
+    dip_op : Qobj
+        Dipole operator
+    state : Qobj
+        Quantum state (ket) or density matrix.
+
+    Returns
+    -------
+    complex
+        Complex polarization value.
+
+    Raises
+    ------
+    TypeError
+        If state is not a ket or density matrix.
+    """
+    if not (state.isket or state.isoper):
+        raise TypeError("State must be a ket or density matrix")
+
+    # General approach that works for any system size
+    polarization = 0j
+
+    if state.isket:
+        # Convert ket to density matrix for consistent handling
+        state = ket2dm(state)
+
+    # For any system size, calculate polarization as sum of off-diagonal elements
+    # This works for any number of atoms without needing special cases TODO BUT NOT IN SINGLE EXCITATION SUBSPACE?
+    for i in range(dip_op.shape[0]):
+        for j in range(i):
+            if i != j and abs(dip_op[i, j]) != 0:
+                polarization += dip_op[i, j] * state[j, i]
+
+    return polarization
+
+
+def compute_pulse_evolution(
+    oqs: SimClassOQS,
     **solver_options: dict,
 ) -> Result:
     """
@@ -85,6 +169,7 @@ def compute_pulse_evolution(  # probably shouldnt change this except for the sys
         Initial quantum state.
     times : np.ndarray
         Time array for the evolution.
+    ops : SimClassOQS contains simulation configuration, system, laser parameters and much more.
     pulse_seq : LaserPulseSystem
         LaserPulseSystem object defining the pulse sequence.
     system : AtomicSystem
@@ -110,6 +195,7 @@ def compute_pulse_evolution(  # probably shouldnt change this except for the sys
     # =============================
     # VALIDATE SOLVER TYPE
     # =============================
+    ODE_Solver = oqs.simulation_config.ODE_Solver
     if ODE_Solver not in SUPPORTED_SOLVERS:
         raise ValueError(
             f"Unknown ODE solver: {ODE_Solver}. "
@@ -117,63 +203,65 @@ def compute_pulse_evolution(  # probably shouldnt change this except for the sys
         )
 
     # =============================
-    # INITIALIZE EVOLUTION COMPONENTS
-    # =============================
-    current_state = psi_ini
-
-    # Build Hamiltonian components that already include the RWA if present
-    H_free = system.H0_diagonalized
-    H_int_evo = QobjEvo(lambda t, args=None: H_free + H_int(t, pulse_seq, system))
-
-    # =============================
     # CONFIGURE SOLVER-SPECIFIC PARAMETERS
     # =============================
     if ODE_Solver == "Paper_eqs":
-        _configure_paper_equations_solver(system)
+        _configure_paper_equations_solver(oqs)
 
     # =============================
     # SPLIT EVOLUTION BY PULSE REGIONS
     # =============================
-    return _execute_segmented_evolution(
-        times, pulse_seq, system, current_state, H_free, H_int_evo, options
-    )
+    # ALL_RES = {}
+    # for pulse in oqs.laser.pulses:
+    #   pulse_seq_single = LaserPulseSystem.from_pulse_specs(
+    #       pulse.pulse_peak_time,
+    #       pulse.pulse_phase,
+    #       pulse.pulse_amplitude,
+    #       pulse.pulse_fwhm,
+    #       pulse.pulse_freq,
+    #       pulse.pulse_type,
+    #       pulse.pulse_index
+    #   )
+    #  ALL_RES[pulse.pulse_index] = _execute_segmented_evolution(oqs, options)
+    #
+
+    return _execute_segmented_evolution(oqs, options)
 
 
 def _execute_segmented_evolution(
-    times: np.ndarray,
-    pulse_seq: LaserPulseSystem,
-    system: AtomicSystem,
-    current_state: Qobj,
-    H_free: Qobj,
-    H_int_evo: QobjEvo,
+    oqs: SimClassOQS,
     options: dict,
 ) -> Result:
     """Execute evolution split by pulse regions."""
     all_states, all_times = [], []
 
+    current_state = oqs.system.psi_ini
     # Find pulse regions and split time array
-    pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
-    split_times = split_by_active_regions(times, pulse_regions)
+    pulse_regions = identify_non_zero_pulse_regions(oqs.times, oqs.laser)
+    split_times = split_by_active_regions(oqs.times, pulse_regions)
 
-    for i, times_ in enumerate(split_times):
-        # Extend times_ by one point if not the last segment
+    for i, curr_times in enumerate(split_times):
+        # Extend curr_times by one point if not the last segment
         if i < len(split_times) - 1:
             next_times = split_times[i + 1]
             if len(next_times) > 0:
-                times_ = np.append(times_, next_times[0])
+                curr_times = np.append(curr_times, next_times[0])
 
         # Find the indices in the original times array for this split
-        start_idx = np.abs(times - times_[0]).argmin()
+        start_idx = np.abs(oqs.times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
 
         # Configure evolution object and collapse operators
-        EVO_obj, c_ops_list = _configure_evolution_objects(
-            system, has_pulse, H_free, H_int_evo, pulse_seq
-        )
+        EVO_obj, c_ops_list = _configure_evolution_objects(oqs, has_pulse)
 
         # Execute evolution for this time segment
         result = _execute_single_evolution_segment(
-            system, EVO_obj, c_ops_list, current_state, times_, H_int_evo, options
+            oqs.simulation_config.ODE_Solver,
+            EVO_obj,
+            c_ops_list,
+            current_state,
+            curr_times,
+            options,
         )
 
         # Store results
@@ -200,11 +288,8 @@ def _execute_segmented_evolution(
 
 
 def _configure_evolution_objects(
-    system: AtomicSystem,
+    oqs: SimClassOQS,
     has_pulse: bool,
-    H_free: Qobj,
-    H_int_evo: QobjEvo,
-    pulse_seq: LaserPulseSystem,
 ) -> tuple[Union[Qobj, QobjEvo], list]:
     """Configure evolution objects and collapse operators based on solver type.
 
@@ -213,64 +298,63 @@ def _configure_evolution_objects(
     tuple[Union[Qobj, QobjEvo], list]
         (evolution_object, collapse_operators_list)
     """
-    if system.ODE_Solver == "ME":
-        if has_pulse:
-            return (
-                H_int_evo,
-                system.me_decay_channels,
-            )
-        else:
-            return (
-                H_free,
-                system.me_decay_channels,
-            )
-    elif system.ODE_Solver == "BR":
-        # BR solver handles a_ops, it is handled in _execute_single_evolution_segment
-        return (
-            H_int_evo,
-            [],
-        )
-    elif system.ODE_Solver == "Paper_BR":
+    # Build Hamiltonian components that already include the RWA if present
+    H_free = oqs.H0_diagonalized
+    H_int_evo = QobjEvo(lambda t, args=None: H_free + oqs.H_int(t))
+    ODE_Solver = oqs.simulation_config.ODE_Solver
+    if ODE_Solver == "Paper_BR":
         # Paper BR combines Liouvillian with custom R operator
         EVO_obj = liouvillian(H_int_evo) + R_paper(
-            system
-        )  # TODO THIS IS WRONG UNFORTUNATELY
+            oqs.system
+        )  # TODO THIS GIVES WRONG RESULTS? UNFORTUNATELY
         return EVO_obj, []
-    elif system.ODE_Solver == "Paper_eqs":
+    elif ODE_Solver == "Paper_eqs":
         # Paper equations use custom matrix ODE
-        EVO_obj = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
+        EVO_obj = QobjEvo(
+            lambda t, args=None: matrix_ODE_paper(t, oqs.pulse_seq, oqs.system)
+        )
         return EVO_obj, []
+
+    elif has_pulse:
+        return (
+            H_int_evo,
+            oqs.decay_channels,
+        )
+    else:
+        return (
+            H_free,
+            oqs.decay_channels,
+        )
 
 
 def _execute_single_evolution_segment(
-    system: AtomicSystem,
+    ODE_Solver: str,
     EVO_obj: Union[Qobj, QobjEvo],
-    c_ops_list: list,
+    decay_ops_list: list,
     current_state: Qobj,
-    times_: np.ndarray,
-    H_int_evo: QobjEvo,
+    curr_times: np.ndarray,
     options: dict,
 ) -> Result:
     """Execute evolution for a single time segment."""
-    if system.ODE_Solver == "BR":
+    if ODE_Solver == "BR":
         return brmesolve(
-            H_int_evo,
+            EVO_obj,
             current_state,
-            times_,
-            a_ops=system.br_decay_channels,
+            curr_times,
+            a_ops=decay_ops_list,
             options=options,
         )
     else:
         return mesolve(
             EVO_obj,
             current_state,
-            times_,
-            c_ops=c_ops_list,
+            curr_times,
+            c_ops=decay_ops_list,
             options=options,
         )
 
 
-def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
+def check_the_solver(oqs: SimClassOQS) -> tuple[Result, float]:
     """
     Checks the solver within the compute_pulse_evolution function
     with the provided psi_ini, times, and system.
@@ -284,50 +368,28 @@ def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
         result (Result): The result object from compute_pulse_evolution.
         time_cut (float): The time after which the checks failed, or np.inf if all checks passed.
     """
-    t_max = 2 * system.t_max
-    dt = 10 * system.dt
-    t0 = -system.fwhms[0]
+    t_max = 2 * oqs.t_max
+    dt = 10 * oqs.dt
+    t0 = -oqs.t0
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
-    print(f"Checking '{system.ODE_Solver}' solver ", flush=True)
+    print(f"Checking '{oqs.simulation_config.ODE_Solver}' solver ", flush=True)
 
     # =============================
     # INPUT VALIDATION
     # =============================
-    if not hasattr(system, "ODE_Solver"):
-        raise AttributeError("system must have attribute 'ODE_Solver'")
-    if not hasattr(system, "observable_ops"):
-        raise AttributeError("system must have attribute 'observable_ops'")
-    if not isinstance(system.psi_ini, Qobj):
+    if not isinstance(oqs.system.psi_ini, Qobj):
         raise TypeError("psi_ini must be a Qobj")
     if not isinstance(times, np.ndarray):
         raise TypeError("times must be a numpy.ndarray")
-    if not isinstance(system.observable_ops, list) or not all(
-        isinstance(op, Qobj) for op in system.observable_ops
+    if not isinstance(oqs.observable_ops, list) or not all(
+        isinstance(op, Qobj) for op in oqs.observable_ops
     ):
         raise TypeError("system.observable_ops must be a list of Qobj")
     if len(times) < 2:
         raise ValueError("times must have at least two elements")
 
-    # =============================
-    # CONSTRUCT PULSE SEQUENCE (refactored)
-    # =============================
-    # Define pulse parameters
-    phi_0 = np.pi / 2
-    phi_1 = np.pi / 4
-    DETECTION_PHASE = 0
-    pulse1_t_peak = times[-1] / 2
-    pulse2_t_peak = times[-1] / 1.1
-
-    # Use the from_pulse_specs static method to construct the sequence
-    pulse_seq = LaserPulseSystem.from_pulse_specs(
-        pulse_peak_times=[0, pulse1_t_peak, pulse2_t_peak],
-        pulse_phases=[phi_0, phi_1, DETECTION_PHASE],
-    )
-
-    result = compute_pulse_evolution(
-        system.psi_ini, times, pulse_seq, system=system, **{"store_states": True}
-    )
+    result = compute_pulse_evolution(oqs, **{"store_states": True})
     states = result.states
     # =============================
     # CHECK THE RESULT
@@ -345,9 +407,9 @@ def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
     strg = ""
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
-    if getattr(system, "RWA_SL", False):
-        N_atoms = system.N_atoms
-        omega_laser = pulse_seq.omega_laser
+    if getattr(oqs.simulation_config, "RWA_SL", False):
+        N_atoms = oqs.system.N_atoms
+        omega_laser = oqs.laser.omega_laser
         states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
     for index, state in enumerate(states):
         time = times[index]
@@ -421,36 +483,23 @@ def _compute_next_start_point(
     return evolution_data.final_state
 
 
-def _create_single_pulse_sequence(system, pulse_idx, t_peak, phase):
-    """Create a pulse sequence with a single pulse."""
-    return LaserPulseSystem.from_pulse_specs(
-        pulse_indices=[pulse_idx],
-        pulse_peak_times=[t_peak],
-        pulse_phases=[phase],
-        pulse_freqs=system.freqs,
-        pulse_fwhms=system.fwhms,
-        pulse_amplitudes=system.amplitudes,
-    )
-
-
 def compute_1d_polarization(
-    tau_coh: float,
-    T_wait: float,
     phi_0: float,
     phi_1: float,
-    t_det_max: np.ndarray,
-    system: AtomicSystem,  # contains frequency omega
     **kwargs,
 ) -> tuple:
     """
     Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_max
     """
+    system = oqs.system
+    tau_coh = oqs.simulation_config.tau_coh
+    T_wait = oqs.simulation_config.T_wait
+    t_det_max = oqs.simulation_config.t_det_max
     time_cut = kwargs.get("time_cut", np.inf)
 
-    dt = system.dt  # TODO how can I seperate this from the system?
-    fwhm = system.pulse_fwhm
-    t0 = -fwhm
-    t_max = tau_coh + T_wait + t_det_max
+    dt = oqs.dt  # TODO how can I seperate this from the system?
+    t0 = oqs.t0
+    t_max = oqs.t_max
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
     # Force 1d times to a canonical grid
@@ -459,25 +508,26 @@ def compute_1d_polarization(
     # =============================
     # PULSE TIMING AND SEQUENCES
     # =============================
-    pulse_timings = _get_pulse_timings(tau_coh, T_wait)
-    # TODO add dynamical pulse parameters like fwhm, omega_L, E0, fwhm
-    E0 = system.E0
-    pulse_sequences = _create_pulse_sequences(
-        phi_0, phi_1, pulse_timings, fwhms=fwhm, E0=E0
-    )
+    oqs.laser.update_first_two_pulse_phases(phi_0, phi_1)  # TODO not sure if this works
+
+    individual_pulses = {
+        "pulse0": [oqs.laser.pulses[0]],
+        "pulse1": [oqs.laser.pulses[1]],
+        "pulse2": [oqs.laser.pulses[2]],
+    }
 
     # =============================
     # COMPUTE EVOLUTION STATES
     # =============================
     evolution_data = _compute_three_pulse_evolution(
-        times, system, pulse_timings, pulse_sequences["full"]
+        times, system, pulse_timings, oqs.laser
     )
 
     # =============================
     # COMPUTE LINEAR SIGNALS
     # =============================
     linear_signals = _compute_linear_signals(
-        times, system, pulse_sequences["individual"], pulse_timings["detection"]
+        times, system, individual_pulses, pulse_timings["detection"]
     )
 
     # =============================
@@ -1227,95 +1277,8 @@ def _configure_solver_options(solver_options: dict) -> dict:
     return options
 
 
-def _configure_paper_equations_solver(system: AtomicSystem) -> None:
+def _configure_paper_equations_solver(oqs: SimClassOQS) -> None:
     """Configure system for paper equations solver."""
-    if not system.RWA_SL:
+    if not oqs.simulation_config.RWA_SL:
         logger.info("Paper equations require RWA - enabling RWA_SL")
-        system.RWA_SL = True
-
-
-# =============================
-# POLARIZATION CALCULATIONS
-# =============================
-def complex_polarization(
-    dip_op: Qobj, state: Union[Qobj, List[Qobj]]
-) -> Union[complex, np.ndarray]:
-    """
-    Calculate the complex polarization for state(s) using the dipole operator.
-    The polarization is defined as one part of the expectation value of the dipole operator
-    with the given quantum state(s) or density matrix(es).
-
-    Parameters
-    ----------
-    dip_op : Qobj
-        Dipole operator for the system
-    state : Union[Qobj, List[Qobj]]
-        A single quantum state/density matrix or list of states.
-
-    Returns
-    -------
-    Union[complex, np.ndarray]
-        Complex polarization value(s). Returns complex for single state,
-        complex array for multiple states.
-
-    Raises
-    ------
-    TypeError
-        If state is not a Qobj or list of Qobj.
-
-    Examples
-    --------
-    >>> pol = complex_polarization(dip_op, rho)  # Single density matrix
-    >>> pols = complex_polarization(dip_op, [rho1, rho2])  # Multiple states
-    """
-    if isinstance(state, Qobj):
-        return _single_qobj_polarization(dip_op, state)
-
-    if isinstance(state, list):
-        return np.array(
-            [_single_qobj_polarization(dip_op, s) for s in state],
-            dtype=np.complex128,  # Use higher precision
-        )
-
-    raise TypeError(f"State must be a Qobj or list of Qobj, got {type(state)}")
-
-
-def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
-    """
-    Calculate polarization for a single quantum state or density matrix.
-
-    Parameters
-    ----------
-    dip_op : Qobj
-        Dipole operator
-    state : Qobj
-        Quantum state (ket) or density matrix.
-
-    Returns
-    -------
-    complex
-        Complex polarization value.
-
-    Raises
-    ------
-    TypeError
-        If state is not a ket or density matrix.
-    """
-    if not (state.isket or state.isoper):
-        raise TypeError("State must be a ket or density matrix")
-
-    # General approach that works for any system size
-    polarization = 0j
-
-    if state.isket:
-        # Convert ket to density matrix for consistent handling
-        state = ket2dm(state)
-
-    # For any system size, calculate polarization as sum of off-diagonal elements
-    # This works for any number of atoms without needing special cases TODO BUT NOT IN SINGLE EXCITATION SUBSPACE?
-    for i in range(dip_op.shape[0]):
-        for j in range(i):
-            if i != j and abs(dip_op[i, j]) != 0:
-                polarization += dip_op[i, j] * state[j, i]
-
-    return polarization
+        oqs.simulation_config.RWA_SL = True

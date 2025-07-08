@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 # bath functions
-from qspectro2d.baths.bath_fcts import (
+from qspectro2d.core.bath_system.bath_fcts import (
     power_spectrum_func_paper,
     power_spectrum_func_ohmic,
     power_spectrum_func_drude_lorentz,
@@ -14,7 +14,7 @@ from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
 
 
 @dataclass
-class BathParameters:
+class BathClass:
     """
     Parameters for the bath coupling and spectral density function.
     """

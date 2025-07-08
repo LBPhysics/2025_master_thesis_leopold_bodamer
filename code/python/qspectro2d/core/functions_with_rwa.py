@@ -8,8 +8,8 @@ and other utilities using a Rotating Wave Approximation.
 import numpy as np
 from typing import Union, List, overload
 from qutip import Qobj, expect
-from qspectro2d.core.system_parameters import SystemParameters
-from qspectro2d.core.pulse_sequences import PulseSequence
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
 
 
 @overload
@@ -80,13 +80,19 @@ def _apply_single_rwa(rho: Qobj, t: float, N_atoms: int, omega: float) -> Qobj:
         rho_array[0, bar_alpha] *= np.conj(e_m_2iwt)
 
     else:
-        raise ValueError("Only N_atoms=1 or 2 are supported.")
+        raise ValueError("TODO implement RWA for N_atoms > 2")
 
     return Qobj(rho_array, dims=rho.dims)
 
 
 def get_expect_vals_with_RWA(
-    states: list[Qobj], times: np.array, system: SystemParameters, add_Dip: bool = True
+    states: list[Qobj],
+    times: np.array,
+    N_atoms: int,
+    e_ops: List[Qobj],
+    omega_laser: float,
+    RWA_SL: bool,
+    Dip_op: Qobj = None,
 ):
     """
     Calculate the expectation values in the result with RWA phase factors.
@@ -95,19 +101,16 @@ def get_expect_vals_with_RWA(
         states= data.states (where data = qutip.Result): Results of the pulse evolution.
         times (list): Time points at which the expectation values are calculated.
         e_ops (list): the operators for which the expectation values are calculated
-        omega (float): omega_laser (float): Frequency of the laser.
-        RWA (bool): Whether to apply the RWA phase factors.
+        omega_laser (float): Frequency of the laser.
+        RWA_SL (bool): Whether to apply the RWA phase factors.
+        Dip_op (Qobj, optional): Dipole operator to include in expectation values.
     Returns:
         list of lists: Expectation values for each operator of len(states).
     """
-    e_ops = system.observable_ops
-    if add_Dip:
-        e_ops += [system.Dip_op]
+    if Dip_op is not None:
+        e_ops += [Dip_op]
 
-    if system.RWA_SL:
-        N_atoms = system.N_atoms
-        omega_laser = PulseSequence.omega_laser
-        # Apply RWA phase factors to each state
+    if RWA_SL:
         states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
 
     # Calculate expectation values for each state and each operator
@@ -131,10 +134,10 @@ if __name__ == "__main__":
         "Testing functions_with_rwa.py module..."
     )  ### Create test system for N_atoms=1
     print("\n=== Testing with N_atoms=1 ===")
-    system1 = SystemParameters(N_atoms=1)
+    system1 = AtomicSystem(N_atoms=1)
 
     ### Create simple pulse sequence
-    from qspectro2d.core.pulse_sequences import Pulse
+    from qspectro2d.core.laser_system.laser_class import Pulse
 
     test_pulse = Pulse(
         pulse_index=0,
@@ -143,16 +146,17 @@ if __name__ == "__main__":
         pulse_fwhm=1.0,
         pulse_phase=0.0,
         pulse_amplitude=0.05,
-        pulse_freq=system1.omega_A_cm,  # TODO MATCH THE units
+        pulse_freq=system1.freqs_cm[0],
     )
-    pulse_seq1 = PulseSequence([test_pulse])
+    pulse_seq1 = LaserPulseSystem([test_pulse])
 
     ### Test apply_RWA_phase_factors
     print("\n--- Testing apply_RWA_phase_factors ---")
     test_rho = system1.psi_ini  # Initial density matrix
     test_time = 1.0
     N_atoms = system1.N_atoms
-    omega_laser = test_pulse.omega_laser
+    omega_laser = pulse_seq1.omega_laser
+
     rho_modified = apply_RWA_phase_factors(test_rho, test_time, N_atoms, omega_laser)
     print(f"Original rho type: {type(test_rho)}")
     print(f"Modified rho type: {type(rho_modified)}")
@@ -165,7 +169,12 @@ if __name__ == "__main__":
     ### Test get_expect_vals_with_RWA
     print("\n--- Testing get_expect_vals_with_RWA ---")
     try:
-        expect_vals = get_expect_vals_with_RWA(states_test, times_test, system1)
+        RWA_SL = True  # Set to True to apply RWA phase factors
+        Dip_op = system1.Dip_op
+        e_ops = system1.basis
+        expect_vals = get_expect_vals_with_RWA(
+            states_test, times_test, N_atoms, e_ops, omega_laser, RWA_SL, Dip_op
+        )
         print(f"Number of expectation operators: {len(expect_vals)}")
         print(f"Number of time points: {len(expect_vals[0]) if expect_vals else 0}")
         print(f"Expectation values shape: {[len(ev) for ev in expect_vals]}")
@@ -174,8 +183,12 @@ if __name__ == "__main__":
 
     ### Test with N_atoms=2
     print("\n=== Testing with N_atoms=2 ===")
-    system2 = SystemParameters(N_atoms=2)
-    pulse_seq2 = PulseSequence([test_pulse])
+    system2 = AtomicSystem(
+        N_atoms=2,
+        freqs_cm=[system1.freqs_cm[0], system1.freqs_cm[0] + 10],
+        dip_moments=[system1.dip_moments[0], system1.dip_moments[0] + 0.1],
+    )
+    pulse_seq2 = LaserPulseSystem([test_pulse])
     test_time = 1.0
 
     ### Test RWA phase factors for 2-atom system

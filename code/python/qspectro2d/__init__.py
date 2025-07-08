@@ -11,8 +11,7 @@ with quantum mechanical models. This package provides tools for:
 - Configuration management and file I/O utilities
 
 Main subpackages:
-- core: Fundamental simulation components (SystemParameters, PulseSequence, solvers)
-- baths: Bosonic bath models (Drude-Lorentz, Ohmic, Paper-specific)
+- core: Fundamental simulation components (AtomicSystem, LaserPulseSystem, BathClass, solvers)
 - spectroscopy: 1D/2D spectroscopy calculations and post-processing
 - visualization: Plotting and data visualization tools
 - data: File I/O and data management utilities
@@ -28,9 +27,10 @@ __email__ = ""
 # =============================
 # Import the most essential classes that users will need
 try:
-    from .core import SystemParameters, Pulse, PulseSequence
+    from .core import AtomicSystem, Pulse, LaserPulseSystem
     from .core import E_pulse, pulse_envelope
-    from .core import matrix_ODE_paper, H_int
+    from .core import matrix_ODE_paper
+    from .core import convert_cm_to_fs, convert_fs_to_cm, HBAR, BOLTZMANN
 except ImportError as e:
     print(f"Warning: Could not import core module: {e}")
 
@@ -38,13 +38,13 @@ except ImportError as e:
 # BATH MODELS
 # =============================
 try:
-    from .baths import (
+    from .core.bath_system import (
         power_spectrum_func_paper,
         power_spectrum_func_drude_lorentz,
         power_spectrum_func_ohmic,
     )
 except ImportError as e:
-    print(f"Warning: Could not import baths module: {e}")
+    print(f"Warning: Could not import bath_system module: {e}")
 
 # =============================
 # SPECTROSCOPY SIMULATIONS
@@ -105,9 +105,9 @@ except ImportError as e:
 # =============================
 __all__ = [
     # Core classes - most important for users
-    "SystemParameters",
-    "Pulse", 
-    "PulseSequence",
+    "AtomicSystem",
+    "Pulse",
+    "LaserPulseSystem",
     # Essential functions
     "E_pulse",
     "pulse_envelope",
@@ -115,7 +115,7 @@ __all__ = [
     "H_int",
     # Bath functions
     "power_spectrum_func_paper",
-    "power_spectrum_func_drude_lorentz", 
+    "power_spectrum_func_drude_lorentz",
     "power_spectrum_func_ohmic",
     # High-level simulation functions
     "run_1d_simulation",
@@ -142,6 +142,7 @@ __all__ = [
     "LINE_STYLES",
 ]
 
+
 # =============================
 # PACKAGE INFORMATION
 # =============================
@@ -164,11 +165,12 @@ Available Subpackages:
 - config: Configuration and constants
 
 Quick Start:
-from qspectro2d import SystemParameters, PulseSequence, run_1d_simulation
+from qspectro2d import AtomicSystem, LaserPulseSystem, run_1d_simulation
 
 For detailed documentation, see individual module docstrings.
 """
     return info
+
 
 def list_available_functions():
     """

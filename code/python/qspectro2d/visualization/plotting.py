@@ -1,22 +1,22 @@
 from matplotlib.colors import TwoSlopeNorm
 import numpy as np
-from qspectro2d.core.system_parameters import SystemParameters
-from qspectro2d.core.pulse_functions import *
-from qspectro2d.core.pulse_sequences import PulseSequence
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.laser_system.laser_fcts import *
+from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
 import matplotlib.pyplot as plt
 from typing import Literal, Union
 from qspectro2d.config.mpl_tex_settings import COLORS, LINE_STYLES
 
 
 def plot_pulse_envelope(
-    times: np.ndarray, pulse_seq: PulseSequence, ax=None, show_legend=True
+    times: np.ndarray, pulse_seq: LaserPulseSystem, ax=None, show_legend=True
 ):
     """
-    Plot the combined pulse envelope over time for up to three pulses using PulseSequence.
+    Plot the combined pulse envelope over time for up to three pulses using LaserPulseSystem.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
@@ -97,14 +97,14 @@ def plot_pulse_envelope(
 
 
 def plot_e_pulse(
-    times: np.ndarray, pulse_seq: PulseSequence, ax=None, show_legend=True
+    times: np.ndarray, pulse_seq: LaserPulseSystem, ax=None, show_legend=True
 ):
     """
-    Plot the RWA electric field (envelope only) over time for pulses using PulseSequence.
+    Plot the RWA electric field (envelope only) over time for pulses using LaserPulseSystem.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
@@ -155,14 +155,14 @@ def plot_e_pulse(
 
 
 def plot_epsilon_pulse(
-    times: np.ndarray, pulse_seq: PulseSequence, ax=None, show_legend=True
+    times: np.ndarray, pulse_seq: LaserPulseSystem, ax=None, show_legend=True
 ):
     """
-    Plot the full electric field (with carrier) over time for pulses using PulseSequence.
+    Plot the full electric field (with carrier) over time for pulses using LaserPulseSystem.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
@@ -220,14 +220,14 @@ def plot_epsilon_pulse(
 
 
 def plot_all_pulse_components(
-    times: np.ndarray, pulse_seq: PulseSequence, figsize=(15, 12)
+    times: np.ndarray, pulse_seq: LaserPulseSystem, figsize=(15, 12)
 ):
     """
     Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (PulseSequence): PulseSequence object containing pulses.
+        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
         figsize (tuple): Figure size. Defaults to (15, 12).
 
     Returns:
@@ -259,10 +259,10 @@ def plot_all_pulse_components(
 def plot_example_evo(
     times_plot: np.ndarray,
     datas: list,
-    pulse_seq_f: PulseSequence,
+    pulse_seq_f: LaserPulseSystem,
     tau_coh: float,
     T_wait: float,
-    system: SystemParameters,
+    system: AtomicSystem,
     **kwargs: dict,
 ):
     """
@@ -271,7 +271,7 @@ def plot_example_evo(
     Parameters:
         times_plot (np.ndarray): Time axis for the plot.
         datas (list): List of arrays of expectation values to plot.
-        pulse_seq_f: PulseSequence object for the final pulse sequence.
+        pulse_seq_f: LaserPulseSystem object for the final pulse sequence.
         tau_coh (float): Coherence time.
         T_wait (float): Waiting time.
         system: System object containing all relevant parameters.

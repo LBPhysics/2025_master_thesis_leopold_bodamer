@@ -32,7 +32,7 @@ from .calculations import (
 # =============================
 from .inhomogenity import (
     normalized_gauss,
-    sample_from_sigma,
+    sample_from_gaussian,
 )
 
 # =============================
@@ -71,7 +71,7 @@ __all__ = [
     
     # Inhomogeneous broadening
     "normalized_gauss",
-    "sample_from_sigma",
+    "sample_from_gaussian",
     
     # Post-processing
     "extend_time_axes",

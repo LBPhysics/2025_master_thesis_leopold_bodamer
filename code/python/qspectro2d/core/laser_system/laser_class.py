@@ -1,5 +1,5 @@
 # =============================
-# Pulse and PulseSequence classes for structured pulse handling
+# Pulse and LaserPulseSystem classes for structured pulse handling
 # =============================
 from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple, Optional, Union
@@ -27,6 +27,7 @@ class Pulse:
             raise ValueError("Pulse FWHM must be positive")
         if not np.isfinite(self.pulse_amplitude):
             raise ValueError("Pulse amplitude must be finite")
+        self.omgea_laser = self.pulse_freq
 
     @property
     def active_time_range(self, n_fwhm: float = 1.094) -> Tuple[float, float]:
@@ -66,14 +67,18 @@ class Pulse:
 
 
 @dataclass
-class PulseSequence:
+class LaserPulseSystem:
     pulses: List[Pulse] = field(default_factory=list)
+
     pulse_indices: List[int] = field(init=False)
     pulse_peak_times: List[float] = field(init=False)
     pulse_phases: List[float] = field(init=False)
     pulse_fwhms: List[float] = field(init=False)
     pulse_freqs: List[float] = field(init=False)
     pulse_types: List[str] = field(init=False)
+    omega_laser: Optional[float] = (
+        None  # Frequency of the laser, if all pulses have the same frequency
+    )
 
     def __post_init__(self):
         self.pulse_indices = [pulse.pulse_index for pulse in self.pulses]
@@ -82,6 +87,9 @@ class PulseSequence:
         self.pulse_fwhms = [pulse.pulse_fwhm for pulse in self.pulses]
         self.pulse_freqs = [pulse.pulse_freq for pulse in self.pulses]
         self.pulse_types = [pulse.pulse_type for pulse in self.pulses]
+
+        if all(freq == self.pulse_freqs[0] for freq in self.pulse_freqs):
+            self.omega_laser = self.pulse_freqs[0]
 
     @staticmethod
     def from_delays(
@@ -92,8 +100,8 @@ class PulseSequence:
         pulse_type: str = "gaussian",
         relative_E0s: Optional[List[float]] = None,
         phases: Optional[List[float]] = None,
-    ) -> "PulseSequence":
-        """Create a PulseSequence from a list of delays and other pulse parameters.
+    ) -> "LaserPulseSystem":
+        """Create a LaserPulseSystem from a list of delays and other pulse parameters.
 
         Args:
             delays (List[float]): List of pulse delays.
@@ -108,7 +116,7 @@ class PulseSequence:
             ValueError: If the lengths of the input lists do not match.
 
         Returns:
-            PulseSequence: A PulseSequence object containing the defined pulses.
+            LaserPulseSystem: A LaserPulseSystem object containing the defined pulses.
         """
         n_pulses = len(delays)
         if relative_E0s is None:
@@ -139,7 +147,7 @@ class PulseSequence:
                 )
             )
 
-        return PulseSequence(pulses=pulses)
+        return LaserPulseSystem(pulses=pulses)
 
     @staticmethod
     def from_general_specs(
@@ -150,7 +158,7 @@ class PulseSequence:
         pulse_freqs: Union[float, List[float]],
         pulse_types: Union[str, List[str]],
         pulse_indices: Optional[List[int]] = None,
-    ) -> "PulseSequence":
+    ) -> "LaserPulseSystem":
         if isinstance(pulse_peak_times, (float, int)):
             pulse_peak_times = [pulse_peak_times]
         n_pulses = len(pulse_peak_times)
@@ -190,7 +198,7 @@ class PulseSequence:
             )
 
         pulses.sort(key=lambda p: p.pulse_peak_time)
-        return PulseSequence(pulses=pulses)
+        return LaserPulseSystem(pulses=pulses)
 
     def get_active_pulses_at_time(self, time: float) -> List[Tuple[int, Pulse]]:
         """
@@ -255,7 +263,30 @@ class PulseSequence:
             "pulse_indices": [i for i, _ in active_pulses],
         }
 
-    # turn the PulseSequence into a list-like object
+    def update_first_two_pulse_phases(self, phase1: float, phase2: float) -> None:
+        """
+        Update the pulse_phases of the first two pulses in the LaserPulseSystem.
+
+        Args:
+            phase1 (float): Phase to set for the first pulse.
+            phase2 (float): Phase to set for the second pulse.
+
+        Raises:
+            ValueError: If there are fewer than two pulses in the system.
+        """
+        if len(self.pulses) < 2:
+            raise ValueError(
+                "LaserPulseSystem must contain at least two pulses to update their phases."
+            )
+
+        self.pulses[0].pulse_phase = phase1
+        self.pulses[1].pulse_phase = phase2
+
+        # Update the cached pulse_phases list
+        self.pulse_phases[0] = phase1
+        self.pulse_phases[1] = phase2
+
+    # turn the LaserPulseSystem into a list-like object
     def __len__(self):
         return len(self.pulses)
 
@@ -266,7 +297,7 @@ class PulseSequence:
         return iter(self.pulses)
 
     def summary(self):
-        header = f"PulseSequence Summary\n{'-' * 80}"
+        header = f"LaserPulseSystem Summary\n{'-' * 80}"
         print(header)
         for p in self.pulses:
             print(p.summary_line())
@@ -278,30 +309,28 @@ class PulseSequence:
         return {"pulses": [pulse.to_dict() for pulse in self.pulses]}
 
     @staticmethod
-    def from_dict(data: dict) -> "PulseSequence":
+    def from_dict(data: dict) -> "LaserPulseSystem":
         pulses = [Pulse.from_dict(d) for d in data["pulses"]]
-        return PulseSequence(pulses=pulses)
+        return LaserPulseSystem(pulses=pulses)
 
     def to_json(self, indent: int = 2) -> str:
-        import json
 
         return json.dumps(self.to_dict(), indent=indent)
 
     @staticmethod
-    def from_json(json_str: str) -> "PulseSequence":
-        import json
+    def from_json(json_str: str) -> "LaserPulseSystem":
 
         data = json.loads(json_str)
-        return PulseSequence.from_dict(data)
+        return LaserPulseSystem.from_dict(data)
 
 
-# How to recreate a PulseSequence and serialize it to JSON
+# How to recreate a LaserPulseSystem and serialize it to JSON
 """
-seq = PulseSequence.from_delays(delays=[100.0, 200.0], pulse_fwhm=10.0)
+seq = LaserPulseSystem.from_delays(delays=[100.0, 200.0], pulse_fwhm=10.0)
 json_data = seq.to_json()
-print("Serialized PulseSequence:\n", json_data)
+print("Serialized LaserPulseSystem:\n", json_data)
 
-reconstructed = PulseSequence.from_json(json_data)
+reconstructed = LaserPulseSystem.from_json(json_data)
 reconstructed.summary()
 """
 
@@ -312,7 +341,7 @@ def main():
     print("=" * 60)
 
     print("\n1. Three-pulse sequence:")
-    seq = PulseSequence.from_delays(
+    seq = LaserPulseSystem.from_delays(
         delays=[100.0, 200.0, 300.0],
         base_amplitude=0.05,
         pulse_fwhm=10.0,
@@ -323,7 +352,7 @@ def main():
     seq.summary()
 
     print("\n1. 5-pulse sequence from general specs:")
-    seq = PulseSequence.from_general_specs(
+    seq = LaserPulseSystem.from_general_specs(
         pulse_peak_times=[100.0, 200.0, 300.0, 400.0, 500.0],
         pulse_phases=[0.0, 0.5, 1.0, 1.5, 2.0],
         pulse_amplitudes=[0.05, 0.05, 0.05, 0.05, 0.05],
@@ -346,6 +375,21 @@ def main():
         print(f"  Number of active pulses: {info['num_active_pulses']}")
         print(f"  Total amplitude: {info['total_amplitude']:.3e}")
         print(f"  Active pulse indices: {info['pulse_indices']}")
+
+    # Example usage of the new functions
+    times = np.linspace(0, 600, 1201)  # Time array from 0 to 600 fs
+    active_regions = identify_non_zero_pulse_regions(times, seq)
+
+    print("\n4. Identified active regions:")
+    for i, active in enumerate(active_regions):
+        if active:
+            print(f"Time {times[i]:.2f} fs is in an active region.")
+
+    # Split the time array based on active regions
+    split_times = split_by_active_regions(times, active_regions)
+    print("\n5. Split time segments:")
+    for segment in split_times:
+        print(f"Segment: {segment}")
 
 
 if __name__ == "__main__":

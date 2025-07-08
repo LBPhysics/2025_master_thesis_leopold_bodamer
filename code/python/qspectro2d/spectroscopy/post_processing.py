@@ -1,4 +1,4 @@
-from qspectro2d.core.pulse_functions import *
+from qspectro2d.core.laser_system.laser_fcts import *
 import numpy as np
 
 

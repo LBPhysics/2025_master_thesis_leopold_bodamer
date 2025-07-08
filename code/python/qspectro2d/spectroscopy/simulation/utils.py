@@ -12,7 +12,7 @@ import os
 import psutil
 
 ### Project-specific imports
-from qspectro2d.core.system_parameters import SystemParameters
+from core.atomic_system.system_class import AtomicSystem
 
 
 # =============================
@@ -30,15 +30,15 @@ def get_max_workers() -> int:
     return slurm_cpus if slurm_cpus > 0 else local_cpus
 
 
-def create_system_parameters(info_config: dict) -> SystemParameters:
+def create_system_parameters(info_config: dict) -> AtomicSystem:
     """
-    Create a SystemParameters object from a configuration dictionary.
+    Create a AtomicSystem object from a configuration dictionary.
 
     Parameters:
     info_config (dict): Configuration dictionary containing simulation parameters.
 
     Returns:
-    SystemParameters: Initialized SystemParameters object.
+    AtomicSystem: Initialized AtomicSystem object.
 
     Raises:
     KeyError: If required keys for time configuration are missing.
@@ -54,7 +54,7 @@ def create_system_parameters(info_config: dict) -> SystemParameters:
         t_max = info_config["t_wait"] + 2 * info_config["t_det_max"]
 
     # Set all parameters to defaults if not provided in info_config
-    return SystemParameters(
+    return AtomicSystem(
         t_max=t_max,
         Temp=info_config.get("Temp", 0),
         cutoff_=info_config.get("cutoff_", 1),

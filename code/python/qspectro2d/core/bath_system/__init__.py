@@ -6,7 +6,7 @@ quantum spectroscopy simulations. It includes spectral density functions
 and power spectrum functions for different bath types:
 
 - Drude-Lorentz bath: Classical model for phonon baths
-- Ohmic bath: Simple ohmic dissipation model  
+- Ohmic bath: Simple ohmic dissipation model
 - Paper bath: Specific model as defined in the research paper
 
 Each bath type provides both spectral density and power spectrum functions
@@ -28,6 +28,8 @@ from .bath_fcts import (
     power_spectrum_func_paper,
 )
 
+from .bath_class import BathClass
+
 # =============================
 # PUBLIC API
 # =============================
@@ -36,11 +38,13 @@ __all__ = [
     "spectral_density_func_drude_lorentz",
     "power_spectrum_func_drude_lorentz",
     # Ohmic bath
-    "spectral_density_func_ohmic", 
+    "spectral_density_func_ohmic",
     "power_spectrum_func_ohmic",
     # Paper bath
     "spectral_density_func_paper",
     "power_spectrum_func_paper",
+    # Bath class
+    "BathClass",
 ]
 
 # =============================
