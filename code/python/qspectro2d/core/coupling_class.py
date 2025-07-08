@@ -124,9 +124,9 @@ class SystemBathCoupling:
             ]
 
         elif N_atoms == 2:  # TODO REDO this to implement the appendix C
-            deph_A = ket2dm(tensor(self.system.atom_e, self.system.atom_g))
-            deph_B = ket2dm(tensor(self.system.atom_g, self.system.atom_e))
-            deph_AB = ket2dm(tensor(self.system.atom_e, self.system.atom_e))  # optional
+            deph_A = ket2dm(self.system.basis[1])
+            deph_B = ket2dm(self.system.basis[2])
+            deph_AB = ket2dm(self.system.basis[3])
 
             br_decay_channels_ = [
                 [
@@ -147,7 +147,23 @@ class SystemBathCoupling:
                 ],
             ]
         else:  # TODO IMPLEMENT THE GENERAL CASE WITHIN SINGLE EXCITATION SUBSPACE
-            raise ValueError("Only N_atoms=1 or 2 are supported.")
+            br_decay_channels_ = [
+                [
+                    (
+                        ket2dm(self.system.basis[i]),
+                        lambda w: self.bath.power_spectrum_func(w, args_deph),
+                    )
+                    for i in range(1, self.system.N_atoms)
+                ],
+                [
+                    (
+                        self.system.basis[0]
+                        * self.system.basis[i].dag(),  # this is sm_m[i]
+                        lambda w: self.bath.power_spectrum_func(w, args_decay),
+                    )
+                    for i in range(1, self.system.N_atoms)
+                ],
+            ]
 
         return br_decay_channels_
 
@@ -187,7 +203,9 @@ class SystemBathCoupling:
                 * np.sqrt(total_dephasing),  # * (n_th_at + 1)
             ]
         else:
-            raise ValueError("Only N_atoms=1 or 2 are supported.")
+            raise ValueError(
+                "Only N_atoms=1 or 2 are supported."
+            )  # TODO implement the general case
 
         return me_decay_channels_
 
@@ -205,7 +223,7 @@ class SystemBathCoupling:
 
         w_ij = self.system.omega_ij(i, j)
         return np.sin(2 * self.system.theta) ** 2 * power_spectrum_func_paper(
-            w_ij, self.SB_coupling.args_bath()
+            w_ij, self.bath.args_bath()
         )
 
     def Gamma_big_ij(self, i: int, j: int) -> float:

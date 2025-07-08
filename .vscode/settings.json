@@ -18,31 +18,6 @@
     ],
     "latex-workshop.latex.tools": [
         {
-            "name": "lualatex",
-            "command": "lualatex",
-            "args": [
-                "-shell-escape",
-                "-synctex=1",
-                "-interaction=nonstopmode",
-                "-file-line-error",
-                "%DOC%"
-            ]
-        },
-        {
-            "name": "lualatexmk",
-            "command": "latexmk",
-            "args": [
-                "-pdf",
-                "-lualatex",
-                "-shell-escape",
-                "-synctex=1",
-                "-interaction=nonstopmode",
-                "-file-line-error",
-                "-outdir=%OUTDIR%",
-                "%DOC%"
-            ]
-        },
-        {
             "name": "latexmk",
             "command": "latexmk",
             "args": [
@@ -52,9 +27,45 @@
                 "-pdf",
                 "-outdir=%OUTDIR%",
                 "%DOC%"
-            ]
+            ],
+            "env": {}
+        },
+        {
+            "name": "xelatex",
+            "command": "xelatex",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "pdflatex",
+            "command": "pdflatex",
+            "args": [
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ],
+            "env": {}
+        },
+        {
+            "name": "bibtex",
+            "command": "bibtex",
+            "args": [
+                "%DOCFILE%"
+            ],
+            "env": {}
         }
     ],
+    // ---- LaTeX PDF Viewer and SyncTeX Configuration ----
+    // Auto-build and compilation settings
+    "latex-workshop.latex.autoBuild.run": "onFileChange",
+    "latex-workshop.latex.autoClean.run": "onBuilt",
+    "latex-workshop.latex.build.clearLog.everyRecipeStep.enabled": false,
     // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
         "editor.defaultFormatter": "James-Yu.latex-workshop",
