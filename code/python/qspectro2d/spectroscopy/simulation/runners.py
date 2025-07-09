@@ -17,35 +17,28 @@ from qspectro2d.spectroscopy.calculations import (
     check_the_solver,
 )
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.simulation_class import SimClassOQS
 
 
 # =============================
 # SIMULATION RUNNER FUNCTIONS
 # =============================
-def run_1d_simulation(
-    info_config: dict, system: AtomicSystem, max_workers: int
-) -> tuple:
+def run_1d_simulation(sim_class_oqs: SimClassOQS) -> tuple:
     """
     Run 1D spectroscopy simulation with updated calculation structure.
 
     Parameters:
-        info_config: Dictionary containing simulation parameters.
-        system: System parameters object.
-        max_workers: Number of parallel workers.
-
+        sim_class_oqs (SimClassOQS): Simulation class containing system and configuration.
     Returns:
         tuple: Detection time values and averaged data.
     """
     ### Create time arrays
-    tau_coh = info_config["tau_coh"]
-    T_wait = info_config["t_wait"]
-    t_det_max = info_config["t_det_max"]
-    t_max = system.t_max
+    t_max = sim_class_oqs.simulation_config.t_max
 
     ### Validate solver
     time_cut = -np.inf
     try:
-        _, time_cut = check_the_solver(system)
+        _, time_cut = check_the_solver(sim_class_oqs)
         print("#" * 60)
         print(
             f"✅  Solver validation worked: Evolution becomes unphysical at"
@@ -65,19 +58,12 @@ def run_1d_simulation(
     print("Computing 1D polarization with parallel processing...")
 
     try:
-        t_det_vals, data = parallel_compute_1d_E_with_inhomogenity(
-            n_freqs=info_config["n_freqs"],
-            n_phases=info_config["n_phases"],
-            tau_coh=tau_coh,
-            T_wait=T_wait,
-            t_det_max=t_det_max,
-            system=system,
-            max_workers=max_workers,
+        data = parallel_compute_1d_E_with_inhomogenity(
+            sim_class_oqs=sim_class_oqs,
             time_cut=time_cut,
-            apply_ift=info_config.get("apply_ift", True),
         )
         print("✅ Parallel computation completed successfully!")
-        return t_det_vals, data
+        return data
     except Exception as e:
         print(f"❌ ERROR: Simulation failed: {e}")
         raise

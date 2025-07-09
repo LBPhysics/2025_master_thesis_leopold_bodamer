@@ -10,6 +10,7 @@ parallel processing configuration, and reporting.
 # =============================
 import os
 import psutil
+import numpy as np
 
 ### Project-specific imports
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
@@ -30,6 +31,7 @@ def get_max_workers() -> int:
     return slurm_cpus if slurm_cpus > 0 else local_cpus
 
 
+# NOT NEEDED with new SimulationConfigClass
 def create_system_parameters(info_config: dict) -> AtomicSystem:
     """
     Create a AtomicSystem object from a configuration dictionary.
@@ -81,6 +83,7 @@ def create_system_parameters(info_config: dict) -> AtomicSystem:
 # =============================
 # REPORTING FUNCTIONS
 # =============================
+# NOT NEEDED with new SimulationConfigClass
 def print_simulation_header(info_config: dict, max_workers: int):
     """Print simulation header with configuration info."""
     simulation_type = info_config.get("simulation_type", "spectroscopy")
@@ -120,3 +123,19 @@ def print_simulation_summary(
     elif simulation_type == "2d":
         print(f"{result_data[0].shape}")
     print(f"was saved to: {rel_path}")
+
+
+DEFAULT_SOLVER_OPTIONS = {  # very rough estimate, not optimized
+    "nsteps": 200000,
+    "atol": 1e-6,
+    "rtol": 1e-4,
+}
+PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
+
+
+# Define named constants for hardcoded values
+NEGATIVE_EIGVAL_THRESHOLD = -1e-3
+TRACE_TOLERANCE = 1e-6
+
+# Fixed phase for detection pulse
+DETECTION_PHASE = 0

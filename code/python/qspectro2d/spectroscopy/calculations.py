@@ -1,66 +1,40 @@
-"""
-
-
-
-
-REMEMBER I CAN ALWAYS GO BACK TO THE LAST VERSION OF THE FILES
-I WILL DO CHANGES NOW!
-
-
-
-
-
-"""
-
 # -*- coding: utf-8 -*-
 
 # =============================
 # STANDARD LIBRARY IMPORTS
 # =============================
-from copy import deepcopy
-import multiprocessing as mp
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import List, Union, Tuple
 import logging
-from tqdm import tqdm
 
 # =============================
 # THIRD-PARTY IMPORTS
 # =============================
 import numpy as np
-from qutip import Qobj, Result, liouvillian, mesolve, brmesolve, ket2dm
+from qutip import Qobj, Result, mesolve, brmesolve, ket2dm
 from qutip.core import QobjEvo
 
 # =============================
 # LOCAL IMPORTS
 # =============================
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.simulation_class import SimClassOQS
 from qspectro2d.core.laser_system.laser_class import (
     LaserPulseSystem,
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
-from qspectro2d.core.solver_fcts import (
-    matrix_ODE_paper,
-    R_paper,
-)
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.core.functions_with_rwa import (
-    # H_int,  # TODO update the new definition inside the SL_COUPLING class
     apply_RWA_phase_factors,
 )
+from qspectro2d.spectroscopy.simulation.utils import (
+    PHASE_CYCLING_PHASES,
+    DEFAULT_SOLVER_OPTIONS,
+    NEGATIVE_EIGVAL_THRESHOLD,
+    TRACE_TOLERANCE,
+    DETECTION_PHASE,
+)
 
-
-# =============================
-# CONSTANTS AND CONFIGURATION
-# =============================
-DEFAULT_SOLVER_OPTIONS = {
-    "nsteps": 200000,
-    "atol": 1e-6,
-    "rtol": 1e-4,
-}
-SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
-PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 
 # =============================
 # LOGGING CONFIGURATION
@@ -68,12 +42,8 @@ PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 logger = logging.getLogger(__name__)
 
 
-def compute_pulse_evolution(  # probably shouldnt change this except for the system dependencies, where there are none!
-    psi_ini: Qobj,
-    times: np.ndarray,
-    pulse_seq: LaserPulseSystem,
-    system: AtomicSystem,
-    ODE_Solver: str,  # INCLUDED THIS!
+def compute_pulse_evolution(
+    sim_oqs: SimClassOQS,
     **solver_options: dict,
 ) -> Result:
     """
@@ -85,6 +55,7 @@ def compute_pulse_evolution(  # probably shouldnt change this except for the sys
         Initial quantum state.
     times : np.ndarray
         Time array for the evolution.
+    ops : SimClassOQS contains simulation configuration, system, laser parameters and much more.
     pulse_seq : LaserPulseSystem
         LaserPulseSystem object defining the pulse sequence.
     system : AtomicSystem
@@ -105,75 +76,69 @@ def compute_pulse_evolution(  # probably shouldnt change this except for the sys
     # =============================
     # CONFIGURE SOLVER OPTIONS
     # =============================
-    options = _configure_solver_options(solver_options)
+    options = solver_options.copy() if solver_options else {}
 
-    # =============================
-    # VALIDATE SOLVER TYPE
-    # =============================
-    if ODE_Solver not in SUPPORTED_SOLVERS:
-        raise ValueError(
-            f"Unknown ODE solver: {ODE_Solver}. "
-            f"Supported solvers: {SUPPORTED_SOLVERS}"
-        )
+    # Update options with defaults only if not already set
+    for key, value in DEFAULT_SOLVER_OPTIONS.items():
+        options.setdefault(key, value)
 
-    # =============================
-    # INITIALIZE EVOLUTION COMPONENTS
-    # =============================
-    current_state = psi_ini
-
-    # Build Hamiltonian components that already include the RWA if present
-    H_free = system.H0_diagonalized
-    H_int_evo = QobjEvo(lambda t, args=None: H_free + H_int(t, pulse_seq, system))
-
-    # =============================
-    # CONFIGURE SOLVER-SPECIFIC PARAMETERS
-    # =============================
-    if ODE_Solver == "Paper_eqs":
-        _configure_paper_equations_solver(system)
-
-    # =============================
-    # SPLIT EVOLUTION BY PULSE REGIONS
-    # =============================
-    return _execute_segmented_evolution(
-        times, pulse_seq, system, current_state, H_free, H_int_evo, options
-    )
+    return _execute_segmented_evolution(sim_oqs, options)
 
 
 def _execute_segmented_evolution(
-    times: np.ndarray,
-    pulse_seq: LaserPulseSystem,
-    system: AtomicSystem,
-    current_state: Qobj,
-    H_free: Qobj,
-    H_int_evo: QobjEvo,
+    sim_oqs: SimClassOQS,
     options: dict,
 ) -> Result:
-    """Execute evolution split by pulse regions."""
+    """
+    Execute evolution split by pulse regions.
+
+    Parameters
+    ----------
+    sim_oqs : SimClassOQS
+        Simulation class object containing system, laser, and time configurations.
+    options : dict
+        Solver options for the evolution.
+
+    Returns
+    -------
+    Result
+        QuTiP Result object containing combined evolution data.
+
+    Examples
+    --------
+    >>> result = _execute_segmented_evolution(sim_oqs, options)
+    >>> print(result.states)
+    """
     all_states, all_times = [], []
 
+    current_state = sim_oqs.system.psi_ini
     # Find pulse regions and split time array
-    pulse_regions = identify_non_zero_pulse_regions(times, pulse_seq)
-    split_times = split_by_active_regions(times, pulse_regions)
+    pulse_regions = identify_non_zero_pulse_regions(sim_oqs.times, sim_oqs.laser)
+    split_times = split_by_active_regions(sim_oqs.times, pulse_regions)
 
-    for i, times_ in enumerate(split_times):
-        # Extend times_ by one point if not the last segment
+    for i, curr_times in enumerate(split_times):
+        # Extend curr_times by one point if not the last segment
         if i < len(split_times) - 1:
             next_times = split_times[i + 1]
             if len(next_times) > 0:
-                times_ = np.append(times_, next_times[0])
+                curr_times = np.append(curr_times, next_times[0])
 
         # Find the indices in the original times array for this split
-        start_idx = np.abs(times - times_[0]).argmin()
+        start_idx = np.abs(sim_oqs.times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
-
-        # Configure evolution object and collapse operators
-        EVO_obj, c_ops_list = _configure_evolution_objects(
-            system, has_pulse, H_free, H_int_evo, pulse_seq
-        )
-
+        decay_ops_list = sim_oqs.decay_ops
+        if has_pulse:
+            EVO_obj = sim_oqs.Evo_obj_int
+        else:
+            EVO_obj = sim_oqs.Evo_obj_free
         # Execute evolution for this time segment
         result = _execute_single_evolution_segment(
-            system, EVO_obj, c_ops_list, current_state, times_, H_int_evo, options
+            sim_oqs.simulation_config.ODE_Solver,
+            EVO_obj,
+            decay_ops_list,
+            current_state,
+            curr_times,
+            options,
         )
 
         # Store results
@@ -199,65 +164,21 @@ def _execute_segmented_evolution(
     return result
 
 
-def _configure_evolution_objects(
-    system: AtomicSystem,
-    has_pulse: bool,
-    H_free: Qobj,
-    H_int_evo: QobjEvo,
-    pulse_seq: LaserPulseSystem,
-) -> tuple[Union[Qobj, QobjEvo], list]:
-    """Configure evolution objects and collapse operators based on solver type.
-
-    Returns
-    -------
-    tuple[Union[Qobj, QobjEvo], list]
-        (evolution_object, collapse_operators_list)
-    """
-    if system.ODE_Solver == "ME":
-        if has_pulse:
-            return (
-                H_int_evo,
-                system.me_decay_channels,
-            )
-        else:
-            return (
-                H_free,
-                system.me_decay_channels,
-            )
-    elif system.ODE_Solver == "BR":
-        # BR solver handles a_ops, it is handled in _execute_single_evolution_segment
-        return (
-            H_int_evo,
-            [],
-        )
-    elif system.ODE_Solver == "Paper_BR":
-        # Paper BR combines Liouvillian with custom R operator
-        EVO_obj = liouvillian(H_int_evo) + R_paper(
-            system
-        )  # TODO THIS IS WRONG UNFORTUNATELY
-        return EVO_obj, []
-    elif system.ODE_Solver == "Paper_eqs":
-        # Paper equations use custom matrix ODE
-        EVO_obj = QobjEvo(lambda t, args=None: matrix_ODE_paper(t, pulse_seq, system))
-        return EVO_obj, []
-
-
 def _execute_single_evolution_segment(
-    system: AtomicSystem,
+    ODE_Solver: str,
     EVO_obj: Union[Qobj, QobjEvo],
-    c_ops_list: list,
+    decay_ops_list: list,
     current_state: Qobj,
     times_: np.ndarray,
-    H_int_evo: QobjEvo,
     options: dict,
 ) -> Result:
     """Execute evolution for a single time segment."""
-    if system.ODE_Solver == "BR":
+    if ODE_Solver == "BR":
         return brmesolve(
-            H_int_evo,
+            EVO_obj,
             current_state,
             times_,
-            a_ops=system.br_decay_channels,
+            a_ops=decay_ops_list,
             options=options,
         )
     else:
@@ -265,69 +186,46 @@ def _execute_single_evolution_segment(
             EVO_obj,
             current_state,
             times_,
-            c_ops=c_ops_list,
+            c_ops=decay_ops_list,
             options=options,
         )
 
 
-def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
+def check_the_solver(sim_oqs: SimClassOQS) -> tuple[Result, float]:
     """
     Checks the solver within the compute_pulse_evolution function
     with the provided psi_ini, times, and system.
 
     Parameters:
-        system (System): System object containing all relevant parameters, including observable_ops.
-        LaserPulseSystem (type): The LaserPulseSystem class to construct pulse sequences.
+        sim_oqs (SimClassOQS):  object containing all relevant parameters
 
     Returns:
     tuple of:
-        result (Result): The result object from compute_pulse_evolution.
+        result (Result): The Qotip result object.
         time_cut (float): The time after which the checks failed, or np.inf if all checks passed.
     """
-    t_max = 2 * system.t_max
-    dt = 10 * system.dt
-    t0 = -system.fwhms[0]
+    t_max = 2 * sim_oqs.t_max
+    dt = 10 * sim_oqs.dt
+    t0 = -sim_oqs.t0
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
-    print(f"Checking '{system.ODE_Solver}' solver ", flush=True)
+    print(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver ", flush=True)
 
     # =============================
     # INPUT VALIDATION
     # =============================
-    if not hasattr(system, "ODE_Solver"):
-        raise AttributeError("system must have attribute 'ODE_Solver'")
-    if not hasattr(system, "observable_ops"):
-        raise AttributeError("system must have attribute 'observable_ops'")
-    if not isinstance(system.psi_ini, Qobj):
+    if not isinstance(sim_oqs.system.psi_ini, Qobj):
         raise TypeError("psi_ini must be a Qobj")
     if not isinstance(times, np.ndarray):
         raise TypeError("times must be a numpy.ndarray")
-    if not isinstance(system.observable_ops, list) or not all(
-        isinstance(op, Qobj) for op in system.observable_ops
+    if not isinstance(sim_oqs.observable_ops, list) or not all(
+        isinstance(op, Qobj) for op in sim_oqs.observable_ops
     ):
         raise TypeError("system.observable_ops must be a list of Qobj")
     if len(times) < 2:
         raise ValueError("times must have at least two elements")
 
-    # =============================
-    # CONSTRUCT PULSE SEQUENCE (refactored)
-    # =============================
-    # Define pulse parameters
-    phi_0 = np.pi / 2
-    phi_1 = np.pi / 4
-    DETECTION_PHASE = 0
-    pulse1_t_peak = times[-1] / 2
-    pulse2_t_peak = times[-1] / 1.1
-
-    # Use the from_pulse_specs static method to construct the sequence
-    pulse_seq = LaserPulseSystem.from_pulse_specs(
-        pulse_peak_times=[0, pulse1_t_peak, pulse2_t_peak],
-        pulse_phases=[phi_0, phi_1, DETECTION_PHASE],
-    )
-
-    result = compute_pulse_evolution(
-        system.psi_ini, times, pulse_seq, system=system, **{"store_states": True}
-    )
+    result = compute_pulse_evolution(sim_oqs, **{"store_states": True})
     states = result.states
     # =============================
     # CHECK THE RESULT
@@ -345,9 +243,9 @@ def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
     strg = ""
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
-    if getattr(system, "RWA_SL", False):
-        N_atoms = system.N_atoms
-        omega_laser = pulse_seq.omega_laser
+    if getattr(sim_oqs.simulation_config, "RWA_SL", False):
+        N_atoms = sim_oqs.system.N_atoms
+        omega_laser = sim_oqs.laser.omega_laser
         states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
     for index, state in enumerate(states):
         time = times[index]
@@ -355,12 +253,10 @@ def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
             strg += f"Density matrix is not Hermitian after t = {time}.\n"
             print(state, flush=True)
         eigvals = state.eigenenergies()
-        if not np.all(
-            eigvals >= -1e-3
-        ):  # allow for small numerical negative eigenvalues
+        if not np.all(eigvals >= NEGATIVE_EIGVAL_THRESHOLD):
             strg += f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {eigvals.min()}.\n"
             time_cut = time
-        if not np.isclose(state.tr(), 1.0):
+        if not np.isclose(state.tr(), 1.0, atol=TRACE_TOLERANCE):
             strg += f"Density matrix is not trace-preserving after t = {time}: The trace is {state.tr()}.\n"
             time_cut = time
         if strg:
@@ -377,10 +273,7 @@ def check_the_solver(system: AtomicSystem) -> tuple[Result, float]:
 
 
 def _compute_next_start_point(
-    psi_initial: Qobj,
-    times: np.ndarray,
-    pulse_seq: LaserPulseSystem,
-    system: AtomicSystem,
+    sim_oqs: SimClassOQS,
     **kwargs,
 ) -> Qobj:
     """
@@ -402,9 +295,6 @@ def _compute_next_start_point(
 
     """
 
-    if times.size == 0:
-        raise ValueError("Times array cannot be empty")
-
     # =============================
     # EVOLUTION COMPUTATION
     # =============================
@@ -414,166 +304,87 @@ def _compute_next_start_point(
     }
     evolution_options.update(kwargs)  # Allow override of options
 
-    evolution_data = compute_pulse_evolution(
-        psi_initial, times, pulse_seq, system=system, **evolution_options
-    )
+    evolution_data = compute_pulse_evolution(sim_oqs=sim_oqs, **evolution_options)
 
     return evolution_data.final_state
 
 
-def _create_single_pulse_sequence(system, pulse_idx, t_peak, phase):
-    """Create a pulse sequence with a single pulse."""
-    return LaserPulseSystem.from_pulse_specs(
-        pulse_indices=[pulse_idx],
-        pulse_peak_times=[t_peak],
-        pulse_phases=[phase],
-        pulse_freqs=system.freqs,
-        pulse_fwhms=system.fwhms,
-        pulse_amplitudes=system.amplitudes,
-    )
-
-
 def compute_1d_polarization(
-    tau_coh: float,
-    T_wait: float,
-    phi_0: float,
-    phi_1: float,
-    t_det_max: np.ndarray,
-    system: AtomicSystem,  # contains frequency omega
+    sim_oqs: SimClassOQS,
     **kwargs,
-) -> tuple:
+) -> np.ndarray:
     """
     Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_max
     """
     time_cut = kwargs.get("time_cut", np.inf)
 
-    dt = system.dt  # TODO how can I seperate this from the system?
-    fwhm = system.pulse_fwhm
-    t0 = -fwhm
-    t_max = tau_coh + T_wait + t_det_max
-    times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
-
-    # Force 1d times to a canonical grid
-    t_det_values = np.linspace(0, t_det_max, int((t_det_max - 0) / dt) + 1)
-
-    # =============================
-    # PULSE TIMING AND SEQUENCES
-    # =============================
-    pulse_timings = _get_pulse_timings(tau_coh, T_wait)
-    # TODO add dynamical pulse parameters like fwhm, omega_L, E0, fwhm
-    E0 = system.E0
-    pulse_sequences = _create_pulse_sequences(
-        phi_0, phi_1, pulse_timings, fwhms=fwhm, E0=E0
-    )
-
     # =============================
     # COMPUTE EVOLUTION STATES
     # =============================
-    evolution_data = _compute_three_pulse_evolution(
-        times, system, pulse_timings, pulse_sequences["full"]
-    )
+    evolution_data = _compute_three_pulse_evolution(sim_oqs)
 
     # =============================
     # COMPUTE LINEAR SIGNALS
     # =============================
-    linear_signals = _compute_linear_signals(
-        times, system, pulse_sequences["individual"], pulse_timings["detection"]
-    )
+    linear_signals = _compute_linear_signals(sim_oqs)
 
     # =============================
     # EXTRACT AND PROCESS DETECTION DATA
     # =============================
     detection_data = _extract_detection_data(
+        sim_oqs,
         evolution_data,
         linear_signals,
-        pulse_timings["detection"],
         time_cut,
-        t_det_values,
-        system,
+        # maybe could also pass kwargs for plotting
     )
 
     # Return based on plotting flag
     if kwargs.get("plot_example_polarization", False):
         return detection_data["plot_data"]
 
-    return detection_data["times"], detection_data["nonlinear_signal"]
-
-
-def _get_pulse_timings(tau_coh: float, T_wait: float) -> dict:
-    """Extract pulse timing information."""
-    return {
-        "pulse0": 0,
-        "pulse1": tau_coh,
-        "detection": tau_coh + T_wait,
-    }
-
-
-def _create_pulse_sequences(
-    phi_0: float,
-    phi_1: float,
-    timings: dict,
-    freqs: List[float] = None,
-    fwhms: List[float] = None,
-    E0: float = 0.05,
-) -> dict:
-    """Create all required pulse sequences."""
-    DETECTION_PHASE = 0  # Fixed phase for detection pulse
-    # Individual pulse sequences for linear signal subtraction
-    pulse_seq = LaserPulseSystem.from_pulse_specs(
-        pulse_peak_times=[timings["pulse0"], timings["pulse1"], timings["detection"]],
-        pulse_phases=[phi_0, phi_1, DETECTION_PHASE],
-        pulse_freqs=freqs,
-        pulse_fwhms=fwhms,
-        pulse_amplitudes=[E0, E0, E0 / 10],
-    )
-
-    individual_sequences = {
-        "pulse0": [pulse_seq.pulses[0]],
-        "pulse1": [pulse_seq.pulses[1]],
-        "pulse2": [pulse_seq.pulses[2]],
-    }
-
-    return {
-        "full": pulse_seq,
-        "individual": individual_sequences,
-    }
+    return detection_data["nonlinear_signal"]
 
 
 def _compute_three_pulse_evolution(
-    times: np.ndarray,
-    system: AtomicSystem,
-    timings: dict,
-    full_sequence: LaserPulseSystem,
+    sim_oqs: SimClassOQS,
 ) -> dict:
     """Compute the three-pulse evolution using segmented approach."""
     # Segment 1: First pulse evolution
-    pulse1_start_idx = np.abs(times - (timings["pulse1"] - system.fwhms[1])).argmin()
+    tau_coh = sim_oqs.simulation_config.tau_coh
+    t_wait = sim_oqs.simulation_config.t_wait
+    times = sim_oqs.times
+    fwhms = sim_oqs.laser.pulse_fwhms
+
+    full_sequence = sim_oqs.laser
+
+    pulse1_start_idx = np.abs(times - (tau_coh - fwhms[0])).argmin()
     times_0 = _ensure_valid_times(times[: pulse1_start_idx + 1], times)
 
+    sim_oqs.times = times_0  # Update times in sim_class_oqs for the first segment
+    sim_oqs.laser = LaserPulseSystem(pulses=[full_sequence.pulses[0]])
     rho_1 = _compute_next_start_point(
-        psi_initial=system.psi_ini,
-        times=times_0,
-        pulse_seq=full_sequence.pulses[0],
-        system=system,
+        sim_oqs=sim_oqs,
     )
 
     # Segment 2: Second pulse evolution
-    pulse2_start_idx = np.abs(times - (timings["detection"] - system.fwhms[2])).argmin()
+    pulse2_start_idx = np.abs(times - (tau_coh + t_wait - fwhms[1])).argmin()
     times_1 = times[pulse1_start_idx : pulse2_start_idx + 1]
     times_1 = _ensure_valid_times(times_1, times, pulse1_start_idx)
 
+    sim_oqs.times = times_1  # Update times in sim_class_oqs for the first segment
+    sim_oqs.laser = LaserPulseSystem(pulses=[full_sequence.pulses[0:2]])
+    sim_oqs.system.psi_ini = rho_1  # Set initial state for next segment
     rho_2 = _compute_next_start_point(
-        psi_initial=rho_1,
-        times=times_1,
-        pulse_seq=full_sequence.pulses[0:2],
-        system=system,
+        sim_oqs=sim_oqs,
     )
 
     # Segment 3: Final evolution with detection
     times_2 = _ensure_valid_times(times[pulse2_start_idx:], times, pulse2_start_idx)
-    data_final = compute_pulse_evolution(
-        rho_2, times_2, full_sequence, system=system, store_states=True
-    )
+    sim_oqs.times = times_2  # Update times in sim_class_oqs for the first segment
+    sim_oqs.laser = LaserPulseSystem(pulses=[full_sequence])
+    sim_oqs.system.psi_ini = rho_2  # Set initial state for next segment
+    data_final = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
 
     return {
         "final_data": data_final,
@@ -583,20 +394,23 @@ def _compute_three_pulse_evolution(
 
 
 def _compute_linear_signals(
-    times: np.ndarray,
-    system: AtomicSystem,
-    pulse_sequences: dict,
-    detection_time: float,
+    sim_oqs: SimClassOQS,
 ) -> dict:
     """Compute all linear signal contributions."""
+    times = sim_oqs.times
+    system = sim_oqs.system
+    laser = sim_oqs.laser
+    detection_time: float = sim_oqs.simulation_config.detection_time
+
     linear_data = {}
     detection_idx = np.abs(times - detection_time).argmin()
 
-    for pulse_name, sequence in pulse_sequences.items():
+    for i, pulse in enumerate(laser):
+        single_seq = LaserPulseSystem(pulses=[pulse])
         data = compute_pulse_evolution(
-            system.psi_ini, times, sequence, system=system, store_states=True
+            system.psi_ini, times, single_seq, system=system, store_states=True
         )
-        linear_data[pulse_name] = data.states[detection_idx:]
+        linear_data[f"pulse{i}"] = data.states[detection_idx:]
 
     return linear_data
 
@@ -638,7 +452,7 @@ def _calculate_all_polarizations(
     linear_signals: dict,
     times: np.ndarray,
     time_cut: float,
-    system: AtomicSystem,
+    Dip_op: Qobj,
 ) -> dict:
     """Calculate polarizations for all signal components."""
     valid_indices = [i for i, t in enumerate(times) if t < time_cut]
@@ -658,7 +472,6 @@ def _calculate_all_polarizations(
     }
 
     # Calculate polarizations
-    Dip_op = system.Dip_op
     polarizations = {}
     for key, states in valid_states.items():
         P_array = np.zeros(len(times), dtype=np.complex64)
@@ -677,23 +490,25 @@ def _calculate_all_polarizations(
 
 
 def _extract_detection_data(
+    sim_class_oqs: SimClassOQS,
     evolution_data: dict,
     linear_signals: dict,
-    detection_time: float,
     time_cut: float,
-    t_det_values: np.ndarray,
-    system: AtomicSystem,
+    # maybe could also pass kwargs for plotting
 ) -> dict:
     """Extract and process detection time data."""
     final_data = evolution_data["final_data"]
+    detection_time = (
+        sim_class_oqs.simulation_config.tau_coh + sim_class_oqs.simulation_config.t_wait
+    )
     detection_start_idx = np.abs(final_data.times - detection_time).argmin()
     actual_det_times = final_data.times[detection_start_idx:]
     states_full = final_data.states[detection_start_idx:]
 
     # Apply RWA phase factors if needed
-    if system.RWA_SL:
-        N_atoms = system.N_atoms
-        omega_laser = PULSE_SEQUENCE.omega_laser
+    if sim_class_oqs.simulation_config.RWA_SL:
+        N_atoms = sim_class_oqs.system.N_atoms
+        omega_laser = sim_class_oqs.laser.omega_laser
         states_full = apply_RWA_phase_factors(
             states_full, actual_det_times, N_atoms, omega_laser
         )
@@ -703,8 +518,9 @@ def _extract_detection_data(
             )
 
     # Calculate polarizations
+    Dip_op = sim_class_oqs.system.Dip_op
     polarizations = _calculate_all_polarizations(
-        states_full, linear_signals, actual_det_times, time_cut, system
+        states_full, linear_signals, actual_det_times, time_cut, Dip_op
     )
 
     # Calculate nonlinear signal
@@ -719,16 +535,17 @@ def _extract_detection_data(
     #     print(
     #         f"Warning: interpolated t_det length {len(actual_det_times)} ≠ {len(t_det_values)}"
     #     )
+    # cap the nonlinear_signal to the sim_class_oqs.times_det length!
+    t_det_values = np.linspace(
+        actual_det_times[0], actual_det_times[-1], len(sim_class_oqs.times_det)
+    )
     # 1D linear interpolation to match the canonical grid
-    data_interp = np.interp(
-        t_det_values, actual_det_times - actual_det_times[0], nonlinear_signal.real
-    ) + 1j * np.interp(
-        t_det_values, actual_det_times - actual_det_times[0], nonlinear_signal.imag
+    data_capped = np.interp(
+        t_det_values, actual_det_times - actual_det_times[0], nonlinear_signal
     )
 
     return {
-        "times": t_det_values,
-        "nonlinear_signal": data_interp,
+        "nonlinear_signal": data_capped,
         "plot_data": (
             actual_det_times - actual_det_times[0],
             polarizations["full"],
@@ -743,12 +560,10 @@ def _extract_detection_data(
 # parallel processing 1d and 2d data
 # ##########################
 def _process_single_1d_combination(
+    sim_class_oqs: SimClassOQS,
+    new_freqs: np.ndarray,
     phi1: float,
     phi2: float,
-    tau_coh: float,
-    T_wait: float,
-    t_det_max: np.ndarray,
-    system: AtomicSystem,
     **kwargs: dict,
 ) -> tuple[np.ndarray, np.ndarray] | None:
     """
@@ -777,18 +592,17 @@ def _process_single_1d_combination(
         (t_det_vals, data) for the computed 1D polarization data, or None if failed.
     """
     try:
+        sim_class_oqs.laser.update_first_two_pulse_phases(
+            phase1=phi1, phase2=phi2
+        )  # Update the laser phases in the simulation class
         # Compute the 1D polarization for this specific phase combination
-        t_det_vals, data = compute_1d_polarization(
-            tau_coh=tau_coh,
-            T_wait=T_wait,
-            phi_0=phi1,
-            phi_1=phi2,
-            t_det_max=t_det_max,
-            system=system,
+        sim_class_oqs.system.freqs_cm = new_freqs  # Update frequencies in the system
+        data = compute_1d_polarization(
+            sim_class_oqs=sim_class_oqs,
             **kwargs,
         )
 
-        return t_det_vals, data
+        return data
 
     except Exception as e:
         print(f"Error in _process_single_1d_combination: {str(e)}", flush=True)
@@ -796,16 +610,13 @@ def _process_single_1d_combination(
 
 
 def parallel_compute_1d_E_with_inhomogenity(
-    n_freqs: int,
-    n_phases: int,
-    tau_coh: float,
-    T_wait: float,
-    t_det_max: np.ndarray,
-    system,
-    max_workers: int = None,
-    apply_ift: bool = True,
-    ift_component: tuple = (-1, 1, 0),
-    **kwargs,
+    sim_class_oqs: SimClassOQS,
+    ift_component: tuple = (
+        -1,
+        1,
+        0,
+    ),  # could also go into sim_class_oqs.simulation_config
+    **kwargs: dict,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Compute 1D COMPLEX polarization with frequency loop and phase cycling for IFT processing.
@@ -813,20 +624,6 @@ def parallel_compute_1d_E_with_inhomogenity(
 
     Parameters
     ----------
-    n_freqs : int
-        Number of frequencies to simulate.
-    n_phases : int
-        Number of phases for phase cycling (should be 4).
-    tau_coh : float
-        Coherence time.
-    T_wait : float
-        Waiting time.
-    t_det_max : np.ndarray
-        Detection time values.
-    system : AtomicSystem
-        System parameters object.
-    max_workers : int, optional
-        Number of workers for parallel processing.
     **kwargs : dict
         Additional keyword arguments for compute_1d_polarization.
 
@@ -835,54 +632,36 @@ def parallel_compute_1d_E_with_inhomogenity(
     tuple
         (t_det_vals, photon_echo_signal) where signal is averaged and IFT-processed.
     """
-    # Configure parallel processing
-    if max_workers is None:
-        max_workers = min(mp.cpu_count(), 8)  # Limit to 8 to avoid memory issues
-
     # Configure phase cycling
+    n_phases = sim_class_oqs.simulation_config.n_phases
+    n_freqs = sim_class_oqs.simulation_config.n_freqs
+    max_workers = sim_class_oqs.simulation_config.max_workers
     phases = PHASE_CYCLING_PHASES[:n_phases]  # Use predefined phases
     if n_phases != 4:
         logger.warning(
             f"Phase cycling with {n_phases} phases may not be optimal for IFT"
         )
 
-    logger.info(
-        f"Processing {n_freqs} frequencies with {n_phases}×{n_phases} phase combinations"
-    )
-    logger.info(f"Using {max_workers} parallel workers")
-
     # Sample frequency offsets for inhomogeneous broadening
-    N_atoms = system.N_atoms
-    if N_atoms == 1:
-        freq_samples = sample_from_gaussian(n_freqs, system.Delta_cm, system.omega_A_cm)
-    elif N_atoms == 2:
-        freq_samples = (
-            sample_from_gaussian(n_freqs, system.Delta_cm, system.omega_A_cm),
-            sample_from_gaussian(n_freqs, system.Delta_cm, system.omega_B_cm),
-        )
-    else:
-        raise ValueError("Unsupported number of atoms")
-    print(f"Using frequency samples ={freq_samples}")
+    Delta_cm = sim_class_oqs.system.Delta_cm
+    freqs_cm = sim_class_oqs.system.freqs_cm
+
+    # Each row = one realization, each column = atom index
+    # Shape: (n_freqs, N_atoms)
+    all_freq_sets = np.stack(
+        [sample_from_gaussian(n_freqs, Delta_cm, freq) for freq in freqs_cm], axis=1
+    )
+    print(f"Using frequency samples ={all_freq_sets}", flush=True)
 
     # Prepare all jobs: one per (omega_idx, phi1_idx, phi2_idx)
     combinations = []
     for omega_idx in range(n_freqs):
-        if N_atoms == 1:
-            new_freqs = freq_samples[omega_idx]
-        elif N_atoms == 2:
-            new_freqs = (freq_samples[omega_idx], freq_samples[n_freqs + omega_idx])
+        new_freqs = all_freq_sets[omega_idx]
+        sim_class_oqs.system.update_freqs_cm(new_freqs)
 
-        for phi1_idx, phi1 in enumerate(phases):
-            for phi2_idx, phi2 in enumerate(phases):
-                sys_copy = deepcopy(system)
-                if N_atoms == 1:
-                    sys_copy.freqs_cm = new_freqs
-                elif N_atoms == 2:
-                    sys_copy.omega_A_cm = new_freqs[0]
-                    sys_copy.omega_B_cm = new_freqs[1]
-                combinations.append(
-                    (omega_idx, phi1_idx, phi2_idx, sys_copy, phi1, phi2)
-                )
+    for phi1_idx, phi1 in enumerate(phases):
+        for phi2_idx, phi2 in enumerate(phases):
+            combinations.append((omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2))
 
     # Execute all jobs in parallel
     results = {}
@@ -890,22 +669,19 @@ def parallel_compute_1d_E_with_inhomogenity(
         futures = {
             executor.submit(
                 _process_single_1d_combination,
+                sim_class_oqs=sim_class_oqs,
+                new_freqs=new_freqs,
                 phi1=phi1,
                 phi2=phi2,
-                tau_coh=tau_coh,
-                T_wait=T_wait,
-                t_det_max=t_det_max,
-                system=sys_copy,
                 **kwargs,
             ): (omega_idx, phi1_idx, phi2_idx)
-            for (omega_idx, phi1_idx, phi2_idx, sys_copy, phi1, phi2) in combinations
+            for (omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2) in combinations
         }
 
-        t_det_vals = None
         for future in as_completed(futures):
             omega_idx, phi1_idx, phi2_idx = futures[future]
             try:
-                t_det_vals, data = future.result()
+                data = future.result()
                 results[(omega_idx, phi1_idx, phi2_idx)] = data
             except Exception as exc:
                 logger.error(
@@ -918,9 +694,10 @@ def parallel_compute_1d_E_with_inhomogenity(
     for (omega_idx, phi1_idx, phi2_idx), data in results.items():
         results_cube[omega_idx, phi1_idx, phi2_idx] = data * 1j  # E ~ iP
 
-    # Average over frequencies before IFT or phase-average
+    # Average over frequencies to get 2D result array before IFT or phase-average
     results_matrix_avg = np.mean(results_cube, axis=0)
 
+    apply_ift = sim_class_oqs.simulation_config.apply_ift
     if apply_ift:
         # Final IFT extraction for the specified component
         photon_echo_signal = extract_ift_signal_component(
@@ -946,208 +723,7 @@ def parallel_compute_1d_E_with_inhomogenity(
                 flush=True,
             )
 
-    return t_det_vals, photon_echo_signal
-
-
-def parallel_compute_2d_E_with_inhomogenity(
-    n_freqs: int,
-    n_phases: int,
-    T_wait: float,
-    t_det_max: np.ndarray,
-    system: AtomicSystem,
-    max_workers: int = None,
-    apply_ift: bool = True,
-    ift_component: tuple = (-1, 1, 0),
-    **kwargs,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Compute 2D COMPLEX polarization signal with inhomogeneous broadening and phase cycling.
-
-    Parameters
-    ----------
-    n_freqs : int
-        Number of frequency samples for inhomogeneous averaging.
-    n_phases : int
-        Number of phases for phase cycling (typically 4).
-    T_wait : float
-        Waiting time between coherence and detection periods.
-    t_det_max : int
-        maximal time for detection. == maximal tau_coh
-    system : AtomicSystem
-        Simulation parameters.
-    max_workers : int, optional
-        Number of workers for parallel processing (default: CPU count).
-    apply_ift : bool, optional
-        Whether to apply IFT signal extraction (default: True).
-        If True, returns the specific signal component via extract_ift_signal_component.
-        If False, returns the raw phase-averaged signal E = i*P.
-    ift_component : tuple, optional
-        Component to extract when apply_ift=True (default: (-1, 1, 0)).
-    **kwargs : dict
-        Additional arguments passed to the pulse sequence simulation function.
-
-    Returns
-    -------
-    tuple
-        tau_coh_vals : np.ndarray
-            Array of coherence times τ.
-        t_det_vals : np.ndarray
-            Detection time axis.
-        data_avg_2d : np.ndarray
-            2D signal array of shape (len(tau_coh), len(t_det)), complex-valued.
-            If apply_ift=True: specific IFT signal component.
-            If apply_ift=False: phase-averaged raw signal E = i*P.
-    """
-    dt = system.dt
-    t_det_vals = np.linspace(0, t_det_max, int((t_det_max - 0) / dt) + 1)
-    tau_coh_vals = t_det_vals
-
-    if max_workers is None:
-        max_workers = mp.cpu_count()
-
-    phases = [k * np.pi / 2 for k in range(n_phases)]
-    if n_phases != 4:
-        print(
-            f"Warning: Phase cycling with {n_phases} phases is nonstandard", flush=True
-        )
-
-    print(
-        f"Computing 2D signal for {n_freqs} frequencies × {len(tau_coh_vals)} τ × {n_phases}² phase combinations",
-        flush=True,
-    )
-    print(f"Using {max_workers} parallel workers", flush=True)
-
-    # --- Frequency samples ---
-    N_atoms = system.N_atoms
-    if N_atoms == 1:
-        freq_samples = sample_from_gaussian(n_freqs, system.Delta_cm, system.omega_A_cm)
-    elif N_atoms == 2:
-        freq_samples = (
-            sample_from_gaussian(n_freqs, system.Delta_cm, system.omega_A_cm),
-            sample_from_gaussian(n_freqs, system.Delta_cm, system.omega_B_cm),
-        )
-        print(f"Using frequency samples ={freq_samples}")
-    else:
-        raise ValueError("Unsupported number of atoms")
-
-    # --- Build all jobs ---
-    combinations = []
-    for omega_idx in range(n_freqs):
-        new_freqs = (
-            freq_samples[omega_idx]
-            if N_atoms == 1
-            else (freq_samples[0][omega_idx], freq_samples[1][omega_idx])
-        )
-        for tau_coh_idx, tau_coh in enumerate(tau_coh_vals):
-            for phi1_idx, phi1 in enumerate(phases):
-                for phi2_idx, phi2 in enumerate(phases):
-                    sys_copy = deepcopy(system)
-                    if N_atoms == 1:
-                        sys_copy.freqs_cm = new_freqs
-                    elif N_atoms == 2:
-                        sys_copy.omega_A_cm = new_freqs[0]
-                        sys_copy.omega_B_cm = new_freqs[1]
-                    combinations.append(
-                        (
-                            omega_idx,
-                            tau_coh_idx,
-                            phi1_idx,
-                            phi2_idx,
-                            sys_copy,
-                            phi1,
-                            phi2,
-                            tau_coh,
-                        )
-                    )
-
-    # --- Run all jobs in parallel ---
-    results = {}
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(
-                _process_single_1d_combination,
-                phi1=phi1,
-                phi2=phi2,
-                tau_coh=tau_coh,
-                T_wait=T_wait,
-                t_det_max=t_det_max,
-                system=sys_copy,
-                **kwargs,
-            ): (omega_idx, tau_coh_idx, phi1_idx, phi2_idx)
-            for omega_idx, tau_coh_idx, phi1_idx, phi2_idx, sys_copy, phi1, phi2, tau_coh in combinations
-        }
-
-        for future in tqdm(as_completed(futures), total=len(futures)):
-            omega_idx, tau_idx, phi1_idx, phi2_idx = futures[future]
-            try:
-                t_det_vals, data = future.result()
-                results[(omega_idx, tau_idx, phi1_idx, phi2_idx)] = data
-            except Exception as exc:
-                print(
-                    f"Failed: ω={omega_idx}, τ={tau_idx}, φ=({phi1_idx},{phi2_idx}) → {exc}",
-                    flush=True,
-                )
-
-    # Organize into 4D object array: (n_freqs, n_tau, n_phases, n_phases)
-    n_tau = len(tau_coh_vals)
-    signal_tensor = np.empty((n_freqs, n_tau, n_phases, n_phases), dtype=object)
-    for (omega_idx, tau_idx, phi1_idx, phi2_idx), data in results.items():
-        signal_tensor[omega_idx, tau_idx, phi1_idx, phi2_idx] = data * 1j  # E ~ iP
-
-    # === Build final 2D signal: one row per τ, after averaging and IFT ===
-    data_list_1d = []
-    for tau_idx in range(n_tau):
-        results_matrix = np.empty((n_phases, n_phases), dtype=object)
-        for phi1_idx in range(n_phases):
-            for phi2_idx in range(n_phases):
-                # average over ω at fixed τ, φ1, φ2
-                try:
-                    results_matrix[phi1_idx, phi2_idx] = np.mean(
-                        [
-                            signal_tensor[f, tau_idx, phi1_idx, phi2_idx]
-                            for f in range(n_freqs)
-                        ],
-                        axis=0,
-                    )
-                except Exception as e:
-                    raise RuntimeError(
-                        f"Averaging failed at τ={tau_idx}, φ=({phi1_idx},{phi2_idx}): {e}"
-                    )
-
-        # Apply IFT or return raw signal based on flag
-        if apply_ift:
-            signal_2d = extract_ift_signal_component(
-                results_matrix=results_matrix, phases=phases, component=ift_component
-            )
-        else:
-            # Return phase-averaged raw signal E = i*P
-            # Collect all valid phase combination arrays for this τ
-            phase_signals = []
-            for phi1_idx in range(n_phases):
-                for phi2_idx in range(n_phases):
-                    if results_matrix[phi1_idx, phi2_idx] is not None:
-                        phase_signals.append(results_matrix[phi1_idx, phi2_idx])
-
-            if phase_signals:
-                # Stack and average along phase axis (axis=0) to preserve t_det dimensions
-                signal_2d = np.mean(np.array(phase_signals), axis=0)
-            else:
-                # Fallback: create zero array with correct shape
-                signal_2d = (
-                    np.zeros_like(results_matrix[0, 0])
-                    if results_matrix[0, 0] is not None
-                    else np.array([])
-                )
-                print(
-                    "Warning: No valid phase signals found, returning empty signal.",
-                    flush=True,
-                )
-
-        data_list_1d.append(signal_2d)
-
-    # Final stacking
-    data_avg_2d = np.vstack(data_list_1d)
-    return tau_coh_vals, t_det_vals, data_avg_2d
+    return photon_echo_signal
 
 
 # ##########################
@@ -1167,71 +743,52 @@ def extract_ift_signal_component(
     ----------
     results_matrix : np.ndarray
         Matrix of results indexed by phase indices [phi1_idx, phi2_idx]
-        Each element can be a 1D or 2D array
+        Each element can be a 1D or 2D array.
     phases : list
         List of phase values used (typically [0, π/2, π, 3π/2])
-    l : int
-        Coefficient for the first phase in the IFT
-    m : int
-        Coefficient for the second phase in the IFT
+    component : list[l: int, m: int, int]
+        Coefficients for the phases in the IFT
 
     Returns
     -------
     np.ndarray
-        Extracted signal component after IFT (same shape as input data elements)
+        Extracted signal component after IFT (same shape as input data elements).
+
+    Examples
+    --------
+    >>> signal = extract_ift_signal_component(results_matrix, phases, [-1, 1, 0])
+    >>> print(signal)
     """
     l, m, n = component
     n_phases = len(phases)
 
-    # Find first non-None result to determine output shape, should be the first one !
-    first_valid_result = None
-    for i in range(n_phases):
-        for j in range(n_phases):
-            if results_matrix[i, j] is not None:
-                first_valid_result = results_matrix[i, j]
-                break
-        if first_valid_result is not None:
-            break
+    # Find first non-None result to determine output shape
+    first_valid_result = next(
+        (
+            results_matrix[i, j]
+            for i in range(n_phases)
+            for j in range(n_phases)
+            if results_matrix[i, j] is not None
+        ),
+        None,
+    )
 
     if first_valid_result is None:
-        # No valid results found
         return None
 
-    # Initialize output array based on the shape of the first valid result
     signal = np.zeros_like(first_valid_result, dtype=np.complex64)
 
-    # Compute the IFT
     for phi1_idx, phi_1 in enumerate(phases):
-        for phi2_idx, DETECTION_PHASE in enumerate(phases):
+        for phi2_idx, phi_2 in enumerate(phases):
             if results_matrix[phi1_idx, phi2_idx] is not None:
-                # IFT phase factor with parameterized coefficients
                 phase_factor = np.exp(
-                    -1j * (l * phi_1 + m * DETECTION_PHASE)
-                )  # n * phi_3 is 0!
+                    -1j * (l * phi_1 + m * phi_2 + n * DETECTION_PHASE)
+                )
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 
-    # Normalize by number of phase combinations
     signal /= n_phases * n_phases
 
     return signal
-
-
-def _configure_solver_options(solver_options: dict) -> dict:
-    """Configure solver options with defaults."""
-    options = solver_options.copy() if solver_options else {}
-
-    # Update options with defaults only if not already set
-    for key, value in DEFAULT_SOLVER_OPTIONS.items():
-        options.setdefault(key, value)
-
-    return options
-
-
-def _configure_paper_equations_solver(system: AtomicSystem) -> None:
-    """Configure system for paper equations solver."""
-    if not system.RWA_SL:
-        logger.info("Paper equations require RWA - enabling RWA_SL")
-        system.RWA_SL = True
 
 
 # =============================

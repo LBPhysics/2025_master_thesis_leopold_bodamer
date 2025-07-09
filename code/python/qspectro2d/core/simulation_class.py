@@ -8,8 +8,12 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.bath_system.bath_class import BathClass
 from qspectro2d.core.system_bath_class import SystemBathCoupling
 from qspectro2d.core.system_laser_class import SystemLaserCoupling
-from qutip import Qobj, ket2dm
+from qutip import Qobj, ket2dm, liouvillian
 from qspectro2d.core.laser_system.laser_fcts import Epsilon_pulse, E_pulse
+from qspectro2d.core.solver_fcts import (
+    matrix_ODE_paper,
+    R_paper,
+)
 
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
 
@@ -26,10 +30,10 @@ class SimulationConfigClass:
     "BR" (solve the Bloch-Redfield equations)
     """
     ODE_Solver: str = "Paper_BR"
+    #  only valid for omega_laser ~ omega_atomic
     RWA_SL: bool = True
     #  CAN ONLY HANDLE TRUE For Paper_eqs
     keep_track: str = "eigenstates"  # alternative "basis" determines the "observables"
-    #  only valid for omega_laser ~ omega_atomic
 
     # Other simulation_config parameters
     # times
@@ -37,11 +41,25 @@ class SimulationConfigClass:
     tau_coh: float = 100.0  # coherence time in fs
     t_wait: float = 0.0  # wait time before the first pulse in fs
     t_det_max: float = 100.0
-    # phase cycling -> 16 parallel jobs
-    n_phases: int = 4
+    # phase cycling
+    n_phases: int = 4  # -> 4*4=16 parallel jobs
     # inhomogeneous broadening
-    n_freqs: int = 100
-    Delta_cm: float = 300.0
+    n_freqs: int = 1
+
+    # additional parameters
+    max_workers: int = 1  # Number of parallel workers for the simulation
+    simulation_type: str = "1d"  # Type of simulation, e.g., "1d", "2d"
+    #
+    apply_ift: bool = (
+        True  # Apply inverse Fourier transform to get the photon echo signal
+    )
+
+    @property
+    def combinations(self) -> int:
+        """
+        Calculate the total number of combinations based on phase cycles and inhomogeneous points.
+        """
+        return self.n_phases * self.n_phases * self.n_freqs
 
     def __post_init__(self):
         # Validate ODE_Solver
@@ -76,18 +94,23 @@ class SimulationConfigClass:
     def summary(self) -> str:
         return (
             f"SimulationConfigClass Summary:\n"
-            f"--------------------------\n"
-            f"Solver Type        : {self.ODE_Solver}\n"
-            f"Use RWA_SL         : {self.RWA_SL}\n\n"
-            f"Time Step (dt)     : {self.dt} fs\n"
+            f"-------------------------------\n"
+            f"{self.simulation_type} ELECTRONIC SPECTROSCOPY SIMULATION\n"
+            f"Time Parameters:\n"
             f"Coherence Time     : {self.tau_coh} fs\n"
             f"Wait Time          : {self.t_wait} fs\n"
             f"Max Det. Time      : {self.t_det_max} fs\n\n"
+            f"Total Time (t_max) : {self.t_max} fs\n"
+            f"Time Step (dt)     : {self.dt} fs\n"
+            f"-------------------------------\n"
+            f"Solver Type        : {self.ODE_Solver}\n"
+            f"Use RWA_SL         : {self.RWA_SL}\n\n"
+            f"-------------------------------\n"
             f"Phase Cycles       : {self.n_phases}\n"
             f"Inhom. Points      : {self.n_freqs}\n"
-            f"Delta (cm⁻¹)       : {self.Delta_cm}\n"
-            f"Total Time (t_max) : {self.t_max} fs\n"
-            f"--------------------------\n"
+            f"Total Combinations : {self.combinations}\n"
+            f"Max Workers        : {self.max_workers}\n"
+            f"-------------------------------\n"
         )
 
     def to_dict(self) -> dict:
@@ -210,18 +233,36 @@ class SimClassOQS:
             int(np.round((self.t_max - self.t0) / self.dt)) + 1
         )  # ensure inclusion of t_max
         self.times = np.linspace(self.t0, self.t_max, n_steps)  # include t0 and t_max
+        n_steps_det = int(np.round(self.simulation_config.t_det_max / self.dt)) + 1
+        self.times_det = np.linspace(0, self.simulation_config.t_det_max, n_steps_det)
 
-        # define the decay channels based on the ODE_Solver
+        # define the decay channels and EVOlution objectsbased on the ODE_Solver
         ODE_Solver = self.simulation_config.ODE_Solver
         if ODE_Solver == "ME":
             # Master equation solver
             self.decay_channels = self.SB_coupling.me_decay_channels
+            self.Evo_obj_free = self.H0_undiagonalized
+            self.Evo_obj_int = self.H_int
         elif ODE_Solver == "BR":
             # Bloch-Redfield solver
             self.decay_channels = self.SB_coupling.br_decay_channels
+            self.Evo_obj_free = self.H0_undiagonalized
+            self.Evo_obj_int = self.H_int
         elif ODE_Solver == "Paper_eqs":
             self.simulation_config.RWA_SL = True  # RWA is required for Paper_eqs
             self.decay_channels = []
+            custom = lambda t: matrix_ODE_paper(
+                t, pulse_seq=self.laser, system=self.system
+            )
+            self.Evo_obj_free = custom
+            self.Evo_obj_int = custom
+        elif ODE_Solver == "Paper_BR":
+            custom_free = self.H0_diagonalized + R_paper(
+                self.system
+            )  # TODO somehow contains 2 RWAs for N_atoms == 2.
+            custom_int = custom_free + liouvillian(self.H_int)
+            self.Evo_obj_free = custom_free
+            self.Evo_obj_int = custom_int
 
     def summary(self):
         print("\n# Summary of System Parameters:")
@@ -319,6 +360,18 @@ def main():
     # =============================
     print("\n--- Test 1: Single Atom System ---")
 
+    ### Create 1-atom system
+
+    system_1 = AtomicSystem(N_atoms=1)
+    bath = BathClass()
+
+    ### Create simulation_config model
+    sim_model_1 = SimClassOQS(
+        simulation_config=sim_config,
+        system=system_1,
+        laser=test_pulse_seq,
+        bath=bath,
+    )
     try:
         ### Create 1-atom system
 

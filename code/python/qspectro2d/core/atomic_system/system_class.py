@@ -16,17 +16,21 @@ class AtomicSystem:
     N_atoms: int = 1
     freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
+    J_cm: Optional[float] = None  # only For N_atoms >= 2
+    psi_ini: Optional[Qobj] = None  # initial state, default is ground state
+    Delta_cm: Optional[float] = None  # inhomogeneous broadening, default is None
 
-    Delta_cm: Optional[float] = None
-    J_cm: Optional[float] = None  # only For N_atoms = 2
+    @property
+    def atom_g(self):
+        return basis(2, 0)
 
-    atom_g: Qobj = field(default_factory=lambda: basis(2, 0))
-    atom_e: Qobj = field(default_factory=lambda: basis(2, 1))
-    basis: Optional[List[Qobj]] = None
-    psi_ini: Optional[Qobj] = None
-    _freqs_cm_history: List[List[float]] = field(
-        default_factory=list, init=False, repr=False
-    )
+    @property
+    def atom_e(self):
+        return basis(2, 1)
+
+    @property
+    def basis(self):
+        return self._basis
 
     def __post_init__(self):
         if len(self.freqs_cm) != self.N_atoms:
@@ -35,7 +39,7 @@ class AtomicSystem:
                 f"Expected {self.N_atoms} frequencies."
             )
         # store the initial frequencies in history
-        self._freqs_cm_history.append(self.freqs_cm.copy())
+        self._freqs_cm_history = [self.freqs_cm.copy()]
 
         if len(self.dip_moments) != self.N_atoms:
             raise ValueError("Length of dip_moments must match N_atoms")
@@ -44,26 +48,24 @@ class AtomicSystem:
             self.J_cm = 0.0
 
         # If basis is not provided, set a default basis (optional)
-        if self.basis is None:
-            if self.N_atoms == 1:
-                self.basis = [self.atom_g, self.atom_e]  # GROUND, EXCITED
-            elif self.N_atoms == 2:
-                self.basis = [
-                    tensor(self.atom_g, self.atom_g),  # GROUND
-                    tensor(self.atom_e, self.atom_g),  # A
-                    tensor(self.atom_g, self.atom_e),  # B
-                    tensor(self.atom_e, self.atom_e),  # AB
-                ]
-            else:
-                N_atoms = self.N_atoms
-                self.basis = [
-                    basis(N_atoms, i) for i in range(N_atoms)
-                ]  # GROUND, atom 1, atom 2, ...
+        if self.N_atoms == 1:
+            self._basis = [self.atom_g, self.atom_e]  # GROUND, EXCITED
+        elif self.N_atoms == 2:
+            self._basis = [
+                tensor(self.atom_g, self.atom_g),  # GROUND
+                tensor(self.atom_e, self.atom_g),  # A
+                tensor(self.atom_g, self.atom_e),  # B
+                tensor(self.atom_e, self.atom_e),  # AB
+            ]
+        else:
+            N_atoms = self.N_atoms
+            self._basis = [
+                basis(N_atoms, i) for i in range(N_atoms)
+            ]  # GROUND, atom 1, atom 2, ...
 
         self.H0_undiagonalized = self.Hamilton_N_atoms()
 
-        if self.psi_ini is None:
-            self.psi_ini = ket2dm(self.basis[0])
+        self.psi_ini = ket2dm(self.basis[0])
 
     def update_freqs_cm(self, new_freqs: List[float]):
         if len(new_freqs) != self.N_atoms:
