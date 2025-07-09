@@ -35,8 +35,8 @@ from qutip.core import QobjEvo
 # LOCAL IMPORTS
 # =============================
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
-from qspectro2d.core.laser_system.laser_fcts import (
+from qspectro2d.core.laser_system.laser_class import (
+    LaserPulseSystem,
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
@@ -46,7 +46,7 @@ from qspectro2d.core.solver_fcts import (
 )
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.core.functions_with_rwa import (
-    H_int,  # TODO update the new definition inside the SL_COUPLING class
+    # H_int,  # TODO update the new definition inside the SL_COUPLING class
     apply_RWA_phase_factors,
 )
 

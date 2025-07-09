@@ -24,6 +24,9 @@ class AtomicSystem:
     atom_e: Qobj = field(default_factory=lambda: basis(2, 1))
     basis: Optional[List[Qobj]] = None
     psi_ini: Optional[Qobj] = None
+    _freqs_cm_history: List[List[float]] = field(
+        default_factory=list, init=False, repr=False
+    )
 
     def __post_init__(self):
         if len(self.freqs_cm) != self.N_atoms:
@@ -31,6 +34,9 @@ class AtomicSystem:
                 f"freqs_cm has {len(self.freqs_cm)} elements but N_atoms={self.N_atoms}. "
                 f"Expected {self.N_atoms} frequencies."
             )
+        # store the initial frequencies in history
+        self._freqs_cm_history.append(self.freqs_cm.copy())
+
         if len(self.dip_moments) != self.N_atoms:
             raise ValueError("Length of dip_moments must match N_atoms")
 
@@ -58,6 +64,27 @@ class AtomicSystem:
 
         if self.psi_ini is None:
             self.psi_ini = ket2dm(self.basis[0])
+
+    def update_freqs_cm(self, new_freqs: List[float]):
+        if len(new_freqs) != self.N_atoms:
+            raise ValueError(
+                f"Expected {self.N_atoms} frequencies, got {len(new_freqs)}"
+            )
+
+        # Save current freqs before updating
+        self._freqs_cm_history.append(new_freqs.copy())
+        self.freqs_cm = new_freqs.copy()
+
+        # Recompute Hamiltonian and eigenstates
+        self.H0_undiagonalized = self.Hamilton_N_atoms()
+
+        if "eigenstates" in self.__dict__:
+            del self.__dict__["eigenstates"]  # reset cached property
+
+    @property
+    def freqs_cm_history(self):
+        """Access history of all frequency lists (including current)."""
+        return self._freqs_cm_history
 
     def freqs_fs(self, i):
         """Return frequency in fs^-1 for the i-th atom."""
@@ -217,20 +244,35 @@ class AtomicSystem:
 
         print(f"\n# Coupling / Inhomogeneity:")
         if self.N_atoms == 2:
-            print(f"    {'J':<20}: {self.J_cm} cm^-1")
-        print(f"    {'Delta':<20}: {self.Delta_cm} cm^-1")
+            if self.J_cm is not None:
+                print(f"    {'J':<20}: {self.J_cm} cm^-1")
+            if self.Delta_cm is not None:
+                print(f"    {'Delta':<20}: {self.Delta_cm} cm^-1")
 
-        print(f"\n    {'psi_ini':<20}:")
-        print(self.psi_ini)
-        print(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
-        print(self.H0_undiagonalized)
+        if self.psi_ini is not None:
+            print(f"\n    {'psi_ini':<20}:")
+            print(self.psi_ini)
+        if self.H0_undiagonalized is not None:
+            print(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
+            print(self.H0_undiagonalized)
 
-        print("\n# Dipole operator (Dip_op):")
-        print(self.Dip_op)
+        if self.Dip_op is not None:
+            print("\n# Dipole operator (Dip_op):")
+            print(self.Dip_op)
         print("\n=== End of Summary ===")
 
     def __str__(self) -> str:
-        return self.summary()
+        from io import StringIO
+        import sys
+
+        # Capture the output of the summary method
+        old_stdout = sys.stdout
+        sys.stdout = StringIO()
+        self.summary()
+        output = sys.stdout.getvalue()
+        sys.stdout = old_stdout
+
+        return output.strip()
 
     def to_dict(self):
         d = {

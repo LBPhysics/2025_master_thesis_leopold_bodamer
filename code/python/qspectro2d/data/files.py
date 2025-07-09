@@ -13,14 +13,14 @@ from tkinter import N
 from typing import Union
 
 ### Project-specific imports
-from qspectro2d.core.system_parameters import SystemParameters
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR  # , FIGURES_DIR,
 
 
 # =============================
 # FILENAME GENERATION FUNCTIONS
 # =============================
-def _generate_base_filename(system: SystemParameters, info_config: dict) -> str:
+def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
     """
     Generate a universal base filename for a calculation based on system and info_config parameters.
 
@@ -132,7 +132,7 @@ def generate_base_sub_dir(info_config: dict, system) -> Path:
 
 
 def generate_unique_data_filename(
-    system: SystemParameters,
+    system: AtomicSystem,
     info_config: dict,
 ) -> str:
     """
@@ -155,7 +155,7 @@ def generate_unique_data_filename(
 
 
 def generate_unique_plot_filename(
-    system: SystemParameters,
+    system: AtomicSystem,
     info_config: dict,
     domain: str,
     component: str = None,
@@ -204,7 +204,7 @@ def main():
     # =============================
 
     ### Create mock system parameters
-    class MockSystemParameters:
+    class MockAtomicSystem:
         def __init__(self):
             self.N_atoms = 2
             self.omega_A_cm = 1.5
@@ -214,7 +214,7 @@ def main():
             self.ODE_Solver = "runge_kutta"
             self.RWA_laser = True
 
-    system = MockSystemParameters()
+    system = MockAtomicSystem()
 
     ### Create mock data configuration
     info_config = {

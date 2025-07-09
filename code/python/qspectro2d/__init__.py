@@ -112,7 +112,6 @@ __all__ = [
     "E_pulse",
     "pulse_envelope",
     "matrix_ODE_paper",
-    "H_int",
     # Bath functions
     "power_spectrum_func_paper",
     "power_spectrum_func_drude_lorentz",

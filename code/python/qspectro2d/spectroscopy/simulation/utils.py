@@ -12,7 +12,7 @@ import os
 import psutil
 
 ### Project-specific imports
-from core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
 
 
 # =============================

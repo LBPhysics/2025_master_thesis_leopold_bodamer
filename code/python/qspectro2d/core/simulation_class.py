@@ -1,12 +1,13 @@
 # =============================
 # DEFINE THE simulation_config PARAMETERS CLASS
 # =============================
-from dataclasses import dataclass, asdict  # for the class definiton
+from dataclasses import dataclass, asdict, field  # for the class definiton
 import numpy as np
 from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from core.system_bath_class import SystemBathCoupling
-from core.system_laser_class import SystemLaserCoupling
+from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.system_bath_class import SystemBathCoupling
+from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qutip import Qobj, ket2dm
 from qspectro2d.core.laser_system.laser_fcts import Epsilon_pulse, E_pulse
 
@@ -27,7 +28,8 @@ class SimulationConfigClass:
     ODE_Solver: str = "Paper_BR"
     RWA_SL: bool = True
     #  CAN ONLY HANDLE TRUE For Paper_eqs
-    #  only valid for omega_laser ~ omega_A
+    keep_track: str = "eigenstates"  # alternative "basis" determines the "observables"
+    #  only valid for omega_laser ~ omega_atomic
 
     # Other simulation_config parameters
     # times
@@ -106,10 +108,9 @@ class SimClassOQS:
 
     system: AtomicSystem
     laser: LaserPulseSystem
-    SB_coupling: SystemBathCoupling
-    SL_coupling: SystemLaserCoupling
-
-    keep_track: str = "eigenstates"  # alternative "basis" determines the "observables"
+    bath: BathClass
+    sl_coupling: SystemLaserCoupling = field(init=False)
+    sb_coupling: SystemBathCoupling = field(init=False)
 
     @property
     def H0_diagonalized(self):
@@ -127,9 +128,9 @@ class SimClassOQS:
                 Es[1] -= self.laser.omega_laser
 
             elif self.system.N_atoms == 2:
-                Es[1] -= self.laser.omega.omega_laser
-                Es[2] -= self.laser.omega.omega_laser
-                Es[3] -= 2 * self.laser.omega.omega_laser
+                Es[1] -= self.laser.omega_laser
+                Es[2] -= self.laser.omega_laser
+                Es[3] -= 2 * self.laser.omega_laser
             else:
                 print(
                     "TODO extend the H_diag to N_atoms > 2 ?Es[i] -= self.laser.omega_laser?"
@@ -168,11 +169,11 @@ class SimClassOQS:
                 self.atom_e * self.atom_g.dag(),  # |exg|
                 ket2dm(self.atom_e),  # |exe|
             ]
-        elif self.keep_track == "basis":
+        elif self.simulation_config.keep_track == "basis":
             observable_ops = [
                 ket2dm(self.system.basis[i]) for i in range(self.system.N_atoms)
             ]
-        elif self.keep_track == "eigenstates":
+        elif self.simulation_config.keep_track == "eigenstates":
             observable_ops = [ket2dm(state) for state in self.system.eigenstates[1]]
 
         return observable_ops
@@ -181,10 +182,10 @@ class SimClassOQS:
     def observable_strs(self):
         if self.system.N_atoms == 1:
             observable_strs = ["gxg", "gxe", "exg", "exe"]
-        elif self.keep_track == "basis":
+        elif self.simulation_config.keep_track == "basis":
             observable_strs = [f"basis({i})" for i in range(self.system.N_atoms)]
             # observable_strs1 = ["0", "A", "B", "AB"]
-        elif self.keep_track == "eigenstates":
+        elif self.simulation_config.keep_track == "eigenstates":
             observable_strs = [
                 f"eigenstate({i})" for i in range(len(self.system.eigenstates[1]))
             ]
@@ -192,6 +193,10 @@ class SimClassOQS:
         return observable_strs
 
     def __post_init__(self):
+        # Generate the coupling objects
+        self.sb_coupling = SystemBathCoupling(self.system, self.bath)
+        self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
+
         # Hamiltonians
         self.H0_undiagonalized = self.system.H0_undiagonalized
         self.H_sim = self.H0_diagonalized
@@ -278,7 +283,7 @@ def H_int_(
     return H_int
 
 
-def test_simulation_model():
+def main():
     """
     Test function for SimClassOQS class functionality.
     Tests H_int method with different system configurations.
@@ -300,8 +305,7 @@ def test_simulation_model():
     from qspectro2d.core.bath_system.bath_class import BathClass
     from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
 
-    test_pulse_seq = LaserPulseSystem()
-    test_pulse_seq.from_general_specs(
+    test_pulse_seq = LaserPulseSystem.from_general_specs(
         pulse_peak_times=[0.0, 50.0],
         pulse_phases=[0.0, 1.57],  # 0, π/2
         pulse_freqs=[1.0, 1.0],
@@ -321,23 +325,12 @@ def test_simulation_model():
         system_1 = AtomicSystem(N_atoms=1)
         bath = BathClass()
 
-        ### Create dummy coupling objects (minimal setup for testing)
-        sb_coupling = SystemBathCoupling(
-            system=system_1,  # System for which the coupling is defined
-            bath=bath,
-        )
-        sl_coupling = SystemLaserCoupling(
-            system=system_1,  # System for which the coupling is defined
-            laser=test_pulse_seq,
-        )
-
         ### Create simulation_config model
         sim_model_1 = SimClassOQS(
             simulation_config=sim_config,
             system=system_1,
             laser=test_pulse_seq,
-            SB_coupling=sb_coupling,
-            SL_coupling=sl_coupling,
+            bath=bath,
         )
 
         ### Test H_int method
@@ -360,15 +353,16 @@ def test_simulation_model():
 
     try:
         ### Create 2-atom system
-        system_2 = AtomicSystem(N_atoms=2)
+        system_2 = AtomicSystem(
+            N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+        )
 
         ### Create simulation_config model
         sim_model_2 = SimClassOQS(
             simulation_config=sim_config,
             system=system_2,
             laser=test_pulse_seq,
-            SB_coupling=sb_coupling,
-            SL_coupling=sl_coupling,
+            bath=bath,
         )
 
         ### Test H_int method
@@ -415,8 +409,7 @@ def test_simulation_model():
             simulation_config=sim_config_no_rwa,
             system=system_1,
             laser=test_pulse_seq,
-            SB_coupling=sb_coupling,
-            SL_coupling=sl_coupling,
+            bath=bath,
         )
 
         ### Compare H_int with and without RWA
@@ -437,4 +430,4 @@ def test_simulation_model():
 
 if __name__ == "__main__":
     ### Run the test function when script is executed directly
-    test_simulation_model()
+    main()

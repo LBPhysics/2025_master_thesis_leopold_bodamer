@@ -36,8 +36,8 @@ from qutip.core import QobjEvo
 # LOCAL IMPORTS
 # =============================
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
-from qspectro2d.core.laser_system.laser_fcts import (
+from qspectro2d.core.laser_system.laser_class import (
+    LaserPulseSystem,
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
@@ -157,7 +157,7 @@ def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
 
 
 def compute_pulse_evolution(
-    oqs: SimClassOQS,
+    sim_oqs: SimClassOQS,
     **solver_options: dict,
 ) -> Result:
     """
@@ -195,7 +195,7 @@ def compute_pulse_evolution(
     # =============================
     # VALIDATE SOLVER TYPE
     # =============================
-    ODE_Solver = oqs.simulation_config.ODE_Solver
+    ODE_Solver = sim_oqs.simulation_config.ODE_Solver
     if ODE_Solver not in SUPPORTED_SOLVERS:
         raise ValueError(
             f"Unknown ODE solver: {ODE_Solver}. "
@@ -206,13 +206,13 @@ def compute_pulse_evolution(
     # CONFIGURE SOLVER-SPECIFIC PARAMETERS
     # =============================
     if ODE_Solver == "Paper_eqs":
-        _configure_paper_equations_solver(oqs)
+        _configure_paper_equations_solver(sim_oqs)
 
     # =============================
     # SPLIT EVOLUTION BY PULSE REGIONS
     # =============================
     # ALL_RES = {}
-    # for pulse in oqs.laser.pulses:
+    # for pulse in sim_oqs.laser.pulses:
     #   pulse_seq_single = LaserPulseSystem.from_pulse_specs(
     #       pulse.pulse_peak_time,
     #       pulse.pulse_phase,
@@ -222,23 +222,23 @@ def compute_pulse_evolution(
     #       pulse.pulse_type,
     #       pulse.pulse_index
     #   )
-    #  ALL_RES[pulse.pulse_index] = _execute_segmented_evolution(oqs, options)
+    #  ALL_RES[pulse.pulse_index] = _execute_segmented_evolution(sim_oqs, options)
     #
 
-    return _execute_segmented_evolution(oqs, options)
+    return _execute_segmented_evolution(sim_oqs, options)
 
 
 def _execute_segmented_evolution(
-    oqs: SimClassOQS,
+    sim_oqs: SimClassOQS,
     options: dict,
 ) -> Result:
     """Execute evolution split by pulse regions."""
     all_states, all_times = [], []
 
-    current_state = oqs.system.psi_ini
+    current_state = sim_oqs.system.psi_ini
     # Find pulse regions and split time array
-    pulse_regions = identify_non_zero_pulse_regions(oqs.times, oqs.laser)
-    split_times = split_by_active_regions(oqs.times, pulse_regions)
+    pulse_regions = identify_non_zero_pulse_regions(sim_oqs.times, sim_oqs.laser)
+    split_times = split_by_active_regions(sim_oqs.times, pulse_regions)
 
     for i, curr_times in enumerate(split_times):
         # Extend curr_times by one point if not the last segment
@@ -248,15 +248,15 @@ def _execute_segmented_evolution(
                 curr_times = np.append(curr_times, next_times[0])
 
         # Find the indices in the original times array for this split
-        start_idx = np.abs(oqs.times - curr_times[0]).argmin()
+        start_idx = np.abs(sim_oqs.times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
 
         # Configure evolution object and collapse operators
-        EVO_obj, c_ops_list = _configure_evolution_objects(oqs, has_pulse)
+        EVO_obj, c_ops_list = _configure_evolution_objects(sim_oqs, has_pulse)
 
         # Execute evolution for this time segment
         result = _execute_single_evolution_segment(
-            oqs.simulation_config.ODE_Solver,
+            sim_oqs.simulation_config.ODE_Solver,
             EVO_obj,
             c_ops_list,
             current_state,
@@ -288,7 +288,7 @@ def _execute_segmented_evolution(
 
 
 def _configure_evolution_objects(
-    oqs: SimClassOQS,
+    sim_oqs: SimClassOQS,
     has_pulse: bool,
 ) -> tuple[Union[Qobj, QobjEvo], list]:
     """Configure evolution objects and collapse operators based on solver type.
@@ -299,31 +299,31 @@ def _configure_evolution_objects(
         (evolution_object, collapse_operators_list)
     """
     # Build Hamiltonian components that already include the RWA if present
-    H_free = oqs.H0_diagonalized
-    H_int_evo = QobjEvo(lambda t, args=None: H_free + oqs.H_int(t))
-    ODE_Solver = oqs.simulation_config.ODE_Solver
+    H_free = sim_oqs.H0_diagonalized
+    H_int_evo = QobjEvo(lambda t, args=None: H_free + sim_oqs.H_int(t))
+    ODE_Solver = sim_oqs.simulation_config.ODE_Solver
     if ODE_Solver == "Paper_BR":
         # Paper BR combines Liouvillian with custom R operator
         EVO_obj = liouvillian(H_int_evo) + R_paper(
-            oqs.system
+            sim_oqs.system
         )  # TODO THIS GIVES WRONG RESULTS? UNFORTUNATELY
         return EVO_obj, []
     elif ODE_Solver == "Paper_eqs":
         # Paper equations use custom matrix ODE
         EVO_obj = QobjEvo(
-            lambda t, args=None: matrix_ODE_paper(t, oqs.pulse_seq, oqs.system)
+            lambda t, args=None: matrix_ODE_paper(t, sim_oqs.pulse_seq, sim_oqs.system)
         )
         return EVO_obj, []
 
     elif has_pulse:
         return (
             H_int_evo,
-            oqs.decay_channels,
+            sim_oqs.decay_channels,
         )
     else:
         return (
             H_free,
-            oqs.decay_channels,
+            sim_oqs.decay_channels,
         )
 
 
@@ -354,7 +354,7 @@ def _execute_single_evolution_segment(
         )
 
 
-def check_the_solver(oqs: SimClassOQS) -> tuple[Result, float]:
+def check_the_solver(sim_oqs: SimClassOQS) -> tuple[Result, float]:
     """
     Checks the solver within the compute_pulse_evolution function
     with the provided psi_ini, times, and system.
@@ -368,28 +368,28 @@ def check_the_solver(oqs: SimClassOQS) -> tuple[Result, float]:
         result (Result): The result object from compute_pulse_evolution.
         time_cut (float): The time after which the checks failed, or np.inf if all checks passed.
     """
-    t_max = 2 * oqs.t_max
-    dt = 10 * oqs.dt
-    t0 = -oqs.t0
+    t_max = 2 * sim_oqs.t_max
+    dt = 10 * sim_oqs.dt
+    t0 = -sim_oqs.t0
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
-    print(f"Checking '{oqs.simulation_config.ODE_Solver}' solver ", flush=True)
+    print(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver ", flush=True)
 
     # =============================
     # INPUT VALIDATION
     # =============================
-    if not isinstance(oqs.system.psi_ini, Qobj):
+    if not isinstance(sim_oqs.system.psi_ini, Qobj):
         raise TypeError("psi_ini must be a Qobj")
     if not isinstance(times, np.ndarray):
         raise TypeError("times must be a numpy.ndarray")
-    if not isinstance(oqs.observable_ops, list) or not all(
-        isinstance(op, Qobj) for op in oqs.observable_ops
+    if not isinstance(sim_oqs.observable_ops, list) or not all(
+        isinstance(op, Qobj) for op in sim_oqs.observable_ops
     ):
         raise TypeError("system.observable_ops must be a list of Qobj")
     if len(times) < 2:
         raise ValueError("times must have at least two elements")
 
-    result = compute_pulse_evolution(oqs, **{"store_states": True})
+    result = compute_pulse_evolution(sim_oqs, **{"store_states": True})
     states = result.states
     # =============================
     # CHECK THE RESULT
@@ -407,9 +407,9 @@ def check_the_solver(oqs: SimClassOQS) -> tuple[Result, float]:
     strg = ""
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
-    if getattr(oqs.simulation_config, "RWA_SL", False):
-        N_atoms = oqs.system.N_atoms
-        omega_laser = oqs.laser.omega_laser
+    if getattr(sim_oqs.simulation_config, "RWA_SL", False):
+        N_atoms = sim_oqs.system.N_atoms
+        omega_laser = sim_oqs.laser.omega_laser
         states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
     for index, state in enumerate(states):
         time = times[index]
@@ -491,15 +491,15 @@ def compute_1d_polarization(
     """
     Compute the data for a fixed tau_coh and T_wait. AND NOW VARIABLE t_det_max
     """
-    system = oqs.system
-    tau_coh = oqs.simulation_config.tau_coh
-    T_wait = oqs.simulation_config.T_wait
-    t_det_max = oqs.simulation_config.t_det_max
+    system = sim_oqs.system
+    tau_coh = sim_oqs.simulation_config.tau_coh
+    T_wait = sim_oqs.simulation_config.T_wait
+    t_det_max = sim_oqs.simulation_config.t_det_max
     time_cut = kwargs.get("time_cut", np.inf)
 
-    dt = oqs.dt  # TODO how can I seperate this from the system?
-    t0 = oqs.t0
-    t_max = oqs.t_max
+    dt = sim_oqs.dt  # TODO how can I seperate this from the system?
+    t0 = sim_oqs.t0
+    t_max = sim_oqs.t_max
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
 
     # Force 1d times to a canonical grid
@@ -508,19 +508,21 @@ def compute_1d_polarization(
     # =============================
     # PULSE TIMING AND SEQUENCES
     # =============================
-    oqs.laser.update_first_two_pulse_phases(phi_0, phi_1)  # TODO not sure if this works
+    sim_oqs.laser.update_first_two_pulse_phases(
+        phi_0, phi_1
+    )  # TODO not sure if this works
 
     individual_pulses = {
-        "pulse0": [oqs.laser.pulses[0]],
-        "pulse1": [oqs.laser.pulses[1]],
-        "pulse2": [oqs.laser.pulses[2]],
+        "pulse0": [sim_oqs.laser.pulses[0]],
+        "pulse1": [sim_oqs.laser.pulses[1]],
+        "pulse2": [sim_oqs.laser.pulses[2]],
     }
 
     # =============================
     # COMPUTE EVOLUTION STATES
     # =============================
     evolution_data = _compute_three_pulse_evolution(
-        times, system, pulse_timings, oqs.laser
+        times, system, pulse_timings, sim_oqs.laser
     )
 
     # =============================
@@ -1277,8 +1279,8 @@ def _configure_solver_options(solver_options: dict) -> dict:
     return options
 
 
-def _configure_paper_equations_solver(oqs: SimClassOQS) -> None:
+def _configure_paper_equations_solver(sim_oqs: SimClassOQS) -> None:
     """Configure system for paper equations solver."""
-    if not oqs.simulation_config.RWA_SL:
+    if not sim_oqs.simulation_config.RWA_SL:
         logger.info("Paper equations require RWA - enabling RWA_SL")
-        oqs.simulation_config.RWA_SL = True
+        sim_oqs.simulation_config.RWA_SL = True

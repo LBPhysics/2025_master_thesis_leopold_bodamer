@@ -20,7 +20,12 @@ from .atomic_system.system_class import AtomicSystem
 # =============================
 # PULSE DEFINITIONS AND SEQUENCES
 # =============================
-from .laser_system.laser_class import Pulse, LaserPulseSystem
+from .laser_system.laser_class import (
+    Pulse,
+    LaserPulseSystem,
+    identify_non_zero_pulse_regions,
+    split_by_active_regions,
+)
 
 # =============================
 # PULSE FIELD FUNCTIONS
@@ -29,8 +34,6 @@ from .laser_system.laser_fcts import (
     pulse_envelope,
     E_pulse,
     Epsilon_pulse,
-    identify_non_zero_pulse_regions,
-    split_by_active_regions,
 )
 
 # =============================

@@ -17,7 +17,7 @@ from typing import Dict, Optional, List
 from datetime import datetime
 
 ### Project-specific imports
-from qspectro2d.core.system_parameters import SystemParameters
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.config.paths import DATA_DIR  # , FIGURES_DIR
 
 # Handle both relative imports (when imported as module) and absolute imports (when run directly)
@@ -342,9 +342,7 @@ def save_data_file(
         raise
 
 
-def save_info_file(
-    info_path: Path, system: SystemParameters, info_config: dict
-) -> None:
+def save_info_file(info_path: Path, system: AtomicSystem, info_config: dict) -> None:
     """
     Save system parameters and data configuration to pickle file.
 
@@ -363,7 +361,7 @@ def save_info_file(
 
 
 def save_simulation_data(
-    system: SystemParameters,
+    system: AtomicSystem,
     info_config: dict,
     data: np.ndarray,
     axis1: np.ndarray,
@@ -377,7 +375,7 @@ def save_simulation_data(
         data (np.ndarray): Simulation results (1D or 2D data).
         axis1 (np.ndarray): First axis (e.g., time or frequency for 1D or 2D data).
         axis2 (Optional[np.ndarray]): Second axis (e.g., coherence time for 2D data).
-        system (SystemParameters): System parameters object.
+        system (AtomicSystem): System parameters object.
         info_config (dict): Simulation configuration dictionary.
 
     Returns:

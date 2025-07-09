@@ -76,6 +76,8 @@ class LaserPulseSystem:
     pulse_fwhms: List[float] = field(init=False)
     pulse_freqs: List[float] = field(init=False)
     pulse_types: List[str] = field(init=False)
+    pulse_amplitudes: List[float] = field(init=False)
+    E0: float = field(init=False)  # Base electric field amplitude
     omega_laser: Optional[float] = (
         None  # Frequency of the laser, if all pulses have the same frequency
     )
@@ -87,9 +89,11 @@ class LaserPulseSystem:
         self.pulse_fwhms = [pulse.pulse_fwhm for pulse in self.pulses]
         self.pulse_freqs = [pulse.pulse_freq for pulse in self.pulses]
         self.pulse_types = [pulse.pulse_type for pulse in self.pulses]
+        self.pulse_amplitudes = [pulse.pulse_amplitude for pulse in self.pulses]
 
         if all(freq == self.pulse_freqs[0] for freq in self.pulse_freqs):
             self.omega_laser = self.pulse_freqs[0]
+        self.E0 = self.pulse_amplitudes[0]
 
     @staticmethod
     def from_delays(
@@ -303,7 +307,9 @@ class LaserPulseSystem:
             print(p.summary_line())
 
     def __str__(self) -> str:
-        return self.summary()
+        header = f"LaserPulseSystem Summary\n{'-' * 80}\n"
+        summary_lines = "\n".join(p.summary_line() for p in self.pulses)
+        return header + summary_lines
 
     def to_dict(self) -> dict:
         return {"pulses": [pulse.to_dict() for pulse in self.pulses]}
@@ -333,6 +339,66 @@ print("Serialized LaserPulseSystem:\n", json_data)
 reconstructed = LaserPulseSystem.from_json(json_data)
 reconstructed.summary()
 """
+
+
+def identify_non_zero_pulse_regions(
+    times: np.ndarray, pulse_seq: LaserPulseSystem
+) -> np.ndarray:
+    """
+    Identify regions where the pulse envelope is non-zero across an array of time values.
+
+    Args:
+        times (np.ndarray): Array of time values to evaluate
+        pulse_seq (LaserPulseSystem): The pulse sequence to evaluate
+
+    Returns:
+        np.ndarray: Boolean array where True indicates times where envelope is non-zero
+    """
+    print(
+        "Type of pulse_seq:", type(pulse_seq)
+    )  # Debugging output to verify pulse_seq type
+
+    if type(pulse_seq) is not LaserPulseSystem:
+        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
+
+    # Initialize an array of all False values
+    active_regions = np.zeros_like(times, dtype=bool)
+
+    # For each time point, check if it's in the active region of any pulse
+    for i, t in enumerate(times):
+        # A time is in an active region if any pulse contributes to the envelope
+        for pulse in pulse_seq.pulses:
+            start_time, end_time = pulse.active_time_range
+
+            # Check if time point falls within the pulse's active region
+            if start_time <= t <= end_time:
+                active_regions[i] = True
+                break  # Once we know this time point is active, we can move to the next
+
+    return active_regions
+
+
+def split_by_active_regions(
+    times: np.ndarray, active_regions: np.ndarray
+) -> List[np.ndarray]:
+    """
+    Split the time array into segments based on active regions.
+
+    Args:
+        times (np.ndarray): Array of time values.
+        active_regions (np.ndarray): Boolean array indicating active regions.
+
+    Returns:
+        List[np.ndarray]: List of time segments split by active regions.
+    """
+    # Find where the active_regions changes value
+    change_indices = np.where(np.diff(active_regions.astype(int)) != 0)[0] + 1
+
+    # Split the times at those change points
+    split_times = np.split(times, change_indices)
+
+    # Return list of time segments
+    return split_times
 
 
 def main():
@@ -367,8 +433,8 @@ def main():
         start, end = pulse.active_time_range
         print(f"Pulse {pulse.pulse_index} active from {start:.2f} fs to {end:.2f} fs")
 
-    times_to_check = [95.0, 300.0]  # adjust as needed
     print("\n3. Checking active pulses at various times:")
+    times_to_check = [95.0, 300.0]  # adjust as needed
     for t in times_to_check:
         info = seq.get_field_info_at_time(t)
         print(f"At time {t} fs:")
@@ -378,18 +444,14 @@ def main():
 
     # Example usage of the new functions
     times = np.linspace(0, 600, 1201)  # Time array from 0 to 600 fs
-    active_regions = identify_non_zero_pulse_regions(times, seq)
 
-    print("\n4. Identified active regions:")
-    for i, active in enumerate(active_regions):
-        if active:
-            print(f"Time {times[i]:.2f} fs is in an active region.")
+    active_regions = identify_non_zero_pulse_regions(times, seq)
 
     # Split the time array based on active regions
     split_times = split_by_active_regions(times, active_regions)
     print("\n5. Split time segments:")
     for segment in split_times:
-        print(f"Segment: {segment}")
+        print(f"Segment: {segment[0], segment[-1]} fs, Length: {len(segment)} points")
 
 
 if __name__ == "__main__":

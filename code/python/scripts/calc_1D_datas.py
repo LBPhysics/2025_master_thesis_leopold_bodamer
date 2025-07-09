@@ -16,6 +16,7 @@ It supports two modes of execution:
 Additional optional arguments:
    --t_det_max <fs>   : Maximum detection time (default: 600.0 fs)
    --dt <fs>          : Spacing between tau_coh values (default: 10.0 fs)
+   --t_wait <fs>      : Waiting time between pump and probe pulses (default: 0.0 fs)
 
 This script is designed for both local development and HPC batch execution.
 Results are saved automatically using the qspectro2d I/O framework.
@@ -41,11 +42,13 @@ Results are saved automatically using the qspectro2d I/O framework.
 # -> 6000 tau_coh_vals: -> split into 10 batches=10jobs of 600 each, each job will take 20s * 600 = 12000s = 200 minutes < 4 hours, actually on proteus it ran for 6,... h
 # Estimation for RAM: 6000 tau vals * 10 batches < 40,000,000.0 complex64 numbers < 40 MB << 1 GB
 
+from encodings.punycode import T
 import time
 import argparse
 import numpy as np
 from pathlib import Path
 
+from qspectro2d.core.bath_system.bath_class import BathClass
 from qspectro2d.config import DATA_DIR
 from qspectro2d.spectroscopy import (
     create_system_parameters,
@@ -60,12 +63,18 @@ from qspectro2d.data import (
     generate_unique_data_filename,
 )
 from spectroscopy import simulation
+from qspectro2d.core.simulation_class import (
+    AtomicSystem,
+    LaserPulseSystem,
+    SimulationConfigClass,
+    SimClassOQS,
+)
 
 N_ATOMS = 1  # Number of atoms in the system, can be changed to 1 or 2
 
 
-def run_single_tau(  # todo let t_wait be a parameter passed from user
-    tau_coh: float, t_det_max: float, dt: float, save_info: bool = False
+def run_single_tau(
+    tau_coh: float, t_det_max: float, dt: float, t_wait: float, save_info: bool = False
 ) -> Path:
     print(f"\n=== Starting tau_coh = {tau_coh:.2f} fs ===")
 
@@ -73,23 +82,28 @@ def run_single_tau(  # todo let t_wait be a parameter passed from user
         ### Atomic System parameters
         "simulation_type": "1d",
         # solver parameters
-        "ODE_Solver": "Paper_eqs",
-        "RWA_SL": True,
         "N_atoms": N_ATOMS,
         "J_cm": 300,  # Coupling strength [cm⁻¹]
-        "omega_A_cm": 16000,  # Frequency of atom A [cm⁻¹]
+        "freqs_cm": [16000],  # Frequency of atom A [cm⁻¹]
     }
+    system = AtomicSystem(**atomic_config)
     pulse_config = {
-        ### Pulse sequence parameters
-        "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,  # Pulse FWHM for single atom [fs]
-        "E0": 0.005,
-        "pulse_types": "gaussian",
-        "pulse_freqs": atomic_config["omega_A_cm"],
+        "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,
+        "base_amplitude": 0.005,  # Rename "E0" to match function signature
+        "pulse_type": "gaussian",  # fix typo: "pulse_types" → "pulse_type"
+        "carrier_freq_cm": atomic_config["omega_A_cm"],
+        "delays": [0.0, tau_coh, tau_coh + t_wait],
     }
+    laser = LaserPulseSystem.from_delays(**pulse_config)
+
     simulation_config = {
         ### Simulation parameters
+        # solver parameters
+        "ODE_Solver": "Paper_eqs",
+        "RWA_SL": True,
+        "keep_track": "eigenstates",  # or "basis" to track basis states
         # times
-        "tau_coh": float(tau_coh),
+        "tau_coh": tau_coh,
         "t_wait": 0.0,
         "t_det_max": t_det_max,
         "dt": dt,
@@ -100,8 +114,29 @@ def run_single_tau(  # todo let t_wait be a parameter passed from user
         "Delta_cm": 300,
     }
 
-    info_config = {
+    info_config = SimulationConfigClass(
+        **simulation_config,
+    )
+    bath_config = {
+        ### Bath parameters
+        "bath_type": "paper",
+        # Temperature / cutoff of the bath
+        "Temp": 1e-5,  # zero temperature
+        "cutoff_": 1e2,  # later * omega_A
+        # decay  rates
+        "gamma_0": 1 / 300.0,  # default value 1/300
+        "gamma_phi": 1 / 100.0,  # default value 1e-2
     }
+    bath = BathClass(**bath_config)
+
+    # Create the simulation class instance
+    sim_oqs = SimClassOQS(
+        simulation_config=info_config,
+        system=system,
+        laser=laser,
+        bath=bath,
+        keep_track="eigenstates",  # or "basis" to track basis states
+    )
 
     start_time = time.time()
     max_workers = get_max_workers()

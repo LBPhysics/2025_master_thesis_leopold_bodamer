@@ -1,5 +1,5 @@
 from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
-from typing import Union, List
+from typing import Union
 import numpy as np
 
 
@@ -147,59 +147,3 @@ def Epsilon_pulse(
         )  # use E_pulse for each pulse
         E_total += E_field * np.exp(-1j * (omega * t))
     return E_total
-
-
-def identify_non_zero_pulse_regions(
-    times: np.ndarray, pulse_seq: LaserPulseSystem
-) -> np.ndarray:
-    """
-    Identify regions where the pulse envelope is non-zero across an array of time values.
-
-    Args:
-        times (np.ndarray): Array of time values to evaluate
-        pulse_seq (LaserPulseSystem): The pulse sequence to evaluate
-
-    Returns:
-        np.ndarray: Boolean array where True indicates times where envelope is non-zero
-    """
-    if not isinstance(pulse_seq, LaserPulseSystem):
-        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
-
-    # Initialize an array of all False values
-    active_regions = np.zeros_like(times, dtype=bool)
-
-    # For each time point, check if it's in the active region of any pulse
-    for i, t in enumerate(times):
-        # A time is in an active region if any pulse contributes to the envelope
-        for pulse in pulse_seq.pulses:
-            start_time, end_time = pulse.active_time_range
-
-            # Check if time point falls within the pulse's active region
-            if start_time <= t <= end_time:
-                active_regions[i] = True
-                break  # Once we know this time point is active, we can move to the next
-
-    return active_regions
-
-
-def split_by_active_regions(
-    times: np.ndarray, active_regions: np.ndarray
-) -> List[np.ndarray]:
-    """
-    Split the time array into segments based on active regions.
-
-    Args:
-        times (np.ndarray): Array of time values.
-        active_regions (np.ndarray): Boolean array indicating active regions.
-
-    Returns:
-        List[np.ndarray]: List of time segments split by active regions.
-    """
-    # Find where the active_regions changes value
-    change_indices = np.where(np.diff(active_regions.astype(int)) != 0)[0] + 1
-
-    # Split the times at those change points
-    split_times = np.split(times, change_indices)
-
-    # Return list of time segments
-    return split_times
