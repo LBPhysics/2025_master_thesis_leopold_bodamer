@@ -79,18 +79,20 @@ def run_single_tau(
         # solver parameters
         "N_atoms": N_ATOMS,
         "freqs_cm": [16000],  # Frequency of atom A [cm⁻¹]
-        "dipole_moments": [1.0] * N_ATOMS,  # Dipole moments for each atom
+        "dip_moments": [1.0] * N_ATOMS,  # Dipole moments for each atom
         "Delta_cm": 0.0,  # inhomogeneous broadening [cm⁻¹]
     }
     if N_ATOMS >= 2:
         atomic_config["J_cm"] = 300.0
-    system = AtomicSystem(**atomic_config)
+    system = AtomicSystem.from_dict(atomic_config)
 
     pulse_config = {
         "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,
         "base_amplitude": 0.005,  # Rename "E0" to match function signature
         "pulse_type": "gaussian",  # fix typo: "pulse_types" → "pulse_type"
-        "carrier_freq_cm": atomic_config["omega_A_cm"],
+        "carrier_freq_cm": atomic_config["freqs_cm"][
+            0
+        ],  # Carrier frequency of the pulse
         "delays": [0.0, tau_coh, tau_coh + t_wait],
     }
     laser = LaserPulseSystem.from_delays(**pulse_config)
@@ -128,7 +130,7 @@ def run_single_tau(
         "gamma_0": 1 / 300.0,  # default value 1/300
         "gamma_phi": 1 / 100.0,  # default value 1e-2
     }
-    bath = BathClass(**bath_config)
+    bath = BathClass.from_dict(bath_config)
 
     # Create the simulation class instance
     sim_oqs = SimClassOQS(
@@ -181,7 +183,12 @@ def main():
         "--t_det_max", type=float, default=600.0, help="Detection time window (fs)"
     )
     parser.add_argument("--dt", type=float, default=10.0, help="tau_coh spacing (fs)")
-
+    parser.add_argument(
+        "--t_wait",
+        type=float,
+        default=0.0,
+        help="Waiting time between 2 pump and probe pulse (fs)",
+    )
     args = parser.parse_args()
 
     # =============================

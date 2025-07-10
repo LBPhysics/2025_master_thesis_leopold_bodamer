@@ -11,11 +11,6 @@ spectroscopy simulations with proper error handling and validation.
 import numpy as np
 
 ### Project-specific imports
-from qspectro2d.spectroscopy.calculations import (
-    parallel_compute_1d_E_with_inhomogenity,
-    parallel_compute_2d_E_with_inhomogenity,
-    check_the_solver,
-)
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.simulation_class import SimClassOQS
 
@@ -32,6 +27,11 @@ def run_1d_simulation(sim_class_oqs: SimClassOQS) -> tuple:
     Returns:
         tuple: Detection time values and averaged data.
     """
+    from qspectro2d.spectroscopy.calculations import (
+        parallel_compute_1d_E_with_inhomogenity,
+        check_the_solver,
+    )
+
     ### Create time arrays
     t_max = sim_class_oqs.simulation_config.t_max
 

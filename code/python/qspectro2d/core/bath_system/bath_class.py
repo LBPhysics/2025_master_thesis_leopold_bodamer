@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Optional
+import json
 
 # bath functions
 from qspectro2d.core.bath_system.bath_fcts import (
@@ -125,3 +126,60 @@ class BathClass:
         print(f"    {'gamma_phi':<20}: {self.gamma_phi:.4f} fs^-1")
         print(f"    {'Temp':<20}: {self.Temp} K")
         print(f"    {'cutoff_':<20}: {self.cutoff_} fs^-1")
+
+    def to_dict(self) -> dict:
+        """
+        Convert the BathClass instance to a dictionary.
+
+        Returns:
+            dict: Dictionary representation of the instance.
+        """
+        return {
+            "bath": self.bath,
+            "Temp": self.Temp,
+            "cutoff_": self.cutoff_,
+            "gamma_0": self.gamma_0,
+            "gamma_phi": self.gamma_phi,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """
+        Create a BathClass instance from a dictionary.
+
+        Parameters:
+            data (dict): Dictionary containing the parameters.
+
+        Returns:
+            BathClass: Instance of BathClass.
+        """
+        return cls(
+            bath=data.get("bath", "paper"),
+            Temp=data.get("Temp", 1e-5),
+            cutoff_=data.get("cutoff_", 1e2),
+            gamma_0=data.get("gamma_0", 1 / 300.0),
+            gamma_phi=data.get("gamma_phi", 1 / 100.0),
+        )
+
+    def to_json(self) -> str:
+        """
+        Convert the BathClass instance to a JSON string.
+
+        Returns:
+            str: JSON string representation of the instance.
+        """
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_json(cls, json_str: str):
+        """
+        Create a BathClass instance from a JSON string.
+
+        Parameters:
+            json_str (str): JSON string containing the parameters.
+
+        Returns:
+            BathClass: Instance of BathClass.
+        """
+        data = json.loads(json_str)
+        return cls.from_dict(data)

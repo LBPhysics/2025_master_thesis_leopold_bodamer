@@ -86,6 +86,7 @@ __all__ = [
     # Utilities and constants
     "convert_cm_to_fs",
     "convert_fs_to_cm",
+    # constants
     "HBAR",
     "BOLTZMANN",
 ]

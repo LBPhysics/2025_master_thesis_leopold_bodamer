@@ -231,7 +231,7 @@ class SystemBathCoupling:
 
         w_ij = self.system.omega_ij(i, j)
         return np.sin(2 * self.system.theta) ** 2 * power_spectrum_func_paper(
-            w_ij, self.bath.args_bath()
+            w_ij, self.args_bath()
         )
 
     def Gamma_big_ij(self, i: int, j: int) -> float:
@@ -246,7 +246,7 @@ class SystemBathCoupling:
             float: Pure dephasing rate.
         """
         # Pure dephasing rates helper
-        P_0 = power_spectrum_func_paper(0, self.SB_coupling.args_bath())
+        P_0 = power_spectrum_func_paper(0, self.args_bath())
         Gamma_t_ab = 2 * np.cos(2 * self.system.theta) ** 2 * P_0  # tilde
         Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.system.theta) ** 2) * P_0
         Gamma_11 = self.gamma_small_ij(2, 1)

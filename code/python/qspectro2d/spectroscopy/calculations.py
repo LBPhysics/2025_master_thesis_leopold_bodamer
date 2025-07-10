@@ -126,7 +126,7 @@ def _execute_segmented_evolution(
         # Find the indices in the original times array for this split
         start_idx = np.abs(sim_oqs.times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
-        decay_ops_list = sim_oqs.decay_ops
+        decay_ops_list = sim_oqs.decay_channels
         if has_pulse:
             EVO_obj = sim_oqs.Evo_obj_int
         else:
