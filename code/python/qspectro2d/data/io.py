@@ -18,6 +18,8 @@ from datetime import datetime
 
 ### Project-specific imports
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.config.paths import DATA_DIR  # , FIGURES_DIR
 
 # Handle both relative imports (when imported as module) and absolute imports (when run directly)
@@ -342,7 +344,13 @@ def save_data_file(
         raise
 
 
-def save_info_file(info_path: Path, system: AtomicSystem, info_config: dict) -> None:
+def save_info_file(
+    info_path: Path,
+    system: AtomicSystem,
+    bath: BathClass,
+    laser: LaserPulseSequence,
+    info_config: dict,
+) -> None:
     """
     Save system parameters and data configuration to pickle file.
 
@@ -353,7 +361,15 @@ def save_info_file(info_path: Path, system: AtomicSystem, info_config: dict) -> 
     """
     try:
         with open(info_path, "wb") as info_file:
-            pickle.dump({"system": system, "info_config": info_config}, info_file)
+            pickle.dump(
+                {
+                    "system": system,
+                    "bath": bath,
+                    "laser": laser,
+                    "info_config": info_config,
+                },
+                info_file,
+            )
         print(f"✅ Info saved successfully to: {info_path}")
     except Exception as e:
         print(f"❌ ERROR: Failed to save info: {e}")
@@ -363,6 +379,8 @@ def save_info_file(info_path: Path, system: AtomicSystem, info_config: dict) -> 
 def save_simulation_data(
     system: AtomicSystem,
     info_config: dict,
+    bath: BathClass,
+    laser: LaserPulseSequence,
     data: np.ndarray,
     axis1: np.ndarray,
     axis2: Optional[np.ndarray] = None,
@@ -392,7 +410,7 @@ def save_simulation_data(
     # Save files
     # =============================
     save_data_file(data_path, data, axis1, axis2)
-    save_info_file(info_path, system, info_config)
+    save_info_file(info_path, system, bath, laser, info_config)
 
     # =============================
     # Return relative path to DATA_DIR

@@ -27,18 +27,21 @@ def main():
     )
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("--rel_path", type=str, help="Specific file path (relative to DATA_DIR)")
+    group.add_argument(
+        "--rel_path", type=str, help="Specific file path (relative to DATA_DIR)"
+    )
     group.add_argument("--latest_from", type=str, help="Load latest from subdirectory")
 
     args = parser.parse_args()
 
     plot_config = {
-            "plot_time_domain": True,
-            "plot_frequency_domain": True,
-            "extend_for": (1, 50),
-            "spectral_components_to_plot": ["abs", "real", "imag"],
-            #"section": (1.5, 1.7, 1.5, 1.7),
-        }
+        "plot_time_domain": True,
+        "plot_frequency_domain": True,
+        "extend_for": (1, 15),
+        "spectral_components_to_plot": ["abs", "real", "imag"],
+        "section": (1, 2, 1, 2),
+        # "section": (1.5, 1.7, 1.5, 1.7),
+    }
 
     try:
         # =============================
@@ -52,7 +55,7 @@ def main():
             print(f"🔍 Auto-mode: Loading latest from {subdir}...")
             data_dict = load_latest_data_from_directory(subdir)
 
-        ndim = data_dict['data'].ndim
+        ndim = data_dict["data"].ndim
         print(
             f"✅ Data shape: {data_dict['data'].shape}, Time range: {data_dict['axes']['axis1'][0]:.1f} to {data_dict['axes']['axis1'][-1]:.1f} fs"
         )
@@ -73,6 +76,7 @@ def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

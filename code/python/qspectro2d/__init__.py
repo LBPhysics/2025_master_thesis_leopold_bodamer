@@ -11,7 +11,7 @@ with quantum mechanical models. This package provides tools for:
 - Configuration management and file I/O utilities
 
 Main subpackages:
-- core: Fundamental simulation components (AtomicSystem, LaserPulseSystem, BathClass, solvers)
+- core: Fundamental simulation components (AtomicSystem, LaserPulseSequence, BathClass, solvers)
 - spectroscopy: 1D/2D spectroscopy calculations and post-processing
 - visualization: Plotting and data visualization tools
 - data: File I/O and data management utilities
@@ -27,7 +27,7 @@ __email__ = ""
 # =============================
 # Import the most essential classes that users will need
 try:
-    from .core import AtomicSystem, Pulse, LaserPulseSystem
+    from .core import AtomicSystem, LaserPulse, LaserPulseSequence
     from .core import E_pulse, pulse_envelope
     from .core import matrix_ODE_paper
     from .core import convert_cm_to_fs, convert_fs_to_cm, HBAR, BOLTZMANN
@@ -106,8 +106,8 @@ except ImportError as e:
 __all__ = [
     # Core classes - most important for users
     "AtomicSystem",
-    "Pulse",
-    "LaserPulseSystem",
+    "LaserPulse",
+    "LaserPulseSequence",
     # Essential functions
     "E_pulse",
     "pulse_envelope",
@@ -164,7 +164,7 @@ Available Subpackages:
 - config: Configuration and constants
 
 Quick Start:
-from qspectro2d import AtomicSystem, LaserPulseSystem, run_1d_simulation
+from qspectro2d import AtomicSystem, LaserPulseSequence, run_1d_simulation
 
 For detailed documentation, see individual module docstrings.
 """

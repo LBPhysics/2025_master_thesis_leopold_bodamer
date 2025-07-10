@@ -17,7 +17,7 @@ def main():
     # =============================
     import argparse
 
-    parser = argparse.ArgumentParser(description="Stack 1D data into 2D along tau_coh.")
+    parser = argparse.ArgumentParser(description="Stack 1D data into 2D along t_coh.")
     parser.add_argument(
         "--rel_path",
         type=str,
@@ -55,7 +55,7 @@ def main():
             data_npz = np.load(abs_data_path, mmap_mode="r")
             data = data_npz["data"]
 
-            # Extract tau_coh value from filename
+            # Extract t_coh value from filename
             tau_str = str(path).split("tau_")[1]
             tau_val = tau_str.split("_")[0]
             tau = float(tau_val)
@@ -63,7 +63,7 @@ def main():
             results.append((tau, data, path))  # also keep path
             shapes.append(data.shape)
 
-            print(f"   ✅ Loaded: tau_coh = {tau}")
+            print(f"   ✅ Loaded: t_coh = {tau}")
         except Exception as e:
             print(f"   ❌ Failed to load {path}: {e}")
 
@@ -77,7 +77,7 @@ def main():
             print(f"   Detected shape: {s}")
         sys.exit(1)
 
-    # Sort by tau_coh
+    # Sort by t_coh
     results.sort(key=lambda r: r[0])
 
     shape_single = results[0][1].shape
@@ -95,6 +95,12 @@ def main():
     abs_info_path = DATA_DIR / (str(results[0][2]) + "_info.pkl")
     info_dict = load_info_file(abs_info_path)
     system = info_dict["system"]
+    # workaround
+    from qspectro2d.core.bath_system import BathClass
+    from qspectro2d.core.laser_system import LaserPulseSequence
+
+    bath = BathClass()  # info_dict["bath"]
+    laser = LaserPulseSequence()  # info_dict["laser"]
     info_config = info_dict["info_config"]
 
     # Get time axis (assumes same for all)
@@ -104,10 +110,10 @@ def main():
 
     # Update config
     info_config["simulation_type"] = "2d"
-    info_config["tau_coh"] = ""  # now spans many values
+    info_config["t_coh"] = ""  # now spans many values
 
     rel_path = save_simulation_data(
-        system, info_config, stacked_data, axis1=tau_vals, axis2=t_det
+        system, info_config, bath, laser, stacked_data, axis1=tau_vals, axis2=t_det
     )
 
     print(f"\n✅ Final 2D data saved to: {rel_path}")

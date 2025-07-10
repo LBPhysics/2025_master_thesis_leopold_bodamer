@@ -46,11 +46,9 @@ def create_system_parameters(info_config: dict) -> AtomicSystem:
     KeyError: If required keys for time configuration are missing.
     """
     # Handle different time configurations for 1D vs 2D
-    if "tau_coh" in info_config:
+    if "t_coh" in info_config:
         # 1D configuration
-        t_max = (
-            info_config["tau_coh"] + info_config["t_wait"] + info_config["t_det_max"]
-        )
+        t_max = info_config["t_coh"] + info_config["t_wait"] + info_config["t_det_max"]
     else:
         # 2D configuration
         t_max = info_config["t_wait"] + 2 * info_config["t_det_max"]
@@ -66,7 +64,7 @@ def create_system_parameters(info_config: dict) -> AtomicSystem:
         dt=info_config.get("dt", 1),
         bath=info_config.get("bath", "paper"),
         E0=info_config.get("E0", 1),
-        pulse_type=info_config.get("pulse_type", "gaussian"),
+        envelope_type=info_config.get("envelope_type", "gaussian"),
         pulse_fwhm=info_config.get("pulse_fwhm", 15),
         omega_laser_cm=info_config.get("omega_laser_cm", 16000),
         Delta_cm=info_config.get("Delta_cm", 0),
@@ -99,7 +97,7 @@ def print_simulation_header(info_config: dict, max_workers: int):
         f"  Times:\tt_det_max={info_config['t_det_max']} fs, dt={info_config['dt']} fs"
     )
     if simulation_type == "1d":
-        print(f"\t\tτ_coh={info_config['tau_coh']} fs")
+        print(f"\t\tτ_coh={info_config['t_coh']} fs")
     print(f"\t\tT_wait: {info_config['t_wait']} fs")
     print(
         f"  Total combinations: {info_config['n_phases'] * info_config['n_phases'] * info_config['n_freqs']}"

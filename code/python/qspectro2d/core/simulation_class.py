@@ -3,7 +3,7 @@
 # =============================
 from dataclasses import dataclass, asdict, field  # for the class definiton
 import numpy as np
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.bath_system.bath_class import BathClass
 from qspectro2d.core.system_bath_class import SystemBathCoupling
@@ -34,7 +34,7 @@ class SimulationConfigClass:
     # Other simulation_config parameters
     # times
     dt: float = 0.1  # time step in fs
-    tau_coh: float = 100.0  # coherence time in fs
+    t_coh: float = 100.0  # coherence time in fs
     t_wait: float = 0.0  # wait time before the first pulse in fs
     t_det_max: float = 100.0
     # phase cycling
@@ -72,8 +72,8 @@ class SimulationConfigClass:
         # Validate other parameters
         if self.dt <= 0:
             raise ValueError("dt must be a positive value.")
-        if self.tau_coh < 0:
-            raise ValueError("tau_coh must be a positive value.")
+        if self.t_coh < 0:
+            raise ValueError("t_coh must be a positive value.")
         if self.t_wait < 0:
             raise ValueError("t_wait must be non-negative.")
         if self.t_det_max <= 0:
@@ -83,7 +83,7 @@ class SimulationConfigClass:
         if self.n_freqs <= 0:
             raise ValueError("n_freqs must be a positive integer.")
 
-        self.t_max = self.tau_coh + self.t_wait + self.t_det_max
+        self.t_max = self.t_wait + 2 * self.t_det_max
         if self.t_max <= self.t_wait:
             raise ValueError("t_wait is greater than t_max.")
 
@@ -93,7 +93,7 @@ class SimulationConfigClass:
             f"-------------------------------\n"
             f"{self.simulation_type} ELECTRONIC SPECTROSCOPY SIMULATION\n"
             f"Time Parameters:\n"
-            f"Coherence Time     : {self.tau_coh} fs\n"
+            f"Coherence Time     : {self.t_coh} fs\n"
             f"Wait Time          : {self.t_wait} fs\n"
             f"Max Det. Time      : {self.t_det_max} fs\n\n"
             f"Total Time (t_max) : {self.t_max} fs\n"
@@ -126,11 +126,16 @@ class SimClassOQS:
     simulation_config: SimulationConfigClass
 
     system: AtomicSystem
-    laser: LaserPulseSystem
+    laser: LaserPulseSequence
     bath: BathClass
     sl_coupling: SystemLaserCoupling = field(init=False)
     sb_coupling: SystemBathCoupling = field(init=False)
 
+    # stuff i probably need:
+    Evo_obj_free: callable = field(init=False)
+    Evo_obj_int: callable = field(init=False)
+
+    #
     @property
     def H0_diagonalized(self):
         """
@@ -160,7 +165,7 @@ class SimClassOQS:
 
     def H_int(self, t: float) -> Qobj:
         """
-        Define the interaction Hamiltonian for the system with multiple pulses using the LaserPulseSystem class.
+        Define the interaction Hamiltonian for the system with multiple pulses using the LaserPulseSequence class.
 
         Parameters:
             t (float): Time at which the interaction Hamiltonian is evaluated.
@@ -211,6 +216,9 @@ class SimClassOQS:
 
         return observable_strs
 
+    def paper_evo_obj(self, t: float) -> Qobj:
+        return matrix_ODE_paper(t, self)
+
     def __post_init__(self):
         # Generate the coupling objects
         self.sb_coupling = SystemBathCoupling(self.system, self.bath)
@@ -222,15 +230,15 @@ class SimClassOQS:
 
         # TIME GRID FOR SIMULATION
         # =============================
-        self.t0 = -self.laser.pulse_fwhms[0]
-        self.t_max = self.simulation_config.t_max
-        self.dt = self.simulation_config.dt
-        n_steps = (
-            int(np.round((self.t_max - self.t0) / self.dt)) + 1
-        )  # ensure inclusion of t_max
-        self.times = np.linspace(self.t0, self.t_max, n_steps)  # include t0 and t_max
-        n_steps_det = int(np.round(self.simulation_config.t_det_max / self.dt)) + 1
-        self.times_det = np.linspace(0, self.simulation_config.t_det_max, n_steps_det)
+        t0 = -self.laser.pulse_fwhms[0]
+        t_max = self.simulation_config.t_max
+        dt = self.simulation_config.dt
+        t_det_max = self.simulation_config.t_det_max
+
+        n_steps = int(np.round((t_max - t0) / dt)) + 1  # ensure inclusion of t_max
+        self.times = np.linspace(t0, t_max, n_steps)  # include t0 and t_max
+        n_steps_det = int(np.round(t_det_max / dt)) + 1
+        self.times_det = np.linspace(0, t_det_max, n_steps_det)
 
         # define the decay channels and EVOlution objectsbased on the ODE_Solver
         ODE_Solver = self.simulation_config.ODE_Solver
@@ -239,17 +247,20 @@ class SimClassOQS:
             self.decay_channels = self.sb_coupling.me_decay_channels
             self.Evo_obj_free = self.H0_undiagonalized
             self.Evo_obj_int = lambda t: self.H_int(t)
+
         elif ODE_Solver == "BR":
             # Bloch-Redfield solver
             self.decay_channels = self.sb_coupling.br_decay_channels
             self.Evo_obj_free = self.H0_undiagonalized
             self.Evo_obj_int = lambda t: self.H_int(t)
+
         elif ODE_Solver == "Paper_eqs":
             self.simulation_config.RWA_SL = True  # RWA is required for Paper_eqs
             self.decay_channels = []
-            custom = lambda t: matrix_ODE_paper(t, self)
-            self.Evo_obj_free = custom
-            self.Evo_obj_int = custom
+
+            self.Evo_obj_free = self.paper_evo_obj
+            self.Evo_obj_int = self.paper_evo_obj
+
         elif ODE_Solver == "Paper_BR":
             custom_free = liouvillian(self.H0_diagonalized) + R_paper(
                 self
@@ -285,21 +296,57 @@ class SimClassOQS:
                 f"    {'Custom ODE matrix used (calculated by matrix_ODE_paper(t, pulse_seq, self))'}"
             )
 
+    def to_dict(self) -> dict:
+        """
+        Converts the SimClassOQS instance and its nested objects into a dictionary.
+        Handles nested dataclasses and provides custom handling for non-dataclass
+        objects like Qobj and callables.
+        """
+        # Start with asdict for the main structure and nested dataclasses
+        data = asdict(self)
+        data["system"] = self.system.to_dict()
+        data["laser"] = self.laser.to_dict()
+        data["bath"] = self.bath.to_dict()
+
+        return data
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "SimClassOQS":
+        """
+        Creates a SimClassOQS instance from a dictionary.
+        Reconstructs nested objects from their dictionary representations.
+
+        Parameters:
+            data (dict): Dictionary containing all necessary data to reconstruct the object.
+
+        Returns:
+            SimClassOQS: Reconstructed simulation model instance.
+        """
+        # Reconstruct nested objects from their dictionary representations
+        simulation_config = SimulationConfigClass.from_dict(data["simulation_config"])
+        system = AtomicSystem.from_dict(data["system"])
+        laser = LaserPulseSequence.from_dict(data["laser"])
+        bath = BathClass.from_dict(data["bath"])
+
+        return cls(
+            simulation_config=simulation_config, system=system, laser=laser, bath=bath
+        )
+
 
 def H_int_(
     t: float,
     SM_op: Qobj,
     RWA_SL: bool,
-    laser: LaserPulseSystem,
+    laser: LaserPulseSequence,
 ) -> Qobj:
     """
-    Define the interaction Hamiltonian for the system with multiple pulses using the LaserPulseSystem class.
+    Define the interaction Hamiltonian for the system with multiple pulses using the LaserPulseSequence class.
 
     Parameters:
         t (float): Time at which the interaction Hamiltonian is evaluated.
         SM_op (Qobj): Lowering operator of the system.
         RWA_SL (bool): Whether to use the rotating wave approximation (RWA) for single-laser coupling.
-        laser (LaserPulseSystem): Laser pulse system containing the pulse parameters.
+        laser (LaserPulseSequence): Laser pulse system containing the pulse parameters.
 
     Returns:
         Qobj: Interaction Hamiltonian at time t.
@@ -347,7 +394,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimClassOQS) -> Qobj:
 
     Parameters:
         t (float): Time at which to evaluate the matrix.
-        pulse_seq (LaserPulseSystem): LaserPulseSystem object for the electric field.
+        pulse_seq (LaserPulseSequence): LaserPulseSequence object for the electric field.
         system (AtomicSystem): System parameters containing Gamma, gamma_0, and mu_eg.
 
     Returns:
@@ -735,20 +782,20 @@ def main():
 
     ### Create simulation_config configuration
     sim_config = SimulationConfigClass(
-        ODE_Solver="Paper_BR", RWA_SL=True, dt=0.1, tau_coh=50.0
+        ODE_Solver="Paper_BR", RWA_SL=True, dt=0.1, t_coh=50.0
     )
 
     ### Create test pulse sequence
     from qspectro2d.core.bath_system.bath_class import BathClass
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
-    test_pulse_seq = LaserPulseSystem.from_general_specs(
+    test_pulse_seq = LaserPulseSequence.from_general_specs(
         pulse_peak_times=[0.0, 50.0],
         pulse_phases=[0.0, 1.57],  # 0, π/2
         pulse_freqs=[1.0, 1.0],
         pulse_fwhms=[15.0, 15.0],
         pulse_amplitudes=[0.05, 0.05],
-        pulse_types="gaussian",
+        envelope_types="gaussian",
     )
 
     # =============================
@@ -851,7 +898,7 @@ def main():
     try:
         ### Create non-RWA configuration
         sim_config_no_rwa = SimulationConfigClass(
-            ODE_Solver="Paper_BR", RWA_SL=False, dt=0.1, tau_coh=100.0  # No RWA
+            ODE_Solver="Paper_BR", RWA_SL=False, dt=0.1, t_coh=100.0  # No RWA
         )
 
         sim_model_no_rwa = SimClassOQS(
@@ -872,11 +919,329 @@ def main():
     except Exception as e:
         print(f"✗ Error in RWA comparison test: {e}")
 
+    # =============================
+    # TEST 5: to_dict and from_dict methods
+    # =============================
+    print("\n--- Test 5: Dictionary Serialization/Deserialization ---")
+
+    try:
+        ### Test SimulationConfigClass to_dict and from_dict
+        print("Testing SimulationConfigClass:")
+
+        # Create original config
+        original_config = SimulationConfigClass(
+            ODE_Solver="Paper_BR",
+            RWA_SL=True,
+            dt=0.05,
+            t_coh=150.0,
+            t_wait=10.0,
+            t_det_max=200.0,
+            n_phases=8,
+            n_freqs=3,
+            max_workers=4,
+            simulation_type="2d",
+        )
+
+        # Convert to dict and back
+        config_dict = original_config.to_dict()
+        reconstructed_config = SimulationConfigClass.from_dict(config_dict)
+
+        # Compare attributes
+        config_match = True
+        for attr in [
+            "ODE_Solver",
+            "RWA_SL",
+            "dt",
+            "t_coh",
+            "t_wait",
+            "t_det_max",
+            "n_phases",
+            "n_freqs",
+            "max_workers",
+            "simulation_type",
+        ]:
+            if getattr(original_config, attr) != getattr(reconstructed_config, attr):
+                config_match = False
+                print(
+                    f"  ✗ Mismatch in {attr}: {getattr(original_config, attr)} != {getattr(reconstructed_config, attr)}"
+                )
+
+        if config_match:
+            print(f"  ✓ SimulationConfigClass serialization successful")
+            print(f"    - Dictionary keys: {list(config_dict.keys())}")
+            print(f"    - All attributes match after reconstruction")
+
+        ### Test SimClassOQS to_dict and from_dict
+        print("\nTesting SimClassOQS:")
+
+        # Use the existing sim_model_1 for testing
+        original_model = sim_model_1
+
+        # Convert to dict and back
+        model_dict = original_model.to_dict()
+        reconstructed_model = SimClassOQS.from_dict(model_dict)
+
+        # Compare key attributes
+        model_match = True
+        comparison_results = []
+
+        # Check simulation_config
+        if (
+            original_model.simulation_config.ODE_Solver
+            != reconstructed_model.simulation_config.ODE_Solver
+        ):
+            model_match = False
+            comparison_results.append(f"ODE_Solver mismatch")
+
+        # Check system attributes
+        if original_model.system.N_atoms != reconstructed_model.system.N_atoms:
+            model_match = False
+            comparison_results.append(f"N_atoms mismatch")
+
+        if not np.allclose(
+            original_model.system.freqs_cm, reconstructed_model.system.freqs_cm
+        ):
+            model_match = False
+            comparison_results.append(f"freqs_cm mismatch")
+
+        # Check laser attributes
+        if len(original_model.laser.pulses) != len(reconstructed_model.laser.pulses):
+            model_match = False
+            comparison_results.append(f"pulse count mismatch")
+
+        # Check bath attributes
+        if abs(original_model.bath.gamma_0 - reconstructed_model.bath.gamma_0) > 1e-10:
+            model_match = False
+            comparison_results.append(f"gamma_0 mismatch")
+
+        # Test H_int method functionality
+        test_time_dict = 5.0
+        try:
+            H_int_original = original_model.H_int(test_time_dict)
+            H_int_reconstructed = reconstructed_model.H_int(test_time_dict)
+
+            if not np.allclose(H_int_original.full(), H_int_reconstructed.full()):
+                model_match = False
+                comparison_results.append(f"H_int method results differ")
+            else:
+                comparison_results.append(f"H_int methods produce identical results")
+
+        except Exception as e:
+            model_match = False
+            comparison_results.append(f"H_int method error: {e}")
+
+        if model_match:
+            print(f"  ✓ SimClassOQS serialization successful")
+            print(f"    - Dictionary structure: simulation_config, system, laser, bath")
+            print(f"    - All core attributes match after reconstruction")
+            for result in comparison_results:
+                print(f"    - {result}")
+        else:
+            print(f"  ✗ SimClassOQS serialization issues:")
+            for result in comparison_results:
+                print(f"    - {result}")
+
+        ### Test dictionary structure and content
+        print(f"\nDictionary structure analysis:")
+        print(f"  - SimulationConfigClass dict keys: {list(config_dict.keys())}")
+        print(f"  - SimClassOQS dict keys: {list(model_dict.keys())}")
+        print(f"  - Dict size (SimClassOQS): ~{len(str(model_dict))} characters")
+
+        ### Test with different system configurations
+        print(f"\nTesting with 2-atom system:")
+
+        # Create 2-atom system for testing
+        system_2_test = AtomicSystem(
+            N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+        )
+
+        sim_model_2_test = SimClassOQS(
+            simulation_config=sim_config,
+            system=system_2_test,
+            laser=test_pulse_seq,
+            bath=bath,
+        )
+
+        # Test serialization for 2-atom system
+        model_2_dict = sim_model_2_test.to_dict()
+        reconstructed_model_2 = SimClassOQS.from_dict(model_2_dict)
+
+        ### Validate reconstructed 2-atom model with all essential attributes
+        model_2_match = True
+        comparison_2_results = []
+
+        # Check simulation_config attributes
+        config_attrs = ["ODE_Solver", "RWA_SL", "dt", "t_coh", "t_wait", "t_det_max"]
+        for attr in config_attrs:
+            orig_val = getattr(sim_model_2_test.simulation_config, attr)
+            recon_val = getattr(reconstructed_model_2.simulation_config, attr)
+            if orig_val != recon_val:
+                model_2_match = False
+                comparison_2_results.append(f"Config {attr}: {orig_val} != {recon_val}")
+
+        # Check system attributes
+        if sim_model_2_test.system.N_atoms != reconstructed_model_2.system.N_atoms:
+            model_2_match = False
+            comparison_2_results.append(
+                f"N_atoms: {sim_model_2_test.system.N_atoms} != {reconstructed_model_2.system.N_atoms}"
+            )
+
+        if not np.allclose(
+            sim_model_2_test.system.freqs_cm, reconstructed_model_2.system.freqs_cm
+        ):
+            model_2_match = False
+            comparison_2_results.append(f"freqs_cm arrays differ")
+
+        if not np.allclose(
+            sim_model_2_test.system.dip_moments,
+            reconstructed_model_2.system.dip_moments,
+        ):
+            model_2_match = False
+            comparison_2_results.append(f"dip_moments arrays differ")
+
+        # Check laser pulse attributes
+        orig_pulses = sim_model_2_test.laser.pulses
+        recon_pulses = reconstructed_model_2.laser.pulses
+        if len(orig_pulses) != len(recon_pulses):
+            model_2_match = False
+            comparison_2_results.append(
+                f"Pulse count: {len(orig_pulses)} != {len(recon_pulses)}"
+            )
+        else:
+            for i, (orig_pulse, recon_pulse) in enumerate(
+                zip(orig_pulses, recon_pulses)
+            ):
+                pulse_attrs = [
+                    "pulse_peak_time",
+                    "pulse_phase",
+                    "pulse_freq",
+                    "pulse_fwhm",
+                    "pulse_amplitude",
+                ]
+                for attr in pulse_attrs:
+                    if (
+                        abs(getattr(orig_pulse, attr) - getattr(recon_pulse, attr))
+                        > 1e-10
+                    ):
+                        model_2_match = False
+                        comparison_2_results.append(f"Pulse {i} {attr} differs")
+
+        # Check bath attributes
+        bath_attrs = ["bath", "gamma_0", "Gamma", "cutoff_", "Temp"]
+        for attr in bath_attrs:
+            orig_val = getattr(sim_model_2_test.bath, attr)
+            recon_val = getattr(reconstructed_model_2.bath, attr)
+
+            # Handle different data types appropriately
+            if isinstance(orig_val, str):
+                # For string attributes like 'bath'
+                if orig_val != recon_val:
+                    model_2_match = False
+                    comparison_2_results.append(
+                        f"Bath {attr}: {orig_val} != {recon_val}"
+                    )
+            else:
+                # For numeric attributes
+                if abs(orig_val - recon_val) > 1e-10:
+                    model_2_match = False
+                    comparison_2_results.append(
+                        f"Bath {attr}: {orig_val} != {recon_val}"
+                    )
+
+        # Test H_int method functionality for 2-atom system
+        test_time_2atom = 10.0
+        try:
+            H_int_orig_2 = sim_model_2_test.H_int(test_time_2atom)
+            H_int_recon_2 = reconstructed_model_2.H_int(test_time_2atom)
+
+            if not np.allclose(H_int_orig_2.full(), H_int_recon_2.full(), rtol=1e-12):
+                model_2_match = False
+                comparison_2_results.append(f"H_int methods produce different results")
+                max_diff = np.max(np.abs(H_int_orig_2.full() - H_int_recon_2.full()))
+                comparison_2_results.append(f"Max H_int difference: {max_diff:.2e}")
+            else:
+                comparison_2_results.append(f"H_int methods produce identical results")
+
+        except Exception as e:
+            model_2_match = False
+            comparison_2_results.append(f"H_int method error: {e}")
+
+        # Test dimensions and matrix properties
+        try:
+            if H_int_orig_2.dims != H_int_recon_2.dims:
+                model_2_match = False
+                comparison_2_results.append(
+                    f"H_int dimensions differ: {H_int_orig_2.dims} != {H_int_recon_2.dims}"
+                )
+
+            if H_int_orig_2.shape != H_int_recon_2.shape:
+                model_2_match = False
+                comparison_2_results.append(
+                    f"H_int shapes differ: {H_int_orig_2.shape} != {H_int_recon_2.shape}"
+                )
+
+        except Exception as e:
+            model_2_match = False
+            comparison_2_results.append(f"Dimension comparison error: {e}")
+
+        # Test observable operators consistency
+        try:
+            orig_obs_ops = sim_model_2_test.observable_ops
+            recon_obs_ops = reconstructed_model_2.observable_ops
+
+            if len(orig_obs_ops) != len(recon_obs_ops):
+                model_2_match = False
+                comparison_2_results.append(f"Observable operators count differs")
+            else:
+                for i, (orig_op, recon_op) in enumerate(
+                    zip(orig_obs_ops, recon_obs_ops)
+                ):
+                    if not np.allclose(orig_op.full(), recon_op.full(), rtol=1e-12):
+                        model_2_match = False
+                        comparison_2_results.append(f"Observable operator {i} differs")
+                        break
+                else:
+                    comparison_2_results.append(f"All observable operators match")
+
+        except Exception as e:
+            model_2_match = False
+            comparison_2_results.append(f"Observable operators error: {e}")
+
+        # Print results for 2-atom system
+        if model_2_match:
+            print(f"  ✓ 2-atom model serialization successful")
+            print(f"    - All essential attributes match after reconstruction")
+            print(f"    - Dictionary size: ~{len(str(model_2_dict))} characters")
+            for result in comparison_2_results:
+                print(f"    - {result}")
+        else:
+            print(f"  ✗ 2-atom model serialization issues:")
+            for result in comparison_2_results:
+                print(f"    - {result}")
+
+        ### Additional comprehensive tests
+        print(f"\nComprehensive serialization tests:")
+
+        # Test edge cases with different configurations
+        test_configs = [
+            SimulationConfigClass(ODE_Solver="ME", RWA_SL=True, dt=0.05, t_coh=25.0),
+            SimulationConfigClass(ODE_Solver="BR", RWA_SL=False, dt=0.2, t_coh=200.0),
+            SimulationConfigClass(
+                ODE_Solver="Paper_eqs", RWA_SL=True, dt=0.1, t_coh=50.0
+            ),
+        ]
+
+        print(f"\n✓ to_dict and from_dict testing completed successfully!")
+
+    except Exception as e:
+        print(f"✗ Error in dictionary serialization test: {e}")
+        import traceback
+
+        traceback.print_exc()
+
     print("\n" + "=" * 60)
-    print("simulation_config MODEL TESTING COMPLETED")
-    print("=" * 60)
 
 
 if __name__ == "__main__":
-    ### Run the test function when script is executed directly
     main()
+    print("All tests completed.")

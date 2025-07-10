@@ -103,7 +103,7 @@ def plot_1d_data(
     t_det_vals = extracted["axis1"]
     system = extracted["system"]
     info_config = extracted["info_config"]
-    tau_coh = info_config["tau_coh"]
+    t_coh = info_config["t_coh"]
     T_wait = info_config["t_wait"]
     n_freqs = info_config.get("n_freqs", 1)
 
@@ -125,7 +125,7 @@ def plot_1d_data(
                 data_y=data,
                 domain="time",
                 component="abs",  # Use first component for time domain
-                tau_coh=tau_coh,
+                t_coh=t_coh,
                 T_wait=T_wait,
                 function_symbol="E_{k_s}",
                 n_freqs=n_freqs,
@@ -197,7 +197,7 @@ def plot_2d_data(
     # Validate and extract data structure
     extracted = _validate_and_extract_data_structure(loaded_data, expected_dim="2d")
     data = extracted["data"]
-    tau_coh_vals = extracted["axis1"]  # coherence times
+    t_coh_vals = extracted["axis1"]  # coherence times
     t_det_vals = extracted["axis2"]  # detection times
     system = extracted["system"]
     info_config = extracted["info_config"]
@@ -221,7 +221,7 @@ def plot_2d_data(
             try:
                 fig = plot_2d_el_field(
                     data_x=t_det_vals,
-                    data_y=tau_coh_vals,
+                    data_y=t_coh_vals,
                     data_z=data,
                     t_wait=T_wait,
                     domain="time",
@@ -249,14 +249,14 @@ def plot_2d_data(
                 extended_ts, extended_taus, extended_data = extend_time_axes(
                     data=data,
                     t_det=t_det_vals,
-                    tau_coh=tau_coh_vals,
+                    t_coh=t_coh_vals,
                     pad_t_det=extend_for,
-                    pad_tau_coh=extend_for,
+                    pad_t_coh=extend_for,
                 )
             else:
                 extended_ts, extended_taus, extended_data = (
                     t_det_vals,
-                    tau_coh_vals,
+                    t_coh_vals,
                     data,
                 )
 

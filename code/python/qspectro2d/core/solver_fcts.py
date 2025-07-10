@@ -31,7 +31,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimClassOQS) -> Qobj:
 
     Parameters:
         t (float): Time at which to evaluate the matrix.
-        pulse_seq (LaserPulseSystem): LaserPulseSystem object for the electric field.
+        pulse_seq (LaserPulseSequence): LaserPulseSequence object for the electric field.
         system (AtomicSystem): System parameters containing Gamma, gamma_0, and mu_eg.
 
     Returns:

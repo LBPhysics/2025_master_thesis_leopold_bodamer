@@ -9,7 +9,7 @@ import numpy as np
 from typing import Union, List, overload
 from qutip import Qobj, expect
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
 
 @overload
@@ -137,18 +137,18 @@ if __name__ == "__main__":
     system1 = AtomicSystem(N_atoms=1)
 
     ### Create simple pulse sequence
-    from qspectro2d.core.laser_system.laser_class import Pulse
+    from qspectro2d.core.laser_system.laser_class import LaserPulse
 
-    test_pulse = Pulse(
+    test_pulse = LaserPulse(
         pulse_index=0,
-        pulse_type="gaussian",
+        envelope_type="gaussian",
         pulse_peak_time=2.0,
         pulse_fwhm=1.0,
         pulse_phase=0.0,
         pulse_amplitude=0.05,
         pulse_freq=system1.freqs_cm[0],
     )
-    pulse_seq1 = LaserPulseSystem([test_pulse])
+    pulse_seq1 = LaserPulseSequence([test_pulse])
 
     ### Test apply_RWA_phase_factors
     print("\n--- Testing apply_RWA_phase_factors ---")
@@ -188,7 +188,7 @@ if __name__ == "__main__":
         freqs_cm=[system1.freqs_cm[0], system1.freqs_cm[0] + 10],
         dip_moments=[system1.dip_moments[0], system1.dip_moments[0] + 0.1],
     )
-    pulse_seq2 = LaserPulseSystem([test_pulse])
+    pulse_seq2 = LaserPulseSequence([test_pulse])
     test_time = 1.0
 
     ### Test RWA phase factors for 2-atom system

@@ -1,32 +1,32 @@
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from typing import Union
 import numpy as np
 
 
 def pulse_envelope(
-    t: Union[float, np.ndarray], pulse_seq: LaserPulseSystem
+    t: Union[float, np.ndarray], pulse_seq: LaserPulseSequence
 ) -> Union[float, np.ndarray]:
     """
-    Calculate the combined envelope of multiple pulses at time t using LaserPulseSystem.
+    Calculate the combined envelope of multiple pulses at time t using LaserPulseSequence.
     Works with both scalar and array time inputs.
 
     Now uses pulse_peak_time as t_peak (peak time) where cos²/gaussian is maximal.
     Pulse is zero outside [t_peak - fwhm, t_peak + fwhm] == outside of 2 fwhm.
 
-    Uses the pulse_type from each pulse to determine which envelope function to use:
+    Uses the envelope_type from each pulse to determine which envelope function to use:
     - 'cos2': cosine squared envelope
     - 'gaussian': Gaussian envelope, shifted so that:
       - The Gaussian is zero at t_peak ± fwhm boundaries: (actually about <= 1%)
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
-        pulse_seq (LaserPulseSystem): The pulse sequence
+        pulse_seq (LaserPulseSequence): The pulse sequence
 
     Returns:
         Union[float, np.ndarray]: Combined envelope value(s)
     """
-    if not isinstance(pulse_seq, LaserPulseSystem):
-        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
+    if not isinstance(pulse_seq, LaserPulseSequence):
+        raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
     # Handle array input
     if isinstance(t, np.ndarray):
@@ -40,7 +40,7 @@ def pulse_envelope(
     for pulse in pulse_seq.pulses:
         t_peak = pulse.pulse_peak_time
         fwhm = pulse.pulse_fwhm
-        pulse_type = pulse.pulse_type
+        envelope_type = pulse.envelope_type
 
         if fwhm is None or fwhm <= 0:
             continue
@@ -51,12 +51,12 @@ def pulse_envelope(
         if not (t_peak - fwhm <= t <= t_peak + fwhm):
             continue
 
-        if pulse_type == "cos2":
+        if envelope_type == "cos2":
             ### Cosine squared envelope
             arg = np.pi * (t - t_peak) / (2 * fwhm)
             envelope += np.cos(arg) ** 2
 
-        elif pulse_type == "gaussian":
+        elif envelope_type == "gaussian":
             ### Gaussian envelope
             sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
             gaussian_val = np.exp(-((t - t_peak) ** 2) / (2 * sigma**2))
@@ -68,28 +68,28 @@ def pulse_envelope(
 
         else:
             raise ValueError(
-                f"Unknown pulse_type: {pulse_type}. Use 'cos2' or 'gaussian'."
+                f"Unknown envelope_type: {envelope_type}. Use 'cos2' or 'gaussian'."
             )
 
     return envelope
 
 
 def E_pulse(
-    t: Union[float, np.ndarray], pulse_seq: LaserPulseSystem
+    t: Union[float, np.ndarray], pulse_seq: LaserPulseSequence
 ) -> Union[complex, np.ndarray]:
     """
-    Calculate the total electric field at time t for a set of pulses (envelope only, no carrier), using LaserPulseSystem.
+    Calculate the total electric field at time t for a set of pulses (envelope only, no carrier), using LaserPulseSequence.
     Works with both scalar and array time inputs.
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
-        pulse_seq (LaserPulseSystem): The pulse sequence
+        pulse_seq (LaserPulseSequence): The pulse sequence
 
     Returns:
         Union[complex, np.ndarray]: Electric field value(s)
     """
-    if not isinstance(pulse_seq, LaserPulseSystem):
-        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
+    if not isinstance(pulse_seq, LaserPulseSequence):
+        raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
     # Handle array input
     if isinstance(t, np.ndarray):
@@ -106,28 +106,28 @@ def E_pulse(
         if phi is None or E0 is None:
             continue
         envelope = pulse_envelope(
-            t, LaserPulseSystem(pulses=[pulse])
+            t, LaserPulseSequence(pulses=[pulse])
         )  # use pulse_envelope for each pulse
         E_total += E0 * envelope * np.exp(-1j * phi)
     return E_total
 
 
 def Epsilon_pulse(
-    t: Union[float, np.ndarray], pulse_seq: LaserPulseSystem
+    t: Union[float, np.ndarray], pulse_seq: LaserPulseSequence
 ) -> Union[complex, np.ndarray]:
     """
-    Calculate the total electric field at time t for a set of pulses, including carrier oscillation, using LaserPulseSystem.
+    Calculate the total electric field at time t for a set of pulses, including carrier oscillation, using LaserPulseSequence.
     Works with both scalar and array time inputs.
 
     Args:
         t (Union[float, np.ndarray]): Time value or array of time values
-        pulse_seq (LaserPulseSystem): The pulse sequence
+        pulse_seq (LaserPulseSequence): The pulse sequence
 
     Returns:
         Union[complex, np.ndarray]: Electric field with carrier value(s)
     """
-    if not isinstance(pulse_seq, LaserPulseSystem):
-        raise TypeError("pulse_seq must be a LaserPulseSystem instance.")
+    if not isinstance(pulse_seq, LaserPulseSequence):
+        raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
     # Handle array input
     if isinstance(t, np.ndarray):
@@ -143,7 +143,7 @@ def Epsilon_pulse(
         if omega is None:
             continue
         E_field = E_pulse(
-            t, LaserPulseSystem(pulses=[pulse])
+            t, LaserPulseSequence(pulses=[pulse])
         )  # use E_pulse for each pulse
         E_total += E_field * np.exp(-1j * (omega * t))
     return E_total

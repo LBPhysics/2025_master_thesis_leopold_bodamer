@@ -3,8 +3,8 @@ Core module for qspectro2d package.
 
 This module provides the fundamental building blocks for 2D spectroscopy simulations:
 - System parameters and configuration
-- Pulse definitions and sequences
-- Pulse field functions
+- LaserPulse definitions and sequences
+- LaserPulse field functions
 - Solver functions for system dynamics
 - RWA (Rotating Wave Approximation) utilities
 
@@ -21,8 +21,8 @@ from .atomic_system.system_class import AtomicSystem
 # PULSE DEFINITIONS AND SEQUENCES
 # =============================
 from .laser_system.laser_class import (
-    Pulse,
-    LaserPulseSystem,
+    LaserPulse,
+    LaserPulseSequence,
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
@@ -68,10 +68,10 @@ from .utils_and_config import (
 __all__ = [
     # System configuration
     "AtomicSystem",
-    # Pulse definitions
-    "Pulse",
-    "LaserPulseSystem",
-    # Pulse field functions
+    # LaserPulse definitions
+    "LaserPulse",
+    "LaserPulseSequence",
+    # LaserPulse field functions
     "pulse_envelope",
     "E_pulse",
     "Epsilon_pulse",

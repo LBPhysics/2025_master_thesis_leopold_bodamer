@@ -2,21 +2,21 @@ from matplotlib.colors import TwoSlopeNorm
 import numpy as np
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_fcts import *
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 import matplotlib.pyplot as plt
 from typing import Literal, Union
 from qspectro2d.config.mpl_tex_settings import COLORS, LINE_STYLES
 
 
 def plot_pulse_envelope(
-    times: np.ndarray, pulse_seq: LaserPulseSystem, ax=None, show_legend=True
+    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
     """
-    Plot the combined pulse envelope over time for up to three pulses using LaserPulseSystem.
+    Plot the combined pulse envelope over time for up to three pulses using LaserPulseSequence.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
+        pulse_seq (LaserPulseSequence): LaserPulseSequence object containing pulses.
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
@@ -97,14 +97,14 @@ def plot_pulse_envelope(
 
 
 def plot_e_pulse(
-    times: np.ndarray, pulse_seq: LaserPulseSystem, ax=None, show_legend=True
+    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
     """
-    Plot the RWA electric field (envelope only) over time for pulses using LaserPulseSystem.
+    Plot the RWA electric field (envelope only) over time for pulses using LaserPulseSequence.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
+        pulse_seq (LaserPulseSequence): LaserPulseSequence object containing pulses.
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
@@ -155,14 +155,14 @@ def plot_e_pulse(
 
 
 def plot_epsilon_pulse(
-    times: np.ndarray, pulse_seq: LaserPulseSystem, ax=None, show_legend=True
+    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
     """
-    Plot the full electric field (with carrier) over time for pulses using LaserPulseSystem.
+    Plot the full electric field (with carrier) over time for pulses using LaserPulseSequence.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
+        pulse_seq (LaserPulseSequence): LaserPulseSequence object containing pulses.
         ax (matplotlib.axes.Axes, optional): Axes object to plot on. Defaults to None.
 
     Returns:
@@ -220,14 +220,14 @@ def plot_epsilon_pulse(
 
 
 def plot_all_pulse_components(
-    times: np.ndarray, pulse_seq: LaserPulseSystem, figsize=(15, 12)
+    times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)
 ):
     """
     Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
 
     Parameters:
         times (np.ndarray): Array of time values.
-        pulse_seq (LaserPulseSystem): LaserPulseSystem object containing pulses.
+        pulse_seq (LaserPulseSequence): LaserPulseSequence object containing pulses.
         figsize (tuple): Figure size. Defaults to (15, 12).
 
     Returns:
@@ -259,21 +259,23 @@ def plot_all_pulse_components(
 def plot_example_evo(
     times_plot: np.ndarray,
     datas: list,
-    pulse_seq_f: LaserPulseSystem,
-    tau_coh: float,
-    T_wait: float,
-    system: AtomicSystem,
+    pulse_seq: LaserPulseSequence,
+    t_coh: float,
+    t_wait: float,
+    RWA_SL: bool = False,
+    ODE_Solver: str = "Paper_eqs",
+    observable_strs: list[str] = [],
     **kwargs: dict,
 ):
     """
-    Plot the evolution of the electric field and expectation values for a given tau_coh and T_wait.
+    Plot the evolution of the electric field and expectation values for a given t_coh and t_wait.
 
     Parameters:
         times_plot (np.ndarray): Time axis for the plot.
         datas (list): List of arrays of expectation values to plot.
-        pulse_seq_f: LaserPulseSystem object for the final pulse sequence.
-        tau_coh (float): Coherence time.
-        T_wait (float): Waiting time.
+        pulse_seq (LaserPulseSequence): Laser pulse sequence object.
+        t_coh (float): Coherence time.
+        t_wait (float): Waiting time.
         system: System object containing all relevant parameters.
         **kwargs: Additional keyword arguments for annotation.
 
@@ -281,14 +283,14 @@ def plot_example_evo(
         matplotlib.figure.Figure: The figure object.
     """
     # Choose field function based on RWA setting
-    if getattr(system, "RWA_SL", False):
+    if RWA_SL:
         field_func = E_pulse
     else:
         field_func = Epsilon_pulse
 
     # Calculate total electric field
-    E0 = pulse_seq_f.pulses[0].pulse_amplitude
-    E_total = np.array([field_func(t, pulse_seq_f) / E0 for t in times_plot])
+    E0 = pulse_seq.E0
+    E_total = np.array([field_func(t, pulse_seq) / E0 for t in times_plot])
 
     # Create plot with appropriate size
     fig, axes = plt.subplots(
@@ -318,8 +320,8 @@ def plot_example_evo(
         ax = axes[idx + 1]
 
         # Determine observable label
-        if hasattr(system, "observable_strs") and idx < len(system.observable_strs):
-            observable_str = system.observable_strs[idx]
+        if observable_strs and idx < len(observable_strs):
+            observable_str = observable_strs[idx]
         else:
             observable_str = r"\mu"
 
@@ -365,7 +367,7 @@ def plot_example_evo(
 
     # Add title and finalize plot
     plt.suptitle(
-        rf"$\tau = {tau_coh:.2f}\,\mathrm{{fs}},\quad T = {T_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {system.ODE_Solver}"
+        rf"$\t_coh = {t_coh:.2f}\,\mathrm{{fs}},\quad t_wait = {t_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {ODE_Solver}"
     )
     plt.tight_layout()
 
@@ -618,11 +620,11 @@ def plot_2d_el_field(
         colormap = "viridis"
         title = r"$\text{Time domain}$"
         x_title = r"$t_{\text{det}}$ [fs]"
-        y_title = r"$\tau_{\text{coh}}$ [fs]"
+        y_title = r"$\t_{\text{coh}}$ [fs]"
     else:
         colormap = "plasma"
         x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
-        y_title = r"$\omega_{\tau_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
+        y_title = r"$\omega_{\t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
 
     if component not in ("real", "imag", "abs", "phase"):
         raise ValueError(
@@ -677,9 +679,9 @@ def plot_2d_el_field(
     fig, ax = plt.subplots(figsize=(10, 8))
     # Create the pcolormesh plot for the 2D data
     pcolor_plot = ax.pcolormesh(
-        x,  # <- ts
-        y,  # <- taus
-        data,  # <- data[taus, ts]
+        x,  # <- t_dets
+        y,  # <- t_cohs
+        data,  # <- data[t_cohs, t_dets]
         shading="auto",
         cmap=colormap,
         norm=norm,

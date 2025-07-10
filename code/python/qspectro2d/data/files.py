@@ -9,6 +9,7 @@ and directory paths for simulation data and plots.
 # IMPORTS
 # =============================
 from pathlib import Path
+from re import A
 from tkinter import N
 from typing import Union
 
@@ -31,17 +32,19 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
     Returns:
         str: Base filename without path
     """
+
+    parts = []
+
+    if info_config.get("simulation_type") == "1d":
+        # Round t_coh to 2 decimal places for filename clarity
+        tau_val = round(float(info_config["t_coh"]), 2)
+        parts.append(f"tau_{tau_val}")
+
+    """
     N_atoms = system.N_atoms
     # simulation_type = info_config.get("simulation_type", "spectroscopy")
     # parts.append(simulation_type)
     # parts.append(f"N{N_atoms}")
-    parts = []
-
-    if info_config.get("simulation_type") == "1d":
-        # Round tau_coh to 2 decimal places for filename clarity
-        tau_val = round(float(info_config["tau_coh"]), 2)
-        parts.append(f"tau_{tau_val}")
-
     parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4")
     parts.append(f"muA{system.mu_A:.2f}")
     if N_atoms == 2:
@@ -50,12 +53,12 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
         J_val = system.J if system.J else info_config.get("J_cm", 0)
         if J_val > 0:
             parts.append(f"J{J_val:.2f}au")  # TODO arbitrary units
-
     n_freqs = info_config.get("n_freqs", 1)
 
     if n_freqs > 1:
         parts.append(f"Delta{system.Delta_cm/1e4:.2f}e4")
     parts.append("cm-1")
+    """
     return "_".join(parts)
 
 
@@ -81,7 +84,7 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
     return str(candidate)
 
 
-def generate_base_sub_dir(info_config: dict, system) -> Path:
+def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
     """
     Generate standardized subdirectory path based on system and configuration.
     WILL BE subdir of DATA_DIR OR FIGURES_DIR
@@ -108,19 +111,19 @@ def generate_base_sub_dir(info_config: dict, system) -> Path:
     parts.append(f"N{N_atoms}")
 
     # Add solver if available
-    parts.append(system.ODE_Solver)
+    parts.append(info_config["ODE_Solver"])
 
     # Add RWA if available
-    parts.append("RWA" if system.RWA_laser else "noRWA")
+    parts.append("RWA" if info_config["RWA_SL"] else "noRWA")
 
     # Add time parameters
     parts.append(f"T_det_MAX_{info_config.get('t_det_max', 'not_provided')}")
     parts.append(f"T_wait_{info_config.get('t_wait', 'not_provided')}")
-    parts.append(f"dt_{system.dt:.1f}fs")
+    parts.append(f"dt_{info_config.get('dt', 'not_provided')}")
 
     if N_atoms == 2:
         # Add coupling strength if applicable
-        J = system.J
+        J = system.J_cm if system.J_ is not None else 0
         if J > 0:
             parts.append(f"Coupled")
 
@@ -212,7 +215,7 @@ def main():
             self.dt = 0.1
             self.t_max = 100.0
             self.ODE_Solver = "runge_kutta"
-            self.RWA_laser = True
+            self.RWA_SL = True
 
     system = MockAtomicSystem()
 

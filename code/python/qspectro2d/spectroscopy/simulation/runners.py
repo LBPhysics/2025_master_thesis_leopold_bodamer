@@ -18,12 +18,12 @@ from qspectro2d.core.simulation_class import SimClassOQS
 # =============================
 # SIMULATION RUNNER FUNCTIONS
 # =============================
-def run_1d_simulation(sim_class_oqs: SimClassOQS) -> tuple:
+def run_1d_simulation(sim_oqs: SimClassOQS) -> tuple:
     """
     Run 1D spectroscopy simulation with updated calculation structure.
 
     Parameters:
-        sim_class_oqs (SimClassOQS): Simulation class containing system and configuration.
+        sim_oqs (SimClassOQS): Simulation class containing system and configuration.
     Returns:
         tuple: Detection time values and averaged data.
     """
@@ -33,12 +33,12 @@ def run_1d_simulation(sim_class_oqs: SimClassOQS) -> tuple:
     )
 
     ### Create time arrays
-    t_max = sim_class_oqs.simulation_config.t_max
+    t_max = sim_oqs.simulation_config.t_max
 
     ### Validate solver
     time_cut = -np.inf
     try:
-        _, time_cut = check_the_solver(sim_class_oqs)
+        _, time_cut = check_the_solver(sim_oqs)
         print("#" * 60)
         print(
             f"✅  Solver validation worked: Evolution becomes unphysical at"
@@ -59,7 +59,7 @@ def run_1d_simulation(sim_class_oqs: SimClassOQS) -> tuple:
 
     try:
         data = parallel_compute_1d_E_with_inhomogenity(
-            sim_class_oqs=sim_class_oqs,
+            sim_oqs=sim_oqs,
             time_cut=time_cut,
         )
         print("✅ Parallel computation completed successfully!")
@@ -108,7 +108,7 @@ def run_2d_simulation(
     kwargs = {"plot_example": False, "time_cut": time_cut}
 
     try:
-        tau_coh_vals, t_det_vals, data_2d = parallel_compute_2d_E_with_inhomogenity(
+        t_coh_vals, t_det_vals, data_2d = parallel_compute_2d_E_with_inhomogenity(
             n_freqs=info_config.get("n_freqs", 1),
             n_phases=info_config["n_phases"],
             T_wait=info_config["t_wait"],
@@ -119,7 +119,7 @@ def run_2d_simulation(
             **kwargs,
         )
         print("✅ Parallel computation completed successfully!")
-        return tau_coh_vals, t_det_vals, data_2d
+        return t_coh_vals, t_det_vals, data_2d
     except Exception as e:
         print(f"❌ ERROR: Simulation failed: {e}")
         raise

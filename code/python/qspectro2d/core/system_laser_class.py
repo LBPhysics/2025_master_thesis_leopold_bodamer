@@ -1,5 +1,5 @@
 from dataclasses import dataclass  # for the class definiton
-from qspectro2d.core.laser_system.laser_class import LaserPulseSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 import numpy as np
 import json
@@ -10,7 +10,7 @@ from qspectro2d.core.utils_and_config import HBAR
 @dataclass
 class SystemLaserCoupling:
     system: AtomicSystem
-    laser: LaserPulseSystem
+    laser: LaserPulseSequence
 
     # DERIVED QUANTITIES FROM SYSTEM / LASER PARAMETERS
     def rabi_0(self, i: int = 0):
@@ -59,7 +59,7 @@ class SystemLaserCoupling:
     def from_dict(cls, d):
         return cls(
             system=AtomicSystem.from_dict(d["system"]),
-            laser=LaserPulseSystem.from_dict(d["laser"]),
+            laser=LaserPulseSequence.from_dict(d["laser"]),
         )
 
     def to_json(self) -> str:
@@ -79,11 +79,11 @@ class SystemLaserCoupling:
 if __name__ == "__main__":
     print("Testing SystemLaserCoupling class...")
 
-    # Create mock AtomicSystem and LaserPulseSystem objects
+    # Create mock AtomicSystem and LaserPulseSequence objects
     mock_atomic_system = AtomicSystem(
         N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
     )
-    seq = LaserPulseSystem.from_delays(
+    seq = LaserPulseSequence.from_delays(
         delays=[100.0, 200.0, 300.0],
         base_amplitude=0.05,
         pulse_fwhm=10.0,
