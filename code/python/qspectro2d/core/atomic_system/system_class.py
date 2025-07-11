@@ -7,7 +7,8 @@ from dataclasses import dataclass, field  # for the class definiton
 from typing import Optional, List
 from qutip import basis, ket2dm, tensor, Qobj
 from qspectro2d.core.utils_and_config import convert_cm_to_fs, HBAR
-from functools import cached_property  # for caching properties
+
+# from functools import cached_property  # for caching properties
 
 
 @dataclass
@@ -17,55 +18,62 @@ class AtomicSystem:
     freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
     J_cm: Optional[float] = None  # only For N_atoms >= 2
+
     psi_ini: Optional[Qobj] = None  # initial state, default is ground state
     Delta_cm: Optional[float] = None  # inhomogeneous broadening, default is None
-
-    @property
-    def atom_g(self):
-        return basis(2, 0)
-
-    @property
-    def atom_e(self):
-        return basis(2, 1)
 
     @property
     def basis(self):
         return self._basis
 
     def __post_init__(self):
-        if len(self.freqs_cm) != self.N_atoms:
+        # mostly for validation and initialization
+        # Cache ground and excited states for single atom
+        self._atom_g = basis(2, 0)  # ground state |g>
+        self._atom_e = basis(2, 1)  # excited state |e>
+
+        # Handle case where single frequency is provided for multiple atoms
+        if len(self.freqs_cm) == 1 and self.N_atoms > 1:
+            self.freqs_cm = self.freqs_cm * self.N_atoms  # repeat for all atoms
+        elif len(self.freqs_cm) != self.N_atoms:
             raise ValueError(
                 f"freqs_cm has {len(self.freqs_cm)} elements but N_atoms={self.N_atoms}. "
-                f"Expected {self.N_atoms} frequencies."
+                f"Expected either 1 frequency (applied to all atoms) or {self.N_atoms} frequencies."
             )
+
+        # Handle case where single dipole moment is provided for multiple atoms
+        if len(self.dip_moments) == 1 and self.N_atoms > 1:
+            self.dip_moments = self.dip_moments * self.N_atoms  # repeat for all atoms
+        elif len(self.dip_moments) != self.N_atoms:
+            raise ValueError(
+                f"dip_moments has {len(self.dip_moments)} elements but N_atoms={self.N_atoms}. "
+                f"Expected either 1 dipole moment (applied to all atoms) or {self.N_atoms} dipole moments."
+            )
+
         # store the initial frequencies in history
         self._freqs_cm_history = [self.freqs_cm.copy()]
 
-        if len(self.dip_moments) != self.N_atoms:
-            raise ValueError("Length of dip_moments must match N_atoms")
-
-        if self.N_atoms == 2 and self.J_cm is None:
+        if self.N_atoms >= 2 and self.J_cm is None:
             self.J_cm = 0.0
 
-        # If basis is not provided, set a default basis (optional)
+        # set a default basis
         if self.N_atoms == 1:
-            self._basis = [self.atom_g, self.atom_e]  # GROUND, EXCITED
+            self._basis = [self._atom_g, self._atom_e]  # GROUND, EXCITED
         elif self.N_atoms == 2:
             self._basis = [
-                tensor(self.atom_g, self.atom_g),  # GROUND
-                tensor(self.atom_e, self.atom_g),  # A
-                tensor(self.atom_g, self.atom_e),  # B
-                tensor(self.atom_e, self.atom_e),  # AB
+                tensor(self._atom_g, self._atom_g),  # GROUND
+                tensor(self._atom_e, self._atom_g),  # A
+                tensor(self._atom_g, self._atom_e),  # B
+                tensor(self._atom_e, self._atom_e),  # AB
             ]
-        else:
+        else:  # SINGLE EXCITATION SUBSPACE FOR N_atoms > 2
             N_atoms = self.N_atoms
             self._basis = [
                 basis(N_atoms, i) for i in range(N_atoms)
             ]  # GROUND, atom 1, atom 2, ...
 
-        self.H0_undiagonalized = self.Hamilton_N_atoms()
-
-        self.psi_ini = ket2dm(self.basis[0])
+        if self.psi_ini is None:
+            self.psi_ini = ket2dm(self.basis[0])
 
     def update_freqs_cm(self, new_freqs: List[float]):
         if len(new_freqs) != self.N_atoms:
@@ -76,9 +84,6 @@ class AtomicSystem:
         # Save current freqs before updating
         self._freqs_cm_history.append(new_freqs.copy())
         self.freqs_cm = new_freqs.copy()
-
-        # Recompute Hamiltonian and eigenstates
-        self.H0_undiagonalized = self.Hamilton_N_atoms()
 
         if "eigenstates" in self.__dict__:
             del self.__dict__["eigenstates"]  # reset cached property
@@ -104,10 +109,10 @@ class AtomicSystem:
     def Delta(self):
         return convert_cm_to_fs(self.Delta_cm)
 
-    def Hamilton_tls(self):
+    def _Hamilton_tls(self):
         return HBAR * self.freqs_fs(0) * ket2dm(self.basis[1])
 
-    def Hamilton_dimer_sys(self):
+    def _Hamilton_dimer_sys(self):
         H = HBAR * (
             self.freqs_fs(0) * ket2dm(self.basis[1])
             + self.freqs_fs(1) * ket2dm(self.basis[2])
@@ -120,12 +125,13 @@ class AtomicSystem:
         )
         return H
 
-    def Hamilton_N_atoms(self):
+    @property
+    def H0_N_canonical(self):
         N_atoms = self.N_atoms
         if N_atoms == 1:
-            return self.Hamilton_tls()
+            return self._Hamilton_tls()
         elif N_atoms == 2:
-            return self.Hamilton_dimer_sys()
+            return self._Hamilton_dimer_sys()
         else:  # TODO IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
             H = 0
             '''
@@ -177,14 +183,14 @@ class AtomicSystem:
             '''
             return H
 
-    @cached_property  # from functools
+    @property  # cached -> to safe some space? TODO
     def eigenstates(self):
-        return self.H0_undiagonalized.eigenstates()
+        return self.H0_N_canonical.eigenstates()
 
     @property
     def SM_op(self):
         if self.N_atoms == 1:
-            return self.dip_moments[0] * (self.atom_g * self.atom_e.dag())
+            return self.dip_moments[0] * (self._atom_g * self._atom_e.dag())
         elif self.N_atoms == 2:
             C_A_1 = -np.sin(self.theta)
             C_A_2 = np.cos(self.theta)
@@ -217,13 +223,13 @@ class AtomicSystem:
         self,
     ):
         if self.N_atoms == 1:
-            return ket2dm(self.atom_e)
+            return ket2dm(self._atom_e)
         elif self.N_atoms == 2:
             return sum(
                 [
-                    ket2dm(tensor(self.atom_e, self.atom_g)),
-                    ket2dm(tensor(self.atom_g, self.atom_e)),
-                    ket2dm(tensor(self.atom_e, self.atom_e)),
+                    ket2dm(tensor(self._atom_e, self._atom_g)),
+                    ket2dm(tensor(self._atom_g, self._atom_e)),
+                    ket2dm(tensor(self._atom_e, self._atom_e)),
                 ]
             )
         else:  # TODO OVERTHINK / IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
@@ -251,16 +257,14 @@ class AtomicSystem:
             if self.Delta_cm is not None:
                 print(f"    {'Delta':<20}: {self.Delta_cm} cm^-1")
 
-        if self.psi_ini is not None:
-            print(f"\n    {'psi_ini':<20}:")
-            print(self.psi_ini)
-        if self.H0_undiagonalized is not None:
-            print(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
-            print(self.H0_undiagonalized)
+        print(f"\n    {'psi_ini':<20}:")
+        print(self.psi_ini)
 
-        if self.Dip_op is not None:
-            print("\n# Dipole operator (Dip_op):")
-            print(self.Dip_op)
+        print(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
+        print(self.H0_N_canonical)
+
+        print("\n# Dipole operator (Dip_op):")
+        print(self.Dip_op)
         print("\n=== End of Summary ===")
 
     def __str__(self) -> str:

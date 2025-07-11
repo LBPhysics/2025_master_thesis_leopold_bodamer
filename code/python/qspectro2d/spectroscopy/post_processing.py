@@ -107,13 +107,13 @@ def extend_time_axes(
         )
 
         # Compute steps
-        dt = t_det[1] - t_det[0]
+        dt_det = t_det[1] - t_det[0]
         dt_coh = t_coh[1] - t_coh[0]
 
         # Extend axes
         extended_t_det = np.linspace(
-            t_det[0] - pad_t_actual[0] * dt,
-            t_det[-1] + pad_t_actual[1] * dt,
+            t_det[0] - pad_t_actual[0] * dt_det,
+            t_det[-1] + pad_t_actual[1] * dt_det,
             padded_data.shape[1],
         )
         extended_t_coh = np.linspace(
@@ -138,12 +138,12 @@ def extend_time_axes(
         padded_data = np.pad(data, pad_t_actual, mode="constant", constant_values=0)
 
         # Compute step
-        dt = t_det[1] - t_det[0]
+        dt_det = t_det[1] - t_det[0]
 
         # Extend axis
         extended_t_det = np.linspace(
-            t_det[0] - pad_t_actual[0] * dt,
-            t_det[-1] + pad_t_actual[1] * dt,
+            t_det[0] - pad_t_actual[0] * dt_det,
+            t_det[-1] + pad_t_actual[1] * dt_det,
             padded_data.shape[0],
         )
 
@@ -191,19 +191,19 @@ def compute_1d_fft_wavenumber(
 
     Examples
     --------
-    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt = 1 fs
+    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
     >>> data = np.random.rand(101)  # Real polarization data
     >>> nu_ts, spectrum = compute_1d_fft_wavenumber(ts, data)
     >>> # nu_ts in 10^4 cm⁻¹, spectrum is complex
     """
     # Calculate sampling rates and perform FFT
-    dt = ts[1] - ts[0]  # Sampling interval in fs
+    dt_det = ts[1] - ts[0]  # Sampling interval in fs
     N_t_det = len(ts)
 
     # Full FFT with shift (similar to 2D implementation)
     s1d = np.fft.fft(data)
     s1d = np.fft.fftshift(s1d)
-    freq_t = np.fft.fftshift(np.fft.fftfreq(N_t_det, d=dt))
+    freq_t = np.fft.fftshift(np.fft.fftfreq(N_t_det, d=dt_det))
 
     # Convert to wavenumber (10^4 cm^-1)
     # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-5 cm/fs
@@ -260,7 +260,7 @@ def compute_2d_fft_wavenumber(
 
     Examples
     --------
-    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt = 1 fs
+    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
     >>> t_cohs = np.linspace(0, 50, 51)  # 0-50 fs, dt_coh = 1 fs
     >>> data = np.random.rand(51, 101)  # Real polarization data
     >>> nu_ts, nu_t_cohs, spectrum = compute_2d_fft_wavenumber(ts, t_cohs, data)
@@ -268,10 +268,10 @@ def compute_2d_fft_wavenumber(
     """
 
     # Calculate only the frequency axes (cycle/fs)
-    dτ = t_cohs[1] - t_cohs[0]
-    dt = ts[1] - ts[0]
-    tfreqs = np.fft.fftfreq(len(ts), d=dt)
-    t_cohfreqs = -np.fft.fftfreq(len(t_cohs), d=dτ)
+    dt_coh = t_cohs[1] - t_cohs[0]
+    dt_det = ts[1] - ts[0]
+    tfreqs = np.fft.fftfreq(len(ts), d=dt_det)
+    t_cohfreqs = -np.fft.fftfreq(len(t_cohs), d=dt_coh)
 
     # Optional: Shift zero-frequency component to center (only along t_cohs)
     # s2d = np.fft.rfft2(data)  # axis 0 (t_coh) → fft, axis 1 (t) → rfft

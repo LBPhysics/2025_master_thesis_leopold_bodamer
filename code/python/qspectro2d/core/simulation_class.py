@@ -8,7 +8,7 @@ import numpy as np
 from zmq import has
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.core.system_bath_class import SystemBathCoupling
 from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qutip import Qobj, QobjEvo, ket2dm, liouvillian, stacked_index
@@ -18,7 +18,7 @@ SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
 
 
 @dataclass
-class SimulationConfigClass:
+class SimulationConfig:
     # =============================
     # Solver and model control
     # =============================
@@ -92,7 +92,7 @@ class SimulationConfigClass:
 
     def summary(self) -> str:
         return (
-            f"SimulationConfigClass Summary:\n"
+            f"SimulationConfig Summary:\n"
             f"-------------------------------\n"
             f"{self.simulation_type} ELECTRONIC SPECTROSCOPY SIMULATION\n"
             f"Time Parameters:\n"
@@ -116,7 +116,7 @@ class SimulationConfigClass:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "SimulationConfigClass":
+    def from_dict(cls, data: dict) -> "SimulationConfig":
         return cls(**data)
 
     def __str__(self) -> str:
@@ -124,21 +124,34 @@ class SimulationConfigClass:
 
 
 @dataclass
-class SimClassOQS:
+class SimulationModuleOQS:
     # Default class attributes for the simulation model
-    simulation_config: SimulationConfigClass
+    simulation_config: SimulationConfig
 
     system: AtomicSystem
     laser: LaserPulseSequence
-    bath: BathClass
+    bath: BathSystem
     sl_coupling: SystemLaserCoupling = field(init=False)
     sb_coupling: SystemBathCoupling = field(init=False)
 
-    # stuff i probably need:
-    Evo_obj_free: callable = field(init=False)
-    Evo_obj_int: callable = field(init=False)
+    def __post_init__(self):
+        # Generate the coupling objects
+        self.sb_coupling = SystemBathCoupling(self.system, self.bath)
+        self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
 
-    #
+        # define the decay channels based on the ODE_Solver
+        ODE_Solver = self.simulation_config.ODE_Solver
+        if ODE_Solver == "ME":
+            self.decay_channels = self.sb_coupling.me_decay_channels
+        elif ODE_Solver == "BR":
+            self.decay_channels = self.sb_coupling.br_decay_channels
+        elif ODE_Solver == "Paper_eqs":
+            self.simulation_config.RWA_SL = True  # RWA is required for Paper_eqs
+            self.decay_channels = []
+        elif ODE_Solver == "Paper_BR":
+            self.decay_channels = []
+            # Redfield tensor, holds decay_channels
+
     @property
     def H0_diagonalized(self):
         """
@@ -163,10 +176,10 @@ class SimClassOQS:
                     "TODO extend the H_diag to N_atoms > 2 ?Es[i] -= self.laser.omega_laser?"
                 )
 
-        H_diag = Qobj(np.diag(Es), dims=self.H0_undiagonalized.dims)
+        H_diag = Qobj(np.diag(Es), dims=self.system.H0_N_canonical.dims)
         return H_diag
 
-    def H_int(self, t: float) -> Qobj:
+    def H_int_sl(self, t: float) -> Qobj:
         """
         Define the interaction Hamiltonian for the system with multiple pulses using the LaserPulseSequence class.
 
@@ -191,14 +204,14 @@ class SimClassOQS:
     def observable_ops(self):
         if self.system.N_atoms == 1:
             observable_ops = [
-                ket2dm(self.system.atom_g),  # |gxg|
-                self.system.atom_g * self.system.atom_e.dag(),  # |gxe|
-                self.system.atom_e * self.system.atom_g.dag(),  # |exg|
-                ket2dm(self.system.atom_e),  # |exe|
+                ket2dm(self.system._atom_g),  # |gxg|
+                self.system._atom_g * self.system._atom_e.dag(),  # |gxe|
+                self.system._atom_e * self.system._atom_g.dag(),  # |exg|
+                ket2dm(self.system._atom_e),  # |exe|
             ]
         elif self.simulation_config.keep_track == "basis":
             observable_ops = [
-                ket2dm(self.system.basis[i]) for i in range(self.system.N_atoms)
+                ket2dm(self.system.basis[i]) for i in range(len(self.system.basis))
             ]
         elif self.simulation_config.keep_track == "eigenstates":
             observable_ops = [ket2dm(state) for state in self.system.eigenstates[1]]
@@ -208,13 +221,21 @@ class SimClassOQS:
     @property
     def observable_strs(self):
         if self.system.N_atoms == 1:
-            observable_strs = ["gxg", "gxe", "exg", "exe"]
+            observable_strs = [
+                r" g \times g ",
+                r" g \times e ",
+                r" e \times g ",
+                r" e \times e ",
+            ]
         elif self.simulation_config.keep_track == "basis":
-            observable_strs = [f"basis({i})" for i in range(self.system.N_atoms)]
+            observable_strs = [
+                rf"\text{{basis}}({i})" for i in range(self.system.N_atoms)
+            ]
             # observable_strs1 = ["0", "A", "B", "AB"]
         elif self.simulation_config.keep_track == "eigenstates":
             observable_strs = [
-                f"eigenstate({i})" for i in range(len(self.system.eigenstates[1]))
+                rf"\text{{eigenstate}}({i})"
+                for i in range(len(self.system.eigenstates[1]))
             ]
 
         return observable_strs
@@ -241,21 +262,27 @@ class SimClassOQS:
 
     @property
     def times_local(self):
-        if not hasattr(self, "_times_local"):
-            # Compute if not manually set
-            t0 = -self.laser.pulse_fwhms[0]
-            t_coh = self.simulation_config.t_coh
-            t_wait = self.simulation_config.t_wait
-            t_max = t_coh + t_wait + self.simulation_config.t_det_max
-            dt = self.simulation_config.dt
+        if hasattr(self, "_times_local_manual"):
+            return self._times_local_manual  # Manual override
 
-            n_steps = int(np.round((t_max - t0) / dt)) + 1
-            self._times_local = np.linspace(t0, t_max, n_steps)
-        return self._times_local
+        # Automatically compute based on current config
+        t0 = -self.laser.pulse_fwhms[0]
+        t_coh = self.simulation_config.t_coh
+        t_wait = self.simulation_config.t_wait
+        t_max = t_coh + t_wait + self.simulation_config.t_det_max
+        dt = self.simulation_config.dt
+
+        n_steps = int(np.round((t_max - t0) / dt)) + 1
+        return np.linspace(t0, t_max, n_steps)
 
     @times_local.setter
     def times_local(self, value):
-        self._times_local = value
+        self._times_local_manual = value  # Explicitly set value
+
+    def reset_times_local(self):
+        """Clear manual override, return to auto-computed behavior."""
+        if hasattr(self, "_times_local_manual"):
+            del self._times_local_manual
 
     @property
     def times_det(self):
@@ -267,46 +294,39 @@ class SimClassOQS:
         self._times_det = times_det  # Store in the instance for later use
         return self._times_det
 
-    @times_det.setter
-    def times_det(self, value):
-        self._times_det = value
+    @property
+    def times_det_actual(self):
+        """Returns the actual detection times."""
+        return self.times_local[-len(self.times_det) :]
 
-    def __post_init__(self):
-        # Generate the coupling objects
-        self.sb_coupling = SystemBathCoupling(self.system, self.bath)
-        self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
-
-        # Hamiltonians
-        self.H0_undiagonalized = self.system.H0_undiagonalized
-
-        # define the decay channels and EVOlution objectsbased on the ODE_Solver
+    @property
+    def Evo_obj_free(self):
         ODE_Solver = self.simulation_config.ODE_Solver
         if ODE_Solver == "ME":
-            # Master equation solver
-            self.decay_channels = self.sb_coupling.me_decay_channels
-            self.Evo_obj_free = self.H0_undiagonalized
-            self.Evo_obj_int = lambda t: self.H_int(t)
-
+            return self.H0_diagonalized
         elif ODE_Solver == "BR":
-            # Bloch-Redfield solver
-            self.decay_channels = self.sb_coupling.br_decay_channels
-            self.Evo_obj_free = self.H0_undiagonalized
-            self.Evo_obj_int = lambda t: self.H_int(t)
-
+            return self.H0_diagonalized
         elif ODE_Solver == "Paper_eqs":
-            self.simulation_config.RWA_SL = True  # RWA is required for Paper_eqs
-            self.decay_channels = []
-
-            self.Evo_obj_free = self.paper_evo_obj
-            self.Evo_obj_int = self.paper_evo_obj
-
+            return self.paper_evo_obj
         elif ODE_Solver == "Paper_BR":
-            custom_free = liouvillian(self.H0_diagonalized) + R_paper(
-                self
-            )  # TODO somehow contains 2 RWAs for N_atoms == 2.
-            custom_int = custom_free + liouvillian(QobjEvo(self.H_int))
-            self.Evo_obj_free = custom_free
-            self.Evo_obj_int = custom_int
+            return liouvillian(self.H0_diagonalized) + R_paper(self)
+        else:
+            raise ValueError(f"Unknown ODE_Solver: {ODE_Solver}")
+
+    @property
+    def Evo_obj_int(self):
+        ODE_Solver = self.simulation_config.ODE_Solver
+        if ODE_Solver == "ME":
+            return self.H0_diagonalized + QobjEvo(self.H_int_sl)
+        elif ODE_Solver == "BR":
+            return self.H0_diagonalized + QobjEvo(self.H_int_sl)
+        elif ODE_Solver == "Paper_eqs":
+            return self.paper_evo_obj
+        elif ODE_Solver == "Paper_BR":  # TODO somehow contains 2 RWAs for N_atoms == 2.
+            custom_free = liouvillian(self.H0_diagonalized) + R_paper(self)
+            return custom_free + liouvillian(QobjEvo(self.H_int_sl))
+        else:
+            raise ValueError(f"Unknown ODE_Solver: {ODE_Solver}")
 
     def summary(self):
         print("\n# Summary of System Parameters:")
@@ -314,30 +334,19 @@ class SimClassOQS:
             print(f"    {key:<20}: {value}")
 
         # Solver Specifics
-        print("\n# Solver specific information:")
-        if self.ODE_Solver == "ME":
-            print(f"    {'me_decay_channels':<20}:")
-            for op in self.me_decay_channels:
-                print(f"        {op}")
-        elif self.ODE_Solver == "BR":
-            print(f"    {'br_decay_channels':<20}:")
-            for op_spec in self.br_decay_channels:
-                if isinstance(op_spec, list) and len(op_spec) == 2:
-                    print(f"        Operator: {op_spec[0]}, Spectrum: {op_spec[1]}")
-                else:
-                    print(f"        {op_spec}")
-        elif self.ODE_Solver == "Paper_BR":
+        ODE_Solver = self.simulation_config.ODE_Solver
+        print(f"    {'ODE_Solver':<20}: {ODE_Solver}")
+        print(f"        decay_channels: {self.decay_channels}")
+        if ODE_Solver == "Paper_BR":
             print(f"    {'Redfield tensor R_paper used (calculated by R_paper(self))'}")
-            # Optionally print the R_paper matrix if it's not too large
-            # print(R_paper(self))
-        elif self.ODE_Solver == "Paper_eqs":
+        if ODE_Solver == "Paper_eqs":
             print(
                 f"    {'Custom ODE matrix used (calculated by matrix_ODE_paper(t, pulse_seq, self))'}"
             )
 
     def to_dict(self) -> dict:
         """
-        Converts the SimClassOQS instance and its nested objects into a dictionary.
+        Converts the SimulationModuleOQS instance and its nested objects into a dictionary.
         Handles nested dataclasses and provides custom handling for non-dataclass
         objects like Qobj and callables.
         """
@@ -350,22 +359,22 @@ class SimClassOQS:
         return data
 
     @classmethod
-    def from_dict(cls, data: dict) -> "SimClassOQS":
+    def from_dict(cls, data: dict) -> "SimulationModuleOQS":
         """
-        Creates a SimClassOQS instance from a dictionary.
+        Creates a SimulationModuleOQS instance from a dictionary.
         Reconstructs nested objects from their dictionary representations.
 
         Parameters:
             data (dict): Dictionary containing all necessary data to reconstruct the object.
 
         Returns:
-            SimClassOQS: Reconstructed simulation model instance.
+            SimulationModuleOQS: Reconstructed simulation model instance.
         """
         # Reconstruct nested objects from their dictionary representations
-        simulation_config = SimulationConfigClass.from_dict(data["simulation_config"])
+        simulation_config = SimulationConfig.from_dict(data["simulation_config"])
         system = AtomicSystem.from_dict(data["system"])
         laser = LaserPulseSequence.from_dict(data["laser"])
-        bath = BathClass.from_dict(data["bath"])
+        bath = BathSystem.from_dict(data["bath"])
 
         return cls(
             simulation_config=simulation_config, system=system, laser=laser, bath=bath
@@ -393,24 +402,23 @@ def H_int_(
 
     if RWA_SL:
         E_field_RWA = E_pulse(t, laser)  # Combined electric field under RWA
-        H_int = -(
+        H_int_sl = -(
             SM_op.dag() * E_field_RWA + SM_op * np.conj(E_field_RWA)
         )  # RWA interaction Hamiltonian
     else:
         Dip_op = SM_op * SM_op.dag()
         E_field = Epsilon_pulse(t, laser)  # Combined electric field with carrier
-        H_int = -Dip_op * (E_field + np.conj(E_field))  # Full interaction Hamiltonian
+        H_int_sl = -Dip_op * (
+            E_field + np.conj(E_field)
+        )  # Full interaction Hamiltonian
 
-    return H_int
+    return H_int_sl
 
 
 # =============================
 # THE PAPER SOLVER FUNCTIONS
 # =============================
-# =============================
-# "Paper_eqs" OWN ODE SOLVER
-# =============================
-def matrix_ODE_paper(t: float, sim_oqs: SimClassOQS) -> Qobj:
+def matrix_ODE_paper(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     """
     Dispatches to the appropriate implementation based on N_atoms.
     Solves the equation drho_dt = L(t) * rho,
@@ -425,7 +433,7 @@ def matrix_ODE_paper(t: float, sim_oqs: SimClassOQS) -> Qobj:
         raise ValueError("Only N_atoms=1 or 2 are supported.")
 
 
-def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimClassOQS) -> Qobj:
+def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     """
     Constructs the matrix L(t) for the equation
     drho_dt = L(t) · vec(rho),   QuTiP-kompatibel (column stacking).
@@ -482,7 +490,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimClassOQS) -> Qobj:
 # carefull i changed this function with GPT
 def _matrix_ODE_paper_2atom(
     t: float,
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
 ) -> Qobj:
     """
     Column-stacked Liouvillian L(t) such that         d/dt vec(rho) = L(t) · vec(rho)
@@ -657,7 +665,7 @@ def _matrix_ODE_paper_2atom(
 
 
 # only use the Redfield tensor as a matrix:
-def R_paper(sim_oqs: SimClassOQS) -> Qobj:
+def R_paper(sim_oqs: SimulationModuleOQS) -> Qobj:
     """Dispatches to the appropriate implementation based on N_atoms."""
     N_atoms = sim_oqs.system.N_atoms
     if N_atoms == 1:
@@ -668,7 +676,7 @@ def R_paper(sim_oqs: SimClassOQS) -> Qobj:
         raise ValueError("Only N_atoms=1 or 2 are supported.")
 
 
-def _R_paper_1atom(sim_oqs: SimClassOQS) -> Qobj:
+def _R_paper_1atom(sim_oqs: SimulationModuleOQS) -> Qobj:
     """
     Constructs the Redfield Tensor R for the equation drho_dt = -i(Hrho - rho H) + R * rho,
     where rho is the flattened density matrix. Uses gamma values from the provided system.
@@ -695,7 +703,7 @@ def _R_paper_1atom(sim_oqs: SimClassOQS) -> Qobj:
     return Qobj(R, dims=[[[2], [2]], [[2], [2]]])
 
 
-def _R_paper_2atom(sim_oqs: SimClassOQS) -> Qobj:
+def _R_paper_2atom(sim_oqs: SimulationModuleOQS) -> Qobj:
     """
     including RWA
     Constructs the Redfield Tensor R for the equation drho_dt = -i(Hrho - rho H) + R * rho,
@@ -808,24 +816,23 @@ def _R_paper_2atom(sim_oqs: SimClassOQS) -> Qobj:
 
 def main():
     """
-    Test function for SimClassOQS class functionality.
-    Tests H_int method with different system configurations.
+    Test function for SimulationModuleOQS class functionality.
+    Tests H_int_sl method with different system configurations.
     """
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 80)
     print("TESTING simulation_config MODEL")
-    print("=" * 60)
 
     # =============================
     # SETUP TEST CONFIGURATIONS
     # =============================
 
     ### Create simulation_config configuration
-    sim_config = SimulationConfigClass(
+    sim_config = SimulationConfig(
         ODE_Solver="Paper_BR", RWA_SL=True, dt=0.1, t_coh=50.0
     )
 
     ### Create test pulse sequence
-    from qspectro2d.core.bath_system.bath_class import BathClass
+    from qspectro2d.core.bath_system.bath_class import BathSystem
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
     test_pulse_seq = LaserPulseSequence.from_general_specs(
@@ -845,10 +852,10 @@ def main():
     ### Create 1-atom system
 
     system_1 = AtomicSystem(N_atoms=1)
-    bath = BathClass()
+    bath = BathSystem()
 
     ### Create simulation_config model
-    sim_model_1 = SimClassOQS(
+    sim_model_1 = SimulationModuleOQS(
         simulation_config=sim_config,
         system=system_1,
         laser=test_pulse_seq,
@@ -858,21 +865,21 @@ def main():
         ### Create 1-atom system
 
         system_1 = AtomicSystem(N_atoms=1)
-        bath = BathClass()
+        bath = BathSystem()
 
         ### Create simulation_config model
-        sim_model_1 = SimClassOQS(
+        sim_model_1 = SimulationModuleOQS(
             simulation_config=sim_config,
             system=system_1,
             laser=test_pulse_seq,
             bath=bath,
         )
 
-        ### Test H_int method
+        ### Test H_int_sl method
         test_time = 1.0
-        H_int_1 = sim_model_1.H_int(test_time)
+        H_int_1 = sim_model_1.H_int_sl(test_time)
 
-        print(f"✓ Single atom H_int created successfully")
+        print(f"✓ Single atom H_int_sl created successfully")
         print(f"  - Type: {type(H_int_1)}")
         print(f"  - Dimensions: {H_int_1.dims}")
         print(f"  - Is Hermitian: {H_int_1.isherm}")
@@ -893,17 +900,17 @@ def main():
         )
 
         ### Create simulation_config model
-        sim_model_2 = SimClassOQS(
+        sim_model_2 = SimulationModuleOQS(
             simulation_config=sim_config,
             system=system_2,
             laser=test_pulse_seq,
             bath=bath,
         )
 
-        ### Test H_int method
-        H_int_2 = sim_model_2.H_int(test_time)
+        ### Test H_int_sl method
+        H_int_2 = sim_model_2.H_int_sl(test_time)
 
-        print(f"✓ Two atom H_int created successfully")
+        print(f"✓ Two atom H_int_sl created successfully")
         print(f"  - Type: {type(H_int_2)}")
         print(f"  - Dimensions: {H_int_2.dims}")
         print(f"  - Is Hermitian: {H_int_2.isherm}")
@@ -913,18 +920,18 @@ def main():
         print(f"✗ Error in two atom test: {e}")
 
     # =============================
-    # TEST 3: Time evolution of H_int
+    # TEST 3: Time evolution of H_int_sl
     # =============================
     print("\n--- Test 3: Time Evolution ---")
 
     try:
         test_times = np.linspace(0, 100, 5)  # Test at different times
 
-        print(f"Testing H_int at different times for single atom system:")
+        print(f"Testing H_int_sl at different times for single atom system:")
         for t in test_times:
-            H_t = sim_model_1.H_int(t)
+            H_t = sim_model_1.H_int_sl(t)
             max_element = np.max(np.abs(H_t.full()))
-            print(f"  t = {t:6.1f} fs: max|H_int| = {max_element:.2e}")
+            print(f"  t = {t:6.1f} fs: max|H_int_sl| = {max_element:.2e}")
 
     except Exception as e:
         print(f"✗ Error in time evolution test: {e}")
@@ -936,24 +943,26 @@ def main():
 
     try:
         ### Create non-RWA configuration
-        sim_config_no_rwa = SimulationConfigClass(
+        sim_config_no_rwa = SimulationConfig(
             ODE_Solver="Paper_BR", RWA_SL=False, dt=0.1, t_coh=100.0  # No RWA
         )
 
-        sim_model_no_rwa = SimClassOQS(
+        sim_model_no_rwa = SimulationModuleOQS(
             simulation_config=sim_config_no_rwa,
             system=system_1,
             laser=test_pulse_seq,
             bath=bath,
         )
 
-        ### Compare H_int with and without RWA
-        H_rwa = sim_model_1.H_int(test_time)
-        H_no_rwa = sim_model_no_rwa.H_int(test_time)
+        ### Compare H_int_sl with and without RWA
+        H_rwa = sim_model_1.H_int_sl(test_time)
+        H_no_rwa = sim_model_no_rwa.H_int_sl(test_time)
 
         print(f"✓ RWA comparison successful")
-        print(f"  - RWA H_int max element: {np.max(np.abs(H_rwa.full())):.2e}")
-        print(f"  - Non-RWA H_int max element: {np.max(np.abs(H_no_rwa.full())):.2e}")
+        print(f"  - RWA H_int_sl max element: {np.max(np.abs(H_rwa.full())):.2e}")
+        print(
+            f"  - Non-RWA H_int_sl max element: {np.max(np.abs(H_no_rwa.full())):.2e}"
+        )
 
     except Exception as e:
         print(f"✗ Error in RWA comparison test: {e}")
@@ -964,11 +973,11 @@ def main():
     print("\n--- Test 5: Dictionary Serialization/Deserialization ---")
 
     try:
-        ### Test SimulationConfigClass to_dict and from_dict
-        print("Testing SimulationConfigClass:")
+        ### Test SimulationConfig to_dict and from_dict
+        print("Testing SimulationConfig:")
 
         # Create original config
-        original_config = SimulationConfigClass(
+        original_config = SimulationConfig(
             ODE_Solver="Paper_BR",
             RWA_SL=True,
             dt=0.05,
@@ -983,7 +992,7 @@ def main():
 
         # Convert to dict and back
         config_dict = original_config.to_dict()
-        reconstructed_config = SimulationConfigClass.from_dict(config_dict)
+        reconstructed_config = SimulationConfig.from_dict(config_dict)
 
         # Compare attributes
         config_match = True
@@ -1006,19 +1015,19 @@ def main():
                 )
 
         if config_match:
-            print(f"  ✓ SimulationConfigClass serialization successful")
+            print(f"  ✓ SimulationConfig serialization successful")
             print(f"    - Dictionary keys: {list(config_dict.keys())}")
             print(f"    - All attributes match after reconstruction")
 
-        ### Test SimClassOQS to_dict and from_dict
-        print("\nTesting SimClassOQS:")
+        ### Test SimulationModuleOQS to_dict and from_dict
+        print("\nTesting SimulationModuleOQS:")
 
         # Use the existing sim_model_1 for testing
         original_model = sim_model_1
 
         # Convert to dict and back
         model_dict = original_model.to_dict()
-        reconstructed_model = SimClassOQS.from_dict(model_dict)
+        reconstructed_model = SimulationModuleOQS.from_dict(model_dict)
 
         # Compare key attributes
         model_match = True
@@ -1053,38 +1062,40 @@ def main():
             model_match = False
             comparison_results.append(f"gamma_0 mismatch")
 
-        # Test H_int method functionality
+        # Test H_int_sl method functionality
         test_time_dict = 5.0
         try:
-            H_int_original = original_model.H_int(test_time_dict)
-            H_int_reconstructed = reconstructed_model.H_int(test_time_dict)
+            H_int_original = original_model.H_int_sl(test_time_dict)
+            H_int_reconstructed = reconstructed_model.H_int_sl(test_time_dict)
 
             if not np.allclose(H_int_original.full(), H_int_reconstructed.full()):
                 model_match = False
-                comparison_results.append(f"H_int method results differ")
+                comparison_results.append(f"H_int_sl method results differ")
             else:
-                comparison_results.append(f"H_int methods produce identical results")
+                comparison_results.append(f"H_int_sl methods produce identical results")
 
         except Exception as e:
             model_match = False
-            comparison_results.append(f"H_int method error: {e}")
+            comparison_results.append(f"H_int_sl method error: {e}")
 
         if model_match:
-            print(f"  ✓ SimClassOQS serialization successful")
+            print(f"  ✓ SimulationModuleOQS serialization successful")
             print(f"    - Dictionary structure: simulation_config, system, laser, bath")
             print(f"    - All core attributes match after reconstruction")
             for result in comparison_results:
                 print(f"    - {result}")
         else:
-            print(f"  ✗ SimClassOQS serialization issues:")
+            print(f"  ✗ SimulationModuleOQS serialization issues:")
             for result in comparison_results:
                 print(f"    - {result}")
 
         ### Test dictionary structure and content
         print(f"\nDictionary structure analysis:")
-        print(f"  - SimulationConfigClass dict keys: {list(config_dict.keys())}")
-        print(f"  - SimClassOQS dict keys: {list(model_dict.keys())}")
-        print(f"  - Dict size (SimClassOQS): ~{len(str(model_dict))} characters")
+        print(f"  - SimulationConfig dict keys: {list(config_dict.keys())}")
+        print(f"  - SimulationModuleOQS dict keys: {list(model_dict.keys())}")
+        print(
+            f"  - Dict size (SimulationModuleOQS): ~{len(str(model_dict))} characters"
+        )
 
         ### Test with different system configurations
         print(f"\nTesting with 2-atom system:")
@@ -1094,7 +1105,7 @@ def main():
             N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
         )
 
-        sim_model_2_test = SimClassOQS(
+        sim_model_2_test = SimulationModuleOQS(
             simulation_config=sim_config,
             system=system_2_test,
             laser=test_pulse_seq,
@@ -1103,7 +1114,7 @@ def main():
 
         # Test serialization for 2-atom system
         model_2_dict = sim_model_2_test.to_dict()
-        reconstructed_model_2 = SimClassOQS.from_dict(model_2_dict)
+        reconstructed_model_2 = SimulationModuleOQS.from_dict(model_2_dict)
 
         ### Validate reconstructed 2-atom model with all essential attributes
         model_2_match = True
@@ -1187,36 +1198,40 @@ def main():
                         f"Bath {attr}: {orig_val} != {recon_val}"
                     )
 
-        # Test H_int method functionality for 2-atom system
+        # Test H_int_sl method functionality for 2-atom system
         test_time_2atom = 10.0
         try:
-            H_int_orig_2 = sim_model_2_test.H_int(test_time_2atom)
-            H_int_recon_2 = reconstructed_model_2.H_int(test_time_2atom)
+            H_int_orig_2 = sim_model_2_test.H_int_sl(test_time_2atom)
+            H_int_recon_2 = reconstructed_model_2.H_int_sl(test_time_2atom)
 
             if not np.allclose(H_int_orig_2.full(), H_int_recon_2.full(), rtol=1e-12):
                 model_2_match = False
-                comparison_2_results.append(f"H_int methods produce different results")
+                comparison_2_results.append(
+                    f"H_int_sl methods produce different results"
+                )
                 max_diff = np.max(np.abs(H_int_orig_2.full() - H_int_recon_2.full()))
-                comparison_2_results.append(f"Max H_int difference: {max_diff:.2e}")
+                comparison_2_results.append(f"Max H_int_sl difference: {max_diff:.2e}")
             else:
-                comparison_2_results.append(f"H_int methods produce identical results")
+                comparison_2_results.append(
+                    f"H_int_sl methods produce identical results"
+                )
 
         except Exception as e:
             model_2_match = False
-            comparison_2_results.append(f"H_int method error: {e}")
+            comparison_2_results.append(f"H_int_sl method error: {e}")
 
         # Test dimensions and matrix properties
         try:
             if H_int_orig_2.dims != H_int_recon_2.dims:
                 model_2_match = False
                 comparison_2_results.append(
-                    f"H_int dimensions differ: {H_int_orig_2.dims} != {H_int_recon_2.dims}"
+                    f"H_int_sl dimensions differ: {H_int_orig_2.dims} != {H_int_recon_2.dims}"
                 )
 
             if H_int_orig_2.shape != H_int_recon_2.shape:
                 model_2_match = False
                 comparison_2_results.append(
-                    f"H_int shapes differ: {H_int_orig_2.shape} != {H_int_recon_2.shape}"
+                    f"H_int_sl shapes differ: {H_int_orig_2.shape} != {H_int_recon_2.shape}"
                 )
 
         except Exception as e:
@@ -1263,11 +1278,9 @@ def main():
 
         # Test edge cases with different configurations
         test_configs = [
-            SimulationConfigClass(ODE_Solver="ME", RWA_SL=True, dt=0.05, t_coh=25.0),
-            SimulationConfigClass(ODE_Solver="BR", RWA_SL=False, dt=0.2, t_coh=200.0),
-            SimulationConfigClass(
-                ODE_Solver="Paper_eqs", RWA_SL=True, dt=0.1, t_coh=50.0
-            ),
+            SimulationConfig(ODE_Solver="ME", RWA_SL=True, dt=0.05, t_coh=25.0),
+            SimulationConfig(ODE_Solver="BR", RWA_SL=False, dt=0.2, t_coh=200.0),
+            SimulationConfig(ODE_Solver="Paper_eqs", RWA_SL=True, dt=0.1, t_coh=50.0),
         ]
 
         print(f"\n✓ to_dict and from_dict testing completed successfully!")

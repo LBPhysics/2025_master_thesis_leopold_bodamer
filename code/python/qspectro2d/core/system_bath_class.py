@@ -7,7 +7,7 @@ from qutip import tensor, ket2dm
 from qutip.utilities import n_thermal
 
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.core.bath_system.bath_fcts import power_spectrum_func_paper
 
 from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
@@ -16,7 +16,7 @@ from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
 @dataclass
 class SystemBathCoupling:
     system: AtomicSystem
-    bath: BathClass
+    bath: BathSystem
 
     # DERIVED QUANTITIES FROM SYSTEM / BATH PARAMETERS
     def cutoff(self, i: int = 0) -> float:
@@ -205,11 +205,11 @@ class SystemBathCoupling:
 
         elif N_atoms == 2:
             me_decay_channels_ = [
-                ket2dm(tensor(self.atom_e, self.atom_g))
+                ket2dm(tensor(self._atom_e, self._atom_g))
                 * np.sqrt(dephasing_rate),  # * (n_th_at + 1)
-                ket2dm(tensor(self.atom_g, self.atom_e))
+                ket2dm(tensor(self._atom_g, self._atom_e))
                 * np.sqrt(dephasing_rate),  # * (n_th_at + 1)
-                ket2dm(tensor(self.atom_e, self.atom_e))
+                ket2dm(tensor(self._atom_e, self._atom_e))
                 * np.sqrt(dephasing_rate),  # * (n_th_at + 1)
             ]
         else:
@@ -304,11 +304,11 @@ class SystemBathCoupling:
 
 if __name__ == "__main__":
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
-    from qspectro2d.core.bath_system.bath_class import BathClass
+    from qspectro2d.core.bath_system.bath_class import BathSystem
 
-    # Create mock instances of AtomicSystem and BathClass
+    # Create mock instances of AtomicSystem and BathSystem
     atomic_system = AtomicSystem(N_atoms=1, freqs_cm=[16000.0], dip_moments=[1.0])
-    bath_class = BathClass(
+    bath_class = BathSystem(
         bath="ohmic", cutoff_=2.0, Temp=300, gamma_phi=0.1, gamma_0=0.05
     )
 

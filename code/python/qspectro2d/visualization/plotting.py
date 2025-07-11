@@ -1,3 +1,4 @@
+from pydoc import text
 from matplotlib.colors import TwoSlopeNorm
 import numpy as np
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
@@ -93,6 +94,7 @@ def plot_pulse_envelope(
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
+    plt.close(fig)
     return fig, ax
 
 
@@ -151,6 +153,7 @@ def plot_e_pulse(
     ax.set_title(r"RWA Electric Field Components")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.close(fig)
     return fig, ax
 
 
@@ -216,6 +219,7 @@ def plot_epsilon_pulse(
     ax.set_title(r"Full Electric Field with Carrier")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.close(fig)
     return fig, ax
 
 
@@ -253,6 +257,7 @@ def plot_all_pulse_components(
     )
 
     plt.tight_layout()
+    plt.close(fig)
     return fig
 
 
@@ -352,11 +357,11 @@ def plot_example_evo(
         for key, value in kwargs.items():
             text_lines.append(f"{key}: {str(value)}"[:30])
 
-        plt.text(
+        axes[0].text(
             0.8,
             0.98,
             "\n".join(text_lines),
-            transform=plt.gca().transAxes,
+            transform=axes[0].transAxes,
             fontsize=12,
             verticalalignment="top",
             bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
@@ -367,9 +372,10 @@ def plot_example_evo(
 
     # Add title and finalize plot
     plt.suptitle(
-        rf"$\t_coh = {t_coh:.2f}\,\mathrm{{fs}},\quad t_wait = {t_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {ODE_Solver}"
+        rf"$t_{{\mathrm{{coh}}}} = {t_coh:.2f}\,\mathrm{{fs}},\quad t_{{\mathrm{{wait}}}} = {t_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {ODE_Solver}"
     )
     plt.tight_layout()
+    plt.close(fig)
 
     return fig
 
@@ -515,6 +521,7 @@ def plot_1d_el_field(
         )
 
     plt.tight_layout()
+    plt.close(fig)
 
     return fig
 
@@ -620,11 +627,11 @@ def plot_2d_el_field(
         colormap = "viridis"
         title = r"$\text{Time domain}$"
         x_title = r"$t_{\text{det}}$ [fs]"
-        y_title = r"$\t_{\text{coh}}$ [fs]"
+        y_title = r"$t_{\text{coh}}$ [fs]"
     else:
         colormap = "plasma"
         x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
-        y_title = r"$\omega_{\t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
+        y_title = r"$\omega_{t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
 
     if component not in ("real", "imag", "abs", "phase"):
         raise ValueError(
@@ -708,6 +715,7 @@ def plot_2d_el_field(
     plt.gca().spines["bottom"].set_linewidth(1.5)
     plt.gca().spines["left"].set_linewidth(1.5)"""
 
+    plt.close(fig)
     return fig
 
 
@@ -797,6 +805,7 @@ def plot_example_polarization(
         )
 
     plt.tight_layout()
+    plt.close(fig)
     return fig
 
 

@@ -18,7 +18,7 @@ from datetime import datetime
 
 ### Project-specific imports
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.config.paths import DATA_DIR  # , FIGURES_DIR
 
@@ -347,7 +347,7 @@ def save_data_file(
 def save_info_file(
     info_path: Path,
     system: AtomicSystem,
-    bath: BathClass,
+    bath: BathSystem,
     laser: LaserPulseSequence,
     info_config: dict,
 ) -> None:
@@ -379,7 +379,7 @@ def save_info_file(
 def save_simulation_data(
     system: AtomicSystem,
     info_config: dict,
-    bath: BathClass,
+    bath: BathSystem,
     laser: LaserPulseSequence,
     data: np.ndarray,
     axis1: np.ndarray,

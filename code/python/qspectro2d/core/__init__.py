@@ -18,6 +18,22 @@ with various bath models and pulse configurations.
 from .atomic_system.system_class import AtomicSystem
 
 # =============================
+# BATH SYSTEMS
+# =============================
+from .bath_system.bath_class import BathSystem
+
+# =============================
+# WHOLE MODULE CLASS AND specific Paper SOLVER FUNCTIONS
+# =============================
+from .simulation_class import (
+    SimulationModuleOQS,
+    SimulationConfig,
+    SimulationModuleOQS,
+    matrix_ODE_paper,
+    R_paper,
+)
+
+# =============================
 # PULSE DEFINITIONS AND SEQUENCES
 # =============================
 from .laser_system.laser_class import (
@@ -34,14 +50,6 @@ from .laser_system.laser_fcts import (
     pulse_envelope,
     E_pulse,
     Epsilon_pulse,
-)
-
-# =============================
-# SOLVER FUNCTIONS
-# =============================
-from .solver_fcts import (
-    matrix_ODE_paper,
-    R_paper,
 )
 
 # =============================
@@ -71,6 +79,11 @@ __all__ = [
     # LaserPulse definitions
     "LaserPulse",
     "LaserPulseSequence",
+    # Environment system
+    "BathSystem",
+    # Simulation module and configuration
+    "SimulationModuleOQS",
+    "SimulationConfig",
     # LaserPulse field functions
     "pulse_envelope",
     "E_pulse",

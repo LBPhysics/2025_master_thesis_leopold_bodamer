@@ -28,7 +28,7 @@ conda activate master_env
 
 cd /home/lbodamer/Master_thesis/code/python/scripts/
 
-python3 calc_1D_datas.py --batch_idx {batch_idx} --n_batches {total_batches} --t_det_max {t_det_max} --dt {dt}
+python3 calc_datas.py --batch_idx {batch_idx} --n_batches {total_batches} --t_det_max {t_det_max} --dt {dt}
 """
 
     path = job_dir / f"batch_{batch_idx}.slurm"

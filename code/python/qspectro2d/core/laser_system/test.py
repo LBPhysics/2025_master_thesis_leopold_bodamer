@@ -67,9 +67,9 @@ def test_laserpulsesequence_from_general_specs():
     assert seq.pulse_amplitudes == [1.0, 2.0]
 
 
-def test_update_first_two_pulse_phases():
+def test_update_phases():
     seq = LaserPulseSequence.from_delays([0.0, 10.0])
-    seq.update_first_two_pulse_phases(0.5, 1.5)
+    seq.update_phases(phases=[0.5, 1.5])
     assert np.isclose(seq.pulses[0].pulse_phase, 0.5)
     assert np.isclose(seq.pulses[1].pulse_phase, 1.5)
     assert np.isclose(seq.pulse_phases[0], 0.5)
@@ -77,7 +77,7 @@ def test_update_first_two_pulse_phases():
     # Should raise if less than two pulses
     seq1 = LaserPulseSequence.from_delays([0.0])
     with pytest.raises(ValueError):
-        seq1.update_first_two_pulse_phases(0.1, 0.2)
+        seq1.update_phases(phases=[0.1, 0.2])
 
 
 def test_get_active_pulses_and_total_amplitude():

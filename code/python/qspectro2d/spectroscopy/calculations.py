@@ -4,6 +4,8 @@
 # STANDARD LIBRARY IMPORTS
 # =============================
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from copy import deepcopy
+import copy
 from typing import List, Union, Tuple
 import logging
 
@@ -17,7 +19,7 @@ from qutip.core import QobjEvo
 # =============================
 # LOCAL IMPORTS
 # =============================
-from qspectro2d.core.simulation_class import SimClassOQS
+from qspectro2d.core.simulation_class import SimulationModuleOQS
 from qspectro2d.core.laser_system.laser_class import (
     LaserPulseSequence,
     identify_non_zero_pulse_regions,
@@ -26,6 +28,7 @@ from qspectro2d.core.laser_system.laser_class import (
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.core.functions_with_rwa import (
     apply_RWA_phase_factors,
+    get_expect_vals_with_RWA,
 )
 from qspectro2d.spectroscopy.simulation.utils import (
     PHASE_CYCLING_PHASES,
@@ -43,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 def compute_pulse_evolution(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     **solver_options: dict,
 ) -> Result:
     """
@@ -55,7 +58,7 @@ def compute_pulse_evolution(
         Initial quantum state.
     times : np.ndarray
         Time array for the evolution.
-    ops : SimClassOQS contains simulation configuration, system, laser parameters and much more.
+    ops : SimulationModuleOQS contains simulation configuration, system, laser parameters and much more.
     pulse_seq : LaserPulseSequence
         LaserPulseSequence object defining the pulse sequence.
     system : AtomicSystem
@@ -86,7 +89,7 @@ def compute_pulse_evolution(
 
 
 def _execute_segmented_evolution(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     options: dict,
 ) -> Result:
     """
@@ -94,7 +97,7 @@ def _execute_segmented_evolution(
 
     Parameters
     ----------
-    sim_oqs : SimClassOQS
+    sim_oqs : SimulationModuleOQS
         Simulation class object containing system, laser, and time configurations.
     options : dict
         Solver options for the evolution.
@@ -112,9 +115,13 @@ def _execute_segmented_evolution(
     all_states, all_times = [], []
 
     current_state = sim_oqs.system.psi_ini
+    actual_times = sim_oqs.times_local
+    pulse_seq = sim_oqs.laser
+    decay_ops_list = sim_oqs.decay_channels
+
     # Find pulse regions and split time array
-    pulse_regions = identify_non_zero_pulse_regions(sim_oqs.times_local, sim_oqs.laser)
-    split_times = split_by_active_regions(sim_oqs.times_local, pulse_regions)
+    pulse_regions = identify_non_zero_pulse_regions(actual_times, pulse_seq)
+    split_times = split_by_active_regions(actual_times, pulse_regions)
 
     for i, curr_times in enumerate(split_times):
         # Extend curr_times by one point if not the last segment
@@ -124,9 +131,8 @@ def _execute_segmented_evolution(
                 curr_times = np.append(curr_times, next_times[0])
 
         # Find the indices in the original times array for this split
-        start_idx = np.abs(sim_oqs.times_local - curr_times[0]).argmin()
+        start_idx = np.abs(actual_times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
-        decay_ops_list = sim_oqs.decay_channels
         if has_pulse:
             EVO_obj = sim_oqs.Evo_obj_int
         else:
@@ -191,43 +197,44 @@ def _execute_single_evolution_segment(
         )
 
 
-def check_the_solver(sim_oqs: SimClassOQS) -> tuple[Result, float]:
+def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     """
     Checks the solver within the compute_pulse_evolution function
     with the provided psi_ini, times, and system.
 
     Parameters:
-        sim_oqs (SimClassOQS):  object containing all relevant parameters
+        sim_oqs (SimulationModuleOQS):  object containing all relevant parameters
 
     Returns:
     tuple of:
         result (Result): The Qotip result object.
         time_cut (float): The time after which the checks failed, or np.inf if all checks passed.
     """
-    t_max = 2 * sim_oqs.simulation_config.t_max
-    dt = 10 * sim_oqs.simulation_config.dt
-    t0 = -sim_oqs.laser.pulse_fwhms[0]
+    copy_sim_oqs = deepcopy(sim_oqs)
+    t_max = 2 * copy_sim_oqs.simulation_config.t_max
+    dt = 10 * copy_sim_oqs.simulation_config.dt
+    t0 = -copy_sim_oqs.laser.pulse_fwhms[0]
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
-    sim_oqs.times_global = times
-    sim_oqs.times_local = times
+    copy_sim_oqs.times_global = times
+    copy_sim_oqs.times_local = times
     # sim_oqs.__post_init__()  # DONT DO IT since it would mess up the times again
-    print(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver ", flush=True)
+    print(f"Checking '{copy_sim_oqs.simulation_config.ODE_Solver}' solver ", flush=True)
 
     # =============================
     # INPUT VALIDATION
     # =============================
-    if not isinstance(sim_oqs.system.psi_ini, Qobj):
+    if not isinstance(copy_sim_oqs.system.psi_ini, Qobj):
         raise TypeError("psi_ini must be a Qobj")
     if not isinstance(times, np.ndarray):
         raise TypeError("times must be a numpy.ndarray")
-    if not isinstance(sim_oqs.observable_ops, list) or not all(
-        isinstance(op, Qobj) for op in sim_oqs.observable_ops
+    if not isinstance(copy_sim_oqs.observable_ops, list) or not all(
+        isinstance(op, Qobj) for op in copy_sim_oqs.observable_ops
     ):
         raise TypeError("system.observable_ops must be a list of Qobj")
     if len(times) < 2:
         raise ValueError("times must have at least two elements")
 
-    result = compute_pulse_evolution(sim_oqs, **{"store_states": True})
+    result = compute_pulse_evolution(copy_sim_oqs, **{"store_states": True})
     states = result.states
     # =============================
     # CHECK THE RESULT
@@ -245,9 +252,9 @@ def check_the_solver(sim_oqs: SimClassOQS) -> tuple[Result, float]:
     strg = ""
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
-    if getattr(sim_oqs.simulation_config, "RWA_SL", False):
-        N_atoms = sim_oqs.system.N_atoms
-        omega_laser = sim_oqs.laser.omega_laser
+    if getattr(copy_sim_oqs.simulation_config, "RWA_SL", False):
+        N_atoms = copy_sim_oqs.system.N_atoms
+        omega_laser = copy_sim_oqs.laser.omega_laser
         states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
     for index, state in enumerate(states):
         time = times[index]
@@ -275,7 +282,7 @@ def check_the_solver(sim_oqs: SimClassOQS) -> tuple[Result, float]:
 
 
 def _compute_next_start_point(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     **kwargs,
 ) -> Qobj:
     """
@@ -312,23 +319,23 @@ def _compute_next_start_point(
 
 
 def compute_1d_polarization(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     **kwargs,
 ) -> np.ndarray:
     """
-    Compute the data for a fixed t_coh and T_wait. AND NOW VARIABLE t_det_max
+    Compute the data for a fixed t_coh and t_wait. AND NOW VARIABLE t_det_max
     """
     time_cut = kwargs.get("time_cut", np.inf)
 
     # =============================
     # COMPUTE EVOLUTION STATES
     # =============================
-    evolution_data = _compute_three_pulse_evolution(sim_oqs)
+    evolution_data = _compute_3_pulse_evolution(sim_oqs)
 
     # =============================
     # COMPUTE LINEAR SIGNALS
     # =============================
-    linear_signals = _compute_linear_signals(sim_oqs)
+    linear_signals = _compute_3_linear_signals(sim_oqs)
 
     # =============================
     # EXTRACT AND PROCESS DETECTION DATA
@@ -341,90 +348,131 @@ def compute_1d_polarization(
         # maybe could also pass kwargs for plotting
     )
 
+    final_data = evolution_data["final_data"]
+    pulse1_data = linear_signals["pulse0"]
+    print(pulse1_data, flush=True)
+    print(f"Final data: {final_data.times}, Pulse 1 data:", flush=True)
+
     # Return based on plotting flag
     if kwargs.get("plot_example_polarization", False):
-        return detection_data["plot_data"]
+        return detection_data["plot_polarization_data"]
 
+    if kwargs.get("plot_example_evo", False):
+        data = detection_data["plot_example_evo"]
+        states = data.states
+        times = data.times
+        Dip_op = sim_oqs.system.Dip_op
+        N_atoms = sim_oqs.system.N_atoms
+        e_ops = sim_oqs.observable_ops
+        RWA_SL = sim_oqs.simulation_config.RWA_SL
+        omega_laser = sim_oqs.laser.omega_laser
+        datas = get_expect_vals_with_RWA(
+            states,
+            times,
+            N_atoms=N_atoms,
+            e_ops=e_ops,
+            omega_laser=omega_laser,
+            RWA_SL=RWA_SL,
+            Dip_op=Dip_op,
+        )
+        return times, datas, sim_oqs
     return detection_data["nonlinear_signal"]
 
 
-def _compute_three_pulse_evolution(
-    sim_oqs: SimClassOQS,
+def _compute_3_pulse_evolution(
+    sim_oqs: SimulationModuleOQS,
 ) -> dict:
-    """Compute the three-pulse evolution using segmented approach."""
-    # Segment 1: First pulse evolution
+    """Compute the n-pulse evolution using segmented approach."""
+    copy_sim_oqs = deepcopy(sim_oqs)
     t_coh = sim_oqs.simulation_config.t_coh
     t_wait = sim_oqs.simulation_config.t_wait
     times = sim_oqs.times_local
     fwhms = sim_oqs.laser.pulse_fwhms
 
     full_sequence = sim_oqs.laser
+    n_pulses = len(full_sequence.pulses)
 
-    pulse1_start_idx = np.abs(times - (t_coh - fwhms[0])).argmin()
-    times_0 = _ensure_valid_times(times[: pulse1_start_idx + 1], times)
+    if n_pulses < 2:
+        raise ValueError("Need at least 2 pulses for segmented evolution")
 
-    sim_oqs.times_local = times_0  # Update times in sim_oqs for the first segment
-    sim_oqs.laser = LaserPulseSequence(pulses=[full_sequence.pulses[0]])
-    sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-    # sim_oqs.__post_init__()  # dont do it as it would mess up the times again
-    rho_1 = _compute_next_start_point(
-        sim_oqs=sim_oqs,
+    # Initialize variables for loop
+    current_state = sim_oqs.system.psi_ini
+    prev_pulse_start_idx = 0
+
+    # Loop over first n_pulses - 1 segments
+    for pulse_idx in range(n_pulses - 1):
+        # Calculate pulse start index
+        if pulse_idx == 0:
+            # First pulse: start at t_coh - fwhm
+            pulse_start_idx = np.abs(times - (t_coh - fwhms[pulse_idx + 1])).argmin()
+            times_segment = _ensure_valid_times(times[: pulse_start_idx + 1], times)
+        elif pulse_idx == 1:
+            pulse_start_idx = np.abs(
+                times - (t_coh + t_wait - fwhms[pulse_idx + 1])
+            ).argmin()
+        else:
+            raise ValueError("STILL TODO implement general n-pulse evolution")
+
+        times_segment = times[prev_pulse_start_idx : pulse_start_idx + 1]
+        times_segment = _ensure_valid_times(times_segment, times, prev_pulse_start_idx)
+
+        # Update simulation parameters for this segment
+        copy_sim_oqs.times_local = times_segment
+        copy_sim_oqs.laser = LaserPulseSequence(
+            pulses=full_sequence.pulses[: pulse_idx + 1]
+        )
+        copy_sim_oqs.system.psi_ini = current_state
+
+        # Compute evolution for this segment
+        current_state = _compute_next_start_point(sim_oqs=copy_sim_oqs)
+
+        # Update for next iteration
+        prev_pulse_start_idx = pulse_start_idx
+
+    # Final segment: evolution with detection (last pulse)
+    times_final = _ensure_valid_times(
+        times[prev_pulse_start_idx:], times, prev_pulse_start_idx
     )
+    copy_sim_oqs.times_local = times_final
+    copy_sim_oqs.laser = full_sequence
+    copy_sim_oqs.system.psi_ini = current_state
 
-    # Segment 2: Second pulse evolution
-    pulse2_start_idx = np.abs(times - (t_coh + t_wait - fwhms[1])).argmin()
-    times_1 = times[pulse1_start_idx : pulse2_start_idx + 1]
-    times_1 = _ensure_valid_times(times_1, times, pulse1_start_idx)
-
-    sim_oqs.times_local = times_1  # Update times in sim_oqs for the first segment
-    sim_oqs.laser = LaserPulseSequence(pulses=full_sequence.pulses[0:2])
-    sim_oqs.system.psi_ini = rho_1  # Set initial state for next segment
-    sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-    # sim_oqs.system.__post_init__()  # Ensure system is updated with new laser
-    # sim_oqs.__post_init__()  # Ensure system is updated with new laser and initial state
-    rho_2 = _compute_next_start_point(
-        sim_oqs=sim_oqs,
-    )
-
-    # Segment 3: Final evolution with detection
-    times_2 = _ensure_valid_times(times[pulse2_start_idx:], times, pulse2_start_idx)
-    sim_oqs.times_local = times_2  # Update times in sim_oqs for the first segment
-    sim_oqs.laser = full_sequence
-    sim_oqs.system.psi_ini = rho_2  # Set initial state for next segment
-    # sim_oqs.system.__post_init__()  # Ensure system is updated with new laser
-    sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-    # sim_oqs.__post_init__()  # Ensure system is updated with new laser and initial state
-    data_final = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
-    print(len(data_final.times), len(sim_oqs.times_det))
-    assert len(data_final.times) == len(sim_oqs.times_det)  # TODO CONTINUE
+    data_final = compute_pulse_evolution(sim_oqs=copy_sim_oqs, store_states=True)
 
     return {
         "final_data": data_final,
-        "times_2": times_2,
-        "detection_start_idx": pulse2_start_idx,
+        "times_final": times_final,
+        "detection_start_idx": prev_pulse_start_idx,  # get rid of this export
     }
 
 
-def _compute_linear_signals(
-    sim_oqs: SimClassOQS,
+def _compute_3_linear_signals(
+    sim_oqs: SimulationModuleOQS,
 ) -> dict:
     """Compute all linear signal contributions."""
     times = sim_oqs.times_local
     laser = sim_oqs.laser
     t_coh = sim_oqs.simulation_config.t_coh
     t_wait = sim_oqs.simulation_config.t_wait
-    detection_time = t_coh + t_wait
+    detection_time = t_coh + t_wait  # == peak of the third pulse # TODO not general yet
 
     linear_data = {}
     detection_idx = np.abs(times - detection_time).argmin()
-
+    copy_sim_oqs = deepcopy(sim_oqs)
     for i, pulse in enumerate(laser):
         single_seq = LaserPulseSequence(pulses=[pulse])
-        sim_oqs.laser = single_seq  # Update the laser sequence for each pulse
-        sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-        # sim_oqs.__post_init__()  # Ensure system is updated with new laser
-        data = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
+        copy_sim_oqs.laser = single_seq  # Update the laser sequence for each pulse
+        # copy_sim_oqs.__post_init__()  # Ensure system is updated with new laser
+        data = compute_pulse_evolution(sim_oqs=copy_sim_oqs, store_states=True)
+        print(
+            f" THE TIME RANGES FOR THE SINGLE PULSE {i}: ",
+            data.times,
+            data.times[detection_idx:],
+            flush=True,
+        )
         linear_data[f"pulse{i}"] = data.states[detection_idx:]
+
+    sim_oqs.laser = laser
 
     return linear_data
 
@@ -471,19 +519,19 @@ def _calculate_all_polarizations(
     """Calculate polarizations for all signal components."""
     valid_indices = [i for i, t in enumerate(times) if t < time_cut]
 
-    if not valid_indices:
-        return {
-            key: np.zeros(len(times), dtype=np.complex64)
-            for key in ["full", "pulse0", "pulse1", "pulse2"]
-        }
+    # Get all pulse keys from linear_signals
+    pulse_keys = list(linear_signals.keys())
+    all_keys = ["full"] + pulse_keys
 
-    # Extract valid states
-    valid_states = {
-        "full": [states_full[i] for i in valid_indices],
-        "pulse0": [linear_signals["pulse0"][i] for i in valid_indices],
-        "pulse1": [linear_signals["pulse1"][i] for i in valid_indices],
-        "pulse2": [linear_signals["pulse2"][i] for i in valid_indices],
-    }
+    if not valid_indices:
+        return {key: np.zeros(len(times), dtype=np.complex64) for key in all_keys}
+
+    # Extract valid states - generalized for n pulses
+    valid_states = {"full": [states_full[i] for i in valid_indices]}
+
+    # Add all pulse contributions dynamically
+    for pulse_key in pulse_keys:
+        valid_states[pulse_key] = [linear_signals[pulse_key][i] for i in valid_indices]
 
     # Calculate polarizations
     polarizations = {}
@@ -504,7 +552,7 @@ def _calculate_all_polarizations(
 
 
 def _extract_detection_data(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     evolution_data: dict,
     linear_signals: dict,
     time_cut: float,
@@ -515,6 +563,13 @@ def _extract_detection_data(
     detection_time = sim_oqs.simulation_config.t_coh + sim_oqs.simulation_config.t_wait
     detection_start_idx = np.abs(final_data.times - detection_time).argmin()
     actual_det_times = final_data.times[detection_start_idx:]
+    t_coh = sim_oqs.simulation_config.t_coh
+    t_wait = sim_oqs.simulation_config.t_wait
+    t_det_max = sim_oqs.simulation_config.t_det_max
+    print(
+        f"{t_coh, t_wait, t_det_max} {sim_oqs.times_det_actual}, {actual_det_times}",
+        flush=True,
+    )
     states_full = final_data.states[detection_start_idx:]
 
     # Apply RWA phase factors if needed
@@ -535,35 +590,27 @@ def _extract_detection_data(
         states_full, linear_signals, actual_det_times, time_cut, Dip_op
     )
 
-    # Calculate nonlinear signal
-    nonlinear_signal = (
-        polarizations["full"]
-        - polarizations["pulse0"]
-        - polarizations["pulse1"]
-        - polarizations["pulse2"]
-    )
+    # Calculate nonlinear signal - generalized for n pulses
+    nonlinear_signal = polarizations["full"].copy()
+    for pulse_key in linear_signals.keys():
+        nonlinear_signal -= polarizations[pulse_key]
 
-    # if len(actual_det_times) != len(t_det_values):
-    #     print(
-    #         f"Warning: interpolated t_det length {len(actual_det_times)} ≠ {len(t_det_values)}"
-    #     )
-    # cap the nonlinear_signal to the sim_oqs.times_det length!
-    t_det_values = np.linspace(
-        actual_det_times[0], actual_det_times[-1], len(sim_oqs.times_det)
-    )
-    # 1D linear interpolation to match the canonical grid
-    data_capped = np.interp(
-        t_det_values, actual_det_times - actual_det_times[0], nonlinear_signal
-    )
-
+    # Ensure consistent output length by extracting exactly len(times_det) points
+    # This fixes the issue where data length changes with t_coh
+    expected_length = len(sim_oqs.times_det)
+    if len(nonlinear_signal) >= expected_length:
+        data_capped = nonlinear_signal[:expected_length]
+    else:
+        # If we have fewer points, pad with zeros
+        data_capped = np.zeros(expected_length, dtype=nonlinear_signal.dtype)
+        data_capped[: len(nonlinear_signal)] = nonlinear_signal
     return {
         "nonlinear_signal": data_capped,
-        "plot_data": (
-            polarizations["full"],
-            polarizations["pulse0"],
-            polarizations["pulse1"],
-            polarizations["pulse2"],
+        "plot_polarization_data": tuple(
+            [polarizations["full"]]
+            + [polarizations[key] for key in linear_signals.keys()]
         ),
+        "plot_example_evo": final_data,
     }
 
 
@@ -571,7 +618,7 @@ def _extract_detection_data(
 # parallel processing 1d and 2d data
 # ##########################
 def _process_single_1d_combination(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     new_freqs: np.ndarray,
     phi1: float,
     phi2: float,
@@ -589,7 +636,7 @@ def _process_single_1d_combination(
         Second phase value.
     t_coh : float
         Coherence time.
-    T_wait : float
+    t_wait : float
         Waiting time.
 
     system : AtomicSystem
@@ -603,13 +650,11 @@ def _process_single_1d_combination(
         (t_det_vals, data) for the computed 1D polarization data, or None if failed.
     """
     try:
-        sim_oqs.laser.update_first_two_pulse_phases(
-            phase1=phi1, phase2=phi2
+        sim_oqs.laser.update_phases(
+            phases=[phi1, phi2, DETECTION_PHASE]
         )  # Update the laser phases in the simulation class
         # Compute the 1D polarization for this specific phase combination
         sim_oqs.system.freqs_cm = new_freqs  # Update frequencies in the system
-        # sim_oqs.system.__post_init__()  # Ensure system is updated with new frequencies
-        sim_oqs.__post_init__()
         data = compute_1d_polarization(
             sim_oqs=sim_oqs,
             **kwargs,
@@ -623,7 +668,7 @@ def _process_single_1d_combination(
 
 
 def parallel_compute_1d_E_with_inhomogenity(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     ift_component: tuple = (
         -1,
         1,
@@ -670,13 +715,11 @@ def parallel_compute_1d_E_with_inhomogenity(
     combinations = []
     for omega_idx in range(n_freqs):
         new_freqs = all_freq_sets[omega_idx]
-        sim_oqs.system.update_freqs_cm(new_freqs)
-        # sim_oqs.system.__post_init__()
-        # sim_oqs.__post_init__()  # Ensure system is updated with new frequencies
-
-    for phi1_idx, phi1 in enumerate(phases):
-        for phi2_idx, phi2 in enumerate(phases):
-            combinations.append((omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2))
+        for phi1_idx, phi1 in enumerate(phases):
+            for phi2_idx, phi2 in enumerate(phases):
+                combinations.append(
+                    (omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2)
+                )
 
     # Execute all jobs in parallel
     results = {}
@@ -707,6 +750,8 @@ def parallel_compute_1d_E_with_inhomogenity(
     # Fill 3D result array
     results_cube = np.zeros((n_freqs, n_phases, n_phases), dtype=object)
     for (omega_idx, phi1_idx, phi2_idx), data in results.items():
+        if data is None:
+            continue
         results_cube[omega_idx, phi1_idx, phi2_idx] = data * 1j  # E ~ iP
 
     # Average over frequencies to get 2D result array before IFT or phase-average

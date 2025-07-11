@@ -19,14 +19,22 @@ It supports two modes of execution:
 
 This script is designed for both local development and HPC batch execution.
 Results are saved automatically using the qspectro2d I/O framework.
+
+# testing
+python3 calc_datas.py --t_coh 10.0 --t_wait 25.0 --dt 2.0
+python3 calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 20
+# full simulations
+python3 calc_datas.py --t_coh 300.0 --t_det_max 1000.0 --dt 2
+python3 calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 0.1
 """
 
 import time
 import argparse
+from unittest.mock import DEFAULT
 import numpy as np
 from pathlib import Path
 
-from qspectro2d.core.bath_system.bath_class import BathClass
+from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.config import DATA_DIR
 from qspectro2d.spectroscopy import (
     get_max_workers,
@@ -44,8 +52,8 @@ from qspectro2d.data import (
 from qspectro2d.core.simulation_class import (
     AtomicSystem,
     LaserPulseSequence,
-    SimulationConfigClass,
-    SimClassOQS,
+    SimulationConfig,
+    SimulationModuleOQS,
 )
 
 N_ATOMS = 1
@@ -57,8 +65,9 @@ DEFAULT_BATH_TEMP = 1e-5
 DEFAULT_BATH_CUTOFF = 1e2
 DEFAULT_BATH_GAMMA_0 = 1 / 300.0
 DEFAULT_BATH_GAMMA_PHI = 1 / 100.0
-DEFAULT_N_FREQS = 1000
-DEFAULT_PHASES = 4  # Number of phase cycles for the simulation
+DEFAULT_N_FREQS = 1
+DEFAULT_PHASES = 1  # Number of phase cycles for the simulation
+DEFAULT_DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 DEFAULT_APPLY_IFFT = (
     True  # Whether to apply inverse Fourier transform in the simulation
 )
@@ -69,7 +78,7 @@ def create_simulation_module_from_configs(
     laser_config: dict,
     bath_config: dict,
     simulation_config: dict,
-) -> SimClassOQS:
+) -> SimulationModuleOQS:
     """
     Create a simulation module from the provided configuration dictionaries.
 
@@ -80,14 +89,14 @@ def create_simulation_module_from_configs(
         simulation_config (dict): Simulation parameters configuration.
 
     Returns:
-        SimClassOQS: Configured simulation class instance.
+        SimulationModuleOQS: Configured simulation class instance.
     """
     system = AtomicSystem.from_dict(atom_config)
     laser = LaserPulseSequence.from_delays(**laser_config)
-    bath = BathClass.from_dict(bath_config)
+    bath = BathSystem.from_dict(bath_config)
 
-    return SimClassOQS(
-        simulation_config=SimulationConfigClass(**simulation_config),
+    return SimulationModuleOQS(
+        simulation_config=SimulationConfig(**simulation_config),
         system=system,
         laser=laser,
         bath=bath,
@@ -95,16 +104,16 @@ def create_simulation_module_from_configs(
 
 
 def run_single_t_coh_with_sim(
-    sim_oqs: SimClassOQS,
+    sim_oqs: SimulationModuleOQS,
     t_coh: float,
     save_info: bool = False,
     time_cut: float = -np.inf,
 ) -> Path:
     """
-    Run a single 1D simulation for a specific coherence time using existing SimClassOQS.
+    Run a single 1D simulation for a specific coherence time using existing SimulationModuleOQS.
 
     Parameters:
-        sim_oqs (SimClassOQS): Pre-configured simulation instance
+        sim_oqs (SimulationModuleOQS): Pre-configured simulation instance
         t_coh (float): Coherence time between 2 pump pulses [fs]
         save_info (bool): Whether to save simulation info
         time_cut (float): Time cutoff for solver validation
@@ -142,7 +151,8 @@ def run_single_t_coh_with_sim(
     )
     data_path = Path(f"{abs_path}_data.npz")
     print(f"\nSaving data to: {data_path}")
-    save_data_file(data_path, data, sim_oqs.times_det)
+    detection_times = sim_oqs.times_det[sim_oqs.times_det_actual < time_cut]
+    save_data_file(data_path, data, detection_times)
 
     rel_path = abs_path.relative_to(DATA_DIR)
 
@@ -157,18 +167,17 @@ def run_single_t_coh_with_sim(
             info_config=simulation_config_dict,
         )
 
-        elapsed = time.time() - start_time
-        print_simulation_summary(elapsed, data, rel_path, "1d")
-
         print(f"{'='*60}")
         print(f"\n🎯 To plot this data, run:")
         print(f'python plot_datas.py --rel_path "{rel_path}"')
-        print(f"{'='*60}")
+
+    elapsed = time.time() - start_time
+    print_simulation_summary(elapsed, data, rel_path, "1d")
 
     return rel_path.parent
 
 
-def create_base_sim_oqs(args) -> tuple[SimClassOQS, float]:
+def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
     """
     Create base simulation instance and perform solver validation once.
 
@@ -176,7 +185,7 @@ def create_base_sim_oqs(args) -> tuple[SimClassOQS, float]:
         args: Parsed command line arguments
 
     Returns:
-        tuple: (SimClassOQS instance, time_cut from solver validation)
+        tuple: (SimulationModuleOQS instance, time_cut from solver validation)
     """
     print("🔧 Creating base simulation configuration...")
 
@@ -184,7 +193,7 @@ def create_base_sim_oqs(args) -> tuple[SimClassOQS, float]:
         "N_atoms": N_ATOMS,
         "freqs_cm": [16000],  # Frequency of atom A [cm⁻¹]
         "dip_moments": [1.0] * N_ATOMS,  # Dipole moments for each atom
-        "Delta_cm": 200.0,  # inhomogeneous broadening [cm⁻¹]
+        "Delta_cm": DEFAULT_DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
     }
     if N_ATOMS >= 2:
         atomic_config["J_cm"] = 300.0
@@ -194,7 +203,7 @@ def create_base_sim_oqs(args) -> tuple[SimClassOQS, float]:
         "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,
         "base_amplitude": 0.005,
         "envelope_type": "gaussian",
-        "carrier_freq_cm": atomic_config["freqs_cm"][0],
+        "carrier_freq_cm": np.mean(atomic_config["freqs_cm"]),
         "delays": [
             0.0,
             args.t_coh,
@@ -209,7 +218,7 @@ def create_base_sim_oqs(args) -> tuple[SimClassOQS, float]:
         "apply_ift": DEFAULT_APPLY_IFFT,
         ### Simulation parameters
         "ODE_Solver": DEFAULT_ODE_SOLVER,
-        "DEFAULT_RWA_SL": DEFAULT_RWA_SL,
+        "RWA_SL": DEFAULT_RWA_SL,
         "keep_track": "basis",
         # times
         "t_coh": args.t_coh,  # dummy value, will be updated
@@ -315,12 +324,13 @@ def run_2d_mode(args):
         f"📊 Processing {len(t_coh_subarray)} t_coh values: [{t_coh_subarray[0]:.1f}, {t_coh_subarray[-1]:.1f}] fs"
     )
 
+    t_wait = args.t_wait
     rel_dir = None
     for i, t_coh in enumerate(t_coh_subarray):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
         save_info = t_coh == 0  # Only save info for first simulation
         sim_oqs.simulation_config.t_coh = t_coh
-        sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + args.t_wait]
+        sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + t_wait]
         rel_dir = run_single_t_coh_with_sim(
             sim_oqs,
             t_coh,
@@ -428,7 +438,6 @@ Examples:
     # =============================
     print("=" * 80)
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
-    print("=" * 80)
     print(f"Simulation type: {args.simulation_type}")
     print(f"Detection time window: {args.t_det_max} fs")
     print(f"Time step: {args.dt} fs")
@@ -444,7 +453,6 @@ Examples:
 
     print("\n" + "=" * 80)
     print("SIMULATION COMPLETED")
-    print("=" * 80)
 
 
 if __name__ == "__main__":

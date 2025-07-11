@@ -31,7 +31,7 @@ def get_max_workers() -> int:
     return slurm_cpus if slurm_cpus > 0 else local_cpus
 
 
-# NOT NEEDED with new SimulationConfigClass
+# NOT NEEDED with new SimulationConfig
 def create_system_parameters(info_config: dict) -> AtomicSystem:
     """
     Create a AtomicSystem object from a configuration dictionary.
@@ -81,14 +81,13 @@ def create_system_parameters(info_config: dict) -> AtomicSystem:
 # =============================
 # REPORTING FUNCTIONS
 # =============================
-# NOT NEEDED with new SimulationConfigClass
+# NOT NEEDED with new SimulationConfig
 def print_simulation_header(info_config: dict, max_workers: int):
     """Print simulation header with configuration info."""
     simulation_type = info_config.get("simulation_type", "spectroscopy")
     title = f"{simulation_type.upper()} ELECTRONIC SPECTROSCOPY SIMULATION"
-    print("=" * 60)
+    print("=" * 80)
     print(title)
-    print("=" * 60)
     print(f"Configuration:")
     print(
         f"  Parameters:\t#phases={info_config['n_phases']}, #frequencies={info_config['n_freqs']}"
@@ -97,7 +96,7 @@ def print_simulation_header(info_config: dict, max_workers: int):
         f"  Times:\tt_det_max={info_config['t_det_max']} fs, dt={info_config['dt']} fs"
     )
     if simulation_type == "1d":
-        print(f"\t\tτ_coh={info_config['t_coh']} fs")
+        print(f"\t\t t_coh={info_config['t_coh']} fs")
     print(f"\t\tT_wait: {info_config['t_wait']} fs")
     print(
         f"  Total combinations: {info_config['n_phases'] * info_config['n_phases'] * info_config['n_freqs']}"
@@ -112,7 +111,6 @@ def print_simulation_summary(
     """Print simulation completion summary."""
     print("\n" + "=" * 60)
     print("SIMULATION COMPLETED")
-    print("=" * 60)
     print(f"Total execution time: {elapsed_time:.2f} seconds")
 
     print("The data with shape: ")

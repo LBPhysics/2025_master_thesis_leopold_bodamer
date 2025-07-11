@@ -138,7 +138,7 @@ class LaserPulseSequence:
     @staticmethod
     def from_delays(
         delays: List[float],
-        base_amplitude: float = 0.05,
+        base_amplitude: float = 1,
         pulse_fwhm: float = 15.0,
         carrier_freq_cm: float = 16000.0,
         envelope_type: str = "gaussian",
@@ -279,7 +279,7 @@ class LaserPulseSequence:
             "pulse_indices": [i for i, _ in active],
         }
 
-    def update_first_two_pulse_phases(self, phase1: float, phase2: float) -> None:
+    def update_phases(self, phases: List[float]) -> None:
         """
         Update the pulse_phases of the first two pulses in the LaserPulseSequence.
 
@@ -290,13 +290,12 @@ class LaserPulseSequence:
         Raises:
             ValueError: If there are fewer than two pulses in the system.
         """
-        if len(self.pulses) < 2:
+        if len(phases) != len(self.pulses):
             raise ValueError(
-                "LaserPulseSequence must contain at least two pulses to update their phases."
+                f"Number of phases ({len(phases)}) must match number of pulses ({len(self.pulses)})"
             )
-
-        self.pulses[0].pulse_phase = phase1
-        self.pulses[1].pulse_phase = phase2
+        for i, phase in enumerate(phases):
+            self.pulses[i].pulse_phase = phase
 
     def update_delays(self, delays: List[float]) -> None:
         """

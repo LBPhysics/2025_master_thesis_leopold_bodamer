@@ -28,7 +28,7 @@ from .bath_fcts import (
     power_spectrum_func_paper,
 )
 
-from .bath_class import BathClass
+from .bath_class import BathSystem
 
 # =============================
 # PUBLIC API
@@ -44,7 +44,7 @@ __all__ = [
     "spectral_density_func_paper",
     "power_spectrum_func_paper",
     # Bath class
-    "BathClass",
+    "BathSystem",
 ]
 
 # =============================

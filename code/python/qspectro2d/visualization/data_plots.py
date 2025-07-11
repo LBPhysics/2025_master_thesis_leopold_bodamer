@@ -104,7 +104,7 @@ def plot_1d_data(
     system = extracted["system"]
     info_config = extracted["info_config"]
     t_coh = info_config["t_coh"]
-    T_wait = info_config["t_wait"]
+    t_wait = info_config["t_wait"]
     n_freqs = info_config.get("n_freqs", 1)
 
     print(f"✅ Data loaded with shape: {data.shape}")
@@ -126,7 +126,7 @@ def plot_1d_data(
                 domain="time",
                 component="abs",  # Use first component for time domain
                 t_coh=t_coh,
-                T_wait=T_wait,
+                t_wait=t_wait,
                 function_symbol="E_{k_s}",
                 n_freqs=n_freqs,
             )
@@ -201,7 +201,7 @@ def plot_2d_data(
     t_det_vals = extracted["axis2"]  # detection times
     system = extracted["system"]
     info_config = extracted["info_config"]
-    T_wait = info_config["t_wait"]
+    t_wait = info_config["t_wait"]
 
     # Get configuration values
     spectral_components_to_plot = plot_config.get(
@@ -223,7 +223,7 @@ def plot_2d_data(
                     data_x=t_det_vals,
                     data_y=t_coh_vals,
                     data_z=data,
-                    t_wait=T_wait,
+                    t_wait=t_wait,
                     domain="time",
                     use_custom_colormap=True,
                     component=component,
@@ -272,7 +272,7 @@ def plot_2d_data(
                         data_x=nu_ts,
                         data_y=nu_taus,
                         data_z=data_freq,
-                        t_wait=T_wait,
+                        t_wait=t_wait,
                         domain="freq",
                         use_custom_colormap=True,
                         component=component,

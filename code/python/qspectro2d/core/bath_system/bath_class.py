@@ -15,7 +15,7 @@ from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
 
 
 @dataclass
-class BathClass:
+class BathSystem:
     """
     Parameters for the bath coupling and spectral density function.
     """
@@ -129,7 +129,7 @@ class BathClass:
 
     def to_dict(self) -> dict:
         """
-        Convert the BathClass instance to a dictionary.
+        Convert the BathSystem instance to a dictionary.
 
         Returns:
             dict: Dictionary representation of the instance.
@@ -145,13 +145,13 @@ class BathClass:
     @classmethod
     def from_dict(cls, data: dict):
         """
-        Create a BathClass instance from a dictionary.
+        Create a BathSystem instance from a dictionary.
 
         Parameters:
             data (dict): Dictionary containing the parameters.
 
         Returns:
-            BathClass: Instance of BathClass.
+            BathSystem: Instance of BathSystem.
         """
         return cls(
             bath=data.get("bath", "paper"),
@@ -163,7 +163,7 @@ class BathClass:
 
     def to_json(self) -> str:
         """
-        Convert the BathClass instance to a JSON string.
+        Convert the BathSystem instance to a JSON string.
 
         Returns:
             str: JSON string representation of the instance.
@@ -173,13 +173,13 @@ class BathClass:
     @classmethod
     def from_json(cls, json_str: str):
         """
-        Create a BathClass instance from a JSON string.
+        Create a BathSystem instance from a JSON string.
 
         Parameters:
             json_str (str): JSON string containing the parameters.
 
         Returns:
-            BathClass: Instance of BathClass.
+            BathSystem: Instance of BathSystem.
         """
         data = json.loads(json_str)
         return cls.from_dict(data)

@@ -96,10 +96,10 @@ def main():
     info_dict = load_info_file(abs_info_path)
     system = info_dict["system"]
     # workaround
-    from qspectro2d.core.bath_system import BathClass
+    from qspectro2d.core.bath_system import BathSystem
     from qspectro2d.core.laser_system import LaserPulseSequence
 
-    bath = BathClass()  # info_dict["bath"]
+    bath = BathSystem()  # info_dict["bath"]
     laser = LaserPulseSequence()  # info_dict["laser"]
     info_config = info_dict["info_config"]
 

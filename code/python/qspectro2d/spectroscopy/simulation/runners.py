@@ -12,18 +12,18 @@ import numpy as np
 
 ### Project-specific imports
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.simulation_class import SimClassOQS
+from qspectro2d.core.simulation_class import SimulationModuleOQS
 
 
 # =============================
 # SIMULATION RUNNER FUNCTIONS
 # =============================
-def run_1d_simulation(sim_oqs: SimClassOQS) -> tuple:
+def run_1d_simulation(sim_oqs: SimulationModuleOQS) -> tuple:
     """
     Run 1D spectroscopy simulation with updated calculation structure.
 
     Parameters:
-        sim_oqs (SimClassOQS): Simulation class containing system and configuration.
+        sim_oqs (SimulationModuleOQS): Simulation class containing system and configuration.
     Returns:
         tuple: Detection time values and averaged data.
     """
@@ -111,7 +111,7 @@ def run_2d_simulation(
         t_coh_vals, t_det_vals, data_2d = parallel_compute_2d_E_with_inhomogenity(
             n_freqs=info_config.get("n_freqs", 1),
             n_phases=info_config["n_phases"],
-            T_wait=info_config["t_wait"],
+            t_wait=info_config["t_wait"],
             t_det_max=info_config["t_det_max"],
             apply_ift=info_config.get("apply_ift", True),
             system=system,
