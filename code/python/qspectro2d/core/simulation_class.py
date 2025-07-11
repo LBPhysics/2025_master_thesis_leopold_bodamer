@@ -1,8 +1,11 @@
 # =============================
 # DEFINE THE simulation_config PARAMETERS CLASS
 # =============================
-from dataclasses import dataclass, asdict, field  # for the class definiton
+from dataclasses import dataclass, asdict, field
+from os import times
+import re  # for the class definiton
 import numpy as np
+from zmq import has
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.bath_system.bath_class import BathClass
@@ -219,6 +222,55 @@ class SimClassOQS:
     def paper_evo_obj(self, t: float) -> Qobj:
         return matrix_ODE_paper(t, self)
 
+    # TIME GRID FOR SIMULATION
+    @property
+    def times_global(self):
+        if not hasattr(self, "_times_global"):
+            # Compute if not manually set
+            t0 = -self.laser.pulse_fwhms[0]
+            t_max = self.simulation_config.t_max
+            dt = self.simulation_config.dt
+
+            n_steps = int(np.round((t_max - t0) / dt)) + 1  # ensure inclusion of t_max
+            self._times_global = np.linspace(t0, t_max, n_steps)  # include t0 and t_max
+        return self._times_global
+
+    @times_global.setter
+    def times_global(self, value):
+        self._times_global = value
+
+    @property
+    def times_local(self):
+        if not hasattr(self, "_times_local"):
+            # Compute if not manually set
+            t0 = -self.laser.pulse_fwhms[0]
+            t_coh = self.simulation_config.t_coh
+            t_wait = self.simulation_config.t_wait
+            t_max = t_coh + t_wait + self.simulation_config.t_det_max
+            dt = self.simulation_config.dt
+
+            n_steps = int(np.round((t_max - t0) / dt)) + 1
+            self._times_local = np.linspace(t0, t_max, n_steps)
+        return self._times_local
+
+    @times_local.setter
+    def times_local(self, value):
+        self._times_local = value
+
+    @property
+    def times_det(self):
+        dt = self.simulation_config.dt
+        t_det_max = self.simulation_config.t_det_max
+
+        n_steps_det = int(np.round(t_det_max / dt)) + 1
+        times_det = np.linspace(0, t_det_max, n_steps_det)
+        self._times_det = times_det  # Store in the instance for later use
+        return self._times_det
+
+    @times_det.setter
+    def times_det(self, value):
+        self._times_det = value
+
     def __post_init__(self):
         # Generate the coupling objects
         self.sb_coupling = SystemBathCoupling(self.system, self.bath)
@@ -226,19 +278,6 @@ class SimClassOQS:
 
         # Hamiltonians
         self.H0_undiagonalized = self.system.H0_undiagonalized
-        self.H_sim = self.H0_diagonalized
-
-        # TIME GRID FOR SIMULATION
-        # =============================
-        t0 = -self.laser.pulse_fwhms[0]
-        t_max = self.simulation_config.t_max
-        dt = self.simulation_config.dt
-        t_det_max = self.simulation_config.t_det_max
-
-        n_steps = int(np.round((t_max - t0) / dt)) + 1  # ensure inclusion of t_max
-        self.times = np.linspace(t0, t_max, n_steps)  # include t0 and t_max
-        n_steps_det = int(np.round(t_det_max / dt)) + 1
-        self.times_det = np.linspace(0, t_det_max, n_steps_det)
 
         # define the decay channels and EVOlution objectsbased on the ODE_Solver
         ODE_Solver = self.simulation_config.ODE_Solver

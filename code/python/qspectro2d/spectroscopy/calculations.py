@@ -113,8 +113,8 @@ def _execute_segmented_evolution(
 
     current_state = sim_oqs.system.psi_ini
     # Find pulse regions and split time array
-    pulse_regions = identify_non_zero_pulse_regions(sim_oqs.times, sim_oqs.laser)
-    split_times = split_by_active_regions(sim_oqs.times, pulse_regions)
+    pulse_regions = identify_non_zero_pulse_regions(sim_oqs.times_local, sim_oqs.laser)
+    split_times = split_by_active_regions(sim_oqs.times_local, pulse_regions)
 
     for i, curr_times in enumerate(split_times):
         # Extend curr_times by one point if not the last segment
@@ -124,7 +124,7 @@ def _execute_segmented_evolution(
                 curr_times = np.append(curr_times, next_times[0])
 
         # Find the indices in the original times array for this split
-        start_idx = np.abs(sim_oqs.times - curr_times[0]).argmin()
+        start_idx = np.abs(sim_oqs.times_local - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
         decay_ops_list = sim_oqs.decay_channels
         if has_pulse:
@@ -208,8 +208,9 @@ def check_the_solver(sim_oqs: SimClassOQS) -> tuple[Result, float]:
     dt = 10 * sim_oqs.simulation_config.dt
     t0 = -sim_oqs.laser.pulse_fwhms[0]
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
-    sim_oqs.times = times
-    sim_oqs.__post_init__()  # Ensure system is updated with new times
+    sim_oqs.times_global = times
+    sim_oqs.times_local = times
+    # sim_oqs.__post_init__()  # DONT DO IT since it would mess up the times again
     print(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver ", flush=True)
 
     # =============================
@@ -354,7 +355,7 @@ def _compute_three_pulse_evolution(
     # Segment 1: First pulse evolution
     t_coh = sim_oqs.simulation_config.t_coh
     t_wait = sim_oqs.simulation_config.t_wait
-    times = sim_oqs.times
+    times = sim_oqs.times_local
     fwhms = sim_oqs.laser.pulse_fwhms
 
     full_sequence = sim_oqs.laser
@@ -362,10 +363,10 @@ def _compute_three_pulse_evolution(
     pulse1_start_idx = np.abs(times - (t_coh - fwhms[0])).argmin()
     times_0 = _ensure_valid_times(times[: pulse1_start_idx + 1], times)
 
-    sim_oqs.times = times_0  # Update times in sim_oqs for the first segment
+    sim_oqs.times_local = times_0  # Update times in sim_oqs for the first segment
     sim_oqs.laser = LaserPulseSequence(pulses=[full_sequence.pulses[0]])
     sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-    sim_oqs.__post_init__()  # Ensure system is updated with new laser
+    # sim_oqs.__post_init__()  # dont do it as it would mess up the times again
     rho_1 = _compute_next_start_point(
         sim_oqs=sim_oqs,
     )
@@ -375,27 +376,27 @@ def _compute_three_pulse_evolution(
     times_1 = times[pulse1_start_idx : pulse2_start_idx + 1]
     times_1 = _ensure_valid_times(times_1, times, pulse1_start_idx)
 
-    sim_oqs.times = times_1  # Update times in sim_oqs for the first segment
+    sim_oqs.times_local = times_1  # Update times in sim_oqs for the first segment
     sim_oqs.laser = LaserPulseSequence(pulses=full_sequence.pulses[0:2])
     sim_oqs.system.psi_ini = rho_1  # Set initial state for next segment
     sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-    sim_oqs.system.__post_init__()  # Ensure system is updated with new laser
-    sim_oqs.__post_init__()  # Ensure system is updated with new laser and initial state
+    # sim_oqs.system.__post_init__()  # Ensure system is updated with new laser
+    # sim_oqs.__post_init__()  # Ensure system is updated with new laser and initial state
     rho_2 = _compute_next_start_point(
         sim_oqs=sim_oqs,
     )
 
     # Segment 3: Final evolution with detection
     times_2 = _ensure_valid_times(times[pulse2_start_idx:], times, pulse2_start_idx)
-    sim_oqs.times = times_2  # Update times in sim_oqs for the first segment
+    sim_oqs.times_local = times_2  # Update times in sim_oqs for the first segment
     sim_oqs.laser = full_sequence
     sim_oqs.system.psi_ini = rho_2  # Set initial state for next segment
-    sim_oqs.system.__post_init__()  # Ensure system is updated with new laser
+    # sim_oqs.system.__post_init__()  # Ensure system is updated with new laser
     sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-    sim_oqs.__post_init__()  # Ensure system is updated with new laser and initial state
+    # sim_oqs.__post_init__()  # Ensure system is updated with new laser and initial state
     data_final = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
-    assert len(data_final.states) == len(times_2)
-    assert len(data_final.times) == len(sim_oqs.times_det)
+    print(len(data_final.times), len(sim_oqs.times_det))
+    assert len(data_final.times) == len(sim_oqs.times_det)  # TODO CONTINUE
 
     return {
         "final_data": data_final,
@@ -408,7 +409,7 @@ def _compute_linear_signals(
     sim_oqs: SimClassOQS,
 ) -> dict:
     """Compute all linear signal contributions."""
-    times = sim_oqs.times
+    times = sim_oqs.times_local
     laser = sim_oqs.laser
     t_coh = sim_oqs.simulation_config.t_coh
     t_wait = sim_oqs.simulation_config.t_wait
@@ -421,7 +422,7 @@ def _compute_linear_signals(
         single_seq = LaserPulseSequence(pulses=[pulse])
         sim_oqs.laser = single_seq  # Update the laser sequence for each pulse
         sim_oqs.laser.__post_init__()  # Ensure laser is initialized correctly
-        sim_oqs.__post_init__()  # Ensure system is updated with new laser
+        # sim_oqs.__post_init__()  # Ensure system is updated with new laser
         data = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
         linear_data[f"pulse{i}"] = data.states[detection_idx:]
 
@@ -607,7 +608,7 @@ def _process_single_1d_combination(
         )  # Update the laser phases in the simulation class
         # Compute the 1D polarization for this specific phase combination
         sim_oqs.system.freqs_cm = new_freqs  # Update frequencies in the system
-        sim_oqs.system.__post_init__()  # Ensure system is updated with new frequencies
+        # sim_oqs.system.__post_init__()  # Ensure system is updated with new frequencies
         sim_oqs.__post_init__()
         data = compute_1d_polarization(
             sim_oqs=sim_oqs,
@@ -670,8 +671,8 @@ def parallel_compute_1d_E_with_inhomogenity(
     for omega_idx in range(n_freqs):
         new_freqs = all_freq_sets[omega_idx]
         sim_oqs.system.update_freqs_cm(new_freqs)
-        sim_oqs.system.__post_init__()
-        sim_oqs.__post_init__()  # Ensure system is updated with new frequencies
+        # sim_oqs.system.__post_init__()
+        # sim_oqs.__post_init__()  # Ensure system is updated with new frequencies
 
     for phi1_idx, phi1 in enumerate(phases):
         for phi2_idx, phi2 in enumerate(phases):
