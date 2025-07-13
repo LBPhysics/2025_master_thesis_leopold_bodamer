@@ -55,7 +55,7 @@ def test_length_consistency():
         simulation_config_dict = {
             "simulation_type": "1d",
             "max_workers": 1,
-            "apply_ift": True,
+            "IFT_component": (-1, 1, 1),
             "ODE_Solver": "Paper_eqs",
             "RWA_SL": True,
             "keep_track": "basis",

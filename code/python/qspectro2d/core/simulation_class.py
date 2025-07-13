@@ -48,10 +48,13 @@ class SimulationConfig:
     # additional parameters
     max_workers: int = 1  # Number of parallel workers for the simulation
     simulation_type: str = "1d"  # Type of simulation, e.g., "1d", "2d"
-    #
-    apply_ift: bool = (
-        True  # Apply inverse Fourier transform to get the photon echo signal
-    )
+
+    # IFT parameters
+    IFT_component: tuple = (
+        1,
+        -1,
+        0,
+    )  # classical average || (1, -1, 0) == photon echo signal
 
     @property
     def combinations(self) -> int:
@@ -265,15 +268,14 @@ class SimulationModuleOQS:
         if hasattr(self, "_times_local_manual"):
             return self._times_local_manual  # Manual override
 
+        times_global = self.times_global
         # Automatically compute based on current config
-        t0 = -self.laser.pulse_fwhms[0]
         t_coh = self.simulation_config.t_coh
         t_wait = self.simulation_config.t_wait
-        t_max = t_coh + t_wait + self.simulation_config.t_det_max
-        dt = self.simulation_config.dt
+        t_max_curr = t_coh + t_wait + self.simulation_config.t_det_max
+        idx = np.abs(times_global - t_max_curr).argmin()
 
-        n_steps = int(np.round((t_max - t0) / dt)) + 1
-        return np.linspace(t0, t_max, n_steps)
+        return self.times_global[: idx + 1]
 
     @times_local.setter
     def times_local(self, value):
@@ -297,7 +299,15 @@ class SimulationModuleOQS:
     @property
     def times_det_actual(self):
         """Returns the actual detection times."""
-        return self.times_local[-len(self.times_det) :]
+        self.reset_times_local()
+        times_det_actual = self.times_local[-len(self.times_det) :]
+        """print(
+            "the lengths of detection times",
+            len(times_det_actual),
+            len(self.times_det),
+            flush=True,
+        )"""
+        return times_det_actual
 
     @property
     def Evo_obj_free(self):

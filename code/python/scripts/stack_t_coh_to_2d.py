@@ -56,14 +56,14 @@ def main():
             data = data_npz["data"]
 
             # Extract t_coh value from filename
-            tau_str = str(path).split("tau_")[1]
-            tau_val = tau_str.split("_")[0]
-            tau = float(tau_val)
+            t_coh_str = str(path).split("t_coh_")[1]
+            t_coh_val = t_coh_str.split("_")[0]
+            t_coh = float(t_coh_val)
 
-            results.append((tau, data, path))  # also keep path
+            results.append((t_coh, data, path))  # also keep path
             shapes.append(data.shape)
 
-            print(f"   ✅ Loaded: t_coh = {tau}")
+            print(f"   ✅ Loaded: t_coh = {t_coh}")
         except Exception as e:
             print(f"   ❌ Failed to load {path}: {e}")
 
@@ -82,14 +82,14 @@ def main():
 
     shape_single = results[0][1].shape
     dtype = results[0][1].dtype
-    num_tau = len(results)
+    num_t_coh = len(results)
 
-    stacked_data = np.empty((num_tau, *shape_single), dtype=dtype)
-    tau_vals = np.empty(num_tau)
+    stacked_data = np.empty((num_t_coh, *shape_single), dtype=dtype)
+    t_coh_vals = np.empty(num_t_coh)
 
-    for i, (tau, data, _) in enumerate(results):
+    for i, (t_coh, data, _) in enumerate(results):
         stacked_data[i] = data
-        tau_vals[i] = tau
+        t_coh_vals[i] = t_coh
 
     # Load metadata once from the first file
     abs_info_path = DATA_DIR / (str(results[0][2]) + "_info.pkl")
@@ -113,7 +113,7 @@ def main():
     info_config["t_coh"] = ""  # now spans many values
 
     rel_path = save_simulation_data(
-        system, info_config, bath, laser, stacked_data, axis1=tau_vals, axis2=t_det
+        system, info_config, bath, laser, stacked_data, axis1=t_coh_vals, axis2=t_det
     )
 
     print(f"\n✅ Final 2D data saved to: {rel_path}")

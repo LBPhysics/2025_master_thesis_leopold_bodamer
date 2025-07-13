@@ -246,7 +246,7 @@ def plot_2d_data(
         try:
             # Extend time axes if needed
             if extend_for != (1, 1):
-                extended_ts, extended_taus, extended_data = extend_time_axes(
+                extended_ts, extended_t_cohs, extended_data = extend_time_axes(
                     data=data,
                     t_det=t_det_vals,
                     t_coh=t_coh_vals,
@@ -254,15 +254,15 @@ def plot_2d_data(
                     pad_t_coh=extend_for,
                 )
             else:
-                extended_ts, extended_taus, extended_data = (
+                extended_ts, extended_t_cohs, extended_data = (
                     t_det_vals,
                     t_coh_vals,
                     data,
                 )
 
             # Compute FFT
-            nu_ts, nu_taus, data_freq = compute_2d_fft_wavenumber(
-                extended_ts, extended_taus, extended_data
+            nu_ts, nu_t_cohs, data_freq = compute_2d_fft_wavenumber(
+                extended_ts, extended_t_cohs, extended_data
             )
 
             # Plot each spectral component separately
@@ -270,7 +270,7 @@ def plot_2d_data(
                 try:
                     fig = plot_2d_el_field(
                         data_x=nu_ts,
-                        data_y=nu_taus,
+                        data_y=nu_t_cohs,
                         data_z=data_freq,
                         t_wait=t_wait,
                         domain="freq",

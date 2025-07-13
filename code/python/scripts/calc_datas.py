@@ -30,7 +30,6 @@ python3 calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 
 
 import time
 import argparse
-from unittest.mock import DEFAULT
 import numpy as np
 from pathlib import Path
 
@@ -66,11 +65,13 @@ DEFAULT_BATH_CUTOFF = 1e2
 DEFAULT_BATH_GAMMA_0 = 1 / 300.0
 DEFAULT_BATH_GAMMA_PHI = 1 / 100.0
 DEFAULT_N_FREQS = 1
-DEFAULT_PHASES = 1  # Number of phase cycles for the simulation
+DEFAULT_PHASES = 4  # Number of phase cycles for the simulation
 DEFAULT_DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
-DEFAULT_APPLY_IFFT = (
-    True  # Whether to apply inverse Fourier transform in the simulation
-)
+DEFAULT_IFT_COMPONENT = (
+    1,
+    0,
+    0,
+)  #  (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal
 
 
 def create_simulation_module_from_configs(
@@ -125,9 +126,12 @@ def run_single_t_coh_with_sim(
 
     # Update t_coh in the simulation config
     sim_oqs.simulation_config.t_coh = t_coh
-
-    # Update laser delays with new t_coh
     t_wait = sim_oqs.simulation_config.t_wait
+    """
+    #print(
+    #    "the times are ", sim_oqs.times_global, sim_oqs.times_local, sim_oqs.times_det
+    #)
+    """
     sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + t_wait]
 
     start_time = time.time()
@@ -151,8 +155,8 @@ def run_single_t_coh_with_sim(
     )
     data_path = Path(f"{abs_path}_data.npz")
     print(f"\nSaving data to: {data_path}")
-    detection_times = sim_oqs.times_det[sim_oqs.times_det_actual < time_cut]
-    save_data_file(data_path, data, detection_times)
+
+    save_data_file(data_path, data, sim_oqs.times_det)
 
     rel_path = abs_path.relative_to(DATA_DIR)
 
@@ -215,7 +219,7 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
     simulation_config_dict = {
         "simulation_type": "1d",
         "max_workers": max_workers,
-        "apply_ift": DEFAULT_APPLY_IFFT,
+        "IFT_component": DEFAULT_IFT_COMPONENT,
         ### Simulation parameters
         "ODE_Solver": DEFAULT_ODE_SOLVER,
         "RWA_SL": DEFAULT_RWA_SL,
@@ -248,7 +252,7 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
         simulation_config=simulation_config_dict,
     )
 
-    print(sim_oqs.simulation_config)
+    # print(sim_oqs.simulation_config)
 
     ### Validate solver once at the beginning
     time_cut = -np.inf
@@ -261,7 +265,6 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
             f"✅ Solver validation worked: Evolution becomes unphysical at "
             f"({time_cut / t_max:.2f} × t_max)"
         )
-        print("#" * 60)
     except Exception as e:
         print(f"⚠️  WARNING: Solver validation failed: {e}")
 
@@ -324,19 +327,20 @@ def run_2d_mode(args):
         f"📊 Processing {len(t_coh_subarray)} t_coh values: [{t_coh_subarray[0]:.1f}, {t_coh_subarray[-1]:.1f}] fs"
     )
 
-    t_wait = args.t_wait
     rel_dir = None
+    start_time = time.time()
     for i, t_coh in enumerate(t_coh_subarray):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
         save_info = t_coh == 0  # Only save info for first simulation
-        sim_oqs.simulation_config.t_coh = t_coh
-        sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + t_wait]
         rel_dir = run_single_t_coh_with_sim(
             sim_oqs,
             t_coh,
             save_info=save_info,
             time_cut=time_cut,
         )
+    elapsed = time.time() - start_time
+    dummy_data = np.zeros((len(t_coh_subarray), len(sim_oqs.times_det)))
+    print_simulation_summary(elapsed, dummy_data, rel_dir, "2d")
 
     print(f"\n✅ Batch {args.batch_idx + 1}/{args.n_batches} completed!")
     print(f"\n🎯 To stack this data into 2D, run:")

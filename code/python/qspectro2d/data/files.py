@@ -37,8 +37,8 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
 
     if info_config.get("simulation_type") == "1d":
         # Round t_coh to 2 decimal places for filename clarity
-        tau_val = round(float(info_config["t_coh"]), 2)
-        parts.append(f"tau_{tau_val}")
+        t_coh_val = round(float(info_config["t_coh"]), 2)
+        parts.append(f"t_coh_{t_coh_val}")
 
     """
     N_atoms = system.N_atoms
