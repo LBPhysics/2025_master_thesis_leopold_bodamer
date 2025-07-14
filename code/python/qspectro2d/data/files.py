@@ -123,7 +123,7 @@ def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
 
     if N_atoms == 2:
         # Add coupling strength if applicable
-        J = system.J_cm if system.J_ is not None else 0
+        J = system.J_cm if system.J_cm is not None else 0
         if J > 0:
             parts.append(f"Coupled")
 

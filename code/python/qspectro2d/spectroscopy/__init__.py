@@ -44,7 +44,6 @@ from .post_processing import (
 # =============================
 # SIMULATION FUNCTIONS
 # =============================
-from . import simulation
 from .simulation import (
     get_max_workers,
     print_simulation_summary,

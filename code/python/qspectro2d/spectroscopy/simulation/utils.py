@@ -12,9 +12,6 @@ import os
 import psutil
 import numpy as np
 
-### Project-specific imports
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
-
 
 # =============================
 # SIMULATION SETUP UTILITIES

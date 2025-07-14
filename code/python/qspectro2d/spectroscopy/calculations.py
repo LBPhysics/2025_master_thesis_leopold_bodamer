@@ -3,7 +3,6 @@
 # =============================
 # STANDARD LIBRARY IMPORTS
 # =============================
-from cmath import polar
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from typing import List, Union, Tuple
@@ -43,6 +42,13 @@ from qspectro2d.spectroscopy.simulation.utils import (
 # LOGGING CONFIGURATION
 # =============================
 logger = logging.getLogger(__name__)
+# Set to DEBUG level to see all debug messages
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.WARNING)  # Only show WARNING, ERROR, CRITICAL messages
 
 
 def compute_pulse_evolution(
@@ -107,13 +113,13 @@ def compute_pulse_evolution(
         start_idx = np.abs(actual_times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
         if has_pulse:
-            EVO_obj = sim_oqs.Evo_obj_int
+            evo_obj = sim_oqs.Evo_obj_int
         else:
-            EVO_obj = sim_oqs.Evo_obj_free
+            evo_obj = sim_oqs.Evo_obj_free
         # Execute evolution for this time segment
         result = _execute_single_evolution_segment(
             sim_oqs.simulation_config.ODE_Solver,
-            EVO_obj,
+            evo_obj,
             decay_ops_list,
             current_state,
             curr_times,
@@ -144,17 +150,17 @@ def compute_pulse_evolution(
 
 
 def _execute_single_evolution_segment(
-    ODE_Solver: str,
-    EVO_obj: Union[Qobj, QobjEvo],
-    decay_ops_list: list,
+    ode_solver: str,
+    evo_obj: Union[Qobj, QobjEvo],
+    decay_ops_list: List[Qobj],
     current_state: Qobj,
     times_: np.ndarray,
     options: dict,
 ) -> Result:
     """Execute evolution for a single time segment."""
-    if ODE_Solver == "BR":
+    if ode_solver == "BR":
         return brmesolve(
-            EVO_obj,
+            evo_obj,
             current_state,
             times_,
             a_ops=decay_ops_list,
@@ -162,7 +168,7 @@ def _execute_single_evolution_segment(
         )
     else:
         return mesolve(
-            EVO_obj,
+            evo_obj,
             current_state,
             times_,
             c_ops=decay_ops_list,
@@ -183,7 +189,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
         result (Result): The Qotip result object.
         time_cut (float): The time after which the checks failed, or np.inf if all checks passed.
     """
-    print(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver ", flush=True)
+    logger.info(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver")
     copy_sim_oqs = deepcopy(sim_oqs)
     t_max = 2 * copy_sim_oqs.simulation_config.t_max
     dt = 10 * copy_sim_oqs.simulation_config.dt
@@ -220,7 +226,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     # =============================
     # CHECK DENSITY MATRIX PROPERTIES
     # =============================
-    strg = ""
+    error_messages = []
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
     if getattr(copy_sim_oqs.simulation_config, "RWA_SL", False):
@@ -230,24 +236,26 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     for index, state in enumerate(states):
         time = times[index]
         if not state.isherm:
-            strg += f"Density matrix is not Hermitian after t = {time}.\n"
-            print(state, flush=True)
+            error_messages.append(f"Density matrix is not Hermitian after t = {time}")
+            logger.error(f"Non-Hermitian density matrix at t = {time}")
         eigvals = state.eigenenergies()
         if not np.all(eigvals >= NEGATIVE_EIGVAL_THRESHOLD):
-            strg += f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {eigvals.min()}.\n"
+            error_messages.append(
+                f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {eigvals.min()}"
+            )
             time_cut = time
         if not np.isclose(state.tr(), 1.0, atol=TRACE_TOLERANCE):
-            strg += f"Density matrix is not trace-preserving after t = {time}: The trace is {state.tr()}.\n"
+            error_messages.append(
+                f"Density matrix is not trace-preserving after t = {time}: The trace is {state.tr()}"
+            )
             time_cut = time
-        if strg:
-            strg += "Adjust your parameters!"
-            print(strg, flush=True)
+        if error_messages:
+            logger.error(
+                "Density matrix validation failed: " + "; ".join(error_messages)
+            )
             break
     else:
-        print(
-            "Checks passed. DM remains Hermitian and positive.",
-            flush=True,
-        )
+        logger.info("Checks passed. DM remains Hermitian and positive.")
 
     return result, time_cut
 
@@ -282,7 +290,7 @@ def _compute_next_start_point(
         "store_final_state": True,
         "store_states": False,  # Only need final state for efficiency
     }
-    evolution_options.update(kwargs)  # Allow override of options
+    # evolution_options.update(kwargs)  # Allow override of options
 
     evolution_data = compute_pulse_evolution(sim_oqs=sim_oqs, **evolution_options)
 
@@ -292,9 +300,28 @@ def _compute_next_start_point(
 def compute_1d_polarization(
     sim_oqs: SimulationModuleOQS,
     **kwargs,
-) -> list[np.complex64]:
+) -> Union[
+    Tuple[np.ndarray, np.ndarray, SimulationModuleOQS], Tuple[np.ndarray], np.ndarray
+]:
     """
-    Compute the data for a fixed t_coh and t_wait. AND NOW VARIABLE t_det_max
+    Compute the data for a fixed t_coh and t_wait.
+
+    Parameters
+    ----------
+    sim_oqs : SimulationModuleOQS
+        Simulation configuration object containing all parameters
+    **kwargs : dict
+        Additional keyword arguments:
+        - plot_example_evo : bool, return evolution data for plotting
+        - plot_example_polarization : bool, return polarization plot data
+        - time_cut : float, time cutoff for detection
+
+    Returns
+    -------
+    Union[Tuple, np.ndarray]
+        - If plot_example_evo=True: (times, expectation_values, sim_oqs)
+        - If plot_example_polarization=True: (polarization_plot_data,)
+        - Otherwise: nonlinear_signal array
     """
 
     if kwargs.get("plot_example_evo", False):
@@ -355,9 +382,8 @@ def compute_1d_polarization(
 
 def _compute_3_pulse_evolution(
     sim_oqs: SimulationModuleOQS,
-) -> dict:
+) -> List[Qobj]:
     """Compute the n-pulse evolution using segmented approach."""
-    copy_sim_oqs = deepcopy(sim_oqs)
     t_coh = sim_oqs.simulation_config.t_coh
     t_wait = sim_oqs.simulation_config.t_wait
     detection_time = t_coh + t_wait
@@ -370,6 +396,16 @@ def _compute_3_pulse_evolution(
     if n_pulses < 2:
         raise ValueError("Need at least 2 pulses for segmented evolution")
 
+    # Debug initial setup
+    logger.info(f"=== Time segmentation debug for t_coh={t_coh:.2f} fs ===")
+    logger.info(f"  t_wait={t_wait:.2f} fs, detection_time={detection_time:.2f} fs")
+    logger.info(
+        f"  times_local: {len(times)} points from {times[0]:.2f} to {times[-1]:.2f} fs"
+    )
+    logger.info(f"  times_det: {len(sim_oqs.times_det)} points")
+    logger.info(f"  fwhms: {fwhms}")
+    logger.info(f"  n_pulses: {n_pulses}")
+
     # Initialize variables for loop
     current_state = sim_oqs.system.psi_ini
     prev_pulse_start_idx = 0
@@ -379,61 +415,123 @@ def _compute_3_pulse_evolution(
         # Calculate pulse start index
         if pulse_idx == 0:
             # First pulse: start at t_coh - fwhm
-            pulse_start_idx = np.abs(times - (t_coh - fwhms[pulse_idx + 1])).argmin()
+            pulse_start_time = t_coh - fwhms[pulse_idx + 1]
+            pulse_start_idx = np.abs(times - pulse_start_time).argmin()
+            logger.info(
+                f"  Pulse {pulse_idx}: target time={pulse_start_time:.2f}, idx={pulse_start_idx}, actual_time={times[pulse_start_idx]:.2f}"
+            )
             times_segment = _ensure_valid_times(times[: pulse_start_idx + 1], times)
         elif pulse_idx == 1:
-            pulse_start_idx = np.abs(
-                times - (detection_time - fwhms[pulse_idx + 1])
-            ).argmin()
+            pulse_start_time = detection_time - fwhms[pulse_idx + 1]
+            pulse_start_idx = np.abs(times - pulse_start_time).argmin()
+            logger.info(
+                f"  Pulse {pulse_idx}: target time={pulse_start_time:.2f}, idx={pulse_start_idx}, actual_time={times[pulse_start_idx]:.2f}"
+            )
         else:
             raise ValueError("STILL TODO implement general n-pulse evolution")
 
         times_segment = times[prev_pulse_start_idx : pulse_start_idx + 1]
         times_segment = _ensure_valid_times(times_segment, times, prev_pulse_start_idx)
+        logger.info(
+            f"  Segment {pulse_idx}: {len(times_segment)} points from {times_segment[0]:.2f} to {times_segment[-1]:.2f} fs"
+        )
 
         # Update simulation parameters for this segment
-        copy_sim_oqs.times_local = times_segment
-        copy_sim_oqs.laser = LaserPulseSequence(
-            pulses=full_sequence.pulses[: pulse_idx + 1]
-        )
-        copy_sim_oqs.system.psi_ini = current_state
+        sim_oqs.times_local = times_segment
+        sim_oqs.laser = LaserPulseSequence(pulses=full_sequence.pulses[: pulse_idx + 1])
+        sim_oqs.system.psi_ini = current_state
 
         # Compute evolution for this segment
-        current_state = _compute_next_start_point(sim_oqs=copy_sim_oqs)
+        current_state = _compute_next_start_point(sim_oqs=sim_oqs)
 
         # Update for next iteration
         prev_pulse_start_idx = pulse_start_idx
 
+    # print("the detection times are ", sim_oqs.times_det_actual, flush=True)
+
+    # print("and the final times are ", times[prev_pulse_start_idx:], flush=True)
+    # pulse_detection_idx = np.abs(times - detection_time).argmin()
+    # times_detection_final = times[pulse_detection_idx:]
+    # print("and the final times after detection are ", times_detection_final, flush=True)
     # Final segment: evolution with detection (last pulse)
     times_final = _ensure_valid_times(
         times[prev_pulse_start_idx:], times, prev_pulse_start_idx
     )
-    copy_sim_oqs.times_local = times_final
 
-    copy_sim_oqs.laser = full_sequence
-    copy_sim_oqs.system.psi_ini = current_state
+    # Debug timing information
+    logger.info(f"Time segmentation debug for t_coh={t_coh:.2f} fs:")
+    logger.info(f"  Detection length: {len(sim_oqs.times_det)}")
+    logger.info(f"  Final segment length: {len(times[prev_pulse_start_idx:])}")
+    logger.info(f"  prev_pulse_start_idx: {prev_pulse_start_idx}")
+    logger.info(f"  times_local total length: {len(times)}")
 
-    data_final = compute_pulse_evolution(sim_oqs=copy_sim_oqs, store_states=True)
+    sim_oqs.times_local = times_final
+
+    sim_oqs.laser = full_sequence
+    sim_oqs.system.psi_ini = current_state
+
+    data_final = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
+
+    sim_oqs.times_local = times
 
     detection_length = len(sim_oqs.times_det)
-    final_states = data_final.states[-detection_length:]
+
+    # Ensure we have enough states
+    if len(data_final.states) < detection_length:
+        logger.warning(
+            f"Not enough states: got {len(data_final.states)}, need {detection_length}"
+        )
+        # Pad with the last state
+        final_states = data_final.states.copy()
+        while len(final_states) < detection_length:
+            final_states.append(
+                final_states[-1] if final_states else sim_oqs.system.psi_ini
+            )
+    else:
+        final_states = data_final.states[-detection_length:]
+
+    # Debug: Check the states being returned
+    logger.debug(f"Total states computed: {len(data_final.states)}")
+    logger.debug(f"Detection length expected: {detection_length}")
+    logger.debug(f"Final states extracted: {len(final_states)}")
 
     return final_states
 
 
 def _compute_3_linear_signals(
     sim_oqs: SimulationModuleOQS,
-) -> dict:
+) -> dict[str, List[Qobj]]:
     """Compute all linear signal contributions."""
     laser = sim_oqs.laser
     detection_length = len(sim_oqs.times_det)
     linear_data_states = {}
-    copy_sim_oqs = deepcopy(sim_oqs)
     for i, pulse in enumerate(laser):
         single_seq = LaserPulseSequence(pulses=[pulse])
-        copy_sim_oqs.laser = single_seq  # Update the laser sequence for each pulse
-        data = compute_pulse_evolution(sim_oqs=copy_sim_oqs, store_states=True)
-        linear_data_states[f"pulse{i}"] = data.states[-detection_length:]
+        sim_oqs.laser = single_seq  # Update the laser sequence for each pulse
+        data = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
+
+        # Ensure we have enough states
+        if len(data.states) < detection_length:
+            logger.warning(
+                f"Pulse {i}: Not enough states: got {len(data.states)}, need {detection_length}"
+            )
+            # Pad with the last state
+            extracted_states = data.states.copy()
+            while len(extracted_states) < detection_length:
+                extracted_states.append(
+                    extracted_states[-1] if extracted_states else sim_oqs.system.psi_ini
+                )
+        else:
+            extracted_states = data.states[-detection_length:]
+
+        linear_data_states[f"pulse{i}"] = extracted_states
+
+        # Debug: Check linear signal states
+        logger.debug(
+            f"Pulse {i}: Total states: {len(data.states)}, extracted: {len(extracted_states)}"
+        )
+
+    sim_oqs.laser = laser  # Restore the original laser sequence
 
     return linear_data_states
 
@@ -462,14 +560,12 @@ def _ensure_valid_times(
     if times_segment.size == 0:
         # First fallback: try to use a single time point at fallback_idx
         if fallback_idx < len(full_times):
-            print(
-                f"Warning: times_segment is empty. Using fallback time at index {fallback_idx}: {full_times[fallback_idx]}",
-                flush=True,
+            logger.warning(
+                f"times_segment is empty. Using fallback time at index {fallback_idx}: {full_times[fallback_idx]}"
             )
             return np.array([full_times[fallback_idx]])
-        print(
-            f"Warning: times_segment is empty. Using first two time points from full array: {full_times[:2]}",
-            flush=True,
+        logger.warning(
+            f"times_segment is empty. Using first two time points from full array: {full_times[:2]}"
         )
         # Second fallback: use first two time points from full array
         return full_times[:2]
@@ -481,12 +577,25 @@ def _ensure_valid_times(
 def _extract_detection_data(
     sim_oqs: SimulationModuleOQS,
     evolution_data: List[Qobj],
-    linear_signals: dict[List[Qobj]],
+    linear_signals: dict[str, List[Qobj]],
     time_cut: float,
     # maybe could also pass kwargs for plotting
 ) -> dict:
     """Extract and process detection time data."""
     actual_det_times = sim_oqs.times_det_actual
+    detection_times = sim_oqs.times_det
+
+    # Debug: Print shapes for debugging
+    logger.debug(
+        f"evolution_data length: {len(evolution_data) if evolution_data else 'None'}"
+    )
+    logger.debug(
+        f"actual_det_times shape: {actual_det_times.shape if hasattr(actual_det_times, 'shape') else len(actual_det_times)}"
+    )
+    logger.debug(
+        f"detection_times shape: {detection_times.shape if hasattr(detection_times, 'shape') else len(detection_times)}"
+    )
+
     # Apply RWA phase factors if needed
     if sim_oqs.simulation_config.RWA_SL:
         N_atoms = sim_oqs.system.N_atoms
@@ -503,25 +612,93 @@ def _extract_detection_data(
     Dip_op = sim_oqs.system.Dip_op
     polarizations = {}
     polarizations_full = complex_polarization(Dip_op, evolution_data)
+    logger.debug(
+        f"polarizations_full shape: {polarizations_full.shape if hasattr(polarizations_full, 'shape') else type(polarizations_full)}"
+    )
+
     for key in linear_signals:
         polarizations[key] = complex_polarization(Dip_op, linear_signals[key])
+        logger.debug(
+            f"polarizations[{key}] shape: {polarizations[key].shape if hasattr(polarizations[key], 'shape') else type(polarizations[key])}"
+        )
 
     # Calculate nonlinear signal - generalized for n pulses
-    nonlinear_signal = polarizations_full
+    nonlinear_signal = polarizations_full.copy()  # Make explicit copy
+    logger.debug(
+        f"nonlinear_signal initial shape: {nonlinear_signal.shape if hasattr(nonlinear_signal, 'shape') else type(nonlinear_signal)}"
+    )
+
     for pulse_key in linear_signals.keys():
         nonlinear_signal -= polarizations[pulse_key]
 
-    detection_times = sim_oqs.times_det
-    # padd the data to match the length of detection_times
-    nonlinear_signal = nonlinear_signal[actual_det_times < time_cut]
-    # print(nonlinear_signal, flush=True)
-    if len(nonlinear_signal) < len(detection_times):
-        print(
-            "The data will be padded with zeros to match the detection times.",
-            flush=True,
+    logger.debug(
+        f"nonlinear_signal after subtraction shape: {nonlinear_signal.shape if hasattr(nonlinear_signal, 'shape') else type(nonlinear_signal)}"
+    )
+
+    # Apply time cutoff - be careful about array shapes
+    if time_cut < np.inf:
+        # Create a mask for valid times
+        valid_time_mask = actual_det_times < time_cut
+        logger.debug(
+            f"valid_time_mask shape: {valid_time_mask.shape}, sum: {np.sum(valid_time_mask)}"
         )
-        zeros_to_add = len(detection_times) - len(nonlinear_signal)
-        nonlinear_signal = np.concatenate([nonlinear_signal, np.zeros(zeros_to_add)])
+
+        if np.any(valid_time_mask):
+            # Check if shapes are compatible for indexing
+            if hasattr(nonlinear_signal, "shape") and len(nonlinear_signal.shape) > 0:
+                if nonlinear_signal.shape[0] == len(valid_time_mask):
+                    nonlinear_signal = nonlinear_signal[valid_time_mask]
+                else:
+                    logger.error(
+                        f"Shape mismatch: nonlinear_signal shape {nonlinear_signal.shape}, mask length {len(valid_time_mask)}"
+                    )
+                    # Fallback: create zeros with correct shape
+                    nonlinear_signal = np.zeros(
+                        np.sum(valid_time_mask), dtype=np.complex64
+                    )
+            else:
+                # If nonlinear_signal is scalar, create array
+                logger.warning(
+                    f"nonlinear_signal is scalar, creating array of length {np.sum(valid_time_mask)}"
+                )
+                nonlinear_signal = np.full(
+                    np.sum(valid_time_mask), nonlinear_signal, dtype=np.complex64
+                )
+        else:
+            # If no valid times, create a single zero
+            logger.warning(f"time_cut={time_cut} filters out all data. Using zeros.")
+            nonlinear_signal = np.zeros(1, dtype=np.complex64)
+
+    # Ensure signal length matches expected detection times
+    expected_length = len(detection_times)
+    current_length = (
+        len(nonlinear_signal) if hasattr(nonlinear_signal, "__len__") else 1
+    )
+
+    logger.debug(
+        f"Expected length: {expected_length}, current length: {current_length}"
+    )
+
+    if current_length < expected_length:
+        logger.info(f"Padding signal from {current_length} to {expected_length} points")
+        zeros_to_add = expected_length - current_length
+        if hasattr(nonlinear_signal, "shape"):
+            nonlinear_signal = np.concatenate(
+                [nonlinear_signal, np.zeros(zeros_to_add, dtype=nonlinear_signal.dtype)]
+            )
+        else:
+            # If scalar, create array
+            nonlinear_signal = np.concatenate(
+                [
+                    np.array([nonlinear_signal], dtype=np.complex64),
+                    np.zeros(zeros_to_add, dtype=np.complex64),
+                ]
+            )
+    elif current_length > expected_length:
+        logger.warning(
+            f"Truncating signal from {current_length} to {expected_length} points"
+        )
+        nonlinear_signal = nonlinear_signal[:expected_length]
 
     plot_polarization_data = [polarizations_full]
     for key in linear_signals.keys():
@@ -543,7 +720,7 @@ def _process_single_1d_combination(
     phi1: float,
     phi2: float,
     **kwargs: dict,
-) -> tuple[np.ndarray, np.ndarray] | None:
+) -> np.ndarray | None:
     """
     Process a single phase combination for IFT-based 1D execution.
     This function runs in a separate process for parallel phase cycling.
@@ -566,22 +743,16 @@ def _process_single_1d_combination(
 
     Returns
     -------
-    tuple or None
-        (t_det_vals, data) for the computed 1D polarization data, or None if failed.
+    np.ndarray or None
+        Computed 1D polarization data array, or None if failed.
     """
     try:
         # CRITICAL FIX: Make a deep copy to avoid modifying the shared object
         local_sim_oqs = deepcopy(sim_oqs)
 
-        # DEBUG: Check phases before and after update
-        # print(f"Before update: {local_sim_oqs.laser.pulse_phases}", flush=True)
-
         local_sim_oqs.laser.update_phases(
             phases=[phi1, phi2, DETECTION_PHASE]
         )  # Update the laser phases in the local copy
-
-        # print(f"After update: {local_sim_oqs.laser.pulse_phases}", flush=True)
-        # TODO THE problem likely happens because the frequencies are not (really) updated in the local copy
 
         local_sim_oqs.system.freqs_cm = (
             new_freqs  # Update frequencies in the local copy
@@ -592,17 +763,39 @@ def _process_single_1d_combination(
             **kwargs,
         )
 
+        # Ensure we return the correct type and shape
+        if data is None:
+            logger.error("compute_1d_polarization returned None")
+            return None
+
+        if not isinstance(data, np.ndarray):
+            logger.error(
+                f"compute_1d_polarization returned {type(data)}, expected np.ndarray"
+            )
+            return None
+
+        # Additional shape validation
+        expected_length = len(local_sim_oqs.times_det)
+        if data.shape != (expected_length,):
+            logger.error(
+                f"Data shape {data.shape} doesn't match expected ({expected_length},)"
+            )
+            return None
+
         return data
 
     except Exception as e:
-        print(f"Error in _process_single_1d_combination: {str(e)}", flush=True)
+        import traceback
+
+        logger.error(f"Error in _process_single_1d_combination: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         return None
 
 
 def parallel_compute_1d_E_with_inhomogenity(
     sim_oqs: SimulationModuleOQS,
     **kwargs: dict,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> np.ndarray:
     """
     Compute 1D COMPLEX polarization with frequency loop and phase cycling for IFT processing.
     Parallelizes over all frequency and phase combinations, averages, then performs IFT.
@@ -614,8 +807,8 @@ def parallel_compute_1d_E_with_inhomogenity(
 
     Returns
     -------
-    tuple
-        (t_det_vals, photon_echo_signal) where signal is averaged and IFT-processed.
+    np.ndarray
+        photon_echo_signal where signal is averaged and IFT-processed.
     """
     # Configure phase cycling
     n_phases = sim_oqs.simulation_config.n_phases
@@ -648,8 +841,11 @@ def parallel_compute_1d_E_with_inhomogenity(
                     (omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2)
                 )
 
-    # Execute all jobs in parallel
-    results = {}
+    data_length = len(sim_oqs.times_det)
+    results_array = np.empty(
+        (n_freqs, n_phases, n_phases, data_length), dtype=np.complex64
+    )
+
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(
@@ -667,29 +863,58 @@ def parallel_compute_1d_E_with_inhomogenity(
             omega_idx, phi1_idx, phi2_idx = futures[future]
             try:
                 data = future.result()
-                results[(omega_idx, phi1_idx, phi2_idx)] = data
+
+                # Validate data shape and type
+                if data is None:
+                    logger.warning(
+                        f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) returned None"
+                    )
+                    results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
+                    continue
+
+                # Ensure data is a numpy array
+                if not isinstance(data, np.ndarray):
+                    logger.error(
+                        f"Expected ndarray, got {type(data)} for combination ({omega_idx},{phi1_idx},{phi2_idx})"
+                    )
+                    results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
+                    continue
+
+                # Check shape compatibility
+                if data.shape != (data_length,):
+                    logger.error(
+                        f"Shape mismatch: expected ({data_length},), got {data.shape} for combination ({omega_idx},{phi1_idx},{phi2_idx})"
+                    )
+                    # Try to handle shape mismatch gracefully
+                    if data.size == data_length:
+                        data = data.reshape(data_length)
+                    elif data.size < data_length:
+                        # Pad with zeros
+                        padded_data = np.zeros(data_length, dtype=np.complex64)
+                        padded_data[: data.size] = data.flatten()
+                        data = padded_data
+                    else:
+                        # Truncate
+                        data = data.flatten()[:data_length]
+
+                results_array[omega_idx, phi1_idx, phi2_idx, :] = data
+
             except Exception as exc:
                 logger.error(
                     f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}"
                 )
-                # You might want to handle this more gracefully, e.g., using default values
+                results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
 
-    # Fill 3D result array
-    results_cube = np.zeros((n_freqs, n_phases, n_phases), dtype=object)
-    for (omega_idx, phi1_idx, phi2_idx), data in results.items():
-        if data is None:
-            continue
-        results_cube[omega_idx, phi1_idx, phi2_idx] = data * 1j  # E ~ iP
     # Average over frequencies to get 2D result array before IFT or phase-average
-    results_matrix_avg = np.mean(results_cube, axis=0)
+    results_matrix_avg = np.mean(results_array, axis=0)
 
-    print("BEFORE IFT", results_matrix_avg, flush=True)
+    logger.debug(f"Results matrix before IFT: {results_matrix_avg}")
     # Final IFT extraction for the specified component
     ift_component = sim_oqs.simulation_config.IFT_component
     photon_echo_signal = extract_ift_signal_component(
         results_matrix=results_matrix_avg, phases=phases, component=ift_component
     )
-    print("AFTER IFT", photon_echo_signal, flush=True)
+    logger.debug(f"Final signal after IFT: {photon_echo_signal}")
 
     return photon_echo_signal
 
@@ -742,7 +967,7 @@ def extract_ift_signal_component(
     )
 
     if first_valid_result is None:
-        print("No valid results found in the results matrix.", flush=True)
+        logger.error("No valid results found in the results matrix")
         return None
 
     signal = np.zeros_like(first_valid_result, dtype=np.complex64)
@@ -753,7 +978,6 @@ def extract_ift_signal_component(
                 phase_factor = np.exp(
                     -1j * (l * phi_1 + m * phi_2 + n * DETECTION_PHASE)
                 )
-                print(f"{phi1_idx},{phi2_idx} phase_factor={phase_factor}")
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 
     signal /= n_phases * n_phases
@@ -799,10 +1023,18 @@ def complex_polarization(
         return _single_qobj_polarization(dip_op, state)
 
     if isinstance(state, list):
-        return np.array(
+        if len(state) == 0:
+            logger.warning("Empty state list provided to complex_polarization")
+            return np.array([], dtype=np.complex64)
+
+        result = np.array(
             [_single_qobj_polarization(dip_op, s) for s in state],
             dtype=np.complex64,  # Use higher precision
         )
+        logger.debug(
+            f"complex_polarization: input list length {len(state)}, output shape {result.shape}"
+        )
+        return result
 
     raise TypeError(f"State must be a Qobj or list of Qobj, got {type(state)}")
 

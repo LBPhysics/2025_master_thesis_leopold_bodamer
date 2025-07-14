@@ -32,6 +32,7 @@ import time
 import argparse
 import numpy as np
 from pathlib import Path
+from copy import deepcopy
 
 from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.config import DATA_DIR
@@ -55,7 +56,7 @@ from qspectro2d.core.simulation_class import (
     SimulationModuleOQS,
 )
 
-N_ATOMS = 1
+N_ATOMS = 2
 DEFAULT_ODE_SOLVER = "Paper_eqs"
 DEFAULT_RWA_SL = True
 
@@ -69,7 +70,7 @@ DEFAULT_PHASES = 4  # Number of phase cycles for the simulation
 DEFAULT_DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 DEFAULT_IFT_COMPONENT = (
     1,
-    0,
+    -1,
     0,
 )  #  (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal
 
@@ -128,9 +129,9 @@ def run_single_t_coh_with_sim(
     sim_oqs.simulation_config.t_coh = t_coh
     t_wait = sim_oqs.simulation_config.t_wait
     """
-    #print(
-    #    "the times are ", sim_oqs.times_global, sim_oqs.times_local, sim_oqs.times_det
-    #)
+    print(
+        "the times are ", sim_oqs.times_global, sim_oqs.times_local, sim_oqs.times_det
+    )
     """
     sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + t_wait]
 
@@ -331,9 +332,11 @@ def run_2d_mode(args):
     start_time = time.time()
     for i, t_coh in enumerate(t_coh_subarray):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
-        save_info = t_coh == 0  # Only save info for first simulation
+        # Save info only for first run
+        save_info = t_coh == 0
+        sim_oqs_copy = deepcopy(sim_oqs)
         rel_dir = run_single_t_coh_with_sim(
-            sim_oqs,
+            sim_oqs_copy,
             t_coh,
             save_info=save_info,
             time_cut=time_cut,

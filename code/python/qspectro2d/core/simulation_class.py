@@ -89,9 +89,10 @@ class SimulationConfig:
         if self.n_freqs <= 0:
             raise ValueError("n_freqs must be a positive integer.")
 
-        self.t_max = self.t_wait + 2 * self.t_det_max
-        if self.t_max <= self.t_wait:
-            raise ValueError("t_wait is greater than t_max.")
+        if self.t_coh < self.t_det_max:
+            self.t_max = self.t_wait + 2 * self.t_det_max
+        else:
+            self.t_max = self.t_coh + self.t_wait + self.t_det_max
 
     def summary(self) -> str:
         return (

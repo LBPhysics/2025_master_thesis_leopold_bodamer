@@ -51,8 +51,6 @@ except ImportError as e:
 # =============================
 try:
     from .spectroscopy import (
-        run_1d_simulation,
-        run_2d_simulation,
         complex_polarization,
         compute_1d_fft_wavenumber,
         compute_2d_fft_wavenumber,
@@ -118,8 +116,6 @@ __all__ = [
     "power_spectrum_func_drude_lorentz",
     "power_spectrum_func_ohmic",
     # High-level simulation functions
-    "run_1d_simulation",
-    "run_2d_simulation",
     "complex_polarization",
     # Post-processing
     "compute_1d_fft_wavenumber",
