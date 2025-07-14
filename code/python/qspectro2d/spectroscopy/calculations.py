@@ -348,12 +348,12 @@ def compute_1d_polarization(
     # =============================
     # COMPUTE EVOLUTION STATES
     # =============================
-    evolution_data = _compute_3_pulse_evolution(sim_oqs)
+    evolution_data = _compute_n_pulse_evolution(sim_oqs)
 
     # =============================
     # COMPUTE LINEAR SIGNALS
     # =============================
-    linear_signals = _compute_3_linear_signals(sim_oqs)
+    linear_signals = _compute_n_linear_signals(sim_oqs)
 
     # =============================
     # EXTRACT AND PROCESS DETECTION DATA
@@ -380,25 +380,18 @@ def compute_1d_polarization(
     return detection_data["nonlinear_signal"]
 
 
-def _compute_3_pulse_evolution(
+def _compute_n_pulse_evolution(
     sim_oqs: SimulationModuleOQS,
 ) -> List[Qobj]:
     """Compute the n-pulse evolution using segmented approach."""
-    t_coh = sim_oqs.simulation_config.t_coh
-    t_wait = sim_oqs.simulation_config.t_wait
-    detection_time = t_coh + t_wait
+    laser = sim_oqs.laser
+    peak_times = laser.pulse_peak_times
+    fwhms = laser.pulse_fwhms
+    psi_ini = sim_oqs.system.psi_ini
     times = sim_oqs.times_local
-    fwhms = sim_oqs.laser.pulse_fwhms
 
-    full_sequence = sim_oqs.laser
-    n_pulses = len(full_sequence.pulses)
+    n_pulses = len(laser.pulses)
 
-    if n_pulses < 2:
-        raise ValueError("Need at least 2 pulses for segmented evolution")
-
-    # Debug initial setup
-    logger.info(f"=== Time segmentation debug for t_coh={t_coh:.2f} fs ===")
-    logger.info(f"  t_wait={t_wait:.2f} fs, detection_time={detection_time:.2f} fs")
     logger.info(
         f"  times_local: {len(times)} points from {times[0]:.2f} to {times[-1]:.2f} fs"
     )
@@ -406,31 +399,14 @@ def _compute_3_pulse_evolution(
     logger.info(f"  fwhms: {fwhms}")
     logger.info(f"  n_pulses: {n_pulses}")
 
-    # Initialize variables for loop
-    current_state = sim_oqs.system.psi_ini
-    prev_pulse_start_idx = 0
-
-    # Loop over first n_pulses - 1 segments
-    for pulse_idx in range(n_pulses - 1):
+    prev_pulse_start_idx = 0  # first -> include the time range before the first pulse
+    current_state = psi_ini
+    # Loop over pulses to calculate new start point n_pulses - 1
+    for pulse_idx in range(1, n_pulses):
         # Calculate pulse start index
-        if pulse_idx == 0:
-            # First pulse: start at t_coh - fwhm
-            pulse_start_time = t_coh - fwhms[pulse_idx + 1]
-            pulse_start_idx = np.abs(times - pulse_start_time).argmin()
-            logger.info(
-                f"  Pulse {pulse_idx}: target time={pulse_start_time:.2f}, idx={pulse_start_idx}, actual_time={times[pulse_start_idx]:.2f}"
-            )
-            times_segment = _ensure_valid_times(times[: pulse_start_idx + 1], times)
-        elif pulse_idx == 1:
-            pulse_start_time = detection_time - fwhms[pulse_idx + 1]
-            pulse_start_idx = np.abs(times - pulse_start_time).argmin()
-            logger.info(
-                f"  Pulse {pulse_idx}: target time={pulse_start_time:.2f}, idx={pulse_start_idx}, actual_time={times[pulse_start_idx]:.2f}"
-            )
-        else:
-            raise ValueError("STILL TODO implement general n-pulse evolution")
-
-        times_segment = times[prev_pulse_start_idx : pulse_start_idx + 1]
+        next_pulse_start_time = peak_times[pulse_idx] - fwhms[pulse_idx]
+        next_pulse_start_idx = np.abs(times - next_pulse_start_time).argmin()
+        times_segment = times[prev_pulse_start_idx : next_pulse_start_idx + 1]
         times_segment = _ensure_valid_times(times_segment, times, prev_pulse_start_idx)
         logger.info(
             f"  Segment {pulse_idx}: {len(times_segment)} points from {times_segment[0]:.2f} to {times_segment[-1]:.2f} fs"
@@ -438,48 +414,32 @@ def _compute_3_pulse_evolution(
 
         # Update simulation parameters for this segment
         sim_oqs.times_local = times_segment
-        sim_oqs.laser = LaserPulseSequence(pulses=full_sequence.pulses[: pulse_idx + 1])
-        sim_oqs.system.psi_ini = current_state
 
         # Compute evolution for this segment
         current_state = _compute_next_start_point(sim_oqs=sim_oqs)
+        sim_oqs.system.psi_ini = current_state
 
         # Update for next iteration
-        prev_pulse_start_idx = pulse_start_idx
+        prev_pulse_start_idx = next_pulse_start_idx
 
-    # print("the detection times are ", sim_oqs.times_det_actual, flush=True)
-
-    # print("and the final times are ", times[prev_pulse_start_idx:], flush=True)
-    # pulse_detection_idx = np.abs(times - detection_time).argmin()
-    # times_detection_final = times[pulse_detection_idx:]
-    # print("and the final times after detection are ", times_detection_final, flush=True)
-    # Final segment: evolution with detection (last pulse)
     times_final = _ensure_valid_times(
         times[prev_pulse_start_idx:], times, prev_pulse_start_idx
     )
-
-    # Debug timing information
-    logger.info(f"Time segmentation debug for t_coh={t_coh:.2f} fs:")
-    logger.info(f"  Detection length: {len(sim_oqs.times_det)}")
-    logger.info(f"  Final segment length: {len(times[prev_pulse_start_idx:])}")
-    logger.info(f"  prev_pulse_start_idx: {prev_pulse_start_idx}")
-    logger.info(f"  times_local total length: {len(times)}")
+    logger.info(
+        f"  Final times: {len(times_final)} points from {times_final[0]:.2f} to {times_final[-1]:.2f} fs"
+    )
 
     sim_oqs.times_local = times_final
 
-    sim_oqs.laser = full_sequence
-    sim_oqs.system.psi_ini = current_state
-
     data_final = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
-
-    sim_oqs.times_local = times
 
     detection_length = len(sim_oqs.times_det)
 
     # Ensure we have enough states
     if len(data_final.states) < detection_length:
         logger.warning(
-            f"Not enough states: got {len(data_final.states)}, need {detection_length}"
+            f"Not enough states in n pulse evo: got {len(data_final.states)}, need {detection_length}\n"
+            f"  Final times: {len(times_final)} points from {times_final[0]:.2f} to {times_final[-1]:.2f} fs"
         )
         # Pad with the last state
         final_states = data_final.states.copy()
@@ -495,10 +455,13 @@ def _compute_3_pulse_evolution(
     logger.debug(f"Detection length expected: {detection_length}")
     logger.debug(f"Final states extracted: {len(final_states)}")
 
+    sim_oqs.reset_times_local()  # restore original times
+    sim_oqs.system.psi_ini = psi_ini  # restore initial state
+
     return final_states
 
 
-def _compute_3_linear_signals(
+def _compute_n_linear_signals(
     sim_oqs: SimulationModuleOQS,
 ) -> dict[str, List[Qobj]]:
     """Compute all linear signal contributions."""
@@ -532,7 +495,7 @@ def _compute_3_linear_signals(
         )
 
     sim_oqs.laser = laser  # Restore the original laser sequence
-
+    # THE initial state is modified!!!
     return linear_data_states
 
 
@@ -568,7 +531,7 @@ def _ensure_valid_times(
             f"times_segment is empty. Using first two time points from full array: {full_times[:2]}"
         )
         # Second fallback: use first two time points from full array
-        return full_times[:2]
+        return full_times[:1]  # TODO check if this is better?
 
     # Time segment is valid, return as-is
     return times_segment
@@ -794,6 +757,7 @@ def _process_single_1d_combination(
 
 def parallel_compute_1d_E_with_inhomogenity(
     sim_oqs: SimulationModuleOQS,
+    parallel: bool = True,
     **kwargs: dict,
 ) -> np.ndarray:
     """
@@ -846,64 +810,106 @@ def parallel_compute_1d_E_with_inhomogenity(
         (n_freqs, n_phases, n_phases, data_length), dtype=np.complex64
     )
 
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(
-                _process_single_1d_combination,
-                sim_oqs=sim_oqs,
-                new_freqs=new_freqs,
-                phi1=phi1,
-                phi2=phi2,
-                **kwargs,
-            ): (omega_idx, phi1_idx, phi2_idx)
-            for (omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2) in combinations
-        }
+    if not parallel:
+        for omega_idx in range(n_freqs):
+            new_freqs = all_freq_sets[omega_idx]
+            for phi1_idx, phi1 in enumerate(phases):
+                for phi2_idx, phi2 in enumerate(phases):
+                    try:
+                        data = _process_single_1d_combination(
+                            sim_oqs=sim_oqs,
+                            new_freqs=new_freqs,
+                            phi1=phi1,
+                            phi2=phi2,
+                            **kwargs,
+                        )
 
-        for future in as_completed(futures):
-            omega_idx, phi1_idx, phi2_idx = futures[future]
-            try:
-                data = future.result()
+                        if data is None or not isinstance(data, np.ndarray):
+                            data = np.full(data_length, np.nan, dtype=np.complex64)
+                        elif data.shape != (data_length,):
+                            if data.size == data_length:
+                                data = data.reshape(data_length)
+                            elif data.size < data_length:
+                                padded_data = np.zeros(data_length, dtype=np.complex64)
+                                padded_data[: data.size] = data.flatten()
+                                data = padded_data
+                            else:
+                                data = data.flatten()[:data_length]
 
-                # Validate data shape and type
-                if data is None:
-                    logger.warning(
-                        f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) returned None"
+                        results_array[omega_idx, phi1_idx, phi2_idx, :] = data
+
+                    except Exception as exc:
+                        logger.error(
+                            f"Serial combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}"
+                        )
+                        results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
+
+    else:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(
+                    _process_single_1d_combination,
+                    sim_oqs=sim_oqs,
+                    new_freqs=new_freqs,
+                    phi1=phi1,
+                    phi2=phi2,
+                    **kwargs,
+                ): (omega_idx, phi1_idx, phi2_idx)
+                for (
+                    omega_idx,
+                    phi1_idx,
+                    phi2_idx,
+                    new_freqs,
+                    phi1,
+                    phi2,
+                ) in combinations
+            }
+
+            for future in as_completed(futures):
+                omega_idx, phi1_idx, phi2_idx = futures[future]
+                try:
+                    data = future.result()
+
+                    # Validate data shape and type
+                    if data is None:
+                        logger.warning(
+                            f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) returned None"
+                        )
+                        results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
+                        continue
+
+                    # Ensure data is a numpy array
+                    if not isinstance(data, np.ndarray):
+                        logger.error(
+                            f"Expected ndarray, got {type(data)} for combination ({omega_idx},{phi1_idx},{phi2_idx})"
+                        )
+                        results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
+                        continue
+
+                    # Check shape compatibility
+                    if data.shape != (data_length,):
+                        logger.error(
+                            f"Shape mismatch: expected ({data_length},), got {data.shape} for combination ({omega_idx},{phi1_idx},{phi2_idx})"
+                        )
+                        # Try to handle shape mismatch gracefully
+                        if data.size == data_length:
+                            data = data.reshape(data_length)
+                        elif data.size < data_length:
+                            # Pad with zeros
+                            padded_data = np.zeros(data_length, dtype=np.complex64)
+                            padded_data[: data.size] = data.flatten()
+                            data = padded_data
+                        else:
+                            # Truncate
+                            data = data.flatten()[:data_length]
+
+                    results_array[omega_idx, phi1_idx, phi2_idx, :] = data
+
+                except Exception as exc:
+                    logger.error(
+                        f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}"
                     )
                     results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
-                    continue
-
-                # Ensure data is a numpy array
-                if not isinstance(data, np.ndarray):
-                    logger.error(
-                        f"Expected ndarray, got {type(data)} for combination ({omega_idx},{phi1_idx},{phi2_idx})"
-                    )
-                    results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
-                    continue
-
-                # Check shape compatibility
-                if data.shape != (data_length,):
-                    logger.error(
-                        f"Shape mismatch: expected ({data_length},), got {data.shape} for combination ({omega_idx},{phi1_idx},{phi2_idx})"
-                    )
-                    # Try to handle shape mismatch gracefully
-                    if data.size == data_length:
-                        data = data.reshape(data_length)
-                    elif data.size < data_length:
-                        # Pad with zeros
-                        padded_data = np.zeros(data_length, dtype=np.complex64)
-                        padded_data[: data.size] = data.flatten()
-                        data = padded_data
-                    else:
-                        # Truncate
-                        data = data.flatten()[:data_length]
-
-                results_array[omega_idx, phi1_idx, phi2_idx, :] = data
-
-            except Exception as exc:
-                logger.error(
-                    f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}"
-                )
-                results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
 
     # Average over frequencies to get 2D result array before IFT or phase-average
     results_matrix_avg = np.mean(results_array, axis=0)
@@ -980,7 +986,7 @@ def extract_ift_signal_component(
                 )
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 
-    signal /= n_phases * n_phases
+    # signal /= n_phases * n_phases # TODO to get more prominent signal leave out
 
     return signal
 

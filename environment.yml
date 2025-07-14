@@ -26,9 +26,8 @@ dependencies:
   - ipython
   - black[jupyter]>=22.0.0 # just my preference, also install black for python formatting?
   - mpmath
-  - multiprocessing
-  - pip
-  - json
   - pip:
+    # Note: multiprocessing and json are built-in Python modules, not conda packages
     - -e ./code/python       # Local package in editable mode
     - tqdm                  # Progress bar for loops
+    # Note: qspectro2d package will be installed separately after environment creation

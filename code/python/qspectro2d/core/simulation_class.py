@@ -302,12 +302,6 @@ class SimulationModuleOQS:
         """Returns the actual detection times."""
         self.reset_times_local()
         times_det_actual = self.times_local[-len(self.times_det) :]
-        """print(
-            "the lengths of detection times",
-            len(times_det_actual),
-            len(self.times_det),
-            flush=True,
-        )"""
         return times_det_actual
 
     @property

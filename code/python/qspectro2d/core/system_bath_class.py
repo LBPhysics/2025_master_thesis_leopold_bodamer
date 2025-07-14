@@ -1,5 +1,6 @@
 from dataclasses import dataclass  # for the class definiton
 from typing import Optional  # for type hinting
+from functools import partial
 import numpy as np
 from qutip import tensor, ket2dm
 
@@ -11,6 +12,14 @@ from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.core.bath_system.bath_fcts import power_spectrum_func_paper
 
 from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
+
+
+class ConstFunctionOfW:
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self, w):
+        return self.value
 
 
 @dataclass
@@ -110,14 +119,17 @@ class SystemBathCoupling:
 
             Deph_op = self.system.Deph_op
             Dip_op = self.system.Dip_op
+
             br_decay_channels_ = [
                 [
                     Deph_op,
-                    lambda w: dephasing_rate,  # TODO IS THIS CORRECT?
+                    ConstFunctionOfW(
+                        dephasing_rate
+                    ),  # TODO not sure if this is correct
                 ],
                 [
                     Dip_op,
-                    lambda w: self.bath.power_spectrum_func(w, args_decay),
+                    partial(self.bath.power_spectrum_func, args=args_decay),
                 ],
             ]
 
@@ -132,18 +144,18 @@ class SystemBathCoupling:
                 br_decay_channels_.append(
                     [
                         deph_i,  # atom i dephasing
-                        lambda w: self.bath.power_spectrum_func(w, args_deph),
+                        partial(self.bath.power_spectrum_func, args=args_deph),
                     ]
                 )
             deph_AB = ket2dm(self.system.basis[3])  # double excited state
             br_decay_channels_ += [
                 [
                     deph_AB,  # part from A on double excited state
-                    lambda w: self.bath.power_spectrum_func(w, args_deph),
+                    partial(self.bath.power_spectrum_func, args=args_deph),
                 ],
                 [
                     deph_AB,  # part from B on double excited state
-                    lambda w: self.bath.power_spectrum_func(w, args_deph),
+                    partial(self.bath.power_spectrum_func, args=args_deph),
                 ],
             ]
         else:  # TODO IMPLEMENT THE GENERAL CASE WITHIN SINGLE EXCITATION SUBSPACE
@@ -156,7 +168,7 @@ class SystemBathCoupling:
                 br_decay_channels_.append(
                     [
                         deph_i,  # atom i dephasing
-                        lambda w: self.bath.power_spectrum_func(w, args_deph),
+                        partial(self.bath.power_spectrum_func, args=args_deph),
                     ]
                 )
                 """ IF I ALSO WANT TO INCLUDE THE DECAY CHANNELS for each atom

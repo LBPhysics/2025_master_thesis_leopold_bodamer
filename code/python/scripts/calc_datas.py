@@ -21,11 +21,11 @@ This script is designed for both local development and HPC batch execution.
 Results are saved automatically using the qspectro2d I/O framework.
 
 # testing
-python3 calc_datas.py --t_coh 10.0 --t_wait 25.0 --dt 2.0
-python3 calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 20
+python calc_datas.py --t_coh 10.0 --t_wait 25.0 --dt 2.0
+python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 20
 # full simulations
-python3 calc_datas.py --t_coh 300.0 --t_det_max 1000.0 --dt 2
-python3 calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 0.1
+python calc_datas.py --t_coh 300.0 --t_det_max 1000.0 --dt 2
+python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 0.1
 """
 
 import time
@@ -56,8 +56,8 @@ from qspectro2d.core.simulation_class import (
     SimulationModuleOQS,
 )
 
-N_ATOMS = 2
-DEFAULT_ODE_SOLVER = "Paper_eqs"
+N_ATOMS = 1
+DEFAULT_ODE_SOLVER = "BR"
 DEFAULT_RWA_SL = True
 
 DEFAULT_BATH_TYPE = "paper"
@@ -71,7 +71,7 @@ DEFAULT_DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 DEFAULT_IFT_COMPONENT = (
     1,
     -1,
-    0,
+    1,
 )  #  (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal
 
 
@@ -428,11 +428,12 @@ Examples:
     # =============================
     # ARGUMENT VALIDATION
     # =============================
-    if args.simulation_type == "2d" and args.n_batches <= 0:
-        raise ValueError("Number of batches must be positive for 2D mode")
-
-    if args.simulation_type == "2d" and args.batch_idx < 0:
-        raise ValueError("Batch index must be non-negative")
+    if args.simulation_type == "2d":
+        args.t_coh = 0.0  # force default value for 2D mode
+        if args.n_batches <= 0:
+            raise ValueError("Number of batches must be positive for 2D mode")
+        elif args.batch_idx < 0:
+            raise ValueError("Batch index must be non-negative")
 
     if args.dt <= 0:
         raise ValueError("Time step dt must be positive")
@@ -447,8 +448,8 @@ Examples:
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
     print(f"Simulation type: {args.simulation_type}")
     print(f"Detection time window: {args.t_det_max} fs")
-    print(f"Time step: {args.dt} fs")
     print(f"Waiting time: {args.t_wait} fs")
+    print(f"Time step: {args.dt} fs")
 
     if args.simulation_type == "1d":
         print(f"Coherence time: {args.t_coh} fs")
