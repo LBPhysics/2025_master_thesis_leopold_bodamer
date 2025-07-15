@@ -7,10 +7,6 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
 from typing import List, Union, Tuple
 import logging
-
-# =============================
-# THIRD-PARTY IMPORTS
-# =============================
 import numpy as np
 from qutip import Qobj, Result, mesolve, brmesolve, ket2dm
 from qutip.core import QobjEvo
@@ -60,15 +56,6 @@ def compute_pulse_evolution(
 
     Parameters
     ----------
-    psi_ini : Qobj
-        Initial quantum state.
-    times : np.ndarray
-        Time array for the evolution.
-    ops : SimulationModuleOQS contains simulation configuration, system, laser parameters and much more.
-    pulse_seq : LaserPulseSequence
-        LaserPulseSequence object defining the pulse sequence.
-    system : AtomicSystem
-        System parameters containing Hamiltonian and solver configuration.
     **solver_options : dict
         Additional solver options that override defaults.
 
@@ -76,11 +63,6 @@ def compute_pulse_evolution(
     -------
     Result
         QuTiP Result object containing evolution data.
-
-    Raises
-    ------
-    ValueError
-        If unknown ODE solver is specified.
     """
     # =============================
     # CONFIGURE SOLVER OPTIONS
@@ -139,7 +121,7 @@ def compute_pulse_evolution(
             current_state = result.final_state
         else:
             raise RuntimeError(
-                "No valid state found in result for next evolution step."
+                "Use either 'store_states' or 'store_final_state' in options."
             )
 
     # Create combined result object

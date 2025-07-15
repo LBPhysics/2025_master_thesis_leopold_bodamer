@@ -71,8 +71,9 @@ DEFAULT_DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 DEFAULT_IFT_COMPONENT = (
     1,
     -1,
-    1,
+    1,  # does not matter cause DETECTION_PHASE = 0
 )  #  (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal
+DEFAULT_RELATIVE_E0S = [1.0, 1.0, 0.1]  # relative amplitudes for each pulse
 
 
 def create_simulation_module_from_configs(
@@ -128,11 +129,6 @@ def run_single_t_coh_with_sim(
     # Update t_coh in the simulation config
     sim_oqs.simulation_config.t_coh = t_coh
     t_wait = sim_oqs.simulation_config.t_wait
-    """
-    print(
-        "the times are ", sim_oqs.times_global, sim_oqs.times_local, sim_oqs.times_det
-    )
-    """
     sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + t_wait]
 
     start_time = time.time()
@@ -214,6 +210,7 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
             args.t_coh,
             args.t_coh + args.t_wait,
         ],  # dummy delays, will be updated
+        "relative_E0s": DEFAULT_RELATIVE_E0S,  # relative amplitudes for each pulse
     }
 
     max_workers = get_max_workers()
@@ -428,12 +425,11 @@ Examples:
     # =============================
     # ARGUMENT VALIDATION
     # =============================
-    if args.simulation_type == "2d":
-        args.t_coh = 0.0  # force default value for 2D mode
-        if args.n_batches <= 0:
-            raise ValueError("Number of batches must be positive for 2D mode")
-        elif args.batch_idx < 0:
-            raise ValueError("Batch index must be non-negative")
+    if args.simulation_type == "2d" and args.n_batches <= 0:
+        raise ValueError("Number of batches must be positive for 2D mode")
+
+    if args.simulation_type == "2d" and args.batch_idx < 0:
+        raise ValueError("Batch index must be non-negative")
 
     if args.dt <= 0:
         raise ValueError("Time step dt must be positive")
@@ -448,8 +444,8 @@ Examples:
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
     print(f"Simulation type: {args.simulation_type}")
     print(f"Detection time window: {args.t_det_max} fs")
-    print(f"Waiting time: {args.t_wait} fs")
     print(f"Time step: {args.dt} fs")
+    print(f"Waiting time: {args.t_wait} fs")
 
     if args.simulation_type == "1d":
         print(f"Coherence time: {args.t_coh} fs")
