@@ -145,25 +145,29 @@ class LaserPulseSequence:
         relative_E0s: Optional[List[float]] = None,
         phases: Optional[List[float]] = None,
     ) -> "LaserPulseSequence":
-        n_pulses = len(delays)
-        relative_E0s = relative_E0s or [1.0] * n_pulses
-        phases = phases or [0.0] * n_pulses
+        n_pulses = len(delays) + 1
+        if relative_E0s is None:
+            relative_E0s = [1.0] * n_pulses
+            relative_E0s[-1] = 0.1
+        if phases is None:
+            phases = [0.0] * n_pulses
 
         if not (len(relative_E0s) == len(phases) == n_pulses):
             raise ValueError("Lengths of delays, relative_E0s, and phases must match")
 
-        sorted_indices = sorted(range(n_pulses), key=lambda i: delays[i])
+        peak_times = np.insert(np.cumsum(delays), 0, 0.0)
+
         pulses = [
             LaserPulseSequence._create_pulse(
                 i,
-                np.sum(delays[:idx]),
-                phases[idx],
+                peak_times[i],
+                phases[i],
                 pulse_fwhm,
                 carrier_freq_cm,
-                base_amplitude * relative_E0s[idx],
+                base_amplitude * relative_E0s[i],
                 envelope_type,
             )
-            for i, idx in enumerate(sorted_indices)
+            for i in range(n_pulses)
         ]
 
         return LaserPulseSequence(pulses=pulses)
@@ -234,7 +238,7 @@ class LaserPulseSequence:
         for i, pulse in enumerate(self.pulses):
             start_time, end_time = pulse.active_time_range
             if start_time <= time <= end_time:
-                active_pulses.append((i, pulse))
+                active_pulses.append(pulse)
 
         return active_pulses
 
@@ -250,7 +254,7 @@ class LaserPulseSequence:
             float: Total electric field amplitude E0 = sum of all active pulse_amplitudes
         """
         active_pulses = self.get_active_pulses_at_time(time)
-        total_amplitude = sum(pulse.pulse_amplitude for _, pulse in active_pulses)
+        total_amplitude = sum(pulse.pulse_amplitude for pulse in active_pulses)
 
         return total_amplitude
 
@@ -274,9 +278,9 @@ class LaserPulseSequence:
         return {
             "active_pulses": active,
             "num_active_pulses": len(active),
-            "total_amplitude": sum(p.pulse_amplitude for _, p in active),
-            "individual_amplitudes": [p.pulse_amplitude for _, p in active],
-            "pulse_indices": [i for i, _ in active],
+            "total_amplitude": sum(p.pulse_amplitude for p in active),
+            "individual_amplitudes": [p.pulse_amplitude for p in active],
+            "pulse_indices": [i for i, p in enumerate(self.pulses) if p in active],
         }
 
     def update_phases(self, phases: List[float]) -> None:
@@ -299,25 +303,24 @@ class LaserPulseSequence:
 
     def update_delays(self, delays: List[float]) -> None:
         """
-        Update the pulse_peak_time of each pulse in the sequence.
+        Update the pulse_peak_time of each pulse in the sequence based on inter-pulse delays.
 
         Args:
-            delays (List[float]): New peak times for each pulse. Must match the number of pulses.
+            delays (List[float]): Delays between pulses. Length must be one less than number of pulses.
 
         Raises:
-            ValueError: If the number of delays doesn't match the number of pulses.
+            ValueError: If the number of delays is not one less than the number of pulses.
         """
-        if len(delays) != len(self.pulses):
+        if len(delays) != len(self.pulses) - 1:
             raise ValueError(
-                f"Number of delays ({len(delays)}) must match number of pulses ({len(self.pulses)})"
+                f"Number of delays ({len(delays)}) must be one less than number of pulses ({len(self.pulses)})"
             )
 
-        # Sort delays and pulses by new peak times
-        sorted_indices = sorted(range(len(delays)), key=lambda i: delays[i])
-        delays = [delays[i] for i in sorted_indices]
+        peak_times = np.insert(np.cumsum(delays), 0, 0.0)
+
         # Update each pulse's peak time
-        for pulse, new_delay in zip(self.pulses, delays):
-            pulse.pulse_peak_time = new_delay
+        for pulse, new_peak in zip(self.pulses, peak_times):
+            pulse.pulse_peak_time = new_peak
 
     # --- Convenience ---
     # turn the LaserPulseSequence into a list-like object

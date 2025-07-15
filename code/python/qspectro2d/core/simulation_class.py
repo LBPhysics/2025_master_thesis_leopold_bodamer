@@ -2,10 +2,7 @@
 # DEFINE THE simulation_config PARAMETERS CLASS
 # =============================
 from dataclasses import dataclass, asdict, field
-from os import times
-import re  # for the class definiton
 import numpy as np
-from zmq import has
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.bath_system.bath_class import BathSystem
@@ -411,9 +408,9 @@ def H_int_(
             SM_op.dag() * E_field_RWA + SM_op * np.conj(E_field_RWA)
         )  # RWA interaction Hamiltonian
     else:
-        Dip_op = SM_op * SM_op.dag()
+        dip_op = SM_op * SM_op.dag()
         E_field = Epsilon_pulse(t, laser)  # Combined electric field with carrier
-        H_int_sl = -Dip_op * (
+        H_int_sl = -dip_op * (
             E_field + np.conj(E_field)
         )  # Full interaction Hamiltonian
 
@@ -541,10 +538,10 @@ def _matrix_ODE_paper_2atom(
         sim_oqs.system.omega_ij(1, 0) - omega_laser
     ) - sim_oqs.sb_coupling.Gamma_big_ij(1, 0)
     L[idx_10, idx_10] = term
-    L[idx_10, idx_00] = 1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_10, idx_11] = -1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_10, idx_12] = -1j * Et * sim_oqs.system.Dip_op[2, 0]
-    L[idx_10, idx_30] = 1j * Et_conj * sim_oqs.system.Dip_op[3, 1]
+    L[idx_10, idx_00] = 1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_10, idx_11] = -1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_10, idx_12] = -1j * Et * sim_oqs.system.dip_op[2, 0]
+    L[idx_10, idx_30] = 1j * Et_conj * sim_oqs.system.dip_op[3, 1]
 
     # ρ_01   = (ρ_10)†
     L[idx_01, idx_01] = np.conj(term)
@@ -558,10 +555,10 @@ def _matrix_ODE_paper_2atom(
         sim_oqs.system.omega_ij(2, 0) - omega_laser
     ) - sim_oqs.sb_coupling.Gamma_big_ij(2, 0)
     L[idx_20, idx_20] = term
-    L[idx_20, idx_00] = 1j * Et * sim_oqs.system.Dip_op[2, 0]
-    L[idx_20, idx_22] = -1j * Et * sim_oqs.system.Dip_op[2, 0]
-    L[idx_20, idx_21] = -1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_20, idx_30] = 1j * Et_conj * sim_oqs.system.Dip_op[3, 2]
+    L[idx_20, idx_00] = 1j * Et * sim_oqs.system.dip_op[2, 0]
+    L[idx_20, idx_22] = -1j * Et * sim_oqs.system.dip_op[2, 0]
+    L[idx_20, idx_21] = -1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_20, idx_30] = 1j * Et_conj * sim_oqs.system.dip_op[3, 2]
 
     # ρ_02
     L[idx_02, idx_02] = np.conj(term)
@@ -578,10 +575,10 @@ def _matrix_ODE_paper_2atom(
         sim_oqs.system.omega_ij(3, 0) - 2 * omega_laser
     ) - sim_oqs.sb_coupling.Gamma_big_ij(3, 0)
     L[idx_30, idx_30] = term
-    L[idx_30, idx_10] = 1j * Et * sim_oqs.system.Dip_op[3, 1]
-    L[idx_30, idx_20] = 1j * Et * sim_oqs.system.Dip_op[3, 2]
-    L[idx_30, idx_31] = -1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_30, idx_32] = -1j * Et * sim_oqs.system.Dip_op[2, 0]
+    L[idx_30, idx_10] = 1j * Et * sim_oqs.system.dip_op[3, 1]
+    L[idx_30, idx_20] = 1j * Et * sim_oqs.system.dip_op[3, 2]
+    L[idx_30, idx_31] = -1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_30, idx_32] = -1j * Et * sim_oqs.system.dip_op[2, 0]
 
     # ρ_03
     L[idx_03, idx_03] = np.conj(term)
@@ -596,10 +593,10 @@ def _matrix_ODE_paper_2atom(
     # ρ_12   (|1⟩⟨2|)
     term = -1j * sim_oqs.system.omega_ij(1, 2) - sim_oqs.sb_coupling.Gamma_big_ij(1, 2)
     L[idx_12, idx_12] = term
-    L[idx_12, idx_02] = 1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_12, idx_13] = -1j * Et * sim_oqs.system.Dip_op[3, 2]
-    L[idx_12, idx_32] = 1j * Et_conj * sim_oqs.system.Dip_op[3, 1]
-    L[idx_12, idx_10] = -1j * Et_conj * sim_oqs.system.Dip_op[2, 0]
+    L[idx_12, idx_02] = 1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_12, idx_13] = -1j * Et * sim_oqs.system.dip_op[3, 2]
+    L[idx_12, idx_32] = 1j * Et_conj * sim_oqs.system.dip_op[3, 1]
+    L[idx_12, idx_10] = -1j * Et_conj * sim_oqs.system.dip_op[2, 0]
 
     # ρ_21
     L[idx_21, idx_21] = np.conj(term)
@@ -613,9 +610,9 @@ def _matrix_ODE_paper_2atom(
         sim_oqs.system.omega_ij(3, 1) - omega_laser
     ) - sim_oqs.sb_coupling.Gamma_big_ij(3, 1)
     L[idx_31, idx_31] = term
-    L[idx_31, idx_11] = 1j * Et * sim_oqs.system.Dip_op[3, 1]
-    L[idx_31, idx_21] = 1j * Et * sim_oqs.system.Dip_op[3, 2]
-    L[idx_31, idx_30] = -1j * Et_conj * sim_oqs.system.Dip_op[1, 0]
+    L[idx_31, idx_11] = 1j * Et * sim_oqs.system.dip_op[3, 1]
+    L[idx_31, idx_21] = 1j * Et * sim_oqs.system.dip_op[3, 2]
+    L[idx_31, idx_30] = -1j * Et_conj * sim_oqs.system.dip_op[1, 0]
 
     # ρ_13
     L[idx_13, idx_13] = np.conj(term)
@@ -628,9 +625,9 @@ def _matrix_ODE_paper_2atom(
         sim_oqs.system.omega_ij(3, 2) - omega_laser
     ) - sim_oqs.sb_coupling.Gamma_big_ij(3, 2)
     L[idx_32, idx_32] = term
-    L[idx_32, idx_22] = 1j * Et * sim_oqs.system.Dip_op[3, 2]
-    L[idx_32, idx_12] = 1j * Et * sim_oqs.system.Dip_op[3, 1]
-    L[idx_32, idx_30] = -1j * Et_conj * sim_oqs.system.Dip_op[2, 0]
+    L[idx_32, idx_22] = 1j * Et * sim_oqs.system.dip_op[3, 2]
+    L[idx_32, idx_12] = 1j * Et * sim_oqs.system.dip_op[3, 1]
+    L[idx_32, idx_30] = -1j * Et_conj * sim_oqs.system.dip_op[2, 0]
 
     # ρ_23
     L[idx_23, idx_23] = np.conj(term)
@@ -642,26 +639,26 @@ def _matrix_ODE_paper_2atom(
     # 4) Populations (diagonals)
     # --------------------------------------------------------------
     # ρ_00
-    L[idx_00, idx_01] = -1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_00, idx_02] = -1j * Et * sim_oqs.system.Dip_op[2, 0]
-    L[idx_00, idx_10] = 1j * Et_conj * sim_oqs.system.Dip_op[1, 0]
-    L[idx_00, idx_20] = 1j * Et_conj * sim_oqs.system.Dip_op[2, 0]
+    L[idx_00, idx_01] = -1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_00, idx_02] = -1j * Et * sim_oqs.system.dip_op[2, 0]
+    L[idx_00, idx_10] = 1j * Et_conj * sim_oqs.system.dip_op[1, 0]
+    L[idx_00, idx_20] = 1j * Et_conj * sim_oqs.system.dip_op[2, 0]
 
     # ρ_11
     L[idx_11, idx_11] = -sim_oqs.sb_coupling.Gamma_big_ij(1, 1)
     L[idx_11, idx_22] = sim_oqs.sb_coupling.gamma_small_ij(1, 2)
-    L[idx_11, idx_01] = 1j * Et * sim_oqs.system.Dip_op[1, 0]
-    L[idx_11, idx_13] = -1j * Et * sim_oqs.system.Dip_op[3, 1]
-    L[idx_11, idx_31] = 1j * Et_conj * sim_oqs.system.Dip_op[3, 1]
-    L[idx_11, idx_10] = -1j * Et_conj * sim_oqs.system.Dip_op[1, 0]
+    L[idx_11, idx_01] = 1j * Et * sim_oqs.system.dip_op[1, 0]
+    L[idx_11, idx_13] = -1j * Et * sim_oqs.system.dip_op[3, 1]
+    L[idx_11, idx_31] = 1j * Et_conj * sim_oqs.system.dip_op[3, 1]
+    L[idx_11, idx_10] = -1j * Et_conj * sim_oqs.system.dip_op[1, 0]
 
     # ρ_22
     L[idx_22, idx_22] = -sim_oqs.sb_coupling.Gamma_big_ij(2, 2)
     L[idx_22, idx_11] = sim_oqs.sb_coupling.gamma_small_ij(2, 1)
-    L[idx_22, idx_02] = 1j * Et * sim_oqs.system.Dip_op[2, 0]
-    L[idx_22, idx_23] = -1j * Et * sim_oqs.system.Dip_op[3, 2]
-    L[idx_22, idx_32] = 1j * Et_conj * sim_oqs.system.Dip_op[3, 2]
-    L[idx_22, idx_20] = -1j * Et_conj * sim_oqs.system.Dip_op[2, 0]
+    L[idx_22, idx_02] = 1j * Et * sim_oqs.system.dip_op[2, 0]
+    L[idx_22, idx_23] = -1j * Et * sim_oqs.system.dip_op[3, 2]
+    L[idx_22, idx_32] = 1j * Et_conj * sim_oqs.system.dip_op[3, 2]
+    L[idx_22, idx_20] = -1j * Et_conj * sim_oqs.system.dip_op[2, 0]
 
     # ρ_33  – Spurbedingung: dρ_00 + dρ_11 + dρ_22 + dρ_33 = 0
     L[idx_33, :] = -L[idx_00, :] - L[idx_11, :] - L[idx_22, :]

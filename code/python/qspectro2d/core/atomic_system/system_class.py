@@ -188,7 +188,7 @@ class AtomicSystem:
         return self.H0_N_canonical.eigenstates()
 
     @property
-    def SM_op(self):
+    def sm_op(self):
         if self.N_atoms == 1:
             return self.dip_moments[0] * (self._atom_g * self._atom_e.dag())
         elif self.N_atoms == 2:
@@ -215,25 +215,13 @@ class AtomicSystem:
             raise NotImplementedError("N_atoms > 2 not yet implemented")
 
     @property
-    def Dip_op(self):
-        return self.SM_op + self.SM_op.dag()
+    def dip_op(self):
+        return self.sm_op + self.sm_op.dag()
 
     @property
-    def Deph_op(
-        self,
-    ):
-        if self.N_atoms == 1:
-            return ket2dm(self._atom_e)
-        elif self.N_atoms == 2:
-            return sum(
-                [
-                    ket2dm(tensor(self._atom_e, self._atom_g)),
-                    ket2dm(tensor(self._atom_g, self._atom_e)),
-                    ket2dm(tensor(self._atom_e, self._atom_e)),
-                ]
-            )
-        else:  # TODO OVERTHINK / IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
-            return sum([ket2dm(self.basis[i]) for i in range(1, self.N_atoms)])
+    def deph_op_i(self, i: int):
+        """Return dephasing operator for the i-th eigenstate. i elem (1, ..., N_atoms)."""
+        return ket2dm(self.basis[i])
 
     def omega_ij(self, i: int, j: int):
         """Return energy difference (frequency) between eigenstates i and j in fs^-1."""
@@ -263,8 +251,8 @@ class AtomicSystem:
         print(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
         print(self.H0_N_canonical)
 
-        print("\n# Dipole operator (Dip_op):")
-        print(self.Dip_op)
+        print("\n# Dipole operator (dip_op):")
+        print(self.dip_op)
         print("\n=== End of Summary ===")
 
     def __str__(self) -> str:
@@ -323,31 +311,35 @@ class AtomicSystem:
 
 
 # =============================
-# TESTING THE SYSTEM PARAMETERS CLASS
+# USAGE EXAMPLES
 # =============================
-""" HOW TO REPLICATE ONE:
-# Create an object
-sp = AtomicSystem(N_atoms=2, freqs_cm=[16000, 16100], dip_moments=[1.0, 1.2])
+""" HOW TO USE AtomicSystem:
 
-# Serialize to JSON
-json_str = sp.to_json()
+# Create a single atom system
+system1 = AtomicSystem(N_atoms=1, freqs_cm=[16000.0], dip_moments=[1.0])
 
-# Deserialize it
-sp2 = AtomicSystem.from_json(json_str)
+# Create a two-atom system with coupling
+system2 = AtomicSystem(
+    N_atoms=2, 
+    freqs_cm=[16000.0, 15640.0], 
+    dip_moments=[1.0, 1.2],
+    J_cm=50.0
+)
+
+# Serialize to JSON for saving/loading
+json_str = system2.to_json()
+system2_loaded = AtomicSystem.from_json(json_str)
+
+# View system properties
+system2.summary()
+
+# Access computed properties
+eigenvals, eigenvecs = system2.eigenstates
+hamiltonian = system2.H0_N_canonical
+dipole_op = system2.dip_op
 """
-if __name__ == "__main__":
-    print("Testing AtomicSystem class...")
-    print("\n=== Testing N_atoms=1 ===")
-    system1 = AtomicSystem(N_atoms=1)
-    system1.summary()
-    print("\n=== Testing N_atoms=2 ===")
-    system2 = AtomicSystem(
-        N_atoms=2, freqs_cm=[16000.0, 15640.0], dip_moments=[1.0, 1.0]
-    )
-    system2.summary()
-    print("\n✅ AtomicSystem tests completed successfully!")
 
-    print("\n=== Testing JSON serialization ===")
-    json_str = system1.to_json()
-    print("Serialized JSON string:")
-    print(json_str)
+if __name__ == "__main__":
+    print("AtomicSystem class loaded successfully!")
+    print("Run 'python test_system_class.py' to execute tests.")
+    print("\nFor usage examples, see the docstring above.")

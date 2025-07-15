@@ -49,7 +49,7 @@ def test_length_consistency():
             "base_amplitude": 0.005,
             "envelope_type": "gaussian",
             "carrier_freq_cm": 16000,
-            "delays": [0.0, t_coh, t_coh + t_wait],
+            "delays": [t_coh, t_coh + t_wait],
         }
 
         simulation_config_dict = {

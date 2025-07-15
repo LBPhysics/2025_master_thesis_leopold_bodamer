@@ -1,7 +1,8 @@
 from dataclasses import dataclass  # for the class definiton
 from typing import Optional  # for type hinting
 import numpy as np
-from qutip import tensor, ket2dm
+from qutip import ket2dm
+from functools import partial
 
 # util function from qutip
 from qutip.utilities import n_thermal
@@ -13,6 +14,16 @@ from qspectro2d.core.bath_system.bath_fcts import power_spectrum_func_paper
 from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
 
 
+class ConstantSpectrum:
+    """Picklable wrapper for a constant spectrum function."""
+
+    def __init__(self, value):
+        self.value = value
+
+    def __call__(self, w):
+        return self.value
+
+
 @dataclass
 class SystemBathCoupling:
     system: AtomicSystem
@@ -20,6 +31,7 @@ class SystemBathCoupling:
 
     # DERIVED QUANTITIES FROM SYSTEM / BATH PARAMETERS
     def cutoff(self, i: int = 0) -> float:
+        """Get the cutoff frequency for i-th transition-frequency i elem (0, ..., N_atoms - 1)."""
         return self.bath.cutoff_ * self.system.freqs_fs(i)
 
     def args_bath(self, alpha: Optional[float] = None, i: int = 0) -> dict:
@@ -44,7 +56,8 @@ class SystemBathCoupling:
         }
 
     def _coupling_paper(self, gamma, i: int = 0):
-        """This is the coupling constant for the spectral density function in the paper"""
+        """This is the coupling constant for the spectral density function in the paper
+        i elem (0, ..., N_atoms - 1)"""
         w_th = BOLTZMANN * self.bath.Temp / HBAR
         n_th_at = n_thermal(self.system.freqs_fs(i), w_th)
         alpha = (
@@ -58,6 +71,8 @@ class SystemBathCoupling:
         return alpha
 
     def _coupling_ohmic(self, gamma, i: int = 0):
+        """This is the coupling constant for the spectral density function in the ohmic case
+        i elem (0, ..., N_atoms - 1)"""
         w_th = BOLTZMANN * self.bath.Temp / HBAR
         coth_term = 1 / np.tanh(self.system.freqs_fs(i) / (2 * w_th))
         alpha = (
@@ -96,10 +111,13 @@ class SystemBathCoupling:
     @property
     def br_decay_channels(self):
         """Generate the a_ops for the Bloch Redfield Master Equation solver."""
+        sys = self.system
+        br_decay_channels_ = []
+
         dephasing_rate = self.bath.Gamma
         relaxation_rate = self.bath.gamma_0
 
-        N_atoms = self.system.N_atoms
+        N_atoms = sys.N_atoms
         if N_atoms == 1:
             i = 0  # only one transition frequency for single atom
             deph = self.coupling(dephasing_rate, i)
@@ -108,66 +126,67 @@ class SystemBathCoupling:
             args_deph = self.args_bath(deph, i)
             args_decay = self.args_bath(decay, i)
 
-            Deph_op = self.system.Deph_op
-            Dip_op = self.system.Dip_op
+            deph_i = sys.deph_op_i(i)  # dephasing operator for single atom
+            dip_op = sys.dip_op
             br_decay_channels_ = [
                 [
-                    Deph_op,
-                    lambda w: dephasing_rate,  # TODO IS THIS CORRECT?
+                    deph_i,
+                    ConstantSpectrum(dephasing_rate),  # TODO is this correct?
                 ],
                 [
-                    Dip_op,
-                    lambda w: self.bath.power_spectrum_func(w, args_decay),
+                    dip_op,
+                    partial(self.bath.power_spectrum_func, **args_decay),
                 ],
             ]
 
         elif N_atoms == 2:  # TODO REDO this to implement the appendix C
-            br_decay_channels_ = []
-            for i in range(1, 3):
+            for i in range(N_atoms):
                 deph = self.coupling(dephasing_rate, i)
                 decay = self.coupling(relaxation_rate, i)
                 args_deph = self.args_bath(deph, i)
                 args_decay = self.args_bath(decay, i)  # NO DECAY PRESENT ?!?! TODO
-                deph_i = ket2dm(self.system.basis[i])  # i = A, B, AB
+                deph_i = sys.deph_op_i(i)  # i = A, B
                 br_decay_channels_.append(
                     [
                         deph_i,  # atom i dephasing
-                        lambda w: self.bath.power_spectrum_func(w, args_deph),
+                        partial(self.bath.power_spectrum_func, **args_deph),
                     ]
                 )
-            deph_AB = ket2dm(self.system.basis[3])  # double excited state
+
+            # ALSO ADD THE DOUBLE EXCITED STATE
+            deph_AB = ket2dm(sys.basis[3])
             br_decay_channels_ += [
                 [
                     deph_AB,  # part from A on double excited state
-                    lambda w: self.bath.power_spectrum_func(w, args_deph),
+                    partial(self.bath.power_spectrum_func, **args_deph),
                 ],
                 [
                     deph_AB,  # part from B on double excited state
-                    lambda w: self.bath.power_spectrum_func(w, args_deph),
+                    partial(self.bath.power_spectrum_func, **args_deph),
                 ],
             ]
-        else:  # TODO IMPLEMENT THE GENERAL CASE WITHIN SINGLE EXCITATION SUBSPACE
-            for i in range(1, self.system.N_atoms):
+        else:
+            for i in range(N_atoms):  # from 0 to N_atoms - 1
                 deph = self.coupling(dephasing_rate, i)
                 decay = self.coupling(relaxation_rate, i)
                 args_deph = self.args_bath(deph, i)
                 args_decay = self.args_bath(decay, i)
-                deph_i = ket2dm(self.system.basis[i])  # i = A, B, AB
+                deph_i = sys.deph_op_i(i)  # i = A, B, C, ...
                 br_decay_channels_.append(
                     [
                         deph_i,  # atom i dephasing
-                        lambda w: self.bath.power_spectrum_func(w, args_deph),
+                        partial(self.bath.power_spectrum_func, **args_deph),
                     ]
                 )
-                """ IF I ALSO WANT TO INCLUDE THE DECAY CHANNELS for each atom
+                """ TODO IF I ALSO WANT TO INCLUDE THE DECAY CHANNELS for each atom
                 br_decay_channels_.append(
                     [
                         (
-                            self.system.basis[0]
-                            * self.system.basis[i].dag(),  # this is sm_m[i]
+                            sys.basis[0]
+                            * sys.basis[i].dag(),  # this is sm_m[i]
                             lambda w: self.bath.power_spectrum_func(w, args_decay),
                         )
-                        for i in range(1, self.system.N_atoms)
+                        for i in range(1, sys.N_atoms)
                     ],
                 )
                 """
@@ -177,26 +196,29 @@ class SystemBathCoupling:
     @property
     def me_decay_channels(self):
         """Generate the c_ops for the Linblad Master Equation solver."""
+        sys = self.system
+        me_decay_channels_ = []
+
         dephasing_rate = self.bath.Gamma
         relaxation_rate = self.bath.gamma_0
 
-        w_th = BOLTZMANN * self.bath.Temp / HBAR
+        # w_th = BOLTZMANN * self.bath.Temp / HBAR
 
-        n_th_at = n_thermal(
-            self.system.freqs_fs(0), w_th
-        )  # TODO to also include thermal effects, and also make the 2 atom and general case!
-        N_atoms = self.system.N_atoms
-        Deph_op = self.system.Deph_op
-        SM_op = self.system.SM_op
+        N_atoms = sys.N_atoms
+        sm_op = sys.sm_op
 
-        if N_atoms == 1:
+        if N_atoms == 1:  # TODO currently no thermal effects
+            # n_th_at = n_thermal(
+            #    sys.freqs_fs(0), w_th)
+            i = 0  # only one transition frequency for single atom
+            deph_op_i = sys.deph_op_i(i)  # dephasing operator for single atom
             me_decay_channels_ = [
-                # SM_op.dag() * np.sqrt(relaxation_rate * n_th_at),  # Collapse operator for thermal excitation
-                SM_op
+                # sm_op.dag() * np.sqrt(relaxation_rate * n_th_at),  # Collapse operator for thermal excitation
+                sm_op
                 * np.sqrt(
                     relaxation_rate
                 ),  #  * (n_th_at + 1)) # Collapse operator for thermal relaxation
-                Deph_op
+                deph_op_i
                 * np.sqrt(
                     2
                     * dephasing_rate  # * (2 * n_th_at + 1)  # factor 2 because of |exe|
@@ -204,17 +226,20 @@ class SystemBathCoupling:
             ]
 
         elif N_atoms == 2:
-            me_decay_channels_ = [
-                ket2dm(tensor(self._atom_e, self._atom_g))
-                * np.sqrt(dephasing_rate),  # * (n_th_at + 1)
-                ket2dm(tensor(self._atom_g, self._atom_e))
-                * np.sqrt(dephasing_rate),  # * (n_th_at + 1)
-                ket2dm(tensor(self._atom_e, self._atom_e))
-                * np.sqrt(dephasing_rate),  # * (n_th_at + 1)
-            ]
+            for i in range(N_atoms):
+                deph_op_i = sys.deph_op_i(i)
+                me_decay_channels_.append(
+                    deph_op_i * np.sqrt(dephasing_rate)
+                )  #   # * (n_th_at + 1)
+            me_decay_channels_.append(
+                sys.basis[3] * np.sqrt(dephasing_rate)
+            )  # double excited state dephasing # * (n_th_at + 1)
         else:
-            raise ValueError("TODO so far Only N_atoms=1 or 2 are supported.")
-
+            for i in range(N_atoms):
+                deph_op_i = sys.deph_op_i(i)
+                me_decay_channels_.append(
+                    deph_op_i * np.sqrt(dephasing_rate)
+                )  # * (n_th_at + 1)
         return me_decay_channels_
 
     def gamma_small_ij(self, i: int, j: int) -> float:
