@@ -1,7 +1,5 @@
-from pydoc import text
 from matplotlib.colors import TwoSlopeNorm
 import numpy as np
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_fcts import *
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 import matplotlib.pyplot as plt

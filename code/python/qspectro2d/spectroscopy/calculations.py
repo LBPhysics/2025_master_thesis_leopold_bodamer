@@ -311,7 +311,7 @@ def compute_1d_polarization(
         data = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
         states = data.states
         times = data.times
-        Dip_op = sim_oqs.system.Dip_op
+        dip_op = sim_oqs.system.dip_op
         N_atoms = sim_oqs.system.N_atoms
         e_ops = sim_oqs.observable_ops
         RWA_SL = sim_oqs.simulation_config.RWA_SL
@@ -323,7 +323,7 @@ def compute_1d_polarization(
             e_ops=e_ops,
             omega_laser=omega_laser,
             RWA_SL=RWA_SL,
-            Dip_op=Dip_op,
+            dip_op=dip_op,
         )
         return times, datas, sim_oqs
 
@@ -554,15 +554,15 @@ def _extract_detection_data(
             )
 
     # Calculate polarizations
-    Dip_op = sim_oqs.system.Dip_op
+    dip_op = sim_oqs.system.dip_op
     polarizations = {}
-    polarizations_full = complex_polarization(Dip_op, evolution_data)
+    polarizations_full = complex_polarization(dip_op, evolution_data)
     logger.debug(
         f"polarizations_full shape: {polarizations_full.shape if hasattr(polarizations_full, 'shape') else type(polarizations_full)}"
     )
 
     for key in linear_signals:
-        polarizations[key] = complex_polarization(Dip_op, linear_signals[key])
+        polarizations[key] = complex_polarization(dip_op, linear_signals[key])
         logger.debug(
             f"polarizations[{key}] shape: {polarizations[key].shape if hasattr(polarizations[key], 'shape') else type(polarizations[key])}"
         )

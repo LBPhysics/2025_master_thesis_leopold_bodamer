@@ -206,7 +206,6 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
         "envelope_type": "gaussian",
         "carrier_freq_cm": np.mean(atomic_config["freqs_cm"]),
         "delays": [
-            0.0,
             args.t_coh,
             args.t_wait,
         ],  # dummy delays, will be updated
