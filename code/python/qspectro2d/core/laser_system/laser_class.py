@@ -156,7 +156,7 @@ class LaserPulseSequence:
         pulses = [
             LaserPulseSequence._create_pulse(
                 i,
-                delays[idx],
+                np.sum(delays[:idx]),
                 phases[idx],
                 pulse_fwhm,
                 carrier_freq_cm,

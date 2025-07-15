@@ -129,7 +129,7 @@ def run_single_t_coh_with_sim(
     # Update t_coh in the simulation config
     sim_oqs.simulation_config.t_coh = t_coh
     t_wait = sim_oqs.simulation_config.t_wait
-    sim_oqs.laser.update_delays = [0.0, t_coh, t_coh + t_wait]
+    sim_oqs.laser.update_delays = [0.0, t_coh, t_wait]
 
     start_time = time.time()
 
@@ -208,7 +208,7 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
         "delays": [
             0.0,
             args.t_coh,
-            args.t_coh + args.t_wait,
+            args.t_wait,
         ],  # dummy delays, will be updated
         "relative_E0s": DEFAULT_RELATIVE_E0S,  # relative amplitudes for each pulse
     }
@@ -425,11 +425,12 @@ Examples:
     # =============================
     # ARGUMENT VALIDATION
     # =============================
-    if args.simulation_type == "2d" and args.n_batches <= 0:
-        raise ValueError("Number of batches must be positive for 2D mode")
-
-    if args.simulation_type == "2d" and args.batch_idx < 0:
-        raise ValueError("Batch index must be non-negative")
+    if args.simulation_type == "2d":
+        args.t_coh = 0.0  # force default value for 2D mode
+        if args.n_batches <= 0:
+            raise ValueError("Number of batches must be positive for 2D mode")
+        elif args.batch_idx < 0:
+            raise ValueError("Batch index must be non-negative")
 
     if args.dt <= 0:
         raise ValueError("Time step dt must be positive")
