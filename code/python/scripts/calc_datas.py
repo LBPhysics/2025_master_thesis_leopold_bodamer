@@ -57,7 +57,7 @@ from qspectro2d.core.simulation_class import (
 )
 
 N_ATOMS = 2
-DEFAULT_ODE_SOLVER = "Paper_eqs"
+DEFAULT_ODE_SOLVER = "BR"
 DEFAULT_RWA_SL = True
 
 DEFAULT_BATH_TYPE = "paper"
@@ -129,7 +129,7 @@ def run_single_t_coh_with_sim(
     # Update t_coh in the simulation config
     sim_oqs.simulation_config.t_coh = t_coh
     t_wait = sim_oqs.simulation_config.t_wait
-    sim_oqs.laser.update_delays = [0.0, t_coh, t_wait]
+    sim_oqs.laser.update_delays = [t_coh, t_wait]
 
     start_time = time.time()
 
@@ -193,13 +193,13 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
     atomic_config = {
         "n_atoms": N_ATOMS,
         "freqs_cm": (
-            [16000] if N_ATOMS == 1 else [15700, 16300]  # TODO extend to more atoms
+            [16000] if N_ATOMS == 1 else [15900, 16300]  # TODO extend to more atoms
         ),  # Frequency of atom A [cm⁻¹]
         "dip_moments": [1.0] * N_ATOMS,  # Dipole moments for each atom
         "delta_cm": DEFAULT_DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
     }
     if N_ATOMS >= 2:
-        atomic_config["J_cm"] = 300.0
+        atomic_config["J_cm"] = 0.0
 
     # Use dummy t_coh=0 for initial setup and solver check
     pulse_config = {

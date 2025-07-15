@@ -25,6 +25,7 @@ def create_batch_script(
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
 
+#SBATCH --partition=GPGPU
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=5G # this should be more than enough
 #SBATCH --time=0-6 # 6 hours
