@@ -470,7 +470,7 @@ if __name__ == "__main__":
                     print(f"   📏 Axes: {list(data['axes'].keys())}")
                 if "system" in data and data["system"]:
                     print(
-                        f"   ⚙️  System: N_atoms={getattr(data['system'], 'N_atoms', 'Unknown')}"
+                        f"   ⚙️  System: n_atoms={getattr(data['system'], 'n_atoms', 'Unknown')}"
                     )
 
                 # Only test the first successful load to avoid too much output

@@ -39,7 +39,7 @@ class SystemLaserCoupling:
         t_prd_values = []
 
         # Iterate over all atoms
-        for i in range(self.system.N_atoms):
+        for i in range(self.system.n_atoms):
             rabi_0_values.append(self.rabi_0(i))
             delta_rabi_values.append(self.delta_rabi(i))
             rabi_gen_values.append(self.rabi_gen(i))
@@ -81,7 +81,7 @@ if __name__ == "__main__":
 
     # Create mock AtomicSystem and LaserPulseSequence objects
     mock_atomic_system = AtomicSystem(
-        N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+        n_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
     )
     seq = LaserPulseSequence.from_delays(
         delays=[100.0, 200.0, 300.0],

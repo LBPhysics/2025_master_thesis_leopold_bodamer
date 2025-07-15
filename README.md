@@ -183,7 +183,7 @@ plot_from_relative_path(relative_path, config, simulation_type="2d")
 ```python
 # 1D Simulation
 config_1d = {
-    "N_atoms": 1,
+    "n_atoms": 1,
     "tau_coh": 300.0,
     "T_wait": 1000.0,
     "t_det_max": 2000.0,
@@ -193,7 +193,7 @@ relative_path = run_simulation_with_config(config_1d, "1d")
 
 # 2D Simulation  
 config_2d = {
-    "N_atoms": 2,
+    "n_atoms": 2,
     "t_max": 600,
     "T_wait_max": 300,
     "n_times_T": 1,

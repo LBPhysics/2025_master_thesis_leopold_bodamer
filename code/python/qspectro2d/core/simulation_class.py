@@ -25,9 +25,9 @@ class SimulationConfig:
     "ME" (solve the master equation) or
     "BR" (solve the Bloch-Redfield equations)
     """
-    ODE_Solver: str = "Paper_BR"
+    ode_solver: str = "Paper_BR"
     #  only valid for omega_laser ~ omega_atomic
-    RWA_SL: bool = True
+    rwa_sl: bool = True
     #  CAN ONLY HANDLE TRUE For Paper_eqs
     keep_track: str = "eigenstates"  # alternative "basis" determines the "observables"
 
@@ -61,17 +61,17 @@ class SimulationConfig:
         return self.n_phases * self.n_phases * self.n_freqs
 
     def __post_init__(self):
-        # Validate ODE_Solver
-        if self.ODE_Solver not in SUPPORTED_SOLVERS:
+        # Validate ode_solver
+        if self.ode_solver not in SUPPORTED_SOLVERS:
             raise ValueError(
-                f"Invalid ODE_Solver: {self.ODE_Solver}. Supported solvers are: "
+                f"Invalid ode_solver: {self.ode_solver}. Supported solvers are: "
                 f"ME, BR, Paper_eqs, Paper_BR."
             )
 
-        # Validate RWA_SL with Paper_eqs -> must be True
-        if self.RWA_SL == False and self.ODE_Solver == "Paper_eqs":
-            print("WARNING: RWA_SL must be True for Paper_eqs. Setting RWA_SL to True.")
-            self.RWA_SL = True
+        # Validate rwa_sl with Paper_eqs -> must be True
+        if self.rwa_sl == False and self.ode_solver == "Paper_eqs":
+            print("WARNING: rwa_sl must be True for Paper_eqs. Setting rwa_sl to True.")
+            self.rwa_sl = True
         # Validate other parameters
         if self.dt <= 0:
             raise ValueError("dt must be a positive value.")
@@ -103,8 +103,8 @@ class SimulationConfig:
             f"Total Time (t_max) : {self.t_max} fs\n"
             f"Time Step (dt)     : {self.dt} fs\n"
             f"-------------------------------\n"
-            f"Solver Type        : {self.ODE_Solver}\n"
-            f"Use RWA_SL         : {self.RWA_SL}\n\n"
+            f"Solver Type        : {self.ode_solver}\n"
+            f"Use rwa_sl         : {self.rwa_sl}\n\n"
             f"-------------------------------\n"
             f"Phase Cycles       : {self.n_phases}\n"
             f"Inhom. Points      : {self.n_freqs}\n"
@@ -140,16 +140,16 @@ class SimulationModuleOQS:
         self.sb_coupling = SystemBathCoupling(self.system, self.bath)
         self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
 
-        # define the decay channels based on the ODE_Solver
-        ODE_Solver = self.simulation_config.ODE_Solver
-        if ODE_Solver == "ME":
+        # define the decay channels based on the ode_solver
+        ode_solver = self.simulation_config.ode_solver
+        if ode_solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
-        elif ODE_Solver == "BR":
+        elif ode_solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
-        elif ODE_Solver == "Paper_eqs":
-            self.simulation_config.RWA_SL = True  # RWA is required for Paper_eqs
+        elif ode_solver == "Paper_eqs":
+            self.simulation_config.rwa_sl = True  # RWA is required for Paper_eqs
             self.decay_channels = []
-        elif ODE_Solver == "Paper_BR":
+        elif ode_solver == "Paper_BR":
             self.decay_channels = []
             # Redfield tensor, holds decay_channels
 
@@ -164,17 +164,17 @@ class SimulationModuleOQS:
         """
         Es, _ = self.system.eigenstates
 
-        if self.simulation_config.RWA_SL:
-            if self.system.N_atoms == 1:
+        if self.simulation_config.rwa_sl:
+            if self.system.n_atoms == 1:
                 Es[1] -= self.laser.omega_laser
 
-            elif self.system.N_atoms == 2:
+            elif self.system.n_atoms == 2:
                 Es[1] -= self.laser.omega_laser
                 Es[2] -= self.laser.omega_laser
                 Es[3] -= 2 * self.laser.omega_laser
             else:
                 print(
-                    "TODO extend the H_diag to N_atoms > 2 ?Es[i] -= self.laser.omega_laser?"
+                    "TODO extend the H_diag to n_atoms > 2 ?Es[i] -= self.laser.omega_laser?"
                 )
 
         H_diag = Qobj(np.diag(Es), dims=self.system.H0_N_canonical.dims)
@@ -190,20 +190,20 @@ class SimulationModuleOQS:
         Returns:
             Qobj: Interaction Hamiltonian at time t.
         """
-        SM_op = self.system.SM_op  # Lowering operator
-        RWA_SL = self.simulation_config.RWA_SL
+        sm_op = self.system.sm_op  # Lowering operator
+        rwa_sl = self.simulation_config.rwa_sl
         laser = self.laser
 
         return H_int_(
             t=t,
-            SM_op=SM_op,
-            RWA_SL=RWA_SL,
+            sm_op=sm_op,
+            rwa_sl=rwa_sl,
             laser=laser,
         )
 
     @property
     def observable_ops(self):
-        if self.system.N_atoms == 1:
+        if self.system.n_atoms == 1:
             observable_ops = [
                 ket2dm(self.system._atom_g),  # |gxg|
                 self.system._atom_g * self.system._atom_e.dag(),  # |gxe|
@@ -221,7 +221,7 @@ class SimulationModuleOQS:
 
     @property
     def observable_strs(self):
-        if self.system.N_atoms == 1:
+        if self.system.n_atoms == 1:
             observable_strs = [
                 r" g \times g ",
                 r" g \times e ",
@@ -230,7 +230,7 @@ class SimulationModuleOQS:
             ]
         elif self.simulation_config.keep_track == "basis":
             observable_strs = [
-                rf"\text{{basis}}({i})" for i in range(self.system.N_atoms)
+                rf"\text{{basis}}({i})" for i in range(self.system.n_atoms)
             ]
             # observable_strs1 = ["0", "A", "B", "AB"]
         elif self.simulation_config.keep_track == "eigenstates":
@@ -303,32 +303,32 @@ class SimulationModuleOQS:
 
     @property
     def Evo_obj_free(self):
-        ODE_Solver = self.simulation_config.ODE_Solver
-        if ODE_Solver == "ME":
+        ode_solver = self.simulation_config.ode_solver
+        if ode_solver == "ME":
             return self.H0_diagonalized
-        elif ODE_Solver == "BR":
+        elif ode_solver == "BR":
             return self.H0_diagonalized
-        elif ODE_Solver == "Paper_eqs":
+        elif ode_solver == "Paper_eqs":
             return self.paper_evo_obj
-        elif ODE_Solver == "Paper_BR":
+        elif ode_solver == "Paper_BR":
             return liouvillian(self.H0_diagonalized) + R_paper(self)
         else:
-            raise ValueError(f"Unknown ODE_Solver: {ODE_Solver}")
+            raise ValueError(f"Unknown ode_solver: {ode_solver}")
 
     @property
     def Evo_obj_int(self):
-        ODE_Solver = self.simulation_config.ODE_Solver
-        if ODE_Solver == "ME":
+        ode_solver = self.simulation_config.ode_solver
+        if ode_solver == "ME":
             return self.H0_diagonalized + QobjEvo(self.H_int_sl)
-        elif ODE_Solver == "BR":
+        elif ode_solver == "BR":
             return self.H0_diagonalized + QobjEvo(self.H_int_sl)
-        elif ODE_Solver == "Paper_eqs":
+        elif ode_solver == "Paper_eqs":
             return self.paper_evo_obj
-        elif ODE_Solver == "Paper_BR":  # TODO somehow contains 2 RWAs for N_atoms == 2.
+        elif ode_solver == "Paper_BR":  # TODO somehow contains 2 RWAs for n_atoms == 2.
             custom_free = liouvillian(self.H0_diagonalized) + R_paper(self)
             return custom_free + liouvillian(QobjEvo(self.H_int_sl))
         else:
-            raise ValueError(f"Unknown ODE_Solver: {ODE_Solver}")
+            raise ValueError(f"Unknown ode_solver: {ode_solver}")
 
     def summary(self):
         print("\n# Summary of System Parameters:")
@@ -336,12 +336,12 @@ class SimulationModuleOQS:
             print(f"    {key:<20}: {value}")
 
         # Solver Specifics
-        ODE_Solver = self.simulation_config.ODE_Solver
-        print(f"    {'ODE_Solver':<20}: {ODE_Solver}")
+        ode_solver = self.simulation_config.ode_solver
+        print(f"    {'ode_solver':<20}: {ode_solver}")
         print(f"        decay_channels: {self.decay_channels}")
-        if ODE_Solver == "Paper_BR":
+        if ode_solver == "Paper_BR":
             print(f"    {'Redfield tensor R_paper used (calculated by R_paper(self))'}")
-        if ODE_Solver == "Paper_eqs":
+        if ode_solver == "Paper_eqs":
             print(
                 f"    {'Custom ODE matrix used (calculated by matrix_ODE_paper(t, pulse_seq, self))'}"
             )
@@ -385,8 +385,8 @@ class SimulationModuleOQS:
 
 def H_int_(
     t: float,
-    SM_op: Qobj,
-    RWA_SL: bool,
+    sm_op: Qobj,
+    rwa_sl: bool,
     laser: LaserPulseSequence,
 ) -> Qobj:
     """
@@ -394,21 +394,21 @@ def H_int_(
 
     Parameters:
         t (float): Time at which the interaction Hamiltonian is evaluated.
-        SM_op (Qobj): Lowering operator of the system.
-        RWA_SL (bool): Whether to use the rotating wave approximation (RWA) for single-laser coupling.
+        sm_op (Qobj): Lowering operator of the system.
+        rwa_sl (bool): Whether to use the rotating wave approximation (RWA) for single-laser coupling.
         laser (LaserPulseSequence): Laser pulse system containing the pulse parameters.
 
     Returns:
         Qobj: Interaction Hamiltonian at time t.
     """
 
-    if RWA_SL:
+    if rwa_sl:
         E_field_RWA = E_pulse(t, laser)  # Combined electric field under RWA
         H_int_sl = -(
-            SM_op.dag() * E_field_RWA + SM_op * np.conj(E_field_RWA)
+            sm_op.dag() * E_field_RWA + sm_op * np.conj(E_field_RWA)
         )  # RWA interaction Hamiltonian
     else:
-        dip_op = SM_op * SM_op.dag()
+        dip_op = sm_op * sm_op.dag()
         E_field = Epsilon_pulse(t, laser)  # Combined electric field with carrier
         H_int_sl = -dip_op * (
             E_field + np.conj(E_field)
@@ -422,17 +422,17 @@ def H_int_(
 # =============================
 def matrix_ODE_paper(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     """
-    Dispatches to the appropriate implementation based on N_atoms.
+    Dispatches to the appropriate implementation based on n_atoms.
     Solves the equation drho_dt = L(t) * rho,
     in natural units: L = -i/hbar(Hrho - rho H) + R * rho,  with [hbar] = 1 and [R] = [1] = [power Spectrum S(w)] = [all the Gammas: like gamma_phi].
     """
-    N_atoms = sim_oqs.system.N_atoms
-    if N_atoms == 1:
+    n_atoms = sim_oqs.system.n_atoms
+    if n_atoms == 1:
         return _matrix_ODE_paper_1atom(t, sim_oqs)
-    elif N_atoms == 2:
+    elif n_atoms == 2:
         return _matrix_ODE_paper_2atom(t, sim_oqs)
     else:
-        raise ValueError("Only N_atoms=1 or 2 are supported.")
+        raise ValueError("Only n_atoms=1 or 2 are supported.")
 
 
 def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
@@ -668,14 +668,14 @@ def _matrix_ODE_paper_2atom(
 
 # only use the Redfield tensor as a matrix:
 def R_paper(sim_oqs: SimulationModuleOQS) -> Qobj:
-    """Dispatches to the appropriate implementation based on N_atoms."""
-    N_atoms = sim_oqs.system.N_atoms
-    if N_atoms == 1:
+    """Dispatches to the appropriate implementation based on n_atoms."""
+    n_atoms = sim_oqs.system.n_atoms
+    if n_atoms == 1:
         return _R_paper_1atom(sim_oqs)
-    elif N_atoms == 2:
+    elif n_atoms == 2:
         return _R_paper_2atom(sim_oqs)
     else:
-        raise ValueError("Only N_atoms=1 or 2 are supported.")
+        raise ValueError("Only n_atoms=1 or 2 are supported.")
 
 
 def _R_paper_1atom(sim_oqs: SimulationModuleOQS) -> Qobj:
@@ -830,7 +830,7 @@ def main():
 
     ### Create simulation_config configuration
     sim_config = SimulationConfig(
-        ODE_Solver="Paper_BR", RWA_SL=True, dt=0.1, t_coh=50.0
+        ode_solver="Paper_BR", rwa_sl=True, dt=0.1, t_coh=50.0
     )
 
     ### Create test pulse sequence
@@ -853,7 +853,7 @@ def main():
 
     ### Create 1-atom system
 
-    system_1 = AtomicSystem(N_atoms=1)
+    system_1 = AtomicSystem(n_atoms=1)
     bath = BathSystem()
 
     ### Create simulation_config model
@@ -866,7 +866,7 @@ def main():
     try:
         ### Create 1-atom system
 
-        system_1 = AtomicSystem(N_atoms=1)
+        system_1 = AtomicSystem(n_atoms=1)
         bath = BathSystem()
 
         ### Create simulation_config model
@@ -898,7 +898,7 @@ def main():
     try:
         ### Create 2-atom system
         system_2 = AtomicSystem(
-            N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+            n_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
         )
 
         ### Create simulation_config model
@@ -946,7 +946,7 @@ def main():
     try:
         ### Create non-RWA configuration
         sim_config_no_rwa = SimulationConfig(
-            ODE_Solver="Paper_BR", RWA_SL=False, dt=0.1, t_coh=100.0  # No RWA
+            ode_solver="Paper_BR", rwa_sl=False, dt=0.1, t_coh=100.0  # No RWA
         )
 
         sim_model_no_rwa = SimulationModuleOQS(
@@ -980,8 +980,8 @@ def main():
 
         # Create original config
         original_config = SimulationConfig(
-            ODE_Solver="Paper_BR",
-            RWA_SL=True,
+            ode_solver="Paper_BR",
+            rwa_sl=True,
             dt=0.05,
             t_coh=150.0,
             t_wait=10.0,
@@ -999,8 +999,8 @@ def main():
         # Compare attributes
         config_match = True
         for attr in [
-            "ODE_Solver",
-            "RWA_SL",
+            "ode_solver",
+            "rwa_sl",
             "dt",
             "t_coh",
             "t_wait",
@@ -1037,16 +1037,16 @@ def main():
 
         # Check simulation_config
         if (
-            original_model.simulation_config.ODE_Solver
-            != reconstructed_model.simulation_config.ODE_Solver
+            original_model.simulation_config.ode_solver
+            != reconstructed_model.simulation_config.ode_solver
         ):
             model_match = False
-            comparison_results.append(f"ODE_Solver mismatch")
+            comparison_results.append(f"ode_solver mismatch")
 
         # Check system attributes
-        if original_model.system.N_atoms != reconstructed_model.system.N_atoms:
+        if original_model.system.n_atoms != reconstructed_model.system.n_atoms:
             model_match = False
-            comparison_results.append(f"N_atoms mismatch")
+            comparison_results.append(f"n_atoms mismatch")
 
         if not np.allclose(
             original_model.system.freqs_cm, reconstructed_model.system.freqs_cm
@@ -1104,7 +1104,7 @@ def main():
 
         # Create 2-atom system for testing
         system_2_test = AtomicSystem(
-            N_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+            n_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
         )
 
         sim_model_2_test = SimulationModuleOQS(
@@ -1123,7 +1123,7 @@ def main():
         comparison_2_results = []
 
         # Check simulation_config attributes
-        config_attrs = ["ODE_Solver", "RWA_SL", "dt", "t_coh", "t_wait", "t_det_max"]
+        config_attrs = ["ode_solver", "rwa_sl", "dt", "t_coh", "t_wait", "t_det_max"]
         for attr in config_attrs:
             orig_val = getattr(sim_model_2_test.simulation_config, attr)
             recon_val = getattr(reconstructed_model_2.simulation_config, attr)
@@ -1132,10 +1132,10 @@ def main():
                 comparison_2_results.append(f"Config {attr}: {orig_val} != {recon_val}")
 
         # Check system attributes
-        if sim_model_2_test.system.N_atoms != reconstructed_model_2.system.N_atoms:
+        if sim_model_2_test.system.n_atoms != reconstructed_model_2.system.n_atoms:
             model_2_match = False
             comparison_2_results.append(
-                f"N_atoms: {sim_model_2_test.system.N_atoms} != {reconstructed_model_2.system.N_atoms}"
+                f"n_atoms: {sim_model_2_test.system.n_atoms} != {reconstructed_model_2.system.n_atoms}"
             )
 
         if not np.allclose(
@@ -1179,7 +1179,7 @@ def main():
                         comparison_2_results.append(f"Pulse {i} {attr} differs")
 
         # Check bath attributes
-        bath_attrs = ["bath", "gamma_0", "Gamma", "cutoff_", "Temp"]
+        bath_attrs = ["bath", "gamma_0", "Gamma", "cutoff_", "temp"]
         for attr in bath_attrs:
             orig_val = getattr(sim_model_2_test.bath, attr)
             recon_val = getattr(reconstructed_model_2.bath, attr)
@@ -1280,9 +1280,9 @@ def main():
 
         # Test edge cases with different configurations
         test_configs = [
-            SimulationConfig(ODE_Solver="ME", RWA_SL=True, dt=0.05, t_coh=25.0),
-            SimulationConfig(ODE_Solver="BR", RWA_SL=False, dt=0.2, t_coh=200.0),
-            SimulationConfig(ODE_Solver="Paper_eqs", RWA_SL=True, dt=0.1, t_coh=50.0),
+            SimulationConfig(ode_solver="ME", rwa_sl=True, dt=0.05, t_coh=25.0),
+            SimulationConfig(ode_solver="BR", rwa_sl=False, dt=0.2, t_coh=200.0),
+            SimulationConfig(ode_solver="Paper_eqs", rwa_sl=True, dt=0.1, t_coh=50.0),
         ]
 
         print(f"\n✓ to_dict and from_dict testing completed successfully!")

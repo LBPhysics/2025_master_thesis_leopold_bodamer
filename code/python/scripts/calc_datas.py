@@ -56,8 +56,8 @@ from qspectro2d.core.simulation_class import (
     SimulationModuleOQS,
 )
 
-N_ATOMS = 1
-DEFAULT_ODE_SOLVER = "BR"
+N_ATOMS = 2
+DEFAULT_ODE_SOLVER = "Paper_eqs"
 DEFAULT_RWA_SL = True
 
 DEFAULT_BATH_TYPE = "paper"
@@ -191,10 +191,12 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
     print("🔧 Creating base simulation configuration...")
 
     atomic_config = {
-        "N_atoms": N_ATOMS,
-        "freqs_cm": [16000],  # Frequency of atom A [cm⁻¹]
+        "n_atoms": N_ATOMS,
+        "freqs_cm": (
+            [16000] if N_ATOMS == 1 else [15700, 16300]  # TODO extend to more atoms
+        ),  # Frequency of atom A [cm⁻¹]
         "dip_moments": [1.0] * N_ATOMS,  # Dipole moments for each atom
-        "Delta_cm": DEFAULT_DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
+        "delta_cm": DEFAULT_DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
     }
     if N_ATOMS >= 2:
         atomic_config["J_cm"] = 300.0
@@ -218,8 +220,8 @@ def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
         "max_workers": max_workers,
         "IFT_component": DEFAULT_IFT_COMPONENT,
         ### Simulation parameters
-        "ODE_Solver": DEFAULT_ODE_SOLVER,
-        "RWA_SL": DEFAULT_RWA_SL,
+        "ode_solver": DEFAULT_ODE_SOLVER,
+        "rwa_sl": DEFAULT_RWA_SL,
         "keep_track": "basis",
         # times
         "t_coh": args.t_coh,  # dummy value, will be updated

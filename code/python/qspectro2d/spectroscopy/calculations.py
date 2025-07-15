@@ -100,7 +100,7 @@ def compute_pulse_evolution(
             evo_obj = sim_oqs.Evo_obj_free
         # Execute evolution for this time segment
         result = _execute_single_evolution_segment(
-            sim_oqs.simulation_config.ODE_Solver,
+            sim_oqs.simulation_config.ode_solver,
             evo_obj,
             decay_ops_list,
             current_state,
@@ -171,7 +171,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
         result (Result): The Qotip result object.
         time_cut (float): The time after which the checks failed, or np.inf if all checks passed.
     """
-    logger.info(f"Checking '{sim_oqs.simulation_config.ODE_Solver}' solver")
+    logger.info(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
     copy_sim_oqs = deepcopy(sim_oqs)
     t_max = 2 * copy_sim_oqs.simulation_config.t_max
     dt = 10 * copy_sim_oqs.simulation_config.dt
@@ -211,10 +211,10 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     error_messages = []
     time_cut = np.inf  # time after which the checks failed
     # Apply RWA phase factors if needed
-    if getattr(copy_sim_oqs.simulation_config, "RWA_SL", False):
-        N_atoms = copy_sim_oqs.system.N_atoms
+    if getattr(copy_sim_oqs.simulation_config, "rwa_sl", False):
+        n_atoms = copy_sim_oqs.system.n_atoms
         omega_laser = copy_sim_oqs.laser.omega_laser
-        states = apply_RWA_phase_factors(states, times, N_atoms, omega_laser)
+        states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
     for index, state in enumerate(states):
         time = times[index]
         if not state.isherm:
@@ -312,17 +312,17 @@ def compute_1d_polarization(
         states = data.states
         times = data.times
         dip_op = sim_oqs.system.dip_op
-        N_atoms = sim_oqs.system.N_atoms
+        n_atoms = sim_oqs.system.n_atoms
         e_ops = sim_oqs.observable_ops
-        RWA_SL = sim_oqs.simulation_config.RWA_SL
+        rwa_sl = sim_oqs.simulation_config.rwa_sl
         omega_laser = sim_oqs.laser.omega_laser
         datas = get_expect_vals_with_RWA(
             states,
             times,
-            N_atoms=N_atoms,
+            n_atoms=n_atoms,
             e_ops=e_ops,
             omega_laser=omega_laser,
-            RWA_SL=RWA_SL,
+            rwa_sl=rwa_sl,
             dip_op=dip_op,
         )
         return times, datas, sim_oqs
@@ -542,15 +542,15 @@ def _extract_detection_data(
     )
 
     # Apply RWA phase factors if needed
-    if sim_oqs.simulation_config.RWA_SL:
-        N_atoms = sim_oqs.system.N_atoms
+    if sim_oqs.simulation_config.rwa_sl:
+        n_atoms = sim_oqs.system.n_atoms
         omega_laser = sim_oqs.laser.omega_laser
         evolution_data = apply_RWA_phase_factors(
-            evolution_data, actual_det_times, N_atoms, omega_laser
+            evolution_data, actual_det_times, n_atoms, omega_laser
         )
         for key in linear_signals:
             linear_signals[key] = apply_RWA_phase_factors(
-                linear_signals[key], actual_det_times, N_atoms, omega_laser
+                linear_signals[key], actual_det_times, n_atoms, omega_laser
             )
 
     # Calculate polarizations
@@ -767,13 +767,13 @@ def parallel_compute_1d_E_with_inhomogenity(
         )
 
     # Sample frequency offsets for inhomogeneous broadening
-    Delta_cm = sim_oqs.system.Delta_cm
+    delta_cm = sim_oqs.system.delta_cm
     freqs_cm = sim_oqs.system.freqs_cm
 
     # Each row = one realization, each column = atom index
-    # Shape: (n_freqs, N_atoms)
+    # Shape: (n_freqs, n_atoms)
     all_freq_sets = np.stack(
-        [sample_from_gaussian(n_freqs, Delta_cm, freq) for freq in freqs_cm], axis=1
+        [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in freqs_cm], axis=1
     )
     # print(f"Using frequency samples ={all_freq_sets}", flush=True)
 

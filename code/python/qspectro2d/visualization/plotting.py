@@ -1,3 +1,4 @@
+from encodings.punycode import T
 from matplotlib.colors import TwoSlopeNorm
 import numpy as np
 from qspectro2d.core.laser_system.laser_fcts import *
@@ -265,8 +266,8 @@ def plot_example_evo(
     pulse_seq: LaserPulseSequence,
     t_coh: float,
     t_wait: float,
-    RWA_SL: bool = False,
-    ODE_Solver: str = "Paper_eqs",
+    rwa_sl: bool = False,
+    ode_solver: str = "Paper_eqs",
     observable_strs: list[str] = [],
     **kwargs: dict,
 ):
@@ -286,7 +287,7 @@ def plot_example_evo(
         matplotlib.figure.Figure: The figure object.
     """
     # Choose field function based on RWA setting
-    if RWA_SL:
+    if rwa_sl:
         field_func = E_pulse
     else:
         field_func = Epsilon_pulse
@@ -370,7 +371,7 @@ def plot_example_evo(
 
     # Add title and finalize plot
     plt.suptitle(
-        rf"$t_{{\mathrm{{coh}}}} = {t_coh:.2f}\,\mathrm{{fs}},\quad t_{{\mathrm{{wait}}}} = {t_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {ODE_Solver}"
+        rf"$t_{{\mathrm{{coh}}}} = {t_coh:.2f}\,\mathrm{{fs}},\quad t_{{\mathrm{{wait}}}} = {t_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {ode_solver}"
     )
     plt.tight_layout()
     plt.close(fig)
@@ -379,8 +380,8 @@ def plot_example_evo(
 
 
 def plot_1d_el_field(
-    data_x: np.ndarray,
-    data_y: np.ndarray,
+    axis_det: np.ndarray,
+    data: np.ndarray,
     domain: Literal["time", "freq"] = "time",
     component: Literal["real", "imag", "abs", "phase"] = "real",
     title: str = None,
@@ -391,8 +392,8 @@ def plot_1d_el_field(
     Plot 1D electric field data in either time or frequency domain with specified component.
 
     Parameters:
-        data_x (np.ndarray): X-axis values (time in fs or frequency in 10^4 cm^-1)
-        data_y (np.ndarray): Complex data array to plot
+        axis_det (np.ndarray): X-axis values (time in fs or frequency in 10^4 cm^-1)
+        data (np.ndarray): Complex data array to plot
         domain (Literal["time", "freq"]): Domain of the data - 'time' or 'freq'. Defaults to 'time'.
         component (Literal["real", "imag", "abs", "phase"]): Component to plot - 'real', 'imag', 'abs', or 'phase'.
                                                            Defaults to 'real'.
@@ -412,24 +413,24 @@ def plot_1d_el_field(
             title = f"{function_symbol} in Time Domain"
 
         if component == "abs":
-            y_data = np.abs(data_y)
+            y_data = np.abs(data)
             label = rf"$|{function_symbol}(t)|$"
             ylabel = rf"$|{function_symbol}(t)|$"
         elif component == "real":
-            y_data = np.real(data_y)
+            y_data = np.real(data)
             label = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
             ylabel = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
         elif component == "imag":
-            y_data = np.imag(data_y)
+            y_data = np.imag(data)
             label = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"
             ylabel = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"
         elif component == "phase":
-            y_data = np.angle(data_y)
+            y_data = np.angle(data)
             label = rf"$\mathrm{{Arg}}[{function_symbol}(t)]$"
             ylabel = rf"$\mathrm{{Arg}}[{function_symbol}(t)]$ [rad]"
         else:
             # Default to real part if invalid component is provided
-            y_data = np.real(data_y)
+            y_data = np.real(data)
             label = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
             ylabel = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
 
@@ -439,24 +440,24 @@ def plot_1d_el_field(
             title = f"{function_symbol} in Frequency Domain"
 
         if component == "abs":
-            y_data = np.abs(data_y)
+            y_data = np.abs(data)
             label = rf"$|{function_symbol}(\omega)|$"
             ylabel = rf"$|{function_symbol}(\omega)|$"
         elif component == "real":
-            y_data = np.real(data_y)
+            y_data = np.real(data)
             label = rf"$\mathrm{{Re}}[{function_symbol}(\omega)]$"
             ylabel = rf"$\mathrm{{Re}}[{function_symbol}(\omega)]$"
         elif component == "imag":
-            y_data = np.imag(data_y)
+            y_data = np.imag(data)
             label = rf"$\mathrm{{Im}}[{function_symbol}(\omega)]$"
             ylabel = rf"$\mathrm{{Im}}[{function_symbol}(\omega)]$"
         elif component == "phase":
-            y_data = np.angle(data_y)
+            y_data = np.angle(data)
             label = rf"$\mathrm{{Arg}}[{function_symbol}(\omega)]$"
             ylabel = rf"$\mathrm{{Arg}}[{function_symbol}(\omega)]$ [rad]"
         else:
             # Default to absolute value for frequency domain if invalid component
-            y_data = np.abs(data_y)
+            y_data = np.abs(data)
             label = rf"$|{function_symbol}(\omega)|$"
             ylabel = rf"$|{function_symbol}(\omega)|$"
     else:
@@ -469,7 +470,7 @@ def plot_1d_el_field(
 
     # Create the plot
     plt.plot(
-        data_x,
+        axis_det,
         y_data,
         label=label,
         color=color,
@@ -525,9 +526,9 @@ def plot_1d_el_field(
 
 
 def plot_2d_el_field(
-    data_x: np.ndarray,
-    data_y: np.ndarray,
-    data_z: np.ndarray,
+    axis_det: np.ndarray,  # 1d
+    axis_coh: np.ndarray,  # 1d
+    data: np.ndarray,  # 2d
     t_wait: float = np.inf,
     domain: Literal["time", "freq"] = "time",
     component: Literal["real", "imag", "abs", "phase"] = "real",
@@ -542,12 +543,12 @@ def plot_2d_el_field(
 
     Parameters
     ----------
-    data_x : np.ndarray
+    axis_det : np.ndarray
         1D array representing x grid (time/frequency values).
-    data_y : np.ndarray
+    axis_coh : np.ndarray
         1D array representing y grid (time/frequency values).
-    data_z : np.ndarray
-        2D complex array with shape (len(data_y), len(data_x)).
+    data : np.ndarray
+        2D complex array with shape (len(axis_coh), len(axis_det)).
     t_wait : float, default np.inf
         Waiting time T (fs) to include in plot title and filename. If np.inf,
         no waiting time is displayed.
@@ -583,71 +584,72 @@ def plot_2d_el_field(
     # =============================
     # VALIDATE INPUT
     # =============================
-    x, y, data = data_x, data_y, data_z
+    if (
+        data.ndim != 2
+        or data.shape[0] != len(axis_coh)
+        or data.shape[1] != len(axis_det)
+    ):
+        raise ValueError(
+            f"Data shape {data.shape} does not match axis_det ({len(axis_det)}) and axis_coh ({len(axis_coh)}) dimensions."
+        )
 
     # Check for empty arrays
-    if x.size == 0 or y.size == 0 or data.size == 0:
+    if axis_det.size == 0 or axis_coh.size == 0 or data.size == 0:
         print(
-            f"❌ Warning: Empty arrays detected in plot_2d_el_field. x.shape={x.shape}, y.shape={y.shape}, data.shape={data.shape}"
+            f"❌ Warning: Empty arrays detected in plot_2d_el_field. axis_det.shape={axis_det.shape}, axis_coh.shape={axis_coh.shape}, data.shape={data.shape}"
         )
         return None
 
     # Convert to real arrays for plotting
-    x = np.real(x)
-    y = np.real(y)
+    axis_det = np.real(axis_det)
+    axis_coh = np.real(axis_coh)
 
     data = np.array(data, dtype=np.complex128)  # why did you do this?
     # =============================
     # SECTION CROPPING
     # =============================
     if section is not None:
-        x, y, data = crop_2d_data_to_section(x, y, data, section)
+        axis_det, axis_coh, data = crop_2d_data_to_section(
+            axis_det, axis_coh, data, section
+        )
 
     if np.abs(data).max() == 0:
         raise ValueError("Data array is all zeros, cannot normalize.")
     data = data / np.abs(data).max()  # normalize
 
-    if data.shape[1] != len(x):
-        raise ValueError(
-            f"Length of x ({len(x)}) must match the number of columns in data ({data.shape[1]})."
-        )
-    if data.shape[0] != len(y):
-        raise ValueError(
-            f"Length of y ({len(y)}) must match the number of rows in data ({data.shape[0]})."
-        )
-
     # =============================
     # SET PLOT LABELS AND COLORMAP
     # =============================
-    if domain not in ("time", "freq"):
-        raise ValueError("Invalid domain. Must be 'time' or 'freq'.")
-    if domain == "time":
-        colormap = "viridis"
-        title = r"$\text{Time domain}$"
-        x_title = r"$t_{\text{det}}$ [fs]"
-        y_title = r"$t_{\text{coh}}$ [fs]"
-    else:
-        colormap = "plasma"
-        x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
-        y_title = r"$\omega_{t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
-
     if component not in ("real", "imag", "abs", "phase"):
         raise ValueError(
             "Invalid component. Must be 'real', 'imag', 'abs', or 'phase'."
         )
     if component == "real":
-        title = r"$\text{2D Real Spectrum}$"
+        title = r"$\text{2D Real }$"
         data = np.real(data)
     elif component == "imag":
-        title = r"$\text{2D Imag Spectrum}$"
+        title = r"$\text{2D Imag }$"
         data = np.imag(data)
     elif component == "abs":
-        title = r"$\text{2D Abs Spectrum}$"
+        title = r"$\text{2D Abs }$"
         data = np.abs(data)
         use_custom_colormap = False
     elif component == "phase":
-        title = r"$\text{2D Phase Spectrum}$"
+        title = r"$\text{2D Phase }$"
         data = np.angle(data)
+
+    if domain not in ("time", "freq"):
+        raise ValueError("Invalid domain. Must be 'time' or 'freq'.")
+    if domain == "time":
+        colormap = "viridis"
+        title += r"$\text{Time domain signal}$"
+        x_title = r"$t_{\text{coh}}$ [fs]"
+        y_title = r"$t_{\text{det}}$ [fs]"
+    else:
+        colormap = "plasma"
+        title += r"$\text{Spectrum}$"
+        x_title = r"$\omega_{t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
+        y_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
 
     if t_wait != np.inf:
         title += rf"$\ \text{{at }} T = {t_wait:.2f}$ fs"
@@ -683,15 +685,21 @@ def plot_2d_el_field(
     # =============================
     fig, ax = plt.subplots(figsize=(10, 8))
     # Create the pcolormesh plot for the 2D data
-    pcolor_plot = ax.pcolormesh(
-        x,  # <- t_dets
-        y,  # <- t_cohs
-        data,  # <- data[t_cohs, t_dets]
-        shading="auto",
+    im_plot = ax.imshow(
+        data,  # data shape: [len(axis_coh), len(axis_det)]
+        aspect="auto",
+        origin="lower",  # origin at bottom-left
         cmap=colormap,
         norm=norm,
+        extent=[
+            axis_det[0],
+            axis_det[-1],  # X-axis: detection time
+            axis_coh[0],
+            axis_coh[-1],  # Y-axis: coherence time
+        ],
+        interpolation="bilinear",  # optional: "none" to avoid smoothing
     )
-    cbar = fig.colorbar(pcolor_plot, ax=ax, label=cbarlabel)
+    cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
     # Add contour lines with different styles for positive and negative values
     # add_custom_contour_lines(x, y, data, component) # TODO UNCOMMENT IF NEEDED
@@ -713,7 +721,7 @@ def plot_2d_el_field(
     plt.gca().spines["bottom"].set_linewidth(1.5)
     plt.gca().spines["left"].set_linewidth(1.5)"""
 
-    plt.close(fig)
+    # plt.close(fig)
     return fig
 
 
@@ -830,6 +838,10 @@ def crop_2d_data_to_section(
     Returns:
         tuple: Cropped (x, y, data) arrays
     """
+    if data.ndim != 2 or data.shape[0] != len(y) or data.shape[1] != len(x):
+        raise ValueError(
+            f"Data shape {data.shape} does not match x ({len(x)}) and y ({len(y)}) dimensions."
+        )
     x_min, x_max, y_min, y_max = section
 
     ### Validate coordinates are within data range

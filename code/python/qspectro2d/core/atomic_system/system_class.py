@@ -14,13 +14,13 @@ from qspectro2d.core.utils_and_config import convert_cm_to_fs, HBAR
 @dataclass
 class AtomicSystem:
     # VITAL ATTRIBUTES
-    N_atoms: int = 1
+    n_atoms: int = 1
     freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
-    J_cm: Optional[float] = None  # only For N_atoms >= 2
+    J_cm: Optional[float] = None  # only For n_atoms >= 2
 
     psi_ini: Optional[Qobj] = None  # initial state, default is ground state
-    Delta_cm: Optional[float] = None  # inhomogeneous broadening, default is None
+    delta_cm: Optional[float] = None  # inhomogeneous broadening, default is None
 
     @property
     def basis(self):
@@ -33,52 +33,52 @@ class AtomicSystem:
         self._atom_e = basis(2, 1)  # excited state |e>
 
         # Handle case where single frequency is provided for multiple atoms
-        if len(self.freqs_cm) == 1 and self.N_atoms > 1:
-            self.freqs_cm = self.freqs_cm * self.N_atoms  # repeat for all atoms
-        elif len(self.freqs_cm) != self.N_atoms:
+        if len(self.freqs_cm) == 1 and self.n_atoms > 1:
+            self.freqs_cm = self.freqs_cm * self.n_atoms  # repeat for all atoms
+        elif len(self.freqs_cm) != self.n_atoms:
             raise ValueError(
-                f"freqs_cm has {len(self.freqs_cm)} elements but N_atoms={self.N_atoms}. "
-                f"Expected either 1 frequency (applied to all atoms) or {self.N_atoms} frequencies."
+                f"freqs_cm has {len(self.freqs_cm)} elements but n_atoms={self.n_atoms}. "
+                f"Expected either 1 frequency (applied to all atoms) or {self.n_atoms} frequencies."
             )
 
         # Handle case where single dipole moment is provided for multiple atoms
-        if len(self.dip_moments) == 1 and self.N_atoms > 1:
-            self.dip_moments = self.dip_moments * self.N_atoms  # repeat for all atoms
-        elif len(self.dip_moments) != self.N_atoms:
+        if len(self.dip_moments) == 1 and self.n_atoms > 1:
+            self.dip_moments = self.dip_moments * self.n_atoms  # repeat for all atoms
+        elif len(self.dip_moments) != self.n_atoms:
             raise ValueError(
-                f"dip_moments has {len(self.dip_moments)} elements but N_atoms={self.N_atoms}. "
-                f"Expected either 1 dipole moment (applied to all atoms) or {self.N_atoms} dipole moments."
+                f"dip_moments has {len(self.dip_moments)} elements but n_atoms={self.n_atoms}. "
+                f"Expected either 1 dipole moment (applied to all atoms) or {self.n_atoms} dipole moments."
             )
 
         # store the initial frequencies in history
         self._freqs_cm_history = [self.freqs_cm.copy()]
 
-        if self.N_atoms >= 2 and self.J_cm is None:
+        if self.n_atoms >= 2 and self.J_cm is None:
             self.J_cm = 0.0
 
         # set a default basis
-        if self.N_atoms == 1:
+        if self.n_atoms == 1:
             self._basis = [self._atom_g, self._atom_e]  # GROUND, EXCITED
-        elif self.N_atoms == 2:
+        elif self.n_atoms == 2:
             self._basis = [
                 tensor(self._atom_g, self._atom_g),  # GROUND
                 tensor(self._atom_e, self._atom_g),  # A
                 tensor(self._atom_g, self._atom_e),  # B
                 tensor(self._atom_e, self._atom_e),  # AB
             ]
-        else:  # SINGLE EXCITATION SUBSPACE FOR N_atoms > 2
-            N_atoms = self.N_atoms
+        else:  # SINGLE EXCITATION SUBSPACE FOR n_atoms > 2
+            n_atoms = self.n_atoms
             self._basis = [
-                basis(N_atoms, i) for i in range(N_atoms)
+                basis(n_atoms, i) for i in range(n_atoms)
             ]  # GROUND, atom 1, atom 2, ...
 
         if self.psi_ini is None:
             self.psi_ini = ket2dm(self.basis[0])
 
     def update_freqs_cm(self, new_freqs: List[float]):
-        if len(new_freqs) != self.N_atoms:
+        if len(new_freqs) != self.n_atoms:
             raise ValueError(
-                f"Expected {self.N_atoms} frequencies, got {len(new_freqs)}"
+                f"Expected {self.n_atoms} frequencies, got {len(new_freqs)}"
             )
 
         # Save current freqs before updating
@@ -107,7 +107,7 @@ class AtomicSystem:
 
     @property
     def Delta(self):
-        return convert_cm_to_fs(self.Delta_cm)
+        return convert_cm_to_fs(self.delta_cm)
 
     def _Hamilton_tls(self):
         return HBAR * self.freqs_fs(0) * ket2dm(self.basis[1])
@@ -127,21 +127,21 @@ class AtomicSystem:
 
     @property
     def H0_N_canonical(self):
-        N_atoms = self.N_atoms
-        if N_atoms == 1:
+        n_atoms = self.n_atoms
+        if n_atoms == 1:
             return self._Hamilton_tls()
-        elif N_atoms == 2:
+        elif n_atoms == 2:
             return self._Hamilton_dimer_sys()
-        else:  # TODO IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
+        else:  # TODO IMPLEMENT THE n_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
             H = 0
             '''
 
             # =============================
             # GEOMETRY DEFINITIONS
             # =============================
-            def chain_positions(distance, N_atoms):
+            def chain_positions(distance, n_atoms):
                 """ Generate atomic positions in a linear chain. """
-                return np.array([[0, 0, i * distance] for i in range(N_atoms)])
+                return np.array([[0, 0, i * distance] for i in range(n_atoms)])
 
             def z_rotation(angle):
                 """ Generate a 3D rotation matrix around the z-axis. """
@@ -157,9 +157,9 @@ class AtomicSystem:
                 radius = 0 if n_chains == 1 else distance / (2 * np.sin(np.pi / n_chains))
                 return np.array([z_rotation(dphi * i) @ [radius, 0, 0] for i in range(n_chains)])
 
-            def cyl_positions(distance, N_atoms, n_chains):
+            def cyl_positions(distance, n_atoms, n_chains):
                 """ Generate atomic positions in a cylindrical structure. """
-                Pos_chain = chain_positions(distance, N_atoms // n_chains)
+                Pos_chain = chain_positions(distance, n_atoms // n_chains)
                 Pos_ring = ring_positions(distance, n_chains)
                 return np.vstack([Pos_chain + Pos_ring[i] for i in range(n_chains)])
 
@@ -167,11 +167,11 @@ class AtomicSystem:
             ALPHA = 1e-3 # Coupling strength of dipoles (Fine structure constant?)
             n_chains = 1                    # Number of chains
             n_rings = 1                     # Number of rings
-            N_atoms = n_chains * n_rings
-            Pos = cyl_positions(distance, N_atoms, n_chains)
-            atom_frequencies = [omega_a]*N_atoms # sample_frequencies(omega_a, 0.0125 * omega_a, N_atoms)
-            for a in range(N_atoms):
-                for b in range(N_atoms):
+            n_atoms = n_chains * n_rings
+            Pos = cyl_positions(distance, n_atoms, n_chains)
+            atom_frequencies = [omega_a]*n_atoms # sample_frequencies(omega_a, 0.0125 * omega_a, n_atoms)
+            for a in range(n_atoms):
+                for b in range(n_atoms):
                     sm_a = self.basis[0]*self.basis[a].dag()
                     sm_b = self.basis[0]*self.basis[b].dag()
                     factor = self.dip_moments[a] * self.dip_moments[b]
@@ -189,9 +189,9 @@ class AtomicSystem:
 
     @property
     def sm_op(self):
-        if self.N_atoms == 1:
+        if self.n_atoms == 1:
             return self.dip_moments[0] * (self._atom_g * self._atom_e.dag())
-        elif self.N_atoms == 2:
+        elif self.n_atoms == 2:
             C_A_1 = -np.sin(self.theta)
             C_A_2 = np.cos(self.theta)
             C_B_1 = C_A_2
@@ -211,16 +211,15 @@ class AtomicSystem:
                     mu_32 * (eigenvecs[2] * eigenvecs[3].dag()),
                 ]
             )
-        else:  # TODO IMPLEMENT THE N_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
-            raise NotImplementedError("N_atoms > 2 not yet implemented")
+        else:  # TODO IMPLEMENT THE n_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
+            raise NotImplementedError("n_atoms > 2 not yet implemented")
 
     @property
     def dip_op(self):
         return self.sm_op + self.sm_op.dag()
 
-    @property
     def deph_op_i(self, i: int):
-        """Return dephasing operator for the i-th eigenstate. i elem (1, ..., N_atoms)."""
+        """Return dephasing operator for the i-th eigenstate. i elem (1, ..., n_atoms)."""
         return ket2dm(self.basis[i])
 
     def omega_ij(self, i: int, j: int):
@@ -230,20 +229,20 @@ class AtomicSystem:
     def summary(self):
         print("=== AtomicSystem Summary ===")
         print(f"\n# The system with:")
-        print(f"    {'N_atoms':<20}: {self.N_atoms}")
+        print(f"    {'n_atoms':<20}: {self.n_atoms}")
 
         print(f"\n# Frequencies and Dipole Moments:")
-        for i in range(self.N_atoms):
+        for i in range(self.n_atoms):
             print(
                 f"    Atom {i}: ω = {self.freqs_cm[i]} cm^-1, μ = {self.dip_moments[i]}"
             )
 
         print(f"\n# Coupling / Inhomogeneity:")
-        if self.N_atoms == 2:
+        if self.n_atoms == 2:
             if self.J_cm is not None:
                 print(f"    {'J':<20}: {self.J_cm} cm^-1")
-            if self.Delta_cm is not None:
-                print(f"    {'Delta':<20}: {self.Delta_cm} cm^-1")
+            if self.delta_cm is not None:
+                print(f"    {'Delta':<20}: {self.delta_cm} cm^-1")
 
         print(f"\n    {'psi_ini':<20}:")
         print(self.psi_ini)
@@ -270,12 +269,12 @@ class AtomicSystem:
 
     def to_dict(self):
         d = {
-            "N_atoms": self.N_atoms,
+            "n_atoms": self.n_atoms,
             "freqs_cm": self.freqs_cm,
             "dip_moments": self.dip_moments,
         }
-        if self.Delta_cm is not None:
-            d["Delta_cm"] = self.Delta_cm
+        if self.delta_cm is not None:
+            d["delta_cm"] = self.delta_cm
         if self.J_cm is not None:
             d["J_cm"] = self.J_cm
         return d
@@ -284,7 +283,7 @@ class AtomicSystem:
         """
         Serialize the system parameters to a JSON string.
 
-        Only basic attributes are included: N_atoms, freqs_cm, dip_moments, Delta_cm, J_cm.
+        Only basic attributes are included: n_atoms, freqs_cm, dip_moments, delta_cm, J_cm.
         Quantum objects (Qobj) and computed properties (like Hamiltonians or eigenstates)
         are not serialized and will be recomputed on deserialization.
         """
@@ -316,11 +315,11 @@ class AtomicSystem:
 """ HOW TO USE AtomicSystem:
 
 # Create a single atom system
-system1 = AtomicSystem(N_atoms=1, freqs_cm=[16000.0], dip_moments=[1.0])
+system1 = AtomicSystem(n_atoms=1, freqs_cm=[16000.0], dip_moments=[1.0])
 
 # Create a two-atom system with coupling
 system2 = AtomicSystem(
-    N_atoms=2, 
+    n_atoms=2, 
     freqs_cm=[16000.0, 15640.0], 
     dip_moments=[1.0, 1.2],
     J_cm=50.0

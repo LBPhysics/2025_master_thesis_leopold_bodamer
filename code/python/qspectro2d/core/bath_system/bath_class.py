@@ -25,7 +25,7 @@ class BathSystem:
     # =============================
     bath: str = "paper"  # Default bath type or "ohmic" or "dl"
     # Temperature / cutoff of the bath
-    Temp: float = 1e-5  # zero temperature
+    temp: float = 1e-5  # zero temperature
     cutoff_: float = 1e2  # later * omega_A
     # decay  rates
     gamma_0: Optional[float] = 1 / 300.0
@@ -54,7 +54,7 @@ class BathSystem:
             "cutoff": self.cutoff_ * OMEGA,
             "Boltzmann": BOLTZMANN,
             "hbar": HBAR,
-            "Temp": self.Temp,
+            "temp": self.temp,
             "s": 1.0,  # ohmic spectrum
         }
 
@@ -124,7 +124,7 @@ class BathSystem:
         print("\n# With parameters for the BATH:")
         print(f"    {'gamma_0':<20}: {self.gamma_0:.4f} fs^-1")
         print(f"    {'gamma_phi':<20}: {self.gamma_phi:.4f} fs^-1")
-        print(f"    {'Temp':<20}: {self.Temp} K")
+        print(f"    {'temp':<20}: {self.temp} K")
         print(f"    {'cutoff_':<20}: {self.cutoff_} fs^-1")
 
     def to_dict(self) -> dict:
@@ -136,7 +136,7 @@ class BathSystem:
         """
         return {
             "bath": self.bath,
-            "Temp": self.Temp,
+            "temp": self.temp,
             "cutoff_": self.cutoff_,
             "gamma_0": self.gamma_0,
             "gamma_phi": self.gamma_phi,
@@ -155,7 +155,7 @@ class BathSystem:
         """
         return cls(
             bath=data.get("bath", "paper"),
-            Temp=data.get("Temp", 1e-5),
+            temp=data.get("temp", 1e-5),
             cutoff_=data.get("cutoff_", 1e2),
             gamma_0=data.get("gamma_0", 1 / 300.0),
             gamma_phi=data.get("gamma_phi", 1 / 100.0),

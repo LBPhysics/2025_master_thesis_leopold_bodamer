@@ -33,7 +33,7 @@ def power_spectrum_func_drude_lorentz(w, args):
     power spectrum function in the frequency domain for an drude lorentzian bath.
     Handles both positive and negative frequencies, compatible with arrays.
     """
-    Temp = args["Temp"]
+    temp = args["temp"]
 
     Boltzmann = args["Boltzmann"] if "Boltzmann" in args else 1.0
     hbar = args["hbar"] if "hbar" in args else 1.0
@@ -43,7 +43,7 @@ def power_spectrum_func_drude_lorentz(w, args):
 
     # Avoid division by zero in tanh
     w_safe = np.where(w == 0, 1e-10, w)
-    w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
+    w_th = Boltzmann * temp / hbar  # Thermal energy in frequency units
     coth_term = 1 / np.tanh(w_safe / (2 * w_th))
 
     result = (
@@ -83,7 +83,7 @@ def power_spectrum_func_ohmic(w, args):
     power spectrum function in the frequency domain for an ohmic bath.
     Handles both positive and negative frequencies, compatible with arrays.
     """
-    Temp = args["Temp"]
+    temp = args["temp"]
 
     Boltzmann = args["Boltzmann"] if "Boltzmann" in args else 1.0
     hbar = args["hbar"] if "hbar" in args else 1.0
@@ -93,7 +93,7 @@ def power_spectrum_func_ohmic(w, args):
 
     # Avoid division by zero in tanh
     w_safe = np.where(w == 0, 1e-10, w)
-    w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
+    w_th = Boltzmann * temp / hbar  # Thermal energy in frequency units
     coth_term = 1 / np.tanh(w_safe / (2 * w_th))
 
     result = np.sign(w) * spectral_density_func_ohmic(np.abs(w), args) * (coth_term + 1)
@@ -135,11 +135,11 @@ def power_spectrum_func_paper(w, args):
     Boltzmann = args["Boltzmann"] if "Boltzmann" in args else 1.0
     hbar = args["hbar"] if "hbar" in args else 1.0
 
-    Temp = args["Temp"]
+    temp = args["temp"]
     alpha = args["alpha"]
     cutoff = args["cutoff"]
 
-    w_th = Boltzmann * Temp / hbar  # Thermal energy in frequency units
+    w_th = Boltzmann * temp / hbar  # Thermal energy in frequency units
 
     w_input = w  # Store original input
     w = np.asarray(w, dtype=float)

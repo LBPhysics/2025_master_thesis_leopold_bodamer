@@ -35,7 +35,7 @@ def main():
     args = parser.parse_args()
 
     plot_config = {
-        "plot_time_domain": True,
+        # "plot_time_domain": True,
         "plot_frequency_domain": True,
         "extend_for": (1, 20),
         "spectral_components_to_plot": ["abs", "real", "imag"],

@@ -41,13 +41,13 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
         parts.append(f"t_coh_{t_coh_val}")
 
     """
-    N_atoms = system.N_atoms
+    n_atoms = system.n_atoms
     # simulation_type = info_config.get("simulation_type", "spectroscopy")
     # parts.append(simulation_type)
-    # parts.append(f"N{N_atoms}")
+    # parts.append(f"N{n_atoms}")
     parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4")
     parts.append(f"muA{system.mu_A:.2f}")
-    if N_atoms == 2:
+    if n_atoms == 2:
         parts.append(f"wB{system.omega_B_cm/1e4:.2f}e4")
         parts.append(f"muB{system.mu_B:.2f}")
         J_val = system.J if system.J else info_config.get("J_cm", 0)
@@ -56,7 +56,7 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
     n_freqs = info_config.get("n_freqs", 1)
 
     if n_freqs > 1:
-        parts.append(f"Delta{system.Delta_cm/1e4:.2f}e4")
+        parts.append(f"Delta{system.delta_cm/1e4:.2f}e4")
     parts.append("cm-1")
     """
     return "_".join(parts)
@@ -107,21 +107,23 @@ def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
         parts.append("spectroscopy")
 
     # Add system details
-    N_atoms = system.N_atoms
-    parts.append(f"N{N_atoms}")
+    n_atoms = system.n_atoms
+    parts.append(f"N{n_atoms}")
 
     # Add solver if available
-    parts.append(info_config["ODE_Solver"])
+    parts.append(info_config["ode_solver"])
 
     # Add RWA if available
-    parts.append("RWA" if info_config["RWA_SL"] else "noRWA")
+    parts.append("RWA" if info_config["rwa_sl"] else "noRWA")
 
     # Add time parameters
-    parts.append(f"T_det_MAX_{info_config.get('t_det_max', 'not_provided')}")
-    parts.append(f"T_wait_{info_config.get('t_wait', 'not_provided')}")
+    parts.append(
+        f"t_dm{info_config.get('t_det_max', 'not_provided')}"
+    )  # maximum detection time
+    parts.append(f"t_wait_{info_config.get('t_wait', 'not_provided')}")
     parts.append(f"dt_{info_config.get('dt', 'not_provided')}")
 
-    if N_atoms == 2:
+    if n_atoms == 2:
         # Add coupling strength if applicable
         J = system.J_cm if system.J_cm is not None else 0
         if J > 0:
@@ -209,13 +211,13 @@ def main():
     ### Create mock system parameters
     class MockAtomicSystem:
         def __init__(self):
-            self.N_atoms = 2
+            self.n_atoms = 2
             self.omega_A_cm = 1.5
-            self.Delta_cm = 0.0
+            self.delta_cm = 0.0
             self.dt = 0.1
             self.t_max = 100.0
-            self.ODE_Solver = "runge_kutta"
-            self.RWA_SL = True
+            self.ode_solver = "runge_kutta"
+            self.rwa_sl = True
 
     system = MockAtomicSystem()
 

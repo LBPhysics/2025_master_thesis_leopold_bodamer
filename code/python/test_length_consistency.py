@@ -38,10 +38,10 @@ def test_length_consistency():
 
         # Create simulation configuration
         atomic_config = {
-            "N_atoms": 1,
+            "n_atoms": 1,
             "freqs_cm": [16000],
             "dip_moments": [1.0],
-            "Delta_cm": 0.0,
+            "delta_cm": 0.0,
         }
 
         pulse_config = {
@@ -56,8 +56,8 @@ def test_length_consistency():
             "simulation_type": "1d",
             "max_workers": 1,
             "IFT_component": (-1, 1, 1),
-            "ODE_Solver": "Paper_eqs",
-            "RWA_SL": True,
+            "ode_solver": "Paper_eqs",
+            "rwa_sl": True,
             "keep_track": "basis",
             "t_coh": t_coh,
             "t_wait": t_wait,
@@ -69,7 +69,7 @@ def test_length_consistency():
 
         bath_config = {
             "bath_type": "paper",
-            "Temp": 1e-5,
+            "temp": 1e-5,
             "cutoff_": 1e2,
             "gamma_0": 1 / 300.0,
             "gamma_phi": 1 / 100.0,

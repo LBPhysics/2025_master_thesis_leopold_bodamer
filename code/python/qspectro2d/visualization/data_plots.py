@@ -121,8 +121,8 @@ def plot_1d_data(
         print("📊 Plotting time domain data...")
         try:
             fig = plot_1d_el_field(
-                data_x=t_det_vals,
-                data_y=data,
+                axis_det=t_det_vals,
+                data=data,
                 domain="time",
                 component="abs",  # Use first component for time domain
                 t_coh=t_coh,
@@ -162,8 +162,8 @@ def plot_1d_data(
         for component in spectral_components_to_plot:
             try:
                 fig = plot_1d_el_field(
-                    data_x=frequencies,
-                    data_y=data_fft,
+                    axis_det=frequencies,
+                    data=data_fft,
                     domain="freq",
                     component=component,
                 )
@@ -216,13 +216,13 @@ def plot_2d_data(
     if plot_config.get("plot_time_domain", True):
         print("📊 Plotting 2D time domain data...")
         # Plot each spectral component separately
-        time_domain_comps = ["real", "imag", "abs", "phase"]
+        time_domain_comps = ["real"]  # , "imag", "abs", "phase"]
         for component in time_domain_comps:
             try:
                 fig = plot_2d_el_field(
-                    data_x=t_det_vals,
-                    data_y=t_coh_vals,
-                    data_z=data,
+                    axis_det=t_det_vals,
+                    axis_coh=t_coh_vals,
+                    data=data,
                     t_wait=t_wait,
                     domain="time",
                     use_custom_colormap=True,
@@ -246,7 +246,7 @@ def plot_2d_data(
         try:
             # Extend time axes if needed
             if extend_for != (1, 1):
-                extended_ts, extended_t_cohs, extended_data = extend_time_axes(
+                extended_t_dets, extended_t_cohs, extended_data = extend_time_axes(
                     data=data,
                     t_det=t_det_vals,
                     t_coh=t_coh_vals,
@@ -254,24 +254,24 @@ def plot_2d_data(
                     pad_t_coh=extend_for,
                 )
             else:
-                extended_ts, extended_t_cohs, extended_data = (
+                extended_t_dets, extended_t_cohs, extended_data = (
                     t_det_vals,
                     t_coh_vals,
                     data,
                 )
 
             # Compute FFT
-            nu_ts, nu_t_cohs, data_freq = compute_2d_fft_wavenumber(
-                extended_ts, extended_t_cohs, extended_data
+            nu_dets, nu_cohs, data_freq = compute_2d_fft_wavenumber(
+                extended_t_dets, extended_t_cohs, extended_data
             )
 
             # Plot each spectral component separately
             for component in spectral_components_to_plot:
                 try:
                     fig = plot_2d_el_field(
-                        data_x=nu_ts,
-                        data_y=nu_t_cohs,
-                        data_z=data_freq,
+                        axis_det=nu_dets,
+                        axis_coh=nu_cohs,
+                        data=data_freq,
                         t_wait=t_wait,
                         domain="freq",
                         use_custom_colormap=True,

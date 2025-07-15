@@ -151,7 +151,7 @@ def extend_time_axes(
 
 
 def compute_1d_fft_wavenumber(
-    ts: np.ndarray, data: np.ndarray
+    t_dets: np.ndarray, data: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute 1D real FFT of spectroscopy data and convert frequency axis to wavenumber units.
@@ -163,7 +163,7 @@ def compute_1d_fft_wavenumber(
 
     Parameters
     ----------
-    ts : np.ndarray
+    t_dets : np.ndarray
         Time axis for detection (t_det) in femtoseconds. Shape: (N_t_det,)
         Must be evenly spaced for accurate FFT.
     data : np.ndarray
@@ -173,7 +173,7 @@ def compute_1d_fft_wavenumber(
     Returns
     -------
     tuple[np.ndarray, np.ndarray]
-        nu_ts : np.ndarray
+        nu_dets : np.ndarray
             Wavenumber axis for detection in units of 10^4 cm⁻¹.
             Shape: (N_t_det//2 + 1,) due to rfft.
         s1d : np.ndarray
@@ -191,14 +191,14 @@ def compute_1d_fft_wavenumber(
 
     Examples
     --------
-    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
+    >>> t_dets = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
     >>> data = np.random.rand(101)  # Real polarization data
-    >>> nu_ts, spectrum = compute_1d_fft_wavenumber(ts, data)
-    >>> # nu_ts in 10^4 cm⁻¹, spectrum is complex
+    >>> nu_dets, spectrum = compute_1d_fft_wavenumber(t_dets, data)
+    >>> # nu_dets in 10^4 cm⁻¹, spectrum is complex
     """
     # Calculate sampling rates and perform FFT
-    dt_det = ts[1] - ts[0]  # Sampling interval in fs
-    N_t_det = len(ts)
+    dt_det = t_dets[1] - t_dets[0]  # Sampling interval in fs
+    N_t_det = len(t_dets)
 
     # Full FFT with shift (similar to 2D implementation)
     s1d = np.fft.fft(data)
@@ -208,87 +208,71 @@ def compute_1d_fft_wavenumber(
     # Convert to wavenumber (10^4 cm^-1)
     # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-5 cm/fs
     # Wavenumber = frequency / c, scaled by 10^4
-    nu_ts = freq_t / 2.998 * 10
+    nu_dets = freq_t / 2.998 * 10
 
-    return nu_ts, s1d
+    return nu_dets, s1d
 
 
 def compute_2d_fft_wavenumber(
-    ts: np.ndarray, t_cohs: np.ndarray, data: np.ndarray
+    t_dets: np.ndarray, t_cohs: np.ndarray, data: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
-    Compute 2D real FFT of spectroscopy data and convert frequency axes to wavenumber units.
+    Compute 2D FFT of spectroscopy data and convert frequency axes to wavenumber units.
 
-    This function performs a 2D real-valued FFT on the input data and converts the
-    resulting frequency axes from cycles/fs to wavenumber units (10^4 cm⁻¹). The
-    output spectrum is multiplied by 1j to account for the relationship E ~ i*P
-    between electric field and polarization.
+    This function performs a 2D FFT on the input data following the formula:
+    S2D(ω_coh,T, ω_det) ~ ∫dt exp(-iω_det*t) × ∫dcoh exp(iω_coh*coh) E_ks(coh,T,t)
+
+    The t-axis uses forward FFT (exp(-iω_det*t)) and coh-axis uses inverse FFT (exp(+iω_coh*coh)).
 
     Parameters
     ----------
-    ts : np.ndarray
+    t_dets : np.ndarray
         Time axis for detection (t_det) in femtoseconds. Shape: (N_t_det,)
         Must be evenly spaced for accurate FFT.
     t_cohs : np.ndarray
-        Time axis for coherence (t_coh) in femtoseconds. Shape: (N_t_coh,)
+        Time axis for coherence (t_coh/coh) in femtoseconds. Shape: (N_t_coh,)
         Must be evenly spaced for accurate FFT.
     data : np.ndarray
-        2D spectroscopy data array, typically real-valued polarization.
-        Shape: (N_t_coh, N_t_det). Data should be real for rfft2 to be appropriate.
+        2D spectroscopy data array E_ks(coh,T,t).
+        Shape: (N_t_coh, N_t_det).
 
     Returns
     -------
     tuple[np.ndarray, np.ndarray, np.ndarray]
-        nu_ts : np.ndarray
+        nu_dets : np.ndarray
             Wavenumber axis for detection in units of 10^4 cm⁻¹.
-            Shape: (N_t_det//2 + 1,) due to rfft.
-        nu_t_cohs : np.ndarray
+            Shape: (N_t_det,).
+        nu_cohs : np.ndarray
             Wavenumber axis for coherence in units of 10^4 cm⁻¹.
-            Shape: (N_t_coh//2 + 1,) due to rfft.
+            Shape: (N_t_coh,).
         s2d : np.ndarray
-            2D FFT spectrum with dtype np.complex64.
-            Shape: (N_t_coh//2 + 1, N_t_det//2 + 1).
-            Includes factor of 1j to represent E ~ i*P relationship.
-
-    Notes
-    -----
-    - Uses np.fft.rfft2() which assumes real input data and returns only positive frequencies
-    - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
-      * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
-      * Wavenumber = frequency / c, scaled by 10^4
-    - The 1j factor accounts for the physical relationship between electric field and polarization
-
-    Examples
-    --------
-    >>> ts = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
-    >>> t_cohs = np.linspace(0, 50, 51)  # 0-50 fs, dt_coh = 1 fs
-    >>> data = np.random.rand(51, 101)  # Real polarization data
-    >>> nu_ts, nu_t_cohs, spectrum = compute_2d_fft_wavenumber(ts, t_cohs, data)
-    >>> # nu_ts and nu_t_cohs in 10^4 cm⁻¹, spectrum is complex
+            2D FFT spectrum.
+            Shape: (N_t_coh, N_t_det).
     """
+    ### Calculate time steps
+    dt_coh = t_cohs[1] - t_cohs[0]  # coh step
+    dt_det = t_dets[1] - t_dets[0]  # t step
 
-    # Calculate only the frequency axes (cycle/fs)
-    dt_coh = t_cohs[1] - t_cohs[0]
-    dt_det = ts[1] - ts[0]
-    tfreqs = np.fft.fftfreq(len(ts), d=dt_det)
-    t_cohfreqs = -np.fft.fftfreq(len(t_cohs), d=dt_coh)
+    ### Perform 2D FFT according to the formula
+    # Forward FFT along t-axis (axis=1): exp(-iω_det*t)
+    # Inverse FFT along coh-axis (axis=0): exp(+iω_coh*coh)
+    s2d = np.fft.fft(data, axis=0) * len(t_cohs)
+    s2d = np.fft.fft(s2d, axis=1)
 
-    # Optional: Shift zero-frequency component to center (only along t_cohs)
-    # s2d = np.fft.rfft2(data)  # axis 0 (t_coh) → fft, axis 1 (t) → rfft
-    s2d = np.fft.fft(data, axis=1)  # axis 1 (t) → rfft
-    s2d = np.fft.ifft(s2d, axis=0) * len(t_cohs)  # axis 0 (t_coh) → ifft
-    s2d = np.fft.fftshift(s2d, axes=1)
-    s2d = np.fft.ifftshift(s2d, axes=0)
-    t_cohfreqs = np.fft.ifftshift(t_cohfreqs)
-    tfreqs = np.fft.ifftshift(tfreqs)
-    data_freq = s2d
+    # s2d = np.fft.fft2(data)
 
-    # Convert to wavenumber units [10^4 cm⁻¹]
-    nu_t_cohs = t_cohfreqs / 2.998 * 10
-    nu_ts = tfreqs / 2.998 * 10
+    ### Generate frequency axes
+    freq_dets = np.fft.fftfreq(len(t_dets), d=dt_det)
+    freq_cohs = np.fft.fftfreq(len(t_cohs), d=dt_coh)
 
-    return (
-        nu_ts,
-        nu_t_cohs,
-        data_freq,
-    )
+    ### Apply frequency shifts for centered display
+    s2d = np.fft.fftshift(s2d, axes=(0, 1))
+    freq_dets = np.fft.fftshift(freq_dets)
+    freq_cohs = np.fft.fftshift(freq_cohs)
+
+    ### Convert to wavenumber units [10^4 cm⁻¹]
+    # Speed of light: c ≈ 2.998 × 10^-4 cm/fs
+    nu_dets = freq_dets / 2.998 * 10
+    nu_cohs = freq_cohs / 2.998 * 10
+
+    return nu_dets, nu_cohs, s2d
