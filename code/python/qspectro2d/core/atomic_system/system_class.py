@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass, field  # for the class definiton
 from typing import Optional, List
 from qutip import basis, ket2dm, tensor, Qobj
-from qspectro2d.core.utils_and_config import convert_cm_to_fs, HBAR
+from qspectro2d.config import HBAR
 
 # from functools import cached_property  # for caching properties
 
@@ -95,10 +95,12 @@ class AtomicSystem:
 
     def freqs_fs(self, i):
         """Return frequency in fs^-1 for the i-th atom."""
+        from qspectro2d.utils import convert_cm_to_fs
         return convert_cm_to_fs(self.freqs_cm[i])
 
     @property
     def J(self):
+        from qspectro2d.utils import convert_cm_to_fs
         return convert_cm_to_fs(self.J_cm)
 
     @property
@@ -107,6 +109,7 @@ class AtomicSystem:
 
     @property
     def Delta(self):
+        from qspectro2d.utils import convert_cm_to_fs
         return convert_cm_to_fs(self.delta_cm)
 
     def _Hamilton_tls(self):

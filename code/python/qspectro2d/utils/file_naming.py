@@ -9,13 +9,11 @@ and directory paths for simulation data and plots.
 # IMPORTS
 # =============================
 from pathlib import Path
-from re import A
-from tkinter import N
 from typing import Union
 
 ### Project-specific imports
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR  # , FIGURES_DIR,
+from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR
 
 
 # =============================
@@ -212,7 +210,7 @@ def main():
     class MockAtomicSystem:
         def __init__(self):
             self.n_atoms = 2
-            self.omega_A_cm = 1.5
+            self.freqs_cm = [1.5]
             self.delta_cm = 0.0
             self.dt = 0.1
             self.t_max = 100.0

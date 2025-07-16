@@ -119,7 +119,7 @@ def save_fig(
     fig,
     filename,
     formats=["svg", "png", "pdf"],
-    dpi=DEFAULT_DPI,
+    dpi=DPI,
     transparent=False,
     category=None,
     output_dir=None,  # NEW PARAMETER

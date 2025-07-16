@@ -1,11 +1,9 @@
 # =============================
 # Pulse and LaserPulseSequence classes for structured pulse handling
 # =============================
-from dataclasses import dataclass, field, asdict  # for the class definiton
+from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple, Optional, Union
 
-from matplotlib.pylab import f
-from qspectro2d.core.utils_and_config import convert_cm_to_fs
 import numpy as np
 import json
 
@@ -34,6 +32,9 @@ class LaserPulse:
             raise ValueError("Pulse frequency must be positive.")
 
         if not self._freq_converted:
+            # Import here to avoid circular imports
+            from qspectro2d.utils import convert_cm_to_fs
+
             self.pulse_freq = convert_cm_to_fs(self.pulse_freq)
             self._freq_converted = True
 
@@ -341,7 +342,11 @@ class LaserPulseSequence:
         return header + "\n".join(p.summary_line() for p in self.pulses)
 
     def to_dict(self) -> dict:
-        return {"pulses": [p.to_dict() for p in self.pulses]}
+        return {
+            "pulses": [p.to_dict() for p in self.pulses],
+            "E0": self.E0,  # TODO only if i do the initialization with from_delays (for my experiment!)
+            "carrier_frequency": self.omega_laser,
+        }
 
     @staticmethod
     def from_dict(data: dict) -> "LaserPulseSequence":

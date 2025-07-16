@@ -5,13 +5,12 @@ This module contains comprehensive tests for the AtomicSystem class,
 including initialization, properties, serialization, and edge cases.
 """
 
-from matplotlib.pylab import f
 import pytest
 import numpy as np
 from qutip import basis, tensor
 
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.utils_and_config import convert_cm_to_fs, HBAR
+from qspectro2d.utils import convert_cm_to_fs
 
 
 class TestAtomicSystemInitialization:

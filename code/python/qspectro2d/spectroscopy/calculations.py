@@ -21,13 +21,13 @@ from qspectro2d.core.laser_system.laser_class import (
     split_by_active_regions,
 )
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
-from qspectro2d.core.functions_with_rwa import (
+from qspectro2d.utils import (
     apply_RWA_phase_factors,
     get_expect_vals_with_RWA,
 )
-from qspectro2d.spectroscopy.simulation.utils import (
+from qspectro2d.config import (
     PHASE_CYCLING_PHASES,
-    DEFAULT_SOLVER_OPTIONS,
+    SOLVER_OPTIONS,
     NEGATIVE_EIGVAL_THRESHOLD,
     TRACE_TOLERANCE,
     DETECTION_PHASE,
@@ -70,7 +70,7 @@ def compute_pulse_evolution(
     options = solver_options.copy() if solver_options else {}
 
     # Update options with defaults only if not already set
-    for key, value in DEFAULT_SOLVER_OPTIONS.items():
+    for key, value in SOLVER_OPTIONS.items():
         options.setdefault(key, value)
 
     all_states, all_times = [], []
@@ -682,7 +682,7 @@ def _process_single_1d_combination(
         Waiting time.
 
     system : AtomicSystem
-        System parameters (already contains the correct omega_A_cm).
+        System parameters (already contains the correct atomic frequencies).
     kwargs : dict
         Additional arguments.
 

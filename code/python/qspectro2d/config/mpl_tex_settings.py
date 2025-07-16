@@ -270,17 +270,17 @@ def _setup_backend():
 # =============================
 # PLOTTING SETTINGS
 # =============================
-DEFAULT_FIG_PATH = FIGURES_TESTS_DIR
-DEFAULT_FIG_FORMAT = "svg"  # pdf, png, svg
-DEFAULT_DPI = 100  # 100 is very high, 10 is good for notebooks
+FIG_PATH = FIGURES_TESTS_DIR
+FIG_FORMAT = "svg"  # pdf, png, svg
+DPI = 100  # 100 is very high, 10 is good for notebooks
 # Default font size calculation based on standard 11pt LaTeX document
 # Uncomment and adjust as needed:
-DEFAULT_FONT_SIZE = _calculate_matching_font_size(LATEX_FONT_SIZE)  # For 11pt LaTeX
-DEFAULT_FIGSIZE = (
+FONT_SIZE = _calculate_matching_font_size(LATEX_FONT_SIZE)  # For 11pt LaTeX
+FIGSIZE = (
     8,
     6,
 )  # set_size(width_pt=LATEX_DOC_WIDTH, fraction=0.5, subplots=(1, 1))
-DEFAULT_TRANSPARENCY = True  # True for transparent background, False for white
+TRANSPARENCY = True  # True for transparent background, False for white
 COLORS = {
     "C0": "#1f77b4",
     "C1": "#ff7f0e",
@@ -313,14 +313,14 @@ base_settings = {
         "serif",
     ],
     # font sizes
-    "font.size": DEFAULT_FONT_SIZE,
-    "axes.titlesize": DEFAULT_FONT_SIZE + 2,
-    "axes.labelsize": DEFAULT_FONT_SIZE + 2,
-    "xtick.labelsize": DEFAULT_FONT_SIZE,
-    "ytick.labelsize": DEFAULT_FONT_SIZE,
-    "legend.fontsize": DEFAULT_FONT_SIZE,
+    "font.size": FONT_SIZE,
+    "axes.titlesize": FONT_SIZE + 2,
+    "axes.labelsize": FONT_SIZE + 2,
+    "xtick.labelsize": FONT_SIZE,
+    "ytick.labelsize": FONT_SIZE,
+    "legend.fontsize": FONT_SIZE,
     # layout
-    "figure.figsize": DEFAULT_FIGSIZE,
+    "figure.figsize": FIGSIZE,
     "figure.autolayout": True,
     "axes.grid": False,
     "axes.axisbelow": True,
@@ -328,10 +328,10 @@ base_settings = {
     "legend.fancybox": True,
     "legend.framealpha": 0.8,
     "savefig.bbox": "tight",
-    "savefig.transparent": DEFAULT_TRANSPARENCY,
+    "savefig.transparent": TRANSPARENCY,
     # Quality of the plot:
-    "savefig.format": DEFAULT_FIG_FORMAT,
-    "savefig.dpi": DEFAULT_DPI,
+    "savefig.format": FIG_FORMAT,
+    "savefig.dpi": DPI,
 }
 
 if latex_available:
@@ -355,9 +355,9 @@ _setup_backend()
 def save_fig(
     fig: plt.Figure,
     filename: str,
-    formats: list = [DEFAULT_FIG_FORMAT],
-    dpi: int = DEFAULT_DPI,
-    transparent: bool = DEFAULT_TRANSPARENCY,
+    formats: list = [FIG_FORMAT],
+    dpi: int = DPI,
+    transparent: bool = TRANSPARENCY,
     figsize: tuple = None,
 ) -> None:
     """
@@ -430,11 +430,11 @@ __all__ = [
     # constants
     "LATEX_DOC_WIDTH",
     "LATEX_FONT_SIZE",
-    "DEFAULT_FIGSIZE",
-    "DEFAULT_DPI",
-    "DEFAULT_FONT_SIZE",
-    "DEFAULT_FIG_FORMAT",
-    "DEFAULT_TRANSPARENCY",
+    "FIGSIZE",
+    "DPI",
+    "FONT_SIZE",
+    "FIG_FORMAT",
+    "TRANSPARENCY",
     "COLORS",
     "LINE_STYLES",
     "MARKERS",
@@ -462,7 +462,7 @@ def main():
             f"   - LaTeX rendering: {'Enabled' if latex_available else 'Disabled (fallback to mathtext)'}"
         )
         print(f"   - Backend: {mpl.get_backend()}")
-        print(f"   - Default figure size: {DEFAULT_FIGSIZE}")
+        print(f"   - Default figure size: {FIGSIZE}")
     except Exception as e:
         print(f"Error: {e}")
 

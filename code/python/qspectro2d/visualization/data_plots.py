@@ -8,11 +8,8 @@ spectroscopy data with standardized formatting and output.
 # =============================
 # IMPORTS
 # =============================
-import numpy as np
 import matplotlib.pyplot as plt
 import gc
-from pathlib import Path
-from typing import Dict
 
 ### Project-specific imports
 from qspectro2d.visualization.plotting import (
@@ -24,7 +21,7 @@ from qspectro2d.spectroscopy.post_processing import (
     compute_1d_fft_wavenumber,
     compute_2d_fft_wavenumber,
 )
-from qspectro2d.data.files import generate_unique_plot_filename
+from qspectro2d.utils import generate_unique_plot_filename
 from qspectro2d.config.mpl_tex_settings import save_fig
 
 
@@ -57,6 +54,8 @@ def _validate_and_extract_data_structure(
     data = loaded_data["data"]
     axes = loaded_data["axes"]
     system = loaded_data["system"]
+    bath = loaded_data["bath"]
+    laser = loaded_data["laser"]
     info_config = loaded_data["info_config"]
 
     # Validate axes structure
@@ -74,6 +73,8 @@ def _validate_and_extract_data_structure(
         "data": data,
         "axis1": axes["axis1"],
         "system": system,
+        "bath": bath,
+        "laser": laser,
         "info_config": info_config,
         "dimension": actual_dim,
     }
@@ -102,17 +103,18 @@ def plot_1d_data(
     data = extracted["data"]
     t_det_vals = extracted["axis1"]
     system = extracted["system"]
+    bath = extracted["bath"]
+    laser = extracted["laser"]
+
     info_config = extracted["info_config"]
-    t_coh = info_config["t_coh"]
-    t_wait = info_config["t_wait"]
-    n_freqs = info_config.get("n_freqs", 1)
+    dict_combined = {**system.to_dict(), **bath.to_dict(), **laser.to_dict()}
 
     print(f"✅ Data loaded with shape: {data.shape}")
     print(f"   Time points: {len(t_det_vals)}")
     print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
 
     spectral_components_to_plot = plot_config.get(
-        "spectral_components_to_plot", ["abs"]
+        "spectral_components_to_plot", ["imag", "real"]
     )
     extend_for = plot_config.get("extend_for", (1, 1))
 
@@ -124,11 +126,27 @@ def plot_1d_data(
                 axis_det=t_det_vals,
                 data=data,
                 domain="time",
-                component="abs",  # Use first component for time domain
-                t_coh=t_coh,
-                t_wait=t_wait,
+                component="abs",
                 function_symbol="E_{k_s}",
-                n_freqs=n_freqs,
+                **dict_combined,
+            )
+            filename = generate_unique_plot_filename(
+                system,
+                info_config=info_config,
+                domain="time",
+                component="abs",
+            )
+
+            save_fig(
+                fig, filename=filename, formats=["png"]
+            )  # easy to work with, because data is too big
+            fig = plot_1d_el_field(
+                axis_det=t_det_vals,
+                data=data,
+                domain="time",
+                component="real",
+                function_symbol="E_{k_s}",
+                **dict_combined,
             )
             filename = generate_unique_plot_filename(
                 system,
@@ -200,8 +218,12 @@ def plot_2d_data(
     t_coh_vals = extracted["axis1"]  # coherence times
     t_det_vals = extracted["axis2"]  # detection times
     system = extracted["system"]
+    bath = extracted["bath"]
+    laser = extracted["laser"]
+
     info_config = extracted["info_config"]
     t_wait = info_config["t_wait"]
+    dict_combined = {**system.to_dict(), **bath.to_dict(), **laser.to_dict()}
 
     # Get configuration values
     spectral_components_to_plot = plot_config.get(
@@ -227,6 +249,7 @@ def plot_2d_data(
                     domain="time",
                     use_custom_colormap=True,
                     component=component,
+                    **dict_combined,
                 )
                 filename = generate_unique_plot_filename(
                     system=system,

@@ -1,10 +1,12 @@
-from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-from typing import Union
+from typing import Union, TYPE_CHECKING
 import numpy as np
+
+if TYPE_CHECKING:
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
 
 def pulse_envelope(
-    t: Union[float, np.ndarray], pulse_seq: LaserPulseSequence
+    t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[float, np.ndarray]:
     """
     Calculate the combined envelope of multiple pulses at time t using LaserPulseSequence.
@@ -25,6 +27,9 @@ def pulse_envelope(
     Returns:
         Union[float, np.ndarray]: Combined envelope value(s)
     """
+    # Import here to avoid circular imports
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+
     if not isinstance(pulse_seq, LaserPulseSequence):
         raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
@@ -75,7 +80,7 @@ def pulse_envelope(
 
 
 def E_pulse(
-    t: Union[float, np.ndarray], pulse_seq: LaserPulseSequence
+    t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[complex, np.ndarray]:
     """
     Calculate the total electric field at time t for a set of pulses (envelope only, no carrier), using LaserPulseSequence.
@@ -88,6 +93,9 @@ def E_pulse(
     Returns:
         Union[complex, np.ndarray]: Electric field value(s)
     """
+    # Import here to avoid circular imports
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+
     if not isinstance(pulse_seq, LaserPulseSequence):
         raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
@@ -98,7 +106,6 @@ def E_pulse(
             result[i] = E_pulse(float(t[i]), pulse_seq)
         return result
 
-    # Handle scalar input (original functionality)
     E_total = 0.0 + 0.0j
     for pulse in pulse_seq.pulses:
         phi = pulse.pulse_phase
@@ -113,7 +120,7 @@ def E_pulse(
 
 
 def Epsilon_pulse(
-    t: Union[float, np.ndarray], pulse_seq: LaserPulseSequence
+    t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[complex, np.ndarray]:
     """
     Calculate the total electric field at time t for a set of pulses, including carrier oscillation, using LaserPulseSequence.
@@ -126,6 +133,9 @@ def Epsilon_pulse(
     Returns:
         Union[complex, np.ndarray]: Electric field with carrier value(s)
     """
+    # Import here to avoid circular imports
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+
     if not isinstance(pulse_seq, LaserPulseSequence):
         raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
@@ -136,7 +146,6 @@ def Epsilon_pulse(
             result[i] = Epsilon_pulse(float(t[i]), pulse_seq)
         return result
 
-    # Handle scalar input (original functionality)
     E_total = 0.0 + 0.0j
     for pulse in pulse_seq.pulses:
         omega = pulse.pulse_freq

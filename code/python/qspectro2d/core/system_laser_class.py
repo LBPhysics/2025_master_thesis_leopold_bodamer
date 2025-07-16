@@ -4,7 +4,7 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 import numpy as np
 import json
 
-from qspectro2d.core.utils_and_config import HBAR
+from qspectro2d.config import HBAR
 
 
 @dataclass
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         n_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
     )
     seq = LaserPulseSequence.from_delays(
-        delays=[100.0, 200.0, 300.0],
+        delays=[100.0, 300.0],
         base_amplitude=0.05,
         pulse_fwhm=10.0,
         carrier_freq_cm=15800.0,

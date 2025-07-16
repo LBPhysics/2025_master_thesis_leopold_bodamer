@@ -13,20 +13,128 @@ import pickle
 import os
 import glob
 from pathlib import Path
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, TYPE_CHECKING
 from datetime import datetime
 
 ### Project-specific imports
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.bath_system.bath_class import BathSystem
-from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-from qspectro2d.config.paths import DATA_DIR  # , FIGURES_DIR
+from qspectro2d.config.paths import DATA_DIR
+
+# Type checking imports to avoid circular imports
+if TYPE_CHECKING:
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
 # Handle both relative imports (when imported as module) and absolute imports (when run directly)
-try:
-    from .files import generate_unique_data_filename
-except ImportError:
-    from qspectro2d.data.files import generate_unique_data_filename
+from qspectro2d.utils.file_naming import generate_unique_data_filename
+
+
+# =============================
+# DATA SAVING FUNCTIONS
+# =============================
+def save_data_file(
+    data_path: Path,
+    data: np.ndarray,
+    axis1: np.ndarray,
+    axis2: Optional[np.ndarray] = None,
+) -> None:
+    """
+    Save numpy data and axes to compressed .npz file.
+
+    Args:
+        data_path: Absolute path for the numpy data file (.npz)
+        data: Simulation results (1D or 2D data)
+        axis1: First axis (e.g., time or frequency for 1D or 2D data)
+        axis2: Second axis (e.g., coherence time for 2D data)
+    """
+    try:
+        if axis2 is not None:
+            np.savez_compressed(data_path, data=data, axis1=axis1, axis2=axis2)
+        else:
+            np.savez_compressed(data_path, data=data, axis1=axis1)
+        print(f"✅ Data saved successfully to: {data_path}")
+    except Exception as e:
+        print(f"❌ ERROR: Failed to save data: {e}")
+        raise
+
+
+def save_info_file(
+    info_path: Path,
+    system,  # AtomicSystem
+    bath: BathSystem,
+    laser: "LaserPulseSequence",
+    info_config: dict,
+) -> None:
+    """
+    Save system parameters and data configuration to pickle file.
+
+    Args:
+        info_path: Absolute path for the info file (.pkl)
+        system: System parameters object
+        info_config: Simulation configuration dictionary
+    """
+    try:
+        with open(info_path, "wb") as info_file:
+            pickle.dump(
+                {
+                    "system": system,
+                    "bath": bath,
+                    "laser": laser,
+                    "info_config": info_config,
+                },
+                info_file,
+            )
+        print(f"✅ Info saved successfully to: {info_path}")
+    except Exception as e:
+        print(f"❌ ERROR: Failed to save info: {e}")
+        raise
+
+
+def save_simulation_data(
+    system,  # AtomicSystem
+    info_config: dict,
+    bath: BathSystem,
+    laser: "LaserPulseSequence",
+    data: np.ndarray,
+    axis1: np.ndarray,
+    axis2: Optional[np.ndarray] = None,
+) -> Path:
+    """
+    Save spectroscopy simulation data (numpy arrays) along with known axes in one file,
+    and system parameters and configuration in another file.
+
+    Parameters:
+        data (np.ndarray): Simulation results (1D or 2D data).
+        axis1 (np.ndarray): First axis (e.g., time or frequency for 1D or 2D data).
+        axis2 (Optional[np.ndarray]): Second axis (e.g., coherence time for 2D data).
+        system (AtomicSystem): System parameters object.
+        info_config (dict): Simulation configuration dictionary.
+
+    Returns:
+        Path]: Relative path to DATA_DIR for the saved numpy data file and info file.
+    """
+    # =============================
+    # Generate unique filenames
+    # =============================
+    base_path = generate_unique_data_filename(system, info_config)
+    data_path = Path(f"{base_path}_data.npz")
+    info_path = Path(f"{base_path}_info.pkl")
+
+    # =============================
+    # Save files
+    # =============================
+    save_data_file(data_path, data, axis1, axis2)
+    save_info_file(info_path, system, bath, laser, info_config)
+
+    # =============================
+    # Return relative path to DATA_DIR
+    # =============================
+    ### Remove both the suffix and the trailing '_data' from the filename for rel_path
+    rel_path = data_path.with_suffix("")
+    rel_path_str = str(rel_path)
+    if rel_path_str.endswith("_data"):
+        rel_path_str = rel_path_str[:-5]  # Remove '_data'
+    rel_path = Path(rel_path_str).relative_to(DATA_DIR)
+    return rel_path
 
 
 # =============================
@@ -122,11 +230,11 @@ def load_data_from_rel_path(relative_path: str) -> dict:
     result = {
         "data": data_dict.get("data"),
         "axes": {
-            "axis1": data_dict.get(
-                "axis1"
-            ),  # Note: saved as 'axis1', loaded as 'axis1'
+            "axis1": data_dict.get("axis1"),
         },
         "system": info_dict.get("system"),
+        "bath": info_dict.get("bath"),
+        "laser": info_dict.get("laser"),
         "info_config": info_dict.get("info_config"),
     }
 
@@ -316,119 +424,10 @@ def list_data_files_in_directory(base_dir: Path) -> List[str]:
 
 
 # =============================
-# DATA SAVING FUNCTIONS
-# =============================
-def save_data_file(
-    data_path: Path,
-    data: np.ndarray,
-    axis1: np.ndarray,
-    axis2: Optional[np.ndarray] = None,
-) -> None:
-    """
-    Save numpy data and axes to compressed .npz file.
-
-    Args:
-        data_path: Absolute path for the numpy data file (.npz)
-        data: Simulation results (1D or 2D data)
-        axis1: First axis (e.g., time or frequency for 1D or 2D data)
-        axis2: Second axis (e.g., coherence time for 2D data)
-    """
-    try:
-        if axis2 is not None:
-            np.savez_compressed(data_path, data=data, axis1=axis1, axis2=axis2)
-        else:
-            np.savez_compressed(data_path, data=data, axis1=axis1)
-        print(f"✅ Data saved successfully to: {data_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to save data: {e}")
-        raise
-
-
-def save_info_file(
-    info_path: Path,
-    system: AtomicSystem,
-    bath: BathSystem,
-    laser: LaserPulseSequence,
-    info_config: dict,
-) -> None:
-    """
-    Save system parameters and data configuration to pickle file.
-
-    Args:
-        info_path: Absolute path for the info file (.pkl)
-        system: System parameters object
-        info_config: Simulation configuration dictionary
-    """
-    try:
-        with open(info_path, "wb") as info_file:
-            pickle.dump(
-                {
-                    "system": system,
-                    "bath": bath,
-                    "laser": laser,
-                    "info_config": info_config,
-                },
-                info_file,
-            )
-        print(f"✅ Info saved successfully to: {info_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to save info: {e}")
-        raise
-
-
-def save_simulation_data(
-    system: AtomicSystem,
-    info_config: dict,
-    bath: BathSystem,
-    laser: LaserPulseSequence,
-    data: np.ndarray,
-    axis1: np.ndarray,
-    axis2: Optional[np.ndarray] = None,
-) -> Path:
-    """
-    Save spectroscopy simulation data (numpy arrays) along with known axes in one file,
-    and system parameters and configuration in another file.
-
-    Parameters:
-        data (np.ndarray): Simulation results (1D or 2D data).
-        axis1 (np.ndarray): First axis (e.g., time or frequency for 1D or 2D data).
-        axis2 (Optional[np.ndarray]): Second axis (e.g., coherence time for 2D data).
-        system (AtomicSystem): System parameters object.
-        info_config (dict): Simulation configuration dictionary.
-
-    Returns:
-        Path]: Relative path to DATA_DIR for the saved numpy data file and info file.
-    """
-    # =============================
-    # Generate unique filenames
-    # =============================
-    base_path = generate_unique_data_filename(system, info_config)
-    data_path = Path(f"{base_path}_data.npz")
-    info_path = Path(f"{base_path}_info.pkl")
-
-    # =============================
-    # Save files
-    # =============================
-    save_data_file(data_path, data, axis1, axis2)
-    save_info_file(info_path, system, bath, laser, info_config)
-
-    # =============================
-    # Return relative path to DATA_DIR
-    # =============================
-    ### Remove both the suffix and the trailing '_data' from the filename for rel_path
-    rel_path = data_path.with_suffix("")
-    rel_path_str = str(rel_path)
-    if rel_path_str.endswith("_data"):
-        rel_path_str = rel_path_str[:-5]  # Remove '_data'
-    rel_path = Path(rel_path_str).relative_to(DATA_DIR)
-    return rel_path
-
-
-# =============================
 # TEST CODE (when run directly)
 # =============================
 if __name__ == "__main__":
-    print("🧪 Testing qspectro2d.data.io module...")
+    print("🧪 Testing qspectro2d.utils.data_io module...")
     print("=" * 50)
 
     # Test 1: List available data files

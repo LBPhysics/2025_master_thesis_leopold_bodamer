@@ -23,17 +23,6 @@ from .atomic_system.system_class import AtomicSystem
 from .bath_system.bath_class import BathSystem
 
 # =============================
-# WHOLE MODULE CLASS AND specific Paper SOLVER FUNCTIONS
-# =============================
-from .simulation_class import (
-    SimulationModuleOQS,
-    SimulationConfig,
-    SimulationModuleOQS,
-    matrix_ODE_paper,
-    R_paper,
-)
-
-# =============================
 # PULSE DEFINITIONS AND SEQUENCES
 # =============================
 from .laser_system.laser_class import (
@@ -52,22 +41,16 @@ from .laser_system.laser_fcts import (
     Epsilon_pulse,
 )
 
-# =============================
-# RWA UTILITIES
-# =============================
-from .functions_with_rwa import (
-    apply_RWA_phase_factors,
-    get_expect_vals_with_RWA,
-)
 
 # =============================
-# UTILITIES AND CONSTANTS
+# WHOLE MODULE CLASS AND specific Paper SOLVER FUNCTIONS
 # =============================
-from .utils_and_config import (
-    convert_cm_to_fs,
-    convert_fs_to_cm,
-    HBAR,
-    BOLTZMANN,
+from .simulation_class import (
+    SimulationModuleOQS,
+    SimulationConfig,
+    SimulationModuleOQS,
+    matrix_ODE_paper,
+    R_paper,
 )
 
 # =============================
@@ -93,15 +76,6 @@ __all__ = [
     # Solver functions
     "matrix_ODE_paper",
     "R_paper",
-    # RWA utilities
-    "apply_RWA_phase_factors",
-    "get_expect_vals_with_RWA",
-    # Utilities and constants
-    "convert_cm_to_fs",
-    "convert_fs_to_cm",
-    # constants
-    "HBAR",
-    "BOLTZMANN",
 ]
 
 # =============================

@@ -11,7 +11,7 @@ from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qutip import Qobj, QobjEvo, ket2dm, liouvillian, stacked_index
 from qspectro2d.core.laser_system.laser_fcts import Epsilon_pulse, E_pulse
 
-SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
+from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS
 
 
 @dataclass
@@ -834,9 +834,6 @@ def main():
     )
 
     ### Create test pulse sequence
-    from qspectro2d.core.bath_system.bath_class import BathSystem
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-
     test_pulse_seq = LaserPulseSequence.from_general_specs(
         pulse_peak_times=[0.0, 50.0],
         pulse_phases=[0.0, 1.57],  # 0, π/2

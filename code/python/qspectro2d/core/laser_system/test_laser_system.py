@@ -13,7 +13,7 @@ from qspectro2d.core.laser_system.laser_class import (
     identify_non_zero_pulse_regions,
     split_by_active_regions,
 )
-from qspectro2d.core.utils_and_config import convert_cm_to_fs
+from qspectro2d.utils import convert_cm_to_fs
 
 
 class TestLaserPulse:

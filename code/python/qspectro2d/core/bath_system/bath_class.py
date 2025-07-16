@@ -11,7 +11,7 @@ from qspectro2d.core.bath_system.bath_fcts import (
     spectral_density_func_ohmic,
     spectral_density_func_paper,
 )
-from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
+from qspectro2d.config import BOLTZMANN, HBAR
 
 
 @dataclass
@@ -26,14 +26,16 @@ class BathSystem:
     bath: str = "paper"  # Default bath type or "ohmic" or "dl"
     # Temperature / cutoff of the bath
     temp: float = 1e-5  # zero temperature
-    cutoff_: float = 1e2  # later * omega_A
+    cutoff_: float = 1e2  # later * atomic frequencie(s)
     # decay  rates
     gamma_0: Optional[float] = 1 / 300.0
     gamma_phi: Optional[float] = 1 / 100.0
 
     def _args_bath(
         self, alpha: Optional[float] = None
-    ) -> dict:  # TODO DONT KNOW HOW TO PUT THIS HERE CAUSE cutoff = cutoff_ * omega_A
+    ) -> (
+        dict
+    ):  # TODO DONT KNOW HOW TO PUT THIS HERE CAUSE cutoff = cutoff_ * atomic frequencie(s)
         """
         Generate arguments for the bath functions.
 

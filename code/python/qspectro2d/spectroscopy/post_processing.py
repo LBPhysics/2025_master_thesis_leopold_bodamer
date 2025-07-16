@@ -256,7 +256,7 @@ def compute_2d_fft_wavenumber(
     ### Perform 2D FFT according to the formula
     # Forward FFT along t-axis (axis=1): exp(-iω_det*t)
     # Inverse FFT along coh-axis (axis=0): exp(+iω_coh*coh)
-    s2d = np.fft.fft(data, axis=0) * len(t_cohs)
+    s2d = np.fft.ifft(data, axis=0) * len(t_cohs)
     s2d = np.fft.fft(s2d, axis=1)
 
     # s2d = np.fft.fft2(data)

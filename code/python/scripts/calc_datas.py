@@ -32,78 +32,19 @@ import time
 import argparse
 import numpy as np
 from pathlib import Path
-from copy import deepcopy
 
-from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.config import DATA_DIR
-from qspectro2d.spectroscopy import (
-    get_max_workers,
-    print_simulation_summary,
-)
 from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
-    check_the_solver,
 )
-from qspectro2d.data import (
+from qspectro2d.utils import (
     save_data_file,
     save_info_file,
     generate_unique_data_filename,
+    print_simulation_summary,
 )
-from qspectro2d.core.simulation_class import (
-    AtomicSystem,
-    LaserPulseSequence,
-    SimulationConfig,
-    SimulationModuleOQS,
-)
-
-N_ATOMS = 2
-DEFAULT_ODE_SOLVER = "BR"
-DEFAULT_RWA_SL = True
-
-DEFAULT_BATH_TYPE = "paper"
-DEFAULT_BATH_TEMP = 1e-5
-DEFAULT_BATH_CUTOFF = 1e2
-DEFAULT_BATH_GAMMA_0 = 1 / 300.0
-DEFAULT_BATH_GAMMA_PHI = 1 / 100.0
-DEFAULT_N_FREQS = 1
-DEFAULT_PHASES = 4  # Number of phase cycles for the simulation
-DEFAULT_DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
-DEFAULT_IFT_COMPONENT = (
-    1,
-    -1,
-    1,  # does not matter cause DETECTION_PHASE = 0
-)  #  (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal
-DEFAULT_RELATIVE_E0S = [1.0, 1.0, 0.1]  # relative amplitudes for each pulse
-
-
-def create_simulation_module_from_configs(
-    atom_config: dict,
-    laser_config: dict,
-    bath_config: dict,
-    simulation_config: dict,
-) -> SimulationModuleOQS:
-    """
-    Create a simulation module from the provided configuration dictionaries.
-
-    Parameters:
-        atom_config (dict): Atomic system configuration.
-        laser_config (dict): Laser pulse sequence configuration.
-        bath_config (dict): Bath parameters configuration.
-        simulation_config (dict): Simulation parameters configuration.
-
-    Returns:
-        SimulationModuleOQS: Configured simulation class instance.
-    """
-    system = AtomicSystem.from_dict(atom_config)
-    laser = LaserPulseSequence.from_delays(**laser_config)
-    bath = BathSystem.from_dict(bath_config)
-
-    return SimulationModuleOQS(
-        simulation_config=SimulationConfig(**simulation_config),
-        system=system,
-        laser=laser,
-        bath=bath,
-    )
+from qspectro2d.utils.simulation_utils import create_base_sim_oqs
+from qspectro2d.core.simulation_class import SimulationModuleOQS
 
 
 def run_single_t_coh_with_sim(
@@ -178,105 +119,6 @@ def run_single_t_coh_with_sim(
     return rel_path.parent
 
 
-def create_base_sim_oqs(args) -> tuple[SimulationModuleOQS, float]:
-    """
-    Create base simulation instance and perform solver validation once.
-
-    Parameters:
-        args: Parsed command line arguments
-
-    Returns:
-        tuple: (SimulationModuleOQS instance, time_cut from solver validation)
-    """
-    print("🔧 Creating base simulation configuration...")
-
-    atomic_config = {
-        "n_atoms": N_ATOMS,
-        "freqs_cm": (
-            [16000] if N_ATOMS == 1 else [15900, 16300]  # TODO extend to more atoms
-        ),  # Frequency of atom A [cm⁻¹]
-        "dip_moments": [1.0] * N_ATOMS,  # Dipole moments for each atom
-        "delta_cm": DEFAULT_DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
-    }
-    if N_ATOMS >= 2:
-        atomic_config["J_cm"] = 0.0
-
-    # Use dummy t_coh=0 for initial setup and solver check
-    pulse_config = {
-        "pulse_fwhm": 15.0 if N_ATOMS == 1 else 5.0,
-        "base_amplitude": 0.005,
-        "envelope_type": "gaussian",
-        "carrier_freq_cm": np.mean(atomic_config["freqs_cm"]),
-        "delays": [
-            args.t_coh,
-            args.t_wait,
-        ],  # dummy delays, will be updated
-        "relative_E0s": DEFAULT_RELATIVE_E0S,  # relative amplitudes for each pulse
-    }
-
-    max_workers = get_max_workers()
-    simulation_config_dict = {
-        "simulation_type": "1d",
-        "max_workers": max_workers,
-        "IFT_component": DEFAULT_IFT_COMPONENT,
-        ### Simulation parameters
-        "ode_solver": DEFAULT_ODE_SOLVER,
-        "rwa_sl": DEFAULT_RWA_SL,
-        "keep_track": "basis",
-        # times
-        "t_coh": args.t_coh,  # dummy value, will be updated
-        "t_wait": args.t_wait,
-        "t_det_max": args.t_det_max,
-        "dt": args.dt,
-        # phase cycling
-        "n_phases": DEFAULT_PHASES,
-        # inhomogeneous broadening
-        "n_freqs": DEFAULT_N_FREQS,
-    }
-
-    bath_config = {
-        ### Bath parameters
-        "bath_type": DEFAULT_BATH_TYPE,
-        "Temp": DEFAULT_BATH_TEMP,  # zero temperature
-        "cutoff_": DEFAULT_BATH_CUTOFF,
-        "gamma_0": DEFAULT_BATH_GAMMA_0,
-        "gamma_phi": DEFAULT_BATH_GAMMA_PHI,
-    }
-
-    # Create the simulation class instance
-    sim_oqs = create_simulation_module_from_configs(
-        atom_config=atomic_config,
-        laser_config=pulse_config,
-        bath_config=bath_config,
-        simulation_config=simulation_config_dict,
-    )
-
-    # print(sim_oqs.simulation_config)
-
-    ### Validate solver once at the beginning
-    time_cut = -np.inf
-    t_max = sim_oqs.simulation_config.t_max
-    print("🔍 Validating solver with dummy t_coh=0...")
-    try:
-        _, time_cut = check_the_solver(sim_oqs)
-        print("#" * 60)
-        print(
-            f"✅ Solver validation worked: Evolution becomes unphysical at "
-            f"({time_cut / t_max:.2f} × t_max)"
-        )
-    except Exception as e:
-        print(f"⚠️  WARNING: Solver validation failed: {e}")
-
-    if time_cut < t_max:
-        print(
-            f"⚠️  WARNING: Time cut {time_cut} is less than the last time point "
-            f"{t_max}. This may affect the simulation results.",
-            flush=True,
-        )
-
-    return sim_oqs, time_cut
-
-
 def run_1d_mode(args):
     """
     Run single 1D simulation for a specific coherence time.
@@ -332,9 +174,8 @@ def run_2d_mode(args):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
         # Save info only for first run
         save_info = t_coh == 0
-        sim_oqs_copy = deepcopy(sim_oqs)
         rel_dir = run_single_t_coh_with_sim(
-            sim_oqs_copy,
+            sim_oqs,
             t_coh,
             save_info=save_info,
             time_cut=time_cut,

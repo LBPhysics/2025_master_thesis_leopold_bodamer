@@ -44,10 +44,13 @@ from .post_processing import (
 # =============================
 # SIMULATION FUNCTIONS
 # =============================
-from .simulation import (
+from qspectro2d.utils import (
+    apply_RWA_phase_factors,
+    get_expect_vals_with_RWA,
     get_max_workers,
     print_simulation_summary,
 )
+
 
 __all__ = [
     # Core calculations
@@ -68,4 +71,7 @@ __all__ = [
     # Submodules and simulation functions
     "get_max_workers",
     "print_simulation_summary",
+    # Functions with RWA
+    "apply_RWA_phase_factors",
+    "get_expect_vals_with_RWA",
 ]

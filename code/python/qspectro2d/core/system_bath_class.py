@@ -11,7 +11,7 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.core.bath_system.bath_fcts import power_spectrum_func_paper
 
-from qspectro2d.core.utils_and_config import BOLTZMANN, HBAR
+from qspectro2d.config import BOLTZMANN, HBAR
 
 
 class ConstantSpectrum:

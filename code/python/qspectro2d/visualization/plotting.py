@@ -386,7 +386,7 @@ def plot_1d_el_field(
     component: Literal["real", "imag", "abs", "phase"] = "real",
     title: str = None,
     function_symbol: str = "S",
-    **kwargs,
+    **kwargs: dict,
 ) -> plt.Figure:
     """
     Plot 1D electric field data in either time or frequency domain with specified component.
@@ -486,18 +486,20 @@ def plot_1d_el_field(
     if kwargs:
         text_lines = []
         for key, value in kwargs.items():
-            if key in ["function", "function_symbol", "show"]:
-                continue  # Skip internal kwargs
-
             if isinstance(value, float):
-                text_lines.append(f"{key}: {value:.3g}")
+                text_lines.append(
+                    f"{key}: {value:.3g}"
+                )  # Format floats to 3 significant digits
             elif isinstance(value, (int, str)):
-                text_lines.append(f"{key}: {value}")
+                text_lines.append(
+                    f"{key}: {value}"
+                )  # Add integers and strings directly
             elif isinstance(value, np.ndarray):
-                # Handle numpy arrays safely - show shape instead of content
-                text_lines.append(f"{key}: array(shape={value.shape})")
+                text_lines.append(
+                    f"{key}: array(shape={value.shape})"
+                )  # Show shape for numpy arrays
             else:
-                # Convert to string and ensure it doesn't have LaTeX special characters
+                # Convert other types to string and escape LaTeX special characters
                 safe_str = (
                     str(value)
                     .replace("_", "\\_")
@@ -534,6 +536,7 @@ def plot_2d_el_field(
     component: Literal["real", "imag", "abs", "phase"] = "real",
     use_custom_colormap: bool = False,
     section: Union[tuple[float, float, float, float], None] = None,
+    **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
     Create a color plot of 2D electric field data for positive x and y values.
@@ -709,17 +712,48 @@ def plot_2d_el_field(
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
 
+    # Add additional parameters as a text box if provided
+    if kwargs:
+        text_lines = []
+        for key, value in kwargs.items():
+            if isinstance(value, float):
+                text_lines.append(
+                    f"{key}: {value:.3g}"
+                )  # Format floats to 3 significant digits
+            elif isinstance(value, (int, str)):
+                text_lines.append(
+                    f"{key}: {value}"
+                )  # Add integers and strings directly
+            elif isinstance(value, np.ndarray):
+                text_lines.append(
+                    f"{key}: array(shape={value.shape})"
+                )  # Show shape for numpy arrays
+            else:
+                # Convert other types to string and escape LaTeX special characters
+                safe_str = (
+                    str(value)
+                    .replace("_", "\\_")
+                    .replace("^", "\\^")
+                    .replace("{", "\\{")
+                    .replace("}", "\\}")
+                )
+                text_lines.append(f"{key}: {safe_str}")
+
+        info_text = "\n".join(text_lines)
+        ax.text(
+            0.98,
+            0.98,
+            info_text,
+            transform=ax.transAxes,
+            fontsize=11,
+            verticalalignment="top",
+            horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
+        )
+
     fig.tight_layout()
 
-    """# Add a border around the plot for better visual definition
-    plt.gca().spines["top"].set_visible(True)
-    plt.gca().spines["right"].set_visible(True)
-    plt.gca().spines["bottom"].set_visible(True)
-    plt.gca().spines["left"].set_visible(True)
-    plt.gca().spines["top"].set_linewidth(1.5)
-    plt.gca().spines["right"].set_linewidth(1.5)
-    plt.gca().spines["bottom"].set_linewidth(1.5)
-    plt.gca().spines["left"].set_linewidth(1.5)"""
+    """# Add a border around the plot for better visual definition plt.gca().spines["top"].set_visible(True); plt.gca().spines["bottom"].set_linewidth(1.5)"""
 
     # plt.close(fig)
     return fig

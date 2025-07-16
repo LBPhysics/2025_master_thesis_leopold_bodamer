@@ -1,5 +1,5 @@
 from platform import system
-from qspectro2d.data import (
+from qspectro2d.utils import (
     save_simulation_data,
     load_data_from_rel_path,
     list_available_data_files,
