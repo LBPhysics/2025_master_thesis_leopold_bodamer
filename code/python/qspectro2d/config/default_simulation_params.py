@@ -11,14 +11,14 @@ import numpy as np
 
 # === ATOMIC SYSTEM DEFAULTS ===
 N_ATOMS = 1
-FREQS_CM = [1600.0]  # Number of frequency components in the system
+FREQS_CM = [16000.0]  # Number of frequency components in the system
 DIP_MOMENTS = [1.0]  # Dipole moments for each atom
 J_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 
 # === LASER SYSTEM DEFAULTS ===
 PULSE_FWHM = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
-BASE_AMPLITUDE = 0.005  # should be such that only one interaction at a time, here that |excitation|² < 1%
+BASE_AMPLITUDE = 0.5  # should be such that only one interaction at a time, here that |excitation|² < 1%
 ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQS_CM)  # Carrier frequency of the laser
 
@@ -36,6 +36,11 @@ BATH_CUTOFF = 1e2
 BATH_GAMMA_0 = 1 / 300.0
 BATH_GAMMA_PHI = 1 / 100.0
 
+
+# === 2D SIMULATION DEFAULTS ===
+BATCHES = 10  # You can increase/decrease this
+T_DET_MAX = 200.0  # Maximum detection time in fs
+DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
 
 # =============================
 # STUFF THAT IS NORMALLY UNCHANGED
