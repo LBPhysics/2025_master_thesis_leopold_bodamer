@@ -705,7 +705,7 @@ def plot_2d_el_field(
     cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
     # Add contour lines with different styles for positive and negative values
-    # add_custom_contour_lines(x, y, data, component) # TODO UNCOMMENT IF NEEDED
+    # add_custom_contour_lines(axis_coh, axis_det, data, component)
 
     # Improve overall plot appearance
     ax.set_title(title)

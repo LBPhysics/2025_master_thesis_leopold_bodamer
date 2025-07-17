@@ -256,10 +256,10 @@ def compute_2d_fft_wavenumber(
     ### Perform 2D FFT according to the formula
     # Forward FFT along t-axis (axis=1): exp(-iω_det*t)
     # Inverse FFT along coh-axis (axis=0): exp(+iω_coh*coh)
-    s2d = np.fft.ifft(data, axis=0) * len(t_cohs)
-    s2d = np.fft.fft(s2d, axis=1)
+    # s2d = np.fft.ifft(data, axis=0) * len(t_cohs)
+    # s2d = np.fft.fft(s2d, axis=1)
 
-    # s2d = np.fft.fft2(data)
+    s2d = np.fft.fft2(data)
 
     ### Generate frequency axes
     freq_dets = np.fft.fftfreq(len(t_dets), d=dt_det)
@@ -267,8 +267,8 @@ def compute_2d_fft_wavenumber(
 
     ### Apply frequency shifts for centered display
     s2d = np.fft.fftshift(s2d, axes=(0, 1))
-    freq_dets = np.fft.fftshift(freq_dets)
     freq_cohs = np.fft.fftshift(freq_cohs)
+    freq_dets = np.fft.fftshift(freq_dets)
 
     ### Convert to wavenumber units [10^4 cm⁻¹]
     # Speed of light: c ≈ 2.998 × 10^-4 cm/fs

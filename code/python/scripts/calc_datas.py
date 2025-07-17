@@ -132,7 +132,7 @@ def run_1d_mode(args):
     sim_oqs, time_cut = create_base_sim_oqs(args)
 
     # Run single simulation
-    rel_dir = run_single_t_coh_with_sim(
+    rel_path = run_single_t_coh_with_sim(
         sim_oqs, args.t_coh, save_info=True, time_cut=time_cut
     )
 
@@ -168,13 +168,13 @@ def run_2d_mode(args):
         f"📊 Processing {len(t_coh_subarray)} t_coh values: [{t_coh_subarray[0]:.1f}, {t_coh_subarray[-1]:.1f}] fs"
     )
 
-    rel_dir = None
+    rel_path = None
     start_time = time.time()
     for i, t_coh in enumerate(t_coh_subarray):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
         # Save info only for first run
         save_info = t_coh == 0
-        rel_dir = run_single_t_coh_with_sim(
+        rel_path = run_single_t_coh_with_sim(
             sim_oqs,
             t_coh,
             save_info=save_info,
@@ -182,11 +182,11 @@ def run_2d_mode(args):
         )
     elapsed = time.time() - start_time
     dummy_data = np.zeros((len(t_coh_subarray), len(sim_oqs.times_det)))
-    print_simulation_summary(elapsed, dummy_data, rel_dir, "2d")
+    print_simulation_summary(elapsed, dummy_data, rel_path, "2d")
 
     print(f"\n✅ Batch {args.batch_idx + 1}/{args.n_batches} completed!")
     print(f"\n🎯 To stack this data into 2D, run:")
-    print(f'python stack_t_coh_to_2d.py --rel_path "{rel_dir}"')
+    print(f'python stack_t_coh_to_2d.py --rel_path "{rel_path}"')
 
 
 def main():
