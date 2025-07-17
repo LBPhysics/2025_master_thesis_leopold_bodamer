@@ -9,7 +9,7 @@ This subpackage provides various utility functions including:
 
 # Data I/O utilities
 from .data_io import (
-    load_data_from_rel_path,
+    load_data_from_abs_path,
     load_latest_data_from_directory,
     list_available_data_files,
     save_simulation_data,
@@ -44,7 +44,7 @@ from .simulation_utils import (
 
 __all__ = [
     # Data I/O
-    "load_data_from_rel_path",
+    "load_data_from_abs_path",
     "load_latest_data_from_directory",
     "load_info_file",
     "load_data_file",

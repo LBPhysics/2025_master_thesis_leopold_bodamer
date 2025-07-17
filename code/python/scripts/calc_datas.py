@@ -33,7 +33,6 @@ import argparse
 import numpy as np
 from pathlib import Path
 
-from qspectro2d.config import DATA_DIR
 from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
 )
@@ -63,7 +62,7 @@ def run_single_t_coh_with_sim(
         time_cut (float): Time cutoff for solver validation
 
     Returns:
-        Path: Relative path to the saved data directory
+        Path: absolute path to the saved data directory
     """
     print(f"\n=== Starting t_coh = {t_coh:.2f} fs ===")
 
@@ -88,21 +87,16 @@ def run_single_t_coh_with_sim(
 
     # Save data
     simulation_config_dict = sim_oqs.simulation_config.to_dict()
-    abs_path = Path(
-        generate_unique_data_filename(sim_oqs.system, simulation_config_dict)
-    )
-    data_path = Path(f"{abs_path}_data.npz")
-    print(f"\nSaving data to: {data_path}")
+    abs_path = generate_unique_data_filename(sim_oqs.system, simulation_config_dict)
+    abs_data_path = Path(f"{abs_path}_data.npz")
 
-    save_data_file(data_path, data, sim_oqs.times_det)
-
-    rel_path = abs_path.relative_to(DATA_DIR)
+    save_data_file(abs_data_path, data, sim_oqs.times_det)
 
     if save_info:
         # all_infos_as_dict = sim_oqs.to_dict() TODO update the saving to incorporate all the info data in one dict?
-        info_path = Path(f"{abs_path}_info.pkl")
+        abs_info_path = Path(f"{abs_path}_info.pkl")
         save_info_file(
-            info_path,
+            abs_info_path,
             sim_oqs.system,
             bath=sim_oqs.bath,
             laser=sim_oqs.laser,
@@ -111,12 +105,12 @@ def run_single_t_coh_with_sim(
 
         print(f"{'='*60}")
         print(f"\n🎯 To plot this data, run:")
-        print(f'python plot_datas.py --rel_path "{rel_path}"')
+        print(f'python plot_datas.py --abs_path "{abs_data_path}"')
 
     elapsed = time.time() - start_time
-    print_simulation_summary(elapsed, data, rel_path, "1d")
+    print_simulation_summary(elapsed, data, abs_path, "1d")
 
-    return rel_path.parent
+    return abs_data_path
 
 
 def run_1d_mode(args):
@@ -132,9 +126,10 @@ def run_1d_mode(args):
     sim_oqs, time_cut = create_base_sim_oqs(args)
 
     # Run single simulation
-    rel_path = run_single_t_coh_with_sim(
+    abs_data_path = run_single_t_coh_with_sim(
         sim_oqs, args.t_coh, save_info=True, time_cut=time_cut
     )
+    print(f"\nSaved data to: {abs_data_path}")
 
     print(f"\n✅ 1D simulation completed!")
 
@@ -168,13 +163,13 @@ def run_2d_mode(args):
         f"📊 Processing {len(t_coh_subarray)} t_coh values: [{t_coh_subarray[0]:.1f}, {t_coh_subarray[-1]:.1f}] fs"
     )
 
-    rel_path = None
+    abs_data_path = None
     start_time = time.time()
     for i, t_coh in enumerate(t_coh_subarray):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
         # Save info only for first run
         save_info = t_coh == 0
-        rel_path = run_single_t_coh_with_sim(
+        abs_data_path = run_single_t_coh_with_sim(
             sim_oqs,
             t_coh,
             save_info=save_info,
@@ -182,11 +177,11 @@ def run_2d_mode(args):
         )
     elapsed = time.time() - start_time
     dummy_data = np.zeros((len(t_coh_subarray), len(sim_oqs.times_det)))
-    print_simulation_summary(elapsed, dummy_data, rel_path, "2d")
+    print_simulation_summary(elapsed, dummy_data, abs_data_path, "2d")
 
     print(f"\n✅ Batch {args.batch_idx + 1}/{args.n_batches} completed!")
     print(f"\n🎯 To stack this data into 2D, run:")
-    print(f'python stack_t_coh_to_2d.py --rel_path "{rel_path}"')
+    print(f'python stack_t_coh_to_2d.py --abs_path "{abs_data_path}"')
 
 
 def main():

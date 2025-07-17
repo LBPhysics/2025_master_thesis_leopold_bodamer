@@ -6,7 +6,7 @@ Usage:
     python plot_datas.py
 
     # Load specific files
-    python plot_datas.py --rel_path "relative/path/to/data/filename(WITHOUT_SUFFIX).npz"
+    python plot_datas.py --abs_path "absolute/path/to/data/filename(WITHOUT_SUFFIX And .npz)"
 
     # Load from directory
     python plot_datas.py --latest_from DIR
@@ -15,8 +15,7 @@ Usage:
 import sys
 import argparse
 from qspectro2d.utils import (
-    load_latest_data_from_directory,
-    load_data_from_rel_path,
+    load_data_from_abs_path,
 )
 from qspectro2d.visualization import plot_1d_data, plot_2d_data
 
@@ -27,9 +26,7 @@ def main():
     )
 
     group = parser.add_mutually_exclusive_group()
-    group.add_argument(
-        "--rel_path", type=str, help="Specific file path (relative to DATA_DIR)"
-    )
+    group.add_argument("--abs_path", type=str, help="Specific file path (absolute)")
     group.add_argument("--latest_from", type=str, help="Load latest from subdirectory")
 
     args = parser.parse_args()
@@ -37,36 +34,28 @@ def main():
     plot_config = {
         # "plot_time_domain": True,
         "plot_frequency_domain": True,
-        "extend_for": (1, 20),
+        "extend_for": (1, 25),
         "spectral_components_to_plot": ["abs", "real", "imag"],
-        # "section": (1, 2, 1, 2),
-        "section": (1.5, 1.7, 1.5, 1.7),
+        "section": [(1, 2), (1, 2)],
+        # "section": [(1.5, 1.7), (1.5, 1.7)],
     }
 
     try:
-        # =============================
         # LOAD DATA
-        # =============================
-        if args.rel_path:
-            print(f"📁 Loading specific file: {args.rel_path}")
-            data_dict = load_data_from_rel_path(relative_path=args.rel_path)
-        else:
-            subdir = args.latest_from if args.latest_from else "2d_spectroscopy"
-            print(f"🔍 Auto-mode: Loading latest from {subdir}...")
-            data_dict = load_latest_data_from_directory(subdir)
+        print(f"📁 Loading specific file: {args.abs_path}")
+        data_and_info_dict = load_data_from_abs_path(abs_path=args.abs_path)
 
-        ndim = data_dict["data"].ndim
+        ndim = data_and_info_dict["data"].ndim
+
         print(
-            f"✅ Data shape: {data_dict['data'].shape}, Time range: {data_dict['axes']['axis1'][0]:.1f} to {data_dict['axes']['axis1'][-1]:.1f} fs"
+            f"✅ Data shape: {data_and_info_dict['data'].shape}, Time range: {data_and_info_dict['axes']['axis1'][0]:.1f} to {data_and_info_dict['axes']['axis1'][-1]:.1f} fs"
         )
 
-        # =============================
-        # PLOT
-        # =============================
+        # ============== PLOT ==============
         if ndim == 1:
-            plot_1d_data(data_dict, plot_config)
+            plot_1d_data(data_and_info_dict, plot_config)
         elif ndim == 2:
-            plot_2d_data(data_dict, plot_config)
+            plot_2d_data(data_and_info_dict, plot_config)
         else:
             print(f"❌ Unsupported data dimension: {ndim}")
             sys.exit(1)

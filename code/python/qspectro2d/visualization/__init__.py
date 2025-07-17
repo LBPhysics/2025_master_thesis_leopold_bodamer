@@ -14,7 +14,7 @@ from .plotting import (
     plot_1d_el_field,
     plot_2d_el_field,
     plot_example_polarization,
-    crop_2d_data_to_section,
+    crop_nd_data_along_axis,
     add_custom_contour_lines,
 )
 from .data_plots import (
@@ -32,7 +32,7 @@ __all__ = [
     "plot_1d_el_field",
     "plot_2d_el_field",
     "plot_example_polarization",
-    "crop_2d_data_to_section",
+    "crop_nd_data_along_axis",
     "add_custom_contour_lines",
     # data_plots.py
     "plot_1d_data",

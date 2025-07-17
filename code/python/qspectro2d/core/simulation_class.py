@@ -408,12 +408,11 @@ def H_int_(
             sm_op.dag() * E_field_RWA + sm_op * np.conj(E_field_RWA)
         )  # RWA interaction Hamiltonian
     else:
-        dip_op = sm_op * sm_op.dag()
+        dip_op = sm_op + sm_op.dag()
         E_field = Epsilon_pulse(t, laser)  # Combined electric field with carrier
         H_int_sl = -dip_op * (
             E_field + np.conj(E_field)
         )  # Full interaction Hamiltonian
-
     return H_int_sl
 
 

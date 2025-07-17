@@ -114,7 +114,7 @@ def get_expect_vals_with_RWA(
     e_ops: List[Qobj],
     omega_laser: float,
     rwa_sl: bool,
-    Dip_op: Qobj = None,
+    dip_op: Qobj = None,
 ) -> List[np.ndarray]:
     """
     Calculate the expectation values in the result with RWA phase factors.
@@ -126,22 +126,28 @@ def get_expect_vals_with_RWA(
         e_ops: The operators for which the expectation values are calculated
         omega_laser: Frequency of the laser
         rwa_sl: Whether to apply the RWA phase factors
-        Dip_op: Dipole operator to include in expectation values
+        dip_op: Dipole operator to include in expectation values
 
     Returns:
         List of arrays containing expectation values for each operator
     """
-    if Dip_op is not None:
-        e_ops = e_ops + [Dip_op]  # Avoid modifying the original list
+    # if dip_op is not None:
+    #     e_ops = e_ops + [dip_op]  # Avoid modifying the original list
 
     if rwa_sl:
         states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
 
-    ### Calculate expectation values for each state and each operator
+    ## Calculate expectation values for each state and each operator
     updated_expects = []
     for e_op in e_ops:
         # Calculate expectation value for each state with this operator
-        expect_vals = np.array([np.real(expect(e_op, state)) for state in states])
+        expect_vals = np.array(np.real(expect(e_op, states)))
         updated_expects.append(expect_vals)
+    if dip_op is not None:
+        from qspectro2d.spectroscopy.calculations import complex_polarization
+
+        # Calculate expectation value for the dipole operator if provided
+        expect_vals_dip = np.array(complex_polarization(dip_op, states))
+        updated_expects.append(expect_vals_dip)
 
     return updated_expects

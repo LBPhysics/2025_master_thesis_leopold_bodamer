@@ -76,7 +76,7 @@ except ImportError as e:
 try:
     from .utils import (
         save_simulation_data,
-        load_data_from_rel_path,
+        load_data_from_abs_path,
         load_latest_data_from_directory,
     )
 except ImportError as e:
@@ -126,7 +126,7 @@ __all__ = [
     "plot_all_pulse_components",
     # Data management
     "save_simulation_data",
-    "load_data_from_rel_path",
+    "load_data_from_abs_path",
     "load_latest_data_from_directory",
     # Configuration
     "DATA_DIR",

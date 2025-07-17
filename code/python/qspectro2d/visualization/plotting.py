@@ -264,10 +264,7 @@ def plot_example_evo(
     times_plot: np.ndarray,
     datas: list,
     pulse_seq: LaserPulseSequence,
-    t_coh: float,
-    t_wait: float,
     rwa_sl: bool = False,
-    ode_solver: str = "Paper_eqs",
     observable_strs: list[str] = [],
     **kwargs: dict,
 ):
@@ -350,29 +347,11 @@ def plot_example_evo(
         ax.set_ylabel(r"$\langle" + observable_str + r"\rangle$")
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
-    # Add parameter information as text box if kwargs provided
-    if kwargs:
-        text_lines = []
-        for key, value in kwargs.items():
-            text_lines.append(f"{key}: {str(value)}"[:30])
-
-        axes[0].text(
-            0.8,
-            0.98,
-            "\n".join(text_lines),
-            transform=axes[0].transAxes,
-            fontsize=12,
-            verticalalignment="top",
-            bbox=dict(boxstyle="round,pad=0.3", alpha=0.01, edgecolor="black"),
-        )
+    add_text_box(ax=axes[0], kwargs=kwargs)
 
     # Set x-label only on the bottom subplot
     axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
 
-    # Add title and finalize plot
-    plt.suptitle(
-        rf"$t_{{\mathrm{{coh}}}} = {t_coh:.2f}\,\mathrm{{fs}},\quad t_{{\mathrm{{wait}}}} = {t_wait:.2f}\,\mathrm{{fs}},\quad \mathrm{{Solver}}$: {ode_solver}"
-    )
     plt.tight_layout()
     plt.close(fig)
 
@@ -385,6 +364,7 @@ def plot_1d_el_field(
     domain: Literal["time", "freq"] = "time",
     component: Literal["real", "imag", "abs", "phase"] = "real",
     title: str = None,
+    section: Union[tuple[float, float], None] = None,
     function_symbol: str = "S",
     **kwargs: dict,
 ) -> plt.Figure:
@@ -405,6 +385,16 @@ def plot_1d_el_field(
         matplotlib.figure.Figure: The figure object.
     """
     fig = plt.figure()
+
+    if section is not None:
+        # Crop the data if a section is specified
+        axis_det, data = crop_nd_data_along_axis(
+            axis_det, data, section=section, axis=0
+        )
+
+    if np.abs(data).max() == 0:
+        raise ValueError("Data array is all zeros, cannot normalize.")
+    data = data / np.abs(data).max()  # normalize
 
     # Set domain-specific variables
     if domain == "time":
@@ -483,43 +473,7 @@ def plot_1d_el_field(
     plt.legend()
 
     # Add additional parameters as a text box if provided
-    if kwargs:
-        text_lines = []
-        for key, value in kwargs.items():
-            if isinstance(value, float):
-                text_lines.append(
-                    f"{key}: {value:.3g}"
-                )  # Format floats to 3 significant digits
-            elif isinstance(value, (int, str)):
-                text_lines.append(
-                    f"{key}: {value}"
-                )  # Add integers and strings directly
-            elif isinstance(value, np.ndarray):
-                text_lines.append(
-                    f"{key}: array(shape={value.shape})"
-                )  # Show shape for numpy arrays
-            else:
-                # Convert other types to string and escape LaTeX special characters
-                safe_str = (
-                    str(value)
-                    .replace("_", "\\_")
-                    .replace("^", "\\^")
-                    .replace("{", "\\{")
-                    .replace("}", "\\}")
-                )
-                text_lines.append(f"{key}: {safe_str}")
-
-        info_text = "\n".join(text_lines)
-        plt.text(
-            0.98,
-            0.98,
-            info_text,
-            transform=plt.gca().transAxes,
-            fontsize=11,
-            verticalalignment="top",
-            horizontalalignment="right",
-            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
-        )
+    add_text_box(ax=plt.gca(), kwargs=kwargs)
 
     plt.tight_layout()
     plt.close(fig)
@@ -535,7 +489,7 @@ def plot_2d_el_field(
     domain: Literal["time", "freq"] = "time",
     component: Literal["real", "imag", "abs", "phase"] = "real",
     use_custom_colormap: bool = False,
-    section: Union[tuple[float, float, float, float], None] = None,
+    section: Union[list[tuple[float, float]], None] = None,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
@@ -563,8 +517,8 @@ def plot_2d_el_field(
     use_custom_colormap : bool, default False
         If True, uses custom red-white-blue colormap centered at zero.
         Automatically set to True for "real", "imag", and "phase" components.
-    section : tuple[float, float, float, float] or None, optional
-        Crop section as (x_min, x_max, y_min, y_max) to zoom into specific region.
+    section : first tuple crops coh axis (coh_min, coh_max),
+              second tuple crops det axis (det_min, det_max) to zoom into specific region.
 
     Returns
     -------
@@ -612,8 +566,11 @@ def plot_2d_el_field(
     # SECTION CROPPING
     # =============================
     if section is not None:
-        axis_det, axis_coh, data = crop_2d_data_to_section(
-            axis_det, axis_coh, data, section
+        axis_coh, data = crop_nd_data_along_axis(
+            axis_coh, data, section=section[0], axis=0
+        )
+        axis_det, data = crop_nd_data_along_axis(
+            axis_det, data, section=section[1], axis=1
         )
 
     if np.abs(data).max() == 0:
@@ -646,13 +603,13 @@ def plot_2d_el_field(
     if domain == "time":
         colormap = "viridis"
         title += r"$\text{Time domain signal}$"
-        x_title = r"$t_{\text{coh}}$ [fs]"
-        y_title = r"$t_{\text{det}}$ [fs]"
+        y_title = r"$t_{\text{coh}}$ [fs]"
+        x_title = r"$t_{\text{det}}$ [fs]"
     else:
         colormap = "plasma"
         title += r"$\text{Spectrum}$"
-        x_title = r"$\omega_{t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
-        y_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
+        y_title = r"$\omega_{t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
+        x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
 
     if t_wait != np.inf:
         title += rf"$\ \text{{at }} T = {t_wait:.2f}$ fs"
@@ -713,43 +670,7 @@ def plot_2d_el_field(
     ax.set_ylabel(y_title)
 
     # Add additional parameters as a text box if provided
-    if kwargs:
-        text_lines = []
-        for key, value in kwargs.items():
-            if isinstance(value, float):
-                text_lines.append(
-                    f"{key}: {value:.3g}"
-                )  # Format floats to 3 significant digits
-            elif isinstance(value, (int, str)):
-                text_lines.append(
-                    f"{key}: {value}"
-                )  # Add integers and strings directly
-            elif isinstance(value, np.ndarray):
-                text_lines.append(
-                    f"{key}: array(shape={value.shape})"
-                )  # Show shape for numpy arrays
-            else:
-                # Convert other types to string and escape LaTeX special characters
-                safe_str = (
-                    str(value)
-                    .replace("_", "\\_")
-                    .replace("^", "\\^")
-                    .replace("{", "\\{")
-                    .replace("}", "\\}")
-                )
-                text_lines.append(f"{key}: {safe_str}")
-
-        info_text = "\n".join(text_lines)
-        ax.text(
-            0.98,
-            0.98,
-            info_text,
-            transform=ax.transAxes,
-            fontsize=11,
-            verticalalignment="top",
-            horizontalalignment="right",
-            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
-        )
+    add_text_box(ax=ax, kwargs=kwargs)
 
     fig.tight_layout()
 
@@ -783,7 +704,7 @@ def plot_example_polarization(
     Returns:
         matplotlib.figure.Figure: The figure object.
     """
-    fig = plt.figure(figsize=(10, 6))
+    fig = plt.figure(figsize=(10, 6))  # get rid of this fixed figsize
     plt.plot(
         times,
         np.abs(P_full),
@@ -825,24 +746,7 @@ def plot_example_polarization(
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     # Add additional parameters as a text box if provided
-    if kwargs:
-        text_lines = []
-        for key, value in kwargs.items():
-            if isinstance(value, float):
-                text_lines.append(f"{key}: {value:.3g}")
-            else:
-                text_lines.append(f"{key}: {value}")
-        info_text = "\n".join(text_lines)
-        plt.text(
-            0.98,
-            0.98,
-            info_text,
-            transform=plt.gca().transAxes,
-            fontsize=11,
-            verticalalignment="top",
-            horizontalalignment="right",
-            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
-        )
+    add_text_box(ax=plt.gca(), kwargs=kwargs)
 
     plt.tight_layout()
     plt.close(fig)
@@ -852,52 +756,56 @@ def plot_example_polarization(
 # =============================
 # HELPER FUNCTIONS
 # =============================
-
-
-def crop_2d_data_to_section(
-    x: np.ndarray,
-    y: np.ndarray,
-    data: np.ndarray,
-    section: tuple[float, float, float, float],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def crop_nd_data_along_axis(
+    coord_array: np.ndarray,
+    nd_data: np.ndarray,
+    section: tuple[float, float],
+    axis: int = 0,
+) -> tuple[np.ndarray, np.ndarray]:
     """
-    Crop 2D data to a specified rectangular section.
+    Crop n-dimensional data along a specified axis.
 
     Parameters:
-        x (np.ndarray): X-axis coordinate array
-        y (np.ndarray): Y-axis coordinate array
-        data (np.ndarray): 2D data array with shape (len(y), len(x))
-        section (tuple): Section boundaries as (x_min, x_max, y_min, y_max)
+        coord_array (np.ndarray): 1D coordinate array for the specified axis
+        nd_data (np.ndarray): N-dimensional data array
+        section (tuple[float, float]): Section boundaries as (min_val, max_val)
+        axis (int): Axis along which to crop (default: 0)
 
     Returns:
-        tuple: Cropped (x, y, data) arrays
+        tuple: (cropped_coord_array, cropped_nd_data)
+
+    Raises:
+        ValueError: If coordinate array length doesn't match data shape along specified axis
     """
-    if data.ndim != 2 or data.shape[0] != len(y) or data.shape[1] != len(x):
+    ### Validate input dimensions
+    if coord_array.ndim != 1:
+        raise ValueError("Coordinate array must be 1-dimensional")
+
+    if nd_data.shape[axis] != len(coord_array):
         raise ValueError(
-            f"Data shape {data.shape} does not match x ({len(x)}) and y ({len(y)}) dimensions."
+            f"Data shape along axis {axis} ({nd_data.shape[axis]}) "
+            f"does not match coordinate array length ({len(coord_array)})"
         )
-    x_min, x_max, y_min, y_max = section
+
+    coord_min, coord_max = section
 
     ### Validate coordinates are within data range
-    x_min = max(x_min, np.min(x))
-    x_max = min(x_max, np.max(x))
-    y_min = max(y_min, np.min(y))
-    y_max = min(y_max, np.max(y))
+    coord_min = max(coord_min, np.min(coord_array))
+    coord_max = min(coord_max, np.max(coord_array))
 
     ### Find indices within the specified section
-    x_indices = np.where((x >= x_min) & (x <= x_max))[0]
-    y_indices = np.where((y >= y_min) & (y <= y_max))[0]
+    indices = np.where((coord_array >= coord_min) & (coord_array <= coord_max))[0]
 
-    ### Ensure indices are within data array bounds
-    x_indices = x_indices[x_indices < data.shape[1]]
-    y_indices = y_indices[y_indices < data.shape[0]]
+    ### Ensure indices are within array bounds
+    indices = indices[indices < len(coord_array)]
 
-    ### Crop data and coordinate arrays
-    cropped_data = data[np.ix_(y_indices, x_indices)]
-    cropped_x = x[x_indices]
-    cropped_y = y[y_indices]
+    ### Crop coordinate array
+    cropped_coords = coord_array[indices]
 
-    return cropped_x, cropped_y, cropped_data
+    ### Crop data along specified axis using advanced indexing
+    cropped_data = np.take(nd_data, indices, axis=axis)
+
+    return cropped_coords, cropped_data
 
 
 def add_custom_contour_lines(
@@ -968,4 +876,53 @@ def add_custom_contour_lines(
             fontsize=8,
             fmt="%.2f",
             levels=contour_plot.levels[::2],
+        )
+
+
+def add_text_box(ax, kwargs: dict, position: tuple = (0.98, 0.98), fontsize: int = 11):
+    """
+    Add a text box with additional parameters to a plot.
+
+    Parameters:
+        ax (matplotlib.axes.Axes): Axes object to add the text box to.
+        kwargs (dict): Dictionary of parameters to display in the text box.
+        position (tuple): Position of the text box in axis coordinates (default: top-right).
+        fontsize (int): Font size for the text box (default: 11).
+    """
+    if kwargs:
+        text_lines = []
+        for key, value in kwargs.items():
+            if isinstance(value, float):
+                text_lines.append(
+                    f"{key}: {value:.3g}"
+                )  # Format floats to 3 significant digits
+            elif isinstance(value, (int, str)):
+                text_lines.append(
+                    f"{key}: {value}"
+                )  # Add integers and strings directly
+            elif isinstance(value, np.ndarray):
+                text_lines.append(
+                    f"{key}: array(shape={value.shape})"
+                )  # Show shape for numpy arrays
+            else:
+                # Convert other types to string and escape LaTeX special characters
+                safe_str = (
+                    str(value)
+                    .replace("_", "\\_")
+                    .replace("^", "\\^")
+                    .replace("{", "\\{")
+                    .replace("}", "\\}")
+                )
+                text_lines.append(f"{key}: {safe_str}")
+
+        info_text = "\n".join(text_lines)
+        ax.text(
+            position[0],
+            position[1],
+            info_text,
+            transform=ax.transAxes,
+            fontsize=fontsize,
+            verticalalignment="top",
+            horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
         )

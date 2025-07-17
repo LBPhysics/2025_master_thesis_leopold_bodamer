@@ -23,8 +23,6 @@ from qspectro2d.config.paths import DATA_DIR
 # Type checking imports to avoid circular imports
 if TYPE_CHECKING:
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-
-# Handle both relative imports (when imported as module) and absolute imports (when run directly)
 from qspectro2d.utils.file_naming import generate_unique_data_filename
 
 
@@ -32,7 +30,7 @@ from qspectro2d.utils.file_naming import generate_unique_data_filename
 # DATA SAVING FUNCTIONS
 # =============================
 def save_data_file(
-    data_path: Path,
+    abs_data_path: Path,
     data: np.ndarray,
     axis1: np.ndarray,
     axis2: Optional[np.ndarray] = None,
@@ -41,24 +39,24 @@ def save_data_file(
     Save numpy data and axes to compressed .npz file.
 
     Args:
-        data_path: Absolute path for the numpy data file (.npz)
+        abs_data_path: Absolute path for the numpy data file (.npz)
         data: Simulation results (1D or 2D data)
         axis1: First axis (e.g., time or frequency for 1D or 2D data)
         axis2: Second axis (e.g., coherence time for 2D data)
     """
     try:
         if axis2 is not None:
-            np.savez_compressed(data_path, data=data, axis1=axis1, axis2=axis2)
+            np.savez_compressed(abs_data_path, data=data, axis1=axis1, axis2=axis2)
         else:
-            np.savez_compressed(data_path, data=data, axis1=axis1)
-        print(f"✅ Data saved successfully to: {data_path}")
+            np.savez_compressed(abs_data_path, data=data, axis1=axis1)
+        print(f"✅ Data saved successfully to: {abs_data_path}")
     except Exception as e:
         print(f"❌ ERROR: Failed to save data: {e}")
         raise
 
 
 def save_info_file(
-    info_path: Path,
+    abs_info_path: Path,
     system,  # AtomicSystem
     bath: BathSystem,
     laser: "LaserPulseSequence",
@@ -68,12 +66,12 @@ def save_info_file(
     Save system parameters and data configuration to pickle file.
 
     Args:
-        info_path: Absolute path for the info file (.pkl)
+        abs_info_path: Absolute path for the info file (.pkl)
         system: System parameters object
         info_config: Simulation configuration dictionary
     """
     try:
-        with open(info_path, "wb") as info_file:
+        with open(abs_info_path, "wb") as info_file:
             pickle.dump(
                 {
                     "system": system,
@@ -83,7 +81,7 @@ def save_info_file(
                 },
                 info_file,
             )
-        print(f"✅ Info saved successfully to: {info_path}")
+        print(f"✅ Info saved successfully to: {abs_info_path}")
     except Exception as e:
         print(f"❌ ERROR: Failed to save info: {e}")
         raise
@@ -110,31 +108,25 @@ def save_simulation_data(
         info_config (dict): Simulation configuration dictionary.
 
     Returns:
-        Path]: Relative path to DATA_DIR for the saved numpy data file and info file.
+        Path]: absolute path to DATA_DIR for the saved numpy data file and info file.
     """
     # =============================
     # Generate unique filenames
     # =============================
-    base_path = generate_unique_data_filename(system, info_config)
-    data_path = Path(f"{base_path}_data.npz")
-    info_path = Path(f"{base_path}_info.pkl")
+    abs_base_path = generate_unique_data_filename(system, info_config)
+    abs_data_path = Path(f"{abs_base_path}_data.npz")
+    abs_info_path = Path(f"{abs_base_path}_info.pkl")
 
     # =============================
     # Save files
     # =============================
-    save_data_file(data_path, data, axis1, axis2)
-    save_info_file(info_path, system, bath, laser, info_config)
+    save_data_file(abs_data_path, data, axis1, axis2)
+    save_info_file(abs_info_path, system, bath, laser, info_config)
 
     # =============================
-    # Return relative path to DATA_DIR
+    # Return absolute path to DATA_DIR
     # =============================
-    ### Remove both the suffix and the trailing '_data' from the filename for rel_path
-    rel_path = data_path.with_suffix("")
-    rel_path_str = str(rel_path)
-    if rel_path_str.endswith("_data"):
-        rel_path_str = rel_path_str[:-5]  # Remove '_data'
-    rel_path = Path(rel_path_str).relative_to(DATA_DIR)
-    return rel_path
+    return abs_data_path
 
 
 # =============================
@@ -202,27 +194,33 @@ def load_info_file(abs_info_path: Path) -> dict:
         raise
 
 
-def load_data_from_rel_path(relative_path: str) -> dict:
+def load_data_from_abs_path(abs_path: str) -> dict:
     """
     Load simulation data from specific data and info file paths.
 
     Args:
-        relative_path: Relative path to DATA_DIR for the numpy data file (.npz) and info file (.pkl)
+        abs_path: absolute path for the numpy data file (.npz) or info file (.pkl)
 
     Returns:
         dict: Dictionary containing loaded data, axes, system, and info_config
     """
-    # =============================
-    # Convert relative paths to absolute paths
-    # =============================
-    abs_data_path = DATA_DIR / (str(relative_path) + "_data.npz")
-    abs_info_path = DATA_DIR / (str(relative_path) + "_info.pkl")
+    ### Determine the base path (without file extensions)
+    if abs_path.endswith("_data.npz"):
+        base_path = abs_path[:-9]  # Remove '_data.npz'
+    elif abs_path.endswith("_info.pkl"):
+        base_path = abs_path[:-9]  # Remove '_info.pkl'
+    else:
+        base_path = abs_path
 
+    print(f"🔍 Loading data from: {base_path}")
     # =============================
     # Load files
     # =============================
-    data_dict = load_data_file(abs_data_path)
-    info_dict = load_info_file(abs_info_path)
+    ### Construct file paths
+    abs_data_path = base_path + "_data.npz"
+    abs_info_path = base_path + "_info.pkl"
+    data_dict = load_data_file(Path(abs_data_path))
+    info_dict = load_info_file(Path(abs_info_path))
 
     # =============================
     # Combine data and info into standardized structure
@@ -237,7 +235,6 @@ def load_data_from_rel_path(relative_path: str) -> dict:
         "laser": info_dict.get("laser"),
         "info_config": info_dict.get("info_config"),
     }
-
     # Add second axis if it exists (for 2D data)
     if "axis2" in data_dict:
         result["axes"]["axis2"] = data_dict["axis2"]
@@ -245,20 +242,18 @@ def load_data_from_rel_path(relative_path: str) -> dict:
     return result
 
 
-def load_latest_data_from_directory(base_dir: str) -> dict:
+def load_latest_data_from_directory(abs_base_dir: str) -> dict:
     """
     Find and load the most recent data file from a base directory and all subdirectories.
 
     Args:
-        base_dir: Base directory path relative to DATA_DIR (e.g., "1d_spectroscopy")
+        abs_base_dir: Base directory path
 
     Returns:
         dict: The loaded data dictionary from the most recent file
     """
     # =============================
-    # Convert to absolute path and validate
-    # =============================
-    abs_base_dir = DATA_DIR / base_dir
+    # validate path
 
     if not abs_base_dir.is_dir():
         abs_base_dir = abs_base_dir.parent
@@ -282,34 +277,29 @@ def load_latest_data_from_directory(base_dir: str) -> dict:
     latest_file = max(data_files, key=os.path.getmtime)
     latest_path = Path(latest_file)
 
-    # Convert to relative path string without _data.npz
-    rel_path = latest_path.relative_to(DATA_DIR)
-    rel_path_str = str(rel_path)
-    if rel_path_str.endswith("_data.npz"):
-        rel_path_str = rel_path_str[:-9]  # Remove '_data.npz'
-    print(f"📅 Loading latest file: {rel_path_str}")
+    # Convert to absolute path string without _data.npz
+    abs_path = latest_path
+    abs_path_str = str(abs_path)
+    if abs_path_str.endswith("_data.npz"):
+        abs_path_str = abs_path_str[:-9]  # Remove '_data.npz'
+    print(f"📅 Loading latest file: {abs_path_str}")
 
     # =============================
     # Load and return the data
     # =============================
-    return load_data_from_rel_path(rel_path_str)
+    return load_data_from_abs_path(abs_path_str)
 
 
-def list_available_data_files(base_dir: Path) -> Dict[str, dict]:
+def list_available_data_files(abs_base_dir: Path) -> Dict[str, dict]:
     """
     List all available data files in a directory with their metadata without loading the full data.
 
     Args:
-        base_dir: Base directory path relative to DATA_DIR
+        abs_base_dir: Base directory path absolute to DATA_DIR
 
     Returns:
         Dict[str, dict]: Dictionary with file paths as keys and metadata as values
     """
-    # =============================
-    # Convert to absolute path and validate
-    # =============================
-    abs_base_dir = DATA_DIR / base_dir
-    print(f"📋 Listing data files in: {abs_base_dir}")
     if not abs_base_dir.is_dir():
         print(f"⚠️  {abs_base_dir} is not a directory, checking parent directory.")
         abs_base_dir = abs_base_dir.parent
@@ -321,67 +311,45 @@ def list_available_data_files(base_dir: Path) -> Dict[str, dict]:
     # =============================
     # Find all data files recursively
     # =============================
+    print(f"📋 Listing data files in: {abs_base_dir}")
+
+    # =============================
+    # Find all data and info files recursively
+    # =============================
     data_pattern = str(abs_base_dir / "**" / "*_data.npz")
+    info_pattern = str(abs_base_dir / "**" / "*_info.pkl")
+
     data_files = glob.glob(data_pattern, recursive=True)
+    info_files = glob.glob(info_pattern, recursive=True)
 
-    if not data_files:
-        print(f"⚠️  No data files found in {abs_base_dir}")
-        return {}
+    ### Combine and sort all file paths
+    all_files = data_files + info_files
+    all_files.sort()
 
-    # =============================
-    # Collect metadata for each file
-    # =============================
-    file_info = {}
-
-    for data_file in data_files:
-        data_path = Path(data_file)
-        rel_data_path = data_path.relative_to(DATA_DIR)
-
-        # Get file statistics
-        stat = os.stat(data_path)
-
-        # Check for corresponding info file
-        info_file_name = data_path.name.replace("_data.npz", "_info.pkl")
-        info_path = data_path.parent / info_file_name
-        has_info_file = info_path.exists()
-
-        file_info[str(rel_data_path)] = {
-            "size_mb": stat.st_size / (1024 * 1024),  # Size in MB
-            "modified_time": datetime.fromtimestamp(stat.st_mtime),
-            "has_info_file": has_info_file,
-            "info_file_path": (
-                str(info_path.relative_to(DATA_DIR)) if has_info_file else None
-            ),
-        }
+    if not all_files:
+        print(f"⚠️  No data or info files found in {abs_base_dir}")
+        return []
 
     # =============================
     # Print summary
     # =============================
-    print(f"📊 Found {len(file_info)} data files:")
-    # for file_path, info in file_info.items():
-    #     status = "✅" if info["has_info_file"] else "❌"
-    #     print(
-    #         f"   {status} {file_path} ({info['size_mb']:.2f} MB, {info['modified_time'].strftime('%Y-%m-%d %H:%M')})"
-    #     )
+    print(f"📊 Found {len(all_files)} files:")
+    for file_path in all_files:
+        print(f"   📄 {file_path}")
 
-    return file_info
+    return all_files
 
 
-def list_data_files_in_directory(base_dir: Path) -> List[str]:
+def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
     """
-    List all data files in a specific directory (non-recursive) as relative paths.
+    List all data files in a specific directory (non-recursive) as absolute paths.
 
     Args:
-        base_dir: Base directory path relative to DATA_DIR
+        abs_base_dir: Base directory path absolute
 
     Returns:
-        List[str]: List of relative paths (without _data.npz suffix) for files in the same directory
+        List[str]: List of absolute paths (without _data.npz suffix) for files in the same directory
     """
-    # =============================
-    # Convert to absolute path and validate
-    # =============================
-    abs_base_dir = DATA_DIR / base_dir
-
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 
@@ -397,30 +365,28 @@ def list_data_files_in_directory(base_dir: Path) -> List[str]:
         return []
 
     # =============================
-    # Convert to relative paths and remove suffix
-    # =============================
-    rel_paths = []
+    # remove suffix
+    abs_paths = []
 
     for data_file in data_files:
-        rel_path = data_file.relative_to(DATA_DIR)
-        rel_path_str = str(rel_path)
+        abs_path = data_file
+        abs_path_str = str(abs_path)
 
         # Remove '_data.npz' suffix
-        if rel_path_str.endswith("_data.npz"):
-            rel_path_str = rel_path_str[:-9]
+        if abs_path_str.endswith("_data.npz"):
+            abs_path_str = abs_path_str[:-9]
 
-        rel_paths.append(rel_path_str)
+        abs_paths.append(abs_path_str)
 
     # =============================
     # Sort paths for consistent output
-    # =============================
-    rel_paths.sort()
+    abs_paths.sort()
 
-    print(f"📊 Found {len(rel_paths)} data files in directory")
-    for path in rel_paths:
+    print(f"📊 Found {len(abs_paths)} data files in directory")
+    for path in abs_paths:
         print(f"   📄 {path}")
 
-    return rel_paths
+    return abs_paths
 
 
 # =============================

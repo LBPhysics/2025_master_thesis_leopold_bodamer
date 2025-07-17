@@ -11,6 +11,7 @@ parallel processing configuration, and reporting.
 import os
 import psutil
 import numpy as np
+from pathlib import Path
 
 from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.core.simulation_class import (
@@ -156,7 +157,7 @@ def create_base_sim_oqs(
     ### Validate solver once at the beginning
     time_cut = -np.inf
     t_max = sim_oqs.simulation_config.t_max
-    print("🔍 Validating solver with dummy t_coh=0...")
+    print("🔍 Validating solver...")
     try:
         # Import here to avoid circular import
         from qspectro2d.spectroscopy.calculations import check_the_solver
@@ -196,7 +197,7 @@ def get_max_workers() -> int:
 
 
 def print_simulation_summary(
-    elapsed_time: float, result_data, rel_path: str, simulation_type: str
+    elapsed_time: float, result_data, abs_path: str, simulation_type: str
 ):
     """Print simulation completion summary."""
     print("\n" + "=" * 60)
@@ -208,4 +209,5 @@ def print_simulation_summary(
         print(f"{result_data.shape}")
     elif simulation_type == "2d":
         print(f"{result_data[0].shape}")
-    print(f"was saved to: {rel_path}")
+    parent_dir = Path(abs_path).parent
+    print(f"was saved to: {parent_dir}")

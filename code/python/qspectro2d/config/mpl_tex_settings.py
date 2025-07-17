@@ -397,13 +397,13 @@ def save_fig(
             transparent=transparent,
         )
 
-    # Print the path relative to FIGURES_PYTHON_DIR
+    # Print the absolute path
     try:
-        rel_path = os.path.relpath(filename, FIGURES_PYTHON_DIR)
+        abs_path = os.path.abspath(filename)
     except Exception:
-        rel_path = filename
+        abs_path = filename
     print(
-        f"Figure saved as: {rel_path} ({', '.join(formats)})",
+        f"Figure saved as: {abs_path}.{', '.join(formats)}",
         flush=True,
     )
 
