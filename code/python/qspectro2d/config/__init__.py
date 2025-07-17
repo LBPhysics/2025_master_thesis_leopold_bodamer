@@ -71,6 +71,10 @@ from .default_simulation_params import (
     TRACE_TOLERANCE,
     PHASE_CYCLING_PHASES,
     DETECTION_PHASE,
+    # 2d simulation defaults
+    T_DET_MAX,
+    DT,
+    BATCHES,
     # Supported options
     SUPPORTED_SOLVERS,
     SUPPORTED_BATHS,
@@ -138,6 +142,10 @@ __all__ = [
     "TRACE_TOLERANCE",
     "PHASE_CYCLING_PHASES",
     "DETECTION_PHASE",
+    # 2d simulation defaults
+    "T_DET_MAX",
+    "DT",
+    "BATCHES",
     # supported options
     "SUPPORTED_SOLVERS",
     "SUPPORTED_BATHS",
