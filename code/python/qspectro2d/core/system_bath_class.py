@@ -55,7 +55,7 @@ class SystemBathCoupling:
             "s": 1.0,  # ohmic spectrum
         }
 
-    def _coupling_paper(self, gamma, i: int = 0):
+    def _coupling_paper(self, gamma: float, i: int = 0):
         """This is the coupling constant for the spectral density function in the paper
         i elem (0, ..., n_atoms - 1)"""
         w_th = BOLTZMANN * self.bath.temp / HBAR
@@ -70,7 +70,7 @@ class SystemBathCoupling:
 
         return alpha
 
-    def _coupling_ohmic(self, gamma, i: int = 0):
+    def _coupling_ohmic(self, gamma: float, i: int = 0):
         """This is the coupling constant for the spectral density function in the ohmic case
         i elem (0, ..., n_atoms - 1)"""
         w_th = BOLTZMANN * self.bath.temp / HBAR
@@ -133,12 +133,10 @@ class SystemBathCoupling:
                     deph_i,
                     ConstantSpectrum(dephasing_rate),  # TODO is this correct?
                 ],
-                [
-                    dip_op,
-                    ConstantSpectrum(
-                        relaxation_rate
-                    ),  # partial(self.bath.power_spectrum_func, args=args_decay),
-                ],
+                # [
+                #    dip_op,
+                #    partial(self.bath.power_spectrum_func, args=args_decay),
+                # ],
             ]
 
         elif n_atoms == 2:  # TODO REDO this to implement the appendix C
@@ -204,22 +202,16 @@ class SystemBathCoupling:
         dephasing_rate = self.bath.Gamma
         relaxation_rate = self.bath.gamma_0
 
-        # w_th = BOLTZMANN * self.bath.temp / HBAR
+        w_th = BOLTZMANN * self.bath.temp / HBAR
 
         n_atoms = sys.n_atoms
         sm_op = sys.sm_op
 
         if n_atoms == 1:  # TODO currently no thermal effects
-            # n_th_at = n_thermal(
-            #    sys.freqs_fs(0), w_th)
+            n_th_at = n_thermal(sys.freqs_fs(0), w_th)
             i = 0  # only one transition frequency for single atom
             deph_op_i = sys.deph_op_i(i)  # dephasing operator for single atom
             me_decay_channels_ = [
-                # sm_op.dag() * np.sqrt(relaxation_rate * n_th_at),  # Collapse operator for thermal excitation
-                sm_op
-                * np.sqrt(
-                    relaxation_rate
-                ),  #  * (n_th_at + 1)) # Collapse operator for thermal relaxation
                 deph_op_i
                 * np.sqrt(
                     2
@@ -258,7 +250,10 @@ class SystemBathCoupling:
 
         w_ij = self.system.omega_ij(i, j)
         return np.sin(2 * self.system.theta) ** 2 * power_spectrum_func_paper(
-            w_ij, self.args_bath()
+            w_ij,
+            self.args_bath(
+                alpha=self.bath.gamma_0, i=0
+            ),  # TODO implement the real case
         )
 
     def Gamma_big_ij(self, i: int, j: int) -> float:
