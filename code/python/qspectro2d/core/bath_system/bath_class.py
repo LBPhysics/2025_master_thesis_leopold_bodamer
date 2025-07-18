@@ -58,9 +58,10 @@ class BathSystem:
         return {
             "alpha": alpha,
             "cutoff": self.cutoff_ * OMEGA,
+            "temp": self.temp,
+            # not changed
             "Boltzmann": BOLTZMANN,
             "hbar": HBAR,
-            "temp": self.temp,
             "s": 1.0,  # ohmic spectrum
         }
 

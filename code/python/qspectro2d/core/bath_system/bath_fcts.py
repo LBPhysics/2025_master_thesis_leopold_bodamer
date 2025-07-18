@@ -163,4 +163,4 @@ def power_spectrum_func_paper(w, args):
     # Return scalar if input was scalar
     if np.isscalar(w_input):
         return float(result)
-    return 2 * result
+    return result
