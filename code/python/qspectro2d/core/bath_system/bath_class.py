@@ -27,9 +27,13 @@ class BathSystem:
     # Temperature / cutoff of the bath
     temp: float = 1e-5  # zero temperature
     cutoff_: float = 1e2  # later * atomic frequencie(s)
-    # decay  rates
+    # decay  rates / coupling constants should go into sb_coupling? TODO
     gamma_0: Optional[float] = 1 / 300.0
     gamma_phi: Optional[float] = 1 / 100.0
+
+    @property
+    def Gamma(self):
+        return self.gamma_0 / 2 + self.gamma_phi
 
     def _args_bath(
         self, alpha: Optional[float] = None
@@ -109,10 +113,6 @@ class BathSystem:
             raise ValueError(
                 f"Unknown bath type: {self.bath}. Valid types are 'paper', 'ohmic', 'dl'."
             )
-
-    @property
-    def Gamma(self):
-        return self.gamma_0 / 2 + self.gamma_phi
 
     def summary(self):
         """

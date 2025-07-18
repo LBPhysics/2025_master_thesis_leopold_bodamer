@@ -129,13 +129,15 @@ class SystemBathCoupling:
             deph_i = sys.deph_op_i(i)  # dephasing operator for single atom
             dip_op = sys.dip_op
             br_decay_channels_ += [
-                # [
-                #    deph_i,
-                #    ConstantSpectrum(dephasing_rate),  # TODO is this correct?
-                # ],
+                [
+                    deph_i,
+                    ConstantSpectrum(dephasing_rate),  # TODO is this correct?
+                ],
                 [
                     dip_op,
-                    partial(self.bath.power_spectrum_func, args=args_decay),
+                    ConstantSpectrum(
+                        relaxation_rate
+                    ),  # partial(self.bath.power_spectrum_func, args=args_decay),
                 ],
             ]
 
