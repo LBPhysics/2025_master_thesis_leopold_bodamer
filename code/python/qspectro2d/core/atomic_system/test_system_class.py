@@ -23,7 +23,7 @@ class TestAtomicSystemInitialization:
         assert system.n_atoms == 1
         assert system.freqs_cm == [16000.0]
         assert system.dip_moments == [1.0]
-        assert system.J_cm is None
+        assert system.at_coupling_cm is None
         assert system.delta_cm is None
         assert system.psi_ini is not None
 
@@ -41,13 +41,13 @@ class TestAtomicSystemInitialization:
         assert system.n_atoms == 2
         assert system.freqs_cm == [16000.0, 15640.0]
         assert system.dip_moments == [1.0, 1.2]
-        assert system.J_cm == 0.0  # Default coupling
+        assert system.at_coupling_cm == 0.0  # Default coupling
 
         print("✓ Two atom initialization successful")
         print(f"  - n_atoms: {system.n_atoms}")
         print(f"  - freqs_cm: {system.freqs_cm}")
         print(f"  - dip_moments: {system.dip_moments}")
-        print(f"  - J_cm: {system.J_cm}")
+        print(f"  - at_coupling_cm: {system.at_coupling_cm}")
 
     def test_single_frequency_expansion(self):
         """Test automatic expansion of single frequency to multiple atoms."""
@@ -128,7 +128,7 @@ class TestAtomicSystemProperties:
         """Test frequency conversion from cm^-1 to fs^-1."""
         system = AtomicSystem(n_atoms=1, freqs_cm=[16000.0])
 
-        freq_fs = system.freqs_fs(0)
+        freq_fs = system.at_freqs_fs(0)
         expected_freq_fs = convert_cm_to_fs(16000.0)
 
         assert np.isclose(freq_fs, expected_freq_fs)
@@ -160,7 +160,9 @@ class TestAtomicSystemProperties:
 
     def test_hamiltonian_two_atoms(self):
         """Test Hamiltonian generation for two atoms."""
-        system = AtomicSystem(n_atoms=2, freqs_cm=[16000.0, 15800.0], J_cm=100.0)
+        system = AtomicSystem(
+            n_atoms=2, freqs_cm=[16000.0, 15800.0], at_coupling_cm=100.0
+        )
 
         H = system.H0_N_canonical
 
@@ -274,26 +276,35 @@ class TestAtomicSystemSerialization:
             n_atoms=2,
             freqs_cm=[16000.0, 15800.0],
             dip_moments=[1.0, 1.2],
-            J_cm=50.0,
+            at_coupling_cm=50.0,
             delta_cm=10.0,
         )
 
         data = system.to_dict()
 
-        expected_keys = {"n_atoms", "freqs_cm", "dip_moments", "J_cm", "delta_cm"}
+        expected_keys = {
+            "n_atoms",
+            "freqs_cm",
+            "dip_moments",
+            "at_coupling_cm",
+            "delta_cm",
+        }
         assert set(data.keys()) == expected_keys
-        assert data["J_cm"] == 50.0
+        assert data["at_coupling_cm"] == 50.0
         assert data["delta_cm"] == 10.0
 
         print("✓ Two atom dictionary serialization with coupling successful")
         print(f"  - Keys: {list(data.keys())}")
-        print(f"  - J_cm: {data['J_cm']}")
+        print(f"  - at_coupling_cm: {data['at_coupling_cm']}")
         print(f"  - delta_cm: {data['delta_cm']}")
 
     def test_json_serialization_roundtrip(self):
         """Test JSON serialization and deserialization roundtrip."""
         original_system = AtomicSystem(
-            n_atoms=2, freqs_cm=[16000.0, 15800.0], dip_moments=[1.0, 1.2], J_cm=100.0
+            n_atoms=2,
+            freqs_cm=[16000.0, 15800.0],
+            dip_moments=[1.0, 1.2],
+            at_coupling_cm=100.0,
         )
 
         # Serialize to JSON
@@ -306,7 +317,7 @@ class TestAtomicSystemSerialization:
         assert reconstructed_system.n_atoms == original_system.n_atoms
         assert reconstructed_system.freqs_cm == original_system.freqs_cm
         assert reconstructed_system.dip_moments == original_system.dip_moments
-        assert reconstructed_system.J_cm == original_system.J_cm
+        assert reconstructed_system.at_coupling_cm == original_system.at_coupling_cm
 
         print("✓ JSON serialization roundtrip successful")
         print(f"  - Original n_atoms: {original_system.n_atoms}")
@@ -319,7 +330,7 @@ class TestAtomicSystemSerialization:
             "n_atoms": 2,
             "freqs_cm": [16000.0, 15800.0],
             "dip_moments": [1.0, 1.2],
-            "J_cm": 75.0,
+            "at_coupling_cm": 75.0,
         }
 
         system = AtomicSystem.from_dict(data)
@@ -327,7 +338,7 @@ class TestAtomicSystemSerialization:
         assert system.n_atoms == 2
         assert system.freqs_cm == [16000.0, 15800.0]
         assert system.dip_moments == [1.0, 1.2]
-        assert system.J_cm == 75.0
+        assert system.at_coupling_cm == 75.0
 
         print("✓ Dictionary reconstruction successful")
         print(f"  - Reconstructed system: n_atoms={system.n_atoms}")
@@ -365,7 +376,9 @@ class TestAtomicSystemEdgeCases:
 
     def test_theta_calculation_two_atoms(self):
         """Test theta parameter calculation for two atoms."""
-        system = AtomicSystem(n_atoms=2, freqs_cm=[16000.0, 15800.0], J_cm=100.0)
+        system = AtomicSystem(
+            n_atoms=2, freqs_cm=[16000.0, 15800.0], at_coupling_cm=100.0
+        )
 
         theta = system.theta
 
@@ -379,7 +392,10 @@ class TestAtomicSystemEdgeCases:
 def test_summary_method():
     """Test the summary method produces reasonable output."""
     system = AtomicSystem(
-        n_atoms=2, freqs_cm=[16000.0, 15800.0], dip_moments=[1.0, 1.2], J_cm=50.0
+        n_atoms=2,
+        freqs_cm=[16000.0, 15800.0],
+        dip_moments=[1.0, 1.2],
+        at_coupling_cm=50.0,
     )
 
     # Capture summary output

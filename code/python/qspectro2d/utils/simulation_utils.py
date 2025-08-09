@@ -12,14 +12,10 @@ import os
 import psutil
 import numpy as np
 from pathlib import Path
-
-from qspectro2d.core.bath_system.bath_class import BathSystem
-from qspectro2d.core.simulation_class import (
-    AtomicSystem,
-    LaserPulseSequence,
-    SimulationConfig,
-    SimulationModuleOQS,
-)
+from qutip import OhmicEnvironment
+from qspectro2d.core.atomic_system.system_class import AtomicSystem
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
 
 
 # =============================
@@ -45,7 +41,14 @@ def create_simulation_module_from_configs(
     """
     system = AtomicSystem.from_dict(atom_config)
     laser = LaserPulseSequence.from_delays(**laser_config)
-    bath = BathSystem.from_dict(bath_config)
+    # for now only use the ohmic case: LATER EXTEND TODO
+    bath = OhmicEnvironment(
+        T=bath_config["Temp"],
+        alpha=bath_config["alpha"],
+        wc=bath_config["cutoff"],
+        s=1.0,
+        tag=bath_config["bath_type"],
+    )
 
     return SimulationModuleOQS(
         simulation_config=SimulationConfig(**simulation_config),
@@ -75,8 +78,7 @@ def create_base_sim_oqs(
         BATH_TYPE,
         BATH_TEMP,
         BATH_CUTOFF,
-        BATH_GAMMA_0,
-        BATH_GAMMA_PHI,
+        BATH_COUPLING,
         N_FREQS,
         N_PHASES,
         DELTA_CM,
@@ -88,19 +90,19 @@ def create_base_sim_oqs(
         CARRIER_FREQ_CM,
         DIP_MOMENTS,
         FREQS_CM,
-        J_COUPLING_CM,
+        AT_COUPLING_CM,
     )
 
     print("🔧 Creating base simulation configuration...")
 
     atomic_config = {
         "n_atoms": N_ATOMS,
-        "freqs_cm": FREQS_CM,  # Frequency of atom A [cm⁻¹]
+        "at_freqs_cm": FREQS_CM,  # Frequency of atom A [cm⁻¹]
         "dip_moments": DIP_MOMENTS,  # Dipole moments for each atom
         "delta_cm": DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
     }
     if N_ATOMS >= 2:
-        atomic_config["J_cm"] = J_COUPLING_CM
+        atomic_config["at_coupling_cm"] = AT_COUPLING_CM
 
     # Use dummy t_coh=0 for initial setup and solver check
     pulse_config = {
@@ -139,9 +141,8 @@ def create_base_sim_oqs(
         ### Bath parameters
         "bath_type": BATH_TYPE,
         "Temp": BATH_TEMP,  # zero temperature
-        "cutoff_": BATH_CUTOFF,
-        "gamma_0": BATH_GAMMA_0,
-        "gamma_phi": BATH_GAMMA_PHI,
+        "cutoff": BATH_CUTOFF,  # cutoff frequency in cm⁻¹
+        "alpha": BATH_COUPLING,
     }
 
     # Create the simulation class instance

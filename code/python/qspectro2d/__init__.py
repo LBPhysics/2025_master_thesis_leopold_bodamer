@@ -11,7 +11,7 @@ with quantum mechanical models. This package provides tools for:
 - Configuration management and file I/O utilities
 
 Main subpackages:
-- core: Fundamental simulation components (AtomicSystem, LaserPulseSequence, BathSystem, solvers)
+- core: Fundamental simulation components (AtomicSystem, LaserPulseSequence, solvers)
 - spectroscopy: 1D/2D spectroscopy calculations and post-processing
 - visualization: Plotting and data visualization tools
 - data: File I/O and data management utilities
@@ -23,15 +23,20 @@ __author__ = "Leopold"
 __email__ = ""
 
 # =============================
-# CORE FUNCTIONALITY
+# LAZY CORE IMPORTS (avoid circular import during package init)
 # =============================
-# Import the most essential classes that users will need
-try:
-    from .core import AtomicSystem, LaserPulse, LaserPulseSequence, BathSystem
-    from .core import E_pulse, pulse_envelope
-    from .core import matrix_ODE_paper
-except ImportError as e:
-    print(f"Warning: Could not import core module: {e}")
+def __getattr__(name):  # PEP 562 lazy attribute loading
+    if name in {"AtomicSystem", "LaserPulse", "LaserPulseSequence", "E_pulse", "pulse_envelope", "matrix_ODE_paper"}:
+        from .core import (
+            AtomicSystem,
+            LaserPulse,
+            LaserPulseSequence,
+            E_pulse,
+            pulse_envelope,
+            matrix_ODE_paper,
+        )
+        return globals()[name]
+    raise AttributeError(name)
 
 # =============================
 # BATH MODELS
@@ -103,7 +108,6 @@ except ImportError as e:
 __all__ = [
     # Core classes - most important for users
     "AtomicSystem",
-    "BathSystem",
     "LaserPulse",
     "LaserPulseSequence",
     # Essential functions

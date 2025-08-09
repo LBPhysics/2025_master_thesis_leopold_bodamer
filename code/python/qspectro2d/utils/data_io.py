@@ -14,15 +14,15 @@ import os
 import glob
 from pathlib import Path
 from typing import Dict, Optional, List, TYPE_CHECKING
-from datetime import datetime
 
 ### Project-specific imports
-from qspectro2d.core.bath_system.bath_class import BathSystem
 from qspectro2d.config.paths import DATA_DIR
 
 # Type checking imports to avoid circular imports
 if TYPE_CHECKING:
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+from qutip import BosonicEnvironment
+from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d.utils.file_naming import generate_unique_data_filename
 
 
@@ -57,8 +57,8 @@ def save_data_file(
 
 def save_info_file(
     abs_info_path: Path,
-    system,  # AtomicSystem
-    bath: BathSystem,
+    system,  # "AtomicSystem"
+    bath: BosonicEnvironment,
     laser: "LaserPulseSequence",
     info_config: dict,
 ) -> None:
@@ -68,6 +68,8 @@ def save_info_file(
     Args:
         abs_info_path: Absolute path for the info file (.pkl)
         system: System parameters object
+        bath: QuTip Environment instance
+        laser: Laser pulse sequence object
         info_config: Simulation configuration dictionary
     """
     try:
@@ -88,9 +90,9 @@ def save_info_file(
 
 
 def save_simulation_data(
-    system,  # AtomicSystem
+    system,  # "AtomicSystem"
     info_config: dict,
-    bath: BathSystem,
+    bath: BosonicEnvironment,
     laser: "LaserPulseSequence",
     data: np.ndarray,
     axis1: np.ndarray,

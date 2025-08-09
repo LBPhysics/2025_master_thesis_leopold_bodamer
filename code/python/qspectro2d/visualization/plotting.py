@@ -23,7 +23,7 @@ def plot_pulse_envelope(
         tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the combined envelope over time
-    envelope = [pulse_envelope(t, pulse_seq) for t in times]
+    envelope = pulse_envelope(times, pulse_seq)
 
     # Create figure and axis if not provided
     fig = None

@@ -38,12 +38,32 @@ class LaserPulse:
             self.pulse_freq = convert_cm_to_fs(self.pulse_freq)
             self._freq_converted = True
 
+        # Precompute envelope invariants (cached) for performance.
+        # For gaussian we use the extended active_time_range (≈1% cutoff at n_fwhm=1.094)
+        # For cos2 (and other compact-support envelopes) we keep the strict ±FWHM range.
+        if self.envelope_type == "gaussian":
+            # Use extended active window (≈1% cutoff) defined by active_time_range (± n_fwhm * FWHM)
+            self._t_start, self._t_end = (
+                self.active_time_range
+            )  # uses default n_fwhm (1.094)
+            self._sigma = self.pulse_fwhm / (2 * np.sqrt(2 * np.log(2)))
+            # Baseline value chosen at EXTENDED window edge (edge_span), not at FWHM, so
+            # envelope retains smooth tails between ±FWHM and ±edge_span.
+            edge_span = self._t_end - self.pulse_peak_time
+            self._boundary_val = np.exp(-(edge_span**2) / (2 * self._sigma**2))
+        else:
+            self._t_start = self.pulse_peak_time - self.pulse_fwhm
+            self._t_end = self.pulse_peak_time + self.pulse_fwhm
+            self._sigma = None
+            self._boundary_val = None
+
     @property
     def omega_laser(self) -> float:
         return self.pulse_freq
 
     @property
     def active_time_range(self, n_fwhm: float = 1.094) -> Tuple[float, float]:
+        """n_fwhm = 1.094-> here the gaussia-pulse is ~1% of max (like in the paper)"""
         duration = n_fwhm * self.pulse_fwhm
         return (self.pulse_peak_time - duration, self.pulse_peak_time + duration)
 
@@ -223,7 +243,7 @@ class LaserPulseSequence:
 
         return LaserPulseSequence(pulses=pulses)
 
-    def get_active_pulses_at_time(self, time: float) -> List[Tuple[int, LaserPulse]]:
+    def get_active_pulses_at_time(self, time: float) -> List[LaserPulse]:
         """
         Get all pulses that are active at a given time.
 
@@ -231,8 +251,7 @@ class LaserPulseSequence:
             time (float): The time at which to check for active pulses
 
         Returns:
-            List[Tuple[int, LaserPulse]]: List of (pulse_index, pulse) tuples for pulses
-                                   that are active at the given time
+            List[LaserPulse]: List of pulses that are active at the given time
         """
         active_pulses = []
 
@@ -345,7 +364,7 @@ class LaserPulseSequence:
         return {
             "pulses": [p.to_dict() for p in self.pulses],
             "E0": self.E0,  # TODO only if i do the initialization with from_delays (for my experiment!)
-            "carrier_frequency": self.omega_laser,
+            "omega_laser": self.omega_laser,  # carrier frequency
         }
 
     @staticmethod

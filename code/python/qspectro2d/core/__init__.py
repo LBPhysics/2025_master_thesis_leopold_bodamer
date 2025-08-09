@@ -15,27 +15,29 @@ with various bath models and pulse configurations.
 # =============================
 # SYSTEM PARAMETERS
 # =============================
-from .atomic_system.system_class import AtomicSystem
+from .atomic_system import AtomicSystem
 
 # =============================
 # BATH SYSTEMS
 # =============================
-from .bath_system.bath_class import BathSystem
+from .bath_system import (
+    spectral_density_func_drude_lorentz,
+    spectral_density_func_ohmic,
+    spectral_density_func_paper,
+    power_spectrum_func_drude_lorentz,
+    power_spectrum_func_ohmic,
+    power_spectrum_func_paper,
+)
 
 # =============================
 # PULSE DEFINITIONS AND SEQUENCES
 # =============================
-from .laser_system.laser_class import (
+from .laser_system import (
     LaserPulse,
     LaserPulseSequence,
     identify_non_zero_pulse_regions,
     split_by_active_regions,
-)
-
-# =============================
-# PULSE FIELD FUNCTIONS
-# =============================
-from .laser_system.laser_fcts import (
+    # PULSE FIELD FUNCTIONS
     pulse_envelope,
     E_pulse,
     Epsilon_pulse,
@@ -45,10 +47,9 @@ from .laser_system.laser_fcts import (
 # =============================
 # WHOLE MODULE CLASS AND specific Paper SOLVER FUNCTIONS
 # =============================
-from .simulation_class import (
+from .simulation import (
     SimulationModuleOQS,
     SimulationConfig,
-    SimulationModuleOQS,
     matrix_ODE_paper,
     R_paper,
 )
@@ -63,7 +64,12 @@ __all__ = [
     "LaserPulse",
     "LaserPulseSequence",
     # Environment system
-    "BathSystem",
+    "spectral_density_func_drude_lorentz",
+    "spectral_density_func_ohmic",
+    "spectral_density_func_paper",
+    "power_spectrum_func_drude_lorentz",
+    "power_spectrum_func_ohmic",
+    "power_spectrum_func_paper",
     # Simulation module and configuration
     "SimulationModuleOQS",
     "SimulationConfig",

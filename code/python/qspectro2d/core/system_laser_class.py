@@ -15,11 +15,11 @@ class SystemLaserCoupling:
     # DERIVED QUANTITIES FROM SYSTEM / LASER PARAMETERS
     def rabi_0(self, i: int = 0):
         """Calculate the Rabi frequency for the i-th transition. [fs⁻¹]"""
-        return self.system.freqs_fs(i) * self.laser.E0 / HBAR
+        return self.system.dip_moments[i] * self.laser.E0 / HBAR
 
     def delta_rabi(self, i: int = 0):
         """Calculate the detuning for the i-th transition. [fs⁻¹]"""
-        return self.laser.omega_laser - self.system.freqs_fs(i)
+        return self.laser.omega_laser - self.system.at_freqs_fs(i)
 
     def rabi_gen(self, i: int = 0):
         """Calculate the generalized Rabi frequency for the i-th transition. [fs⁻¹]"""
@@ -29,27 +29,19 @@ class SystemLaserCoupling:
         """Calculate the period of the Rabi oscillation. (for TLS: one full cycle between |g> and |e>)"""
         return 2 * np.pi / self.rabi_gen(i) if self.rabi_gen(i) != 0 else 0.0
 
-    def summary(self):
-        print("=== SystemLaserCoupling Summary ===")
-
-        # Initialize lists to store values for plotting
-        rabi_0_values = []
-        delta_rabi_values = []
-        rabi_gen_values = []
-        t_prd_values = []
-
-        # Iterate over all atoms
-        for i in range(self.system.n_atoms):
-            rabi_0_values.append(self.rabi_0(i))
-            delta_rabi_values.append(self.delta_rabi(i))
-            rabi_gen_values.append(self.rabi_gen(i))
-            t_prd_values.append(self.t_prd(i))
-
-        # Print all values
-        print("Rabi Frequencies (0th order):", rabi_0_values)
-        print("Detunings (Delta Rabi):", delta_rabi_values)
-        print("Rabi Frequencies (Generalized):", rabi_gen_values)
-        print("Periods (T_prd):", t_prd_values)
+    def summary(self) -> str:
+        rabi_0_values = [self.rabi_0(i) for i in range(self.system.n_atoms)]
+        delta_rabi_values = [self.delta_rabi(i) for i in range(self.system.n_atoms)]
+        rabi_gen_values = [self.rabi_gen(i) for i in range(self.system.n_atoms)]
+        t_prd_values = [self.t_prd(i) for i in range(self.system.n_atoms)]
+        lines = [
+            "=== SystemLaserCoupling Summary ===",
+            f"Rabi Frequencies (0th order): {rabi_0_values}",
+            f"Detunings (Delta Rabi): {delta_rabi_values}",
+            f"Rabi Frequencies (Generalized): {rabi_gen_values}",
+            f"Periods (T_prd): {t_prd_values}",
+        ]
+        return "\n".join(lines)
 
     # SERIALIZATION METHODS
     def to_dict(self):
@@ -81,7 +73,7 @@ if __name__ == "__main__":
 
     # Create mock AtomicSystem and LaserPulseSequence objects
     mock_atomic_system = AtomicSystem(
-        n_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+        n_atoms=2, at_freqs_cm_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
     )
     seq = LaserPulseSequence.from_delays(
         delays=[100.0, 300.0],

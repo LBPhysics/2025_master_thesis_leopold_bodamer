@@ -14,7 +14,7 @@ from qutip.core import QobjEvo
 # =============================
 # LOCAL IMPORTS
 # =============================
-from qspectro2d.core.simulation_class import SimulationModuleOQS
+from qspectro2d.core.simulation import SimulationModuleOQS
 from qspectro2d.core.laser_system.laser_class import (
     LaserPulseSequence,
     identify_non_zero_pulse_regions,
@@ -95,9 +95,9 @@ def compute_pulse_evolution(
         start_idx = np.abs(actual_times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
         if has_pulse:
-            evo_obj = sim_oqs.Evo_obj_int
+            evo_obj = sim_oqs.evo_obj_int
         else:
-            evo_obj = sim_oqs.Evo_obj_free
+            evo_obj = sim_oqs.evo_obj_free
         # Execute evolution for this time segment
         result = _execute_single_evolution_segment(
             sim_oqs.simulation_config.ode_solver,

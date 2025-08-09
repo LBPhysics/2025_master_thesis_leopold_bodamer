@@ -43,7 +43,7 @@ from qspectro2d.utils import (
     print_simulation_summary,
 )
 from qspectro2d.utils.simulation_utils import create_base_sim_oqs
-from qspectro2d.core.simulation_class import SimulationModuleOQS
+from qspectro2d.core.simulation import SimulationModuleOQS
 
 
 def run_single_t_coh_with_sim(
@@ -253,7 +253,7 @@ Examples:
     parser.add_argument(
         "--dt",
         type=float,
-        default=10.0,
+        default=2.0,
         help="Spacing between t_coh and t_det values (default: 10.0 fs)",
     )
 

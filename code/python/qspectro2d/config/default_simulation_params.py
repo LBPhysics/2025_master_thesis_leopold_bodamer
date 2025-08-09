@@ -9,11 +9,53 @@ and reduces code duplication.
 import numpy as np
 
 
+def convert_cm_to_fs(value):
+    """
+    local version from qspectro2d.utils.units_and_rwa import convert_cm_to_fs
+    """
+    return value * 2.998 * 2 * np.pi * 10**-5
+
+
+# =============================
+# fixed constants: don't change!
+# =============================
+
+# === signal processing / phase cycling ===
+PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
+DETECTION_PHASE = 0  # Fixed phase for detection pulse
+# (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal(phase cycling)
+IFT_COMPONENT = (
+    1,
+    -1,
+    1,  # does not matter because DETECTION_PHASE = 0
+)
+# last pulse is 10% of the first two to ensure probing character
+RELATIVE_E0S = [1.0, 1.0, 0.1]
+
+
+# =============================
+# solver defaults  # very rough estimate, not optimized
+# =============================
+SOLVER_OPTIONS = {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
+
+# Validation thresholds for physics checks
+NEGATIVE_EIGVAL_THRESHOLD = -1e-3
+TRACE_TOLERANCE = 1e-6
+
+# physical constants
+HBAR = 1.0
+BOLTZMANN = 1.0
+
+# supported solvers and bath models
+SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
+SUPPORTED_BATHS = ["ohmic"]  # , "dl"
+
+
 # === ATOMIC SYSTEM DEFAULTS ===
 N_ATOMS = 1
 FREQS_CM = [16000.0]  # Number of frequency components in the system
 DIP_MOMENTS = [1.0]  # Dipole moments for each atom
-J_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
+AT_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 
 # === LASER SYSTEM DEFAULTS ===
@@ -30,68 +72,17 @@ N_PHASES = 4  # Number of phase cycles for the simulation
 
 
 # === BATH SYSTEM DEFAULTS ===
-BATH_TYPE = "paper"
-BATH_TEMP = 1e-5
-BATH_CUTOFF = 1e2
-BATH_GAMMA_0 = 1 / 300.0
-BATH_GAMMA_PHI = 1 / 100.0
+at_freqs_fs = [convert_cm_to_fs(freq_cm) for freq_cm in FREQS_CM]
+BATH_TYPE = "ohmic"  # TODO at the moment only ohmic baths are supported
+BATH_CUTOFF = 1e2 * at_freqs_fs[0]  # Cutoff frequency in cm⁻¹
+BATH_TEMP = 1e0 * at_freqs_fs[0] / BOLTZMANN
+BATH_COUPLING = 1e-4 * at_freqs_fs[0]
 
 
 # === 2D SIMULATION DEFAULTS ===
 BATCHES = 10  # You can increase/decrease this
 T_DET_MAX = 200.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
-
-# =============================
-# STUFF THAT IS NORMALLY UNCHANGED
-# =============================
-
-# === SIGNAL PROCESSING DEFAULTS ===
-# Phase cycling parameters
-PHASE_CYCLING_PHASES = [
-    0,
-    np.pi / 2,
-    np.pi,
-    3 * np.pi / 2,
-]  # [0, π/2, π, 3π/2]
-DETECTION_PHASE = 0  # Fixed phase for detection pulse
-
-
-# (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal(phase cycling)
-IFT_COMPONENT = (
-    1,
-    -1,
-    1,  # does not matter because DETECTION_PHASE = 0
-)
-
-RELATIVE_E0S = [1.0, 1.0, 0.1]  # relative amplitudes for each pulse
-
-
-# =============================
-# SOLVER DEFAULTS
-# =============================
-SOLVER_OPTIONS = {  # very rough estimate, not optimized
-    "nsteps": 200000,
-    "atol": 1e-6,
-    "rtol": 1e-4,
-}
-
-# Validation thresholds for physics checks
-NEGATIVE_EIGVAL_THRESHOLD = -1e-3
-TRACE_TOLERANCE = 1e-6
-
-# =============================
-# FUNDAMENTAL CONSTANTS
-# =============================
-HBAR = 1.0
-BOLTZMANN = 1.0
-
-
-# =============================
-# SUPPORTED OPTIONS
-# =============================
-SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
-SUPPORTED_BATHS = ["paper", "ohmic", "dl"]
 
 
 # =============================
@@ -124,11 +115,8 @@ def validate_defaults():
     if BATH_CUTOFF <= 0:
         raise ValueError("BATH_CUTOFF must be positive")
 
-    if BATH_GAMMA_0 <= 0:
-        raise ValueError("BATH_GAMMA_0 must be positive")
-
-    if BATH_GAMMA_PHI <= 0:
-        raise ValueError("BATH_GAMMA_PHI must be positive")
+    if BATH_COUPLING <= 0:
+        raise ValueError("BATH_COUPLING must be positive")
 
     # Validate phases
     if N_PHASES <= 0:

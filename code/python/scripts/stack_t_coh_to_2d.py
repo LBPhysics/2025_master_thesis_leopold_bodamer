@@ -88,7 +88,7 @@ def main():
     abs_info_path = [Path(path) for path in abs_paths if path.endswith("_info.pkl")]
     loaded_info_data = load_info_file(abs_info_path[0])
     system = loaded_info_data["system"]
-    bath = loaded_info_data["bath"]
+    bath = loaded_info_data["bath_params"]
     laser = loaded_info_data["laser"]
     info_config = loaded_info_data["info_config"]
 

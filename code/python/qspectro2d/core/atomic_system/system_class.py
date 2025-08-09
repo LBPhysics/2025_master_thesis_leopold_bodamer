@@ -4,27 +4,23 @@
 import numpy as np
 import json
 from dataclasses import dataclass, field  # for the class definiton
-from typing import Optional, List
+from typing import Optional, List, Tuple
+from functools import cached_property
 from qutip import basis, ket2dm, tensor, Qobj
 from qspectro2d.config import HBAR
-
-# from functools import cached_property  # for caching properties
+from qspectro2d.utils.units_and_rwa import convert_cm_to_fs  # canonical conversion
 
 
 @dataclass
 class AtomicSystem:
     # VITAL ATTRIBUTES
     n_atoms: int = 1
-    freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
+    at_freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
-    J_cm: Optional[float] = None  # only For n_atoms >= 2
+    at_coupling_cm: Optional[float] = None  # only For n_atoms >= 2
 
     psi_ini: Optional[Qobj] = None  # initial state, default is ground state
     delta_cm: Optional[float] = None  # inhomogeneous broadening, default is None
-
-    @property
-    def basis(self):
-        return self._basis
 
     def __post_init__(self):
         # mostly for validation and initialization
@@ -33,11 +29,11 @@ class AtomicSystem:
         self._atom_e = basis(2, 1)  # excited state |e>
 
         # Handle case where single frequency is provided for multiple atoms
-        if len(self.freqs_cm) == 1 and self.n_atoms > 1:
-            self.freqs_cm = self.freqs_cm * self.n_atoms  # repeat for all atoms
-        elif len(self.freqs_cm) != self.n_atoms:
+        if len(self.at_freqs_cm) == 1 and self.n_atoms > 1:
+            self.at_freqs_cm = self.at_freqs_cm * self.n_atoms  # repeat for all atoms
+        elif len(self.at_freqs_cm) != self.n_atoms:
             raise ValueError(
-                f"freqs_cm has {len(self.freqs_cm)} elements but n_atoms={self.n_atoms}. "
+                f"at_freqs_cm has {len(self.at_freqs_cm)} elements but n_atoms={self.n_atoms}. "
                 f"Expected either 1 frequency (applied to all atoms) or {self.n_atoms} frequencies."
             )
 
@@ -51,26 +47,26 @@ class AtomicSystem:
             )
 
         # store the initial frequencies in history
-        self._freqs_cm_history = [self.freqs_cm.copy()]
+        self._freqs_cm_history = [self.at_freqs_cm.copy()]
 
-        if self.n_atoms >= 2 and self.J_cm is None:
-            self.J_cm = 0.0
+        if self.n_atoms >= 2 and self.at_coupling_cm is None:
+            self.at_coupling_cm = 0.0
 
         # set a default basis
         if self.n_atoms == 1:
-            self._basis = [self._atom_g, self._atom_e]  # GROUND, EXCITED
+            self._basis = [self._atom_g, self._atom_e]  # ground, excited
         elif self.n_atoms == 2:
             self._basis = [
-                tensor(self._atom_g, self._atom_g),  # GROUND
+                tensor(self._atom_g, self._atom_g),  # ground
                 tensor(self._atom_e, self._atom_g),  # A
                 tensor(self._atom_g, self._atom_e),  # B
                 tensor(self._atom_e, self._atom_e),  # AB
             ]
-        else:  # SINGLE EXCITATION SUBSPACE FOR n_atoms > 2
+        else:  # single excitation subspace n_atoms > 2
             n_atoms = self.n_atoms
             self._basis = [
                 basis(n_atoms, i) for i in range(n_atoms)
-            ]  # GROUND, atom 1, atom 2, ...
+            ]  # fock basis: ground, atom 1, atom 2, ...
 
         if self.psi_ini is None:
             self.psi_ini = ket2dm(self.basis[0])
@@ -83,53 +79,97 @@ class AtomicSystem:
 
         # Save current freqs before updating
         self._freqs_cm_history.append(new_freqs.copy())
-        self.freqs_cm = new_freqs.copy()
+        self.at_freqs_cm = new_freqs.copy()
 
-        if "eigenstates" in self.__dict__:
-            del self.__dict__["eigenstates"]  # reset cached property
+        # Invalidate cached properties depending on frequencies
+        self.reset_cache()
+
+    def reset_cache(self):
+        """Reset cached spectral/operator properties.
+
+        Removes cached properties whose values depend on the intrinsic
+        system parameters (frequencies, coupling, dipole moments). Use this
+        after any *in-place* modification of such parameters. Note that
+        :meth:`update_freqs_cm` already calls this automatically.
+
+        Cached attributes cleared:
+        - eigenstates
+        - sm_op
+        - dip_op
+        """
+        for attr in ("eigenstates", "sm_op", "dip_op"):
+            if attr in self.__dict__:
+                del self.__dict__[attr]
+
+    @property
+    def basis(self):
+        return self._basis
 
     @property
     def freqs_cm_history(self):
         """Access history of all frequency lists (including current)."""
         return self._freqs_cm_history
 
-    def freqs_fs(self, i):
+    def at_freqs_fs(self, i: int) -> float:
         """Return frequency in fs^-1 for the i-th atom."""
-        from qspectro2d.utils import convert_cm_to_fs
-        return convert_cm_to_fs(self.freqs_cm[i])
+        return convert_cm_to_fs(self.at_freqs_cm[i])
 
     @property
-    def J(self):
-        from qspectro2d.utils import convert_cm_to_fs
-        return convert_cm_to_fs(self.J_cm)
+    def at_coupling(self) -> float:
+        return convert_cm_to_fs(self.at_coupling_cm)
 
     @property
-    def theta(self):
-        return np.arctan(2 * self.J / (self.freqs_fs(0) * self.freqs_fs(1))) / 2
+    def theta(self) -> float:
+        """Return dimer mixing angle θ (radians) for n_atoms == 2.
+
+        Definition (standard exciton / coupled two-level system):
+
+            tan(2θ) = 2J / Δ
+
+        where
+            J  = at_coupling (fs^-1)
+            Δ  = ω_1 - ω_2 (fs^-1)  (bare transition frequency detuning)
+
+        We compute:
+            θ = 0.5 * arctan2(2J, Δ)
+
+        Range: θ ∈ (-π/4, π/4]; magnitude governs the degree of state mixing.
+        The previous implementation used arctan(J/Δ), which differs by a
+        factor-of-two in the argument and is non-standard. Coefficients used
+        in `sm_op` retain their algebraic definitions (sinθ, cosθ), so this
+        correction yields physically consistent mixing when J ~ Δ.
+
+        Raises
+        ------
+        ValueError: if called for systems with n_atoms != 2.
+        """
+        if self.n_atoms != 2:
+            raise ValueError("theta is only defined for n_atoms == 2")
+        detuning = self.at_freqs_fs(0) - self.at_freqs_fs(1)  # Δ
+        return 0.5 * np.arctan2(2 * self.at_coupling, detuning)
 
     @property
-    def Delta(self):
-        from qspectro2d.utils import convert_cm_to_fs
+    def Delta(self) -> float:
         return convert_cm_to_fs(self.delta_cm)
 
-    def _Hamilton_tls(self):
-        return HBAR * self.freqs_fs(0) * ket2dm(self.basis[1])
+    def _Hamilton_tls(self) -> Qobj:
+        return HBAR * self.at_freqs_fs(0) * ket2dm(self.basis[1])
 
-    def _Hamilton_dimer_sys(self):
+    def _Hamilton_dimer_sys(self) -> Qobj:
         H = HBAR * (
-            self.freqs_fs(0) * ket2dm(self.basis[1])
-            + self.freqs_fs(1) * ket2dm(self.basis[2])
-            + self.J
+            self.at_freqs_fs(0) * ket2dm(self.basis[1])
+            + self.at_freqs_fs(1) * ket2dm(self.basis[2])
+            + self.at_coupling
             * (
                 self.basis[1] * self.basis[2].dag()
                 + self.basis[2] * self.basis[1].dag()
             )
-            + (self.freqs_fs(0) + self.freqs_fs(1)) * ket2dm(self.basis[3])
+            + (self.at_freqs_fs(0) + self.at_freqs_fs(1)) * ket2dm(self.basis[3])
         )
         return H
 
     @property
-    def H0_N_canonical(self):
+    def H0_N_canonical(self) -> Qobj:
         n_atoms = self.n_atoms
         if n_atoms == 1:
             return self._Hamilton_tls()
@@ -167,7 +207,7 @@ class AtomicSystem:
                 return np.vstack([Pos_chain + Pos_ring[i] for i in range(n_chains)])
 
                 
-            ALPHA = 1e-3 # Coupling strength of dipoles (Fine structure constant?)
+            BATH_COUPLING = 1e-3 # Coupling strength of dipoles (Fine structure constant?)
             n_chains = 1                    # Number of chains
             n_rings = 1                     # Number of rings
             n_atoms = n_chains * n_rings
@@ -180,18 +220,22 @@ class AtomicSystem:
                     factor = self.dip_moments[a] * self.dip_moments[b]
                     op = factor * sm_a.dag() * sm_b
                     if a != b:
-                        H += ALPHA / (np.linalg.norm(Pos[a] - Pos[b]))**3 * op
+                        H += BATH_COUPLING / (np.linalg.norm(Pos[a] - Pos[b]))**3 * op
                     else:
                         H += atom_frequencies[a] * op
             '''
             return H
 
-    @property  # cached -> to safe some space? TODO
-    def eigenstates(self):
+    @cached_property
+    def eigenstates(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Eigenvalues & eigenstates (cached).
+
+        Invalidated when `update_freqs_cm` is called.
+        """
         return self.H0_N_canonical.eigenstates()
 
-    @property
-    def sm_op(self):
+    @cached_property
+    def sm_op(self) -> Qobj:
         if self.n_atoms == 1:
             return self.dip_moments[0] * (self._atom_g * self._atom_e.dag())
         elif self.n_atoms == 2:
@@ -217,76 +261,61 @@ class AtomicSystem:
         else:  # TODO IMPLEMENT THE n_atoms > 2 CASE IN SINGLE EXCITATION SUBSPACE
             raise NotImplementedError("n_atoms > 2 not yet implemented")
 
-    @property
-    def dip_op(self):
+    @cached_property
+    def dip_op(self) -> Qobj:
         return self.sm_op + self.sm_op.dag()
 
-    def deph_op_i(self, i: int):
+    def deph_op_i(self, i: int) -> Qobj:
         """Return dephasing operator for the i-th eigenstate. i elem (1, ..., n_atoms)."""
         return ket2dm(self.basis[i])
 
-    def omega_ij(self, i: int, j: int):
+    def omega_ij(self, i: int, j: int) -> float:
         """Return energy difference (frequency) between eigenstates i and j in fs^-1."""
         return self.eigenstates[0][i] - self.eigenstates[0][j]
 
     def summary(self):
-        print("=== AtomicSystem Summary ===")
-        print(f"\n# The system with:")
-        print(f"    {'n_atoms':<20}: {self.n_atoms}")
-
-        print(f"\n# Frequencies and Dipole Moments:")
+        lines = ["=== AtomicSystem Summary ===", "", "# The system with:", f"    {'n_atoms':<20}: {self.n_atoms}"]
+        lines.append("\n# Frequencies and Dipole Moments:")
         for i in range(self.n_atoms):
-            print(
-                f"    Atom {i}: ω = {self.freqs_cm[i]} cm^-1, μ = {self.dip_moments[i]}"
+            lines.append(
+                f"    Atom {i}: ω = {self.at_freqs_cm[i]} cm^-1, μ = {self.dip_moments[i]}"
             )
-
-        print(f"\n# Coupling / Inhomogeneity:")
+        lines.append("\n# Coupling / Inhomogeneity:")
         if self.n_atoms == 2:
-            if self.J_cm is not None:
-                print(f"    {'J':<20}: {self.J_cm} cm^-1")
+            if self.at_coupling_cm is not None:
+                lines.append(f"    {'at_coupling':<20}: {self.at_coupling_cm} cm^-1")
             if self.delta_cm is not None:
-                print(f"    {'Delta':<20}: {self.delta_cm} cm^-1")
-
-        print(f"\n    {'psi_ini':<20}:")
-        print(self.psi_ini)
-
-        print(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
-        print(self.H0_N_canonical)
-
-        print("\n# Dipole operator (dip_op):")
-        print(self.dip_op)
-        print("\n=== End of Summary ===")
+                lines.append(f"    {'Delta':<20}: {self.delta_cm} cm^-1")
+        lines.append(f"\n    {'psi_ini':<20}:")
+        lines.append(str(self.psi_ini))
+        lines.append(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
+        lines.append(str(self.H0_N_canonical))
+        lines.append("\n# Dipole operator (dip_op):")
+        lines.append(str(self.dip_op))
+        lines.append("\n=== End of Summary ===")
+        return "\n".join(lines)
 
     def __str__(self) -> str:
-        from io import StringIO
-        import sys
-
-        # Capture the output of the summary method
-        old_stdout = sys.stdout
-        sys.stdout = StringIO()
-        self.summary()
-        output = sys.stdout.getvalue()
-        sys.stdout = old_stdout
-
-        return output.strip()
+        # Return string representation without side effects (used by print())
+        return self.summary()
 
     def to_dict(self):
         d = {
             "n_atoms": self.n_atoms,
-            "freqs_cm": self.freqs_cm,
+            "at_freqs_cm": self.at_freqs_cm,
             "dip_moments": self.dip_moments,
         }
         if self.delta_cm is not None:
             d["delta_cm"] = self.delta_cm
-        if self.J_cm is not None:
-            d["J_cm"] = self.J_cm
+        if self.at_coupling_cm is not None:
+            d["at_coupling_cm"] = self.at_coupling_cm
         return d
 
     def to_json(self):
         """
         Serialize the system parameters to a JSON string.
 
-        Only basic attributes are included: n_atoms, freqs_cm, dip_moments, delta_cm, J_cm.
+        Only basic attributes are included: n_atoms, at_freqs_cm, dip_moments, delta_cm, at_coupling_cm.
         Quantum objects (Qobj) and computed properties (like Hamiltonians or eigenstates)
         are not serialized and will be recomputed on deserialization.
         """
@@ -318,14 +347,14 @@ class AtomicSystem:
 """ HOW TO USE AtomicSystem:
 
 # Create a single atom system
-system1 = AtomicSystem(n_atoms=1, freqs_cm=[16000.0], dip_moments=[1.0])
+system1 = AtomicSystem(n_atoms=1, at_freqs_cm=[16000.0], dip_moments=[1.0])
 
 # Create a two-atom system with coupling
 system2 = AtomicSystem(
     n_atoms=2, 
-    freqs_cm=[16000.0, 15640.0], 
+    at_freqs_cm=[16000.0, 15640.0], 
     dip_moments=[1.0, 1.2],
-    J_cm=50.0
+    at_coupling_cm=50.0
 )
 
 # Serialize to JSON for saving/loading

@@ -8,7 +8,6 @@ and directory paths for simulation data and plots.
 # =============================
 # IMPORTS
 # =============================
-import fnmatch
 from pathlib import Path
 from typing import Union
 
@@ -39,7 +38,7 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
         t_coh_val = round(float(info_config["t_coh"]), 2)
         parts.append(f"t_coh_{t_coh_val}")
     else:
-        parts.append(system.freqs_cm.__str__())
+        parts.append(system.at_freqs_cm_cm.__str__())
 
     """
     n_atoms = system.n_atoms
@@ -51,9 +50,9 @@ def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
     if n_atoms == 2:
         parts.append(f"wB{system.omega_B_cm/1e4:.2f}e4")
         parts.append(f"muB{system.mu_B:.2f}")
-        J_val = system.J if system.J else info_config.get("J_cm", 0)
+        J_val = system.at_coupling_cm if system.at_coupling_cm else info_config.get("at_coupling_cm", 0)
         if J_val > 0:
-            parts.append(f"J{J_val:.2f}au")  # TODO arbitrary units
+            parts.append(f"at_coupling_cm{J_val:.2f}au")  # TODO arbitrary units
     n_freqs = info_config.get("n_freqs", 1)
 
     if n_freqs > 1:
@@ -151,8 +150,10 @@ def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
 
     if n_atoms == 2:
         # Add coupling strength if applicable
-        J = system.J_cm if system.J_cm is not None else 0
-        if J > 0:
+        at_coupling_cm = (
+            system.at_coupling_cm if system.at_coupling_cm is not None else 0
+        )
+        if at_coupling_cm > 0:
             parts.append(f"Coupled")
 
     n_freqs = info_config.get("n_freqs", 1)

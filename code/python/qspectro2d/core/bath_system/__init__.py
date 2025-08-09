@@ -26,9 +26,9 @@ from .bath_fcts import (
     # Paper-specific bath functions
     spectral_density_func_paper,
     power_spectrum_func_paper,
+    # extract info of the qutip bath
+    extract_bath_parameters,
 )
-
-from .bath_class import BathSystem
 
 # =============================
 # PUBLIC API
@@ -43,8 +43,8 @@ __all__ = [
     # Paper bath
     "spectral_density_func_paper",
     "power_spectrum_func_paper",
-    # Bath class
-    "BathSystem",
+    # extract bath parameters
+    "extract_bath_parameters",
 ]
 
 # =============================

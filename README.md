@@ -4,10 +4,7 @@
 
 This project uses conda for environment management. Follow these steps to set up the development environment:
 
-### Prere}
-relative_path = run_simulation_with_config(config_1d, "1d")
-
-# 2D Simulation  ites
+### Prerequisites
 - [Anaconda](https://www.anaconda.com/products/distribution) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html) installed
 
 ### Quick Setup
@@ -75,6 +72,49 @@ master_thesis/
 ├── requirements.txt     # Pip requirements (backup)
 └── README.md           # This file
 ```
+
+## Simulation Pipeline (High-Level)
+
+This section explains the core end‑to‑end flow used by both 1D and 2D spectroscopy simulations. It clarifies how the modular pieces you refactored interact.
+
+1. Configure Inputs
+    - Build a Python dict (or future `SimulationConfig`) specifying system, pulse, bath, and numerical parameters.
+    - Example keys: `n_atoms`, `tau_coh`, `T_wait`, `t_det_max`, pulse definitions, solver choice.
+2. Construct Physical Objects
+    - Atomic system (site energies, couplings) → diagonalization & cached operators.
+    - Laser pulse sequence (each pulse stores cached invariants: support window, sigma, boundary baseline).
+    - System–bath / system–laser coupling (transition dipoles, decay channels) assembled.
+3. Build Liouvillian / Rates
+    - For density matrix propagation: assemble Hamiltonian + dissipators (Redfield / Bloch-Redfield / phenomenological).
+    - Cached structural pieces reused across waiting / detection time loops.
+4. Time Propagation
+    - Evolve coherence/ population segments over required time axes (coherence τ, waiting T, detection t_det).
+    - For 2D: outer loops over T (and possibly phase cycling) while reusing precomputed operators.
+5. Observable Assembly
+    - Compute polarization / emitted field via dipole expectation values.
+    - Apply phase cycling / rephasing vs non‑rephasing separation if requested.
+6. Post-Processing
+    - FFT over coherence & detection dimensions to form frequency-domain spectra.
+    - Windowing / zero-padding handled prior to transform (future improvement: configurable apodization).
+7. Packaging & Storage
+    - Standard payload structure (data, axes, system parameters, config dict, metadata including simulation type).
+    - Compressed `.pkl.gz` written under structured directory (1d_spectroscopy / 2d_spectroscopy).
+8. Plotting & Analysis
+    - Load payload, select spectral components (real/imag/abs/phase), optionally crop to spectral window, save figures.
+9. Reproducibility (Planned Enhancements)
+    - Serialize `SimulationConfig` (to_dict / from_dict) + embed hash & git commit.
+    - Record environment + RNG state for full provenance.
+
+### Data & Caching Notes
+- Critical heavy objects (eigenstates, dipole operators, pulse invariants) use lazy caching; explicit `reset_cache()` when parameters change.
+- Pulse envelopes now avoid repeated Gaussian baseline computation via precomputed `_boundary_val` & window limits.
+
+### Extension Points (Design Intent)
+- Add new pulse shapes: implement in `_single_pulse_envelope` (and extend validation) without touching propagation.
+- New solvers: register callable in a future solver registry; accept `SimulationConfig` / system handles.
+- Output formats: swap pickle writer with HDF5 layer using the same payload dict schema.
+
+This pipeline ensures 1D & 2D share as much code as possible while keeping physics components isolated and testable.
 
 
 
@@ -302,7 +342,7 @@ FIGURES_DIR/
 ## 🚀 Next Steps
 
 1. **Test with existing simulations** to ensure compatibility
-2. **Update documentation** for new workflow
+2. **Update documentation** for new workflow (PARTIALLY DONE: added Simulation Pipeline overview; remaining: per-module docstring harmonization)
 3. **Consider migration script** for bulk conversion of old files
 4. **Benchmark performance** improvements from compression
 5. **Add unit tests** for the unified functions

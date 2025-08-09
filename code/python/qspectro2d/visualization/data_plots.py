@@ -23,6 +23,7 @@ from qspectro2d.spectroscopy.post_processing import (
 )
 from qspectro2d.utils import generate_unique_plot_filename
 from qspectro2d.config.mpl_tex_settings import save_fig
+from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 
 
 # =============================
@@ -50,15 +51,18 @@ def plot_1d_data(
         return
 
     system = loaded_data_and_info["system"]
-    bath = loaded_data_and_info["bath"]
-    laser = loaded_data_and_info["laser"]
+    bath_dict = loaded_data_and_info["bath"]
+    # QuTip Environment - extract parameters
 
+    laser = loaded_data_and_info["laser"]
     info_config = loaded_data_and_info["info_config"]
 
     laser_dict = {
         k: v for k, v in laser.to_dict().items() if k != "pulses"
     }  # Exclude "pulses" key
-    dict_combined = {**system.to_dict(), **bath.to_dict(), **laser_dict}
+
+    # Combine dictionaries
+    dict_combined = {**system.to_dict(), **bath_dict, **laser_dict, **info_config}
 
     print(f"✅ Data loaded with shape: {data.shape}")
     print(f"   Time points: {len(t_det_vals)}")
@@ -178,7 +182,9 @@ def plot_2d_data(
         return
     t_coh_vals = axes["axis2"]  # coherence times
     system = loaded_data_and_info["system"]
-    bath = loaded_data_and_info["bath"]
+
+    bath_dict = loaded_data_and_info["bath"]
+    # bath_dict = extract_bath_parameters(bath)
     laser = loaded_data_and_info["laser"]
 
     info_config = loaded_data_and_info["info_config"]
@@ -186,7 +192,9 @@ def plot_2d_data(
     laser_dict = {
         k: v for k, v in laser.to_dict().items() if k != "pulses"
     }  # Exclude "pulses" key
-    dict_combined = {**system.to_dict(), **bath.to_dict(), **laser_dict}
+
+    # Combine dictionaries
+    dict_combined = {**system.to_dict(), **bath_dict, **laser_dict, **info_config}
 
     # Get configuration values
     spectral_components_to_plot = plot_config.get(
@@ -208,7 +216,6 @@ def plot_2d_data(
                     axis_det=t_det_vals,
                     axis_coh=t_coh_vals,
                     data=data,
-                    t_wait=t_wait,
                     domain="time",
                     use_custom_colormap=True,
                     component=component,

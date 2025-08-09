@@ -10,7 +10,12 @@ including their electric field profiles and temporal shapes.
 # LASER SYSTEM FUNCTIONS AND CLASSES
 # =============================
 from .laser_fcts import E_pulse, Epsilon_pulse, pulse_envelope
-from .laser_class import LaserPulseSequence, LaserPulse
+from .laser_class import (
+    LaserPulseSequence,
+    LaserPulse,
+    identify_non_zero_pulse_regions,
+    split_by_active_regions,
+)
 
 # =============================
 # PUBLIC API
@@ -20,6 +25,8 @@ __all__ = [
     "E_pulse",
     "Epsilon_pulse",
     "pulse_envelope",
+    "identify_non_zero_pulse_regions",
+    "split_by_active_regions",
     # classes
     "LaserPulseSequence",
     "LaserPulse",

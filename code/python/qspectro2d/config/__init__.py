@@ -44,7 +44,7 @@ from .default_simulation_params import (
     N_ATOMS,
     FREQS_CM,
     DELTA_CM,
-    J_COUPLING_CM,
+    AT_COUPLING_CM,
     DIP_MOMENTS,
     # Simulation defaults
     ODE_SOLVER,
@@ -55,8 +55,7 @@ from .default_simulation_params import (
     BATH_TYPE,
     BATH_TEMP,
     BATH_CUTOFF,
-    BATH_GAMMA_0,
-    BATH_GAMMA_PHI,
+    BATH_COUPLING,
     # Laser system defaults
     PULSE_FWHM,
     CARRIER_FREQ_CM,
@@ -116,7 +115,7 @@ __all__ = [
     "DELTA_CM",
     "FREQS_CM",
     "DIP_MOMENTS",
-    "J_COUPLING_CM",
+    "AT_COUPLING_CM",
     # simulation defaults
     "ODE_SOLVER",
     "RWA_SL",
@@ -126,8 +125,7 @@ __all__ = [
     "BATH_TYPE",
     "BATH_TEMP",
     "BATH_CUTOFF",
-    "BATH_GAMMA_0",
-    "BATH_GAMMA_PHI",
+    "BATH_COUPLING",
     # laser system defaults
     "PULSE_FWHM",
     "CARRIER_FREQ_CM",

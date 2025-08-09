@@ -26,6 +26,7 @@ dependencies:
   - ipython
   - black[jupyter]>=22.0.0 # just my preference, also install black for python formatting?
   - mpmath
+  - pytest>=7.0.0
   - pip:
     # Note: multiprocessing and json are built-in Python modules, not conda packages
     - -e ./code/python       # Local package in editable mode
