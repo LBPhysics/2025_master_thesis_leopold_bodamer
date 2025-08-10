@@ -6,6 +6,7 @@ from typing import List, Tuple, Optional, Union
 
 import numpy as np
 import json
+from qspectro2d.constants import convert_cm_to_fs
 
 
 @dataclass
@@ -32,9 +33,7 @@ class LaserPulse:
             raise ValueError("Pulse frequency must be positive.")
 
         if not self._freq_converted:
-            # Import here to avoid circular imports
-            from qspectro2d.utils import convert_cm_to_fs
-
+            # Direct conversion (constants module is safe for early import)
             self.pulse_freq = convert_cm_to_fs(self.pulse_freq)
             self._freq_converted = True
 

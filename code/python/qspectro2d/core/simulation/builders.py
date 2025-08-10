@@ -87,6 +87,56 @@ class SimulationModuleOQS:
     def H_int_sl(self, t: float) -> Qobj:
         return H_int_(t, self.system.sm_op, self.simulation_config.rwa_sl, self.laser)
 
+    # --- Evolution objects -------------------------------------------------------
+    @property
+    def evo_obj_free(self) -> Qobj:
+        """Free evolution Hamiltonian (no driving field).
+
+        Returned as a static Qobj so QuTiP can use the optimized code-path.
+        For BR solver this is still acceptable (brmesolve will use `a_ops`).
+        """
+        ode_solver = self.simulation_config.ode_solver
+        if ode_solver == "ME":
+            return self.H0_diagonalized
+        elif ode_solver == "BR":
+            return self.H0_diagonalized
+        elif ode_solver in ["Paper_eqs", "Paper_BR"]:
+            return self.H0_diagonalized
+        return self.H0_diagonalized
+
+    @property
+    def evo_obj_int(self):  # type: ignore[override]
+        """Time-dependent driven Hamiltonian H(t) = H0 + H_int(t).
+
+        Provided in a mesolve / brmesolve compatible list form:
+            [H0, [callable, args_dict]]
+
+        This representation (instead of a lambda capture / QobjEvo) keeps the
+        object picklable for potential use in process pools.
+        """
+        if not hasattr(self, "_evo_obj_int"):
+
+            def _H_int_callable(t, args):  # QuTiP signature: (t, args) -> Qobj
+                return H_int_(
+                    t,
+                    args["sm_op"],
+                    args["rwa_sl"],
+                    args["laser"],
+                )
+
+            self._evo_obj_int = [
+                self.H0_diagonalized,
+                [
+                    _H_int_callable,
+                    {
+                        "sm_op": self.system.sm_op,
+                        "rwa_sl": self.simulation_config.rwa_sl,
+                        "laser": self.laser,
+                    },
+                ],
+            ]
+        return self._evo_obj_int
+
     # --- Observables ---------------------------------------------------------------
     @property
     def observable_ops(self) -> List[Qobj]:

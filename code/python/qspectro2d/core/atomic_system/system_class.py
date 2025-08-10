@@ -3,12 +3,11 @@
 # =============================
 import numpy as np
 import json
-from dataclasses import dataclass, field  # for the class definiton
+from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
 from functools import cached_property
 from qutip import basis, ket2dm, tensor, Qobj
-from qspectro2d.config import HBAR
-from qspectro2d.utils.units_and_rwa import convert_cm_to_fs  # canonical conversion
+from qspectro2d.constants import HBAR, convert_cm_to_fs
 
 
 @dataclass
@@ -274,7 +273,12 @@ class AtomicSystem:
         return self.eigenstates[0][i] - self.eigenstates[0][j]
 
     def summary(self):
-        lines = ["=== AtomicSystem Summary ===", "", "# The system with:", f"    {'n_atoms':<20}: {self.n_atoms}"]
+        lines = [
+            "=== AtomicSystem Summary ===",
+            "",
+            "# The system with:",
+            f"    {'n_atoms':<20}: {self.n_atoms}",
+        ]
         lines.append("\n# Frequencies and Dipole Moments:")
         for i in range(self.n_atoms):
             lines.append(

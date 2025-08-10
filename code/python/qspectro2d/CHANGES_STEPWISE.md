@@ -26,14 +26,14 @@ Date: 2025-08-09
    - Updated `simulation/__init__.py` to export `matrix_ODE_paper` and `R_paper`.
 
 5. Legacy module cleanup
-   - `simulation_class.py` now a thin compatibility layer re-exporting modern API.
-   - Stripped obsolete comments/duplicated solver code (original heavy content migrated).
+   - Previously slimmed `simulation_class.py` (compat layer).
+   - (NEW) Removed `simulation_class.py` entirely; users must import from `qspectro2d.core.simulation`.
 
 6. Interaction & decay channel simplification
    - `H_int_` retained (still minimal) with clear RWA vs non-RWA branches (no extra abstraction layers).
    - Decay channel logic restricted to ME / BR else empty (paper solvers manage their own structures).
 
-7. Duplicate unit conversion removed (current step)
+7. Duplicate unit conversion removed
    - Deleted local `convert_cm_to_fs` definition inside `atomic_system/system_class.py`.
    - Now importing canonical converter from `utils/units_and_rwa.py`.
 
@@ -69,6 +69,6 @@ M. (DONE) Extended lazy import: replaced remaining eager imports (baths, spectro
 ## Notes
 - All edits kept minimal; no behavioral changes expected except improved maintainability.
 - No additional dependencies introduced.
-- Legacy public API (`from qspectro2d.core.simulation_class import SimulationConfig`) still works.
+- Legacy public API path removed; attempting to import `qspectro2d.core.simulation_class` will now fail (intentional simplification).
 
 (End of log – append further steps below as they are approved and implemented.)

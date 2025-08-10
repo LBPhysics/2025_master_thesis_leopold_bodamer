@@ -16,13 +16,13 @@ Main components:
 # CORE CALCULATION FUNCTIONS
 # =============================
 from .calculations import (
-    complex_polarization,
     compute_pulse_evolution,
     compute_1d_polarization,
     check_the_solver,
     parallel_compute_1d_E_with_inhomogenity,
     extract_ift_signal_component,
 )
+from .polarization import complex_polarization
 
 # =============================
 # INHOMOGENEOUS BROADENING

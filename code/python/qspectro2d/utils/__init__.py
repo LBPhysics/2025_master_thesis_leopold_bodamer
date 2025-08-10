@@ -27,12 +27,8 @@ from .file_naming import (
 )
 
 # Configuration and constants
-from .units_and_rwa import (
-    convert_cm_to_fs,
-    convert_fs_to_cm,
-    apply_RWA_phase_factors,
-    get_expect_vals_with_RWA,
-)
+from qspectro2d.constants import convert_cm_to_fs, convert_fs_to_cm
+from .units_and_rwa import apply_RWA_phase_factors, get_expect_vals_with_RWA
 
 # Simulation utilities
 from .simulation_utils import (

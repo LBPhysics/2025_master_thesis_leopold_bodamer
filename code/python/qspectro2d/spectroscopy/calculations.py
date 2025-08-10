@@ -21,10 +21,8 @@ from qspectro2d.core.laser_system.laser_class import (
     split_by_active_regions,
 )
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
-from qspectro2d.utils import (
-    apply_RWA_phase_factors,
-    get_expect_vals_with_RWA,
-)
+from qspectro2d.utils import apply_RWA_phase_factors, get_expect_vals_with_RWA
+from qspectro2d.spectroscopy.polarization import complex_polarization
 from qspectro2d.config import (
     PHASE_CYCLING_PHASES,
     SOLVER_OPTIONS,
@@ -699,7 +697,7 @@ def _process_single_1d_combination(
             phases=[phi1, phi2, DETECTION_PHASE]
         )  # Update the laser phases in the local copy
 
-        local_sim_oqs.system.freqs_cm = (
+        local_sim_oqs.system.at_freqs_cm = (
             new_freqs  # Update frequencies in the local copy
         )
 
@@ -768,12 +766,12 @@ def parallel_compute_1d_E_with_inhomogenity(
 
     # Sample frequency offsets for inhomogeneous broadening
     delta_cm = sim_oqs.system.delta_cm
-    freqs_cm = sim_oqs.system.freqs_cm
+    at_freqs_cm = sim_oqs.system.at_freqs_cm
 
     # Each row = one realization, each column = atom index
     # Shape: (n_freqs, n_atoms)
     all_freq_sets = np.stack(
-        [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in freqs_cm], axis=1
+        [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in at_freqs_cm], axis=1
     )
     # print(f"Using frequency samples ={all_freq_sets}", flush=True)
 
@@ -973,96 +971,4 @@ def extract_ift_signal_component(
     return signal
 
 
-# =============================
-# POLARIZATION CALCULATIONS
-# =============================
-def complex_polarization(
-    dip_op: Qobj, state: Union[Qobj, List[Qobj]]
-) -> Union[complex, np.ndarray]:
-    """
-    Calculate the complex polarization for state(s) using the dipole operator.
-    The polarization is defined as one part of the expectation value of the dipole operator
-    with the given quantum state(s) or density matrix(es).
-
-    Parameters
-    ----------
-    dip_op : Qobj
-        Dipole operator for the system
-    state : Union[Qobj, List[Qobj]]
-        A single quantum state/density matrix or list of states.
-
-    Returns
-    -------
-    Union[complex, np.ndarray]
-        Complex polarization value(s). Returns complex for single state,
-        complex array for multiple states.
-
-    Raises
-    ------
-    TypeError
-        If state is not a Qobj or list of Qobj.
-
-    Examples
-    --------
-    >>> pol = complex_polarization(dip_op, rho)  # Single density matrix
-    >>> pols = complex_polarization(dip_op, [rho1, rho2])  # Multiple states
-    """
-    if isinstance(state, Qobj):
-        return _single_qobj_polarization(dip_op, state)
-
-    if isinstance(state, list):
-        if len(state) == 0:
-            logger.warning("Empty state list provided to complex_polarization")
-            return np.array([], dtype=np.complex64)
-
-        result = np.array(
-            [_single_qobj_polarization(dip_op, s) for s in state],
-            dtype=np.complex64,  # Use higher precision
-        )
-        logger.debug(
-            f"complex_polarization: input list length {len(state)}, output shape {result.shape}"
-        )
-        return result
-
-    raise TypeError(f"State must be a Qobj or list of Qobj, got {type(state)}")
-
-
-def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
-    """
-    Calculate polarization for a single quantum state or density matrix.
-
-    Parameters
-    ----------
-    dip_op : Qobj
-        Dipole operator
-    state : Qobj
-        Quantum state (ket) or density matrix.
-
-    Returns
-    -------
-    complex
-        Complex polarization value.
-
-    Raises
-    ------
-    TypeError
-        If state is not a ket or density matrix.
-    """
-    if not (state.isket or state.isoper):
-        raise TypeError("State must be a ket or density matrix")
-
-    # General approach that works for any system size
-    polarization = 0j
-
-    if state.isket:
-        # Convert ket to density matrix for consistent handling
-        state = ket2dm(state)
-
-    # For any system size, calculate polarization as sum of off-diagonal elements
-    # This works for any number of atoms without needing special cases TODO BUT NOT IN SINGLE EXCITATION SUBSPACE?
-    for i in range(dip_op.shape[0]):
-        for j in range(i):
-            if i != j and abs(dip_op[i, j]) != 0:
-                polarization += dip_op[i, j] * state[j, i]
-
-    return polarization
+## complex_polarization implementation moved to spectroscopy.polarization

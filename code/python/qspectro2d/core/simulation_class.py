@@ -128,7 +128,7 @@ def main():
     try:
         ### Create 2-atom system
         system_2 = AtomicSystem(
-            n_atoms=2, freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
+            n_atoms=2, at_freqs_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
         )
 
         ### Create simulation_config model

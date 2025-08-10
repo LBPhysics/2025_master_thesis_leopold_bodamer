@@ -1,18 +1,15 @@
 """Simulation subpackage.
 
-Provides structured components split out of the original monolithic
-`simulation_class.py` for better maintainability.
+Structured components formerly contained in a single monolithic
+`simulation_class.py` (now removed). Import directly from this
+subpackage instead of the old legacy path.
 
 Modules
 -------
-config              : SimulationConfig dataclass & enums
+config              : SimulationConfig dataclass & validation
 builders            : Core helper functions (interaction Hamiltonians)
 liouvillian_paper   : Paper specific time–dependent Liouvillian builders
 redfield            : Redfield tensor construction helpers
-
-Backward compatibility:
-The legacy `simulation_class.py` will import from here so external code using
-`from qspectro2d.core.simulation_class import SimulationConfig` keeps working.
 """
 
 from .config import SimulationConfig

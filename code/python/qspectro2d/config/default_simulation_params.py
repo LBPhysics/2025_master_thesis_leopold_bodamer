@@ -7,13 +7,11 @@ and reduces code duplication.
 """
 
 import numpy as np
-
-
-def convert_cm_to_fs(value):
-    """
-    local version from qspectro2d.utils.units_and_rwa import convert_cm_to_fs
-    """
-    return value * 2.998 * 2 * np.pi * 10**-5
+from qspectro2d.constants import (
+    HBAR,  # re-export compatibility via config.__init__ later
+    BOLTZMANN,
+    convert_cm_to_fs,
+)
 
 
 # =============================
@@ -42,9 +40,7 @@ SOLVER_OPTIONS = {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
 NEGATIVE_EIGVAL_THRESHOLD = -1e-3
 TRACE_TOLERANCE = 1e-6
 
-# physical constants
-HBAR = 1.0
-BOLTZMANN = 1.0
+# physical constants now imported from qspectro2d.constants (kept names for backward compat)
 
 # supported solvers and bath models
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
