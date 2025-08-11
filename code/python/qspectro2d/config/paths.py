@@ -25,26 +25,50 @@ redirecting outputs (e.g. for scratch / temporary runs) without modifying code.
 """
 
 from pathlib import Path
+import os
 
 
-def find_project_root():
-    """Find the project root directory by looking for 'Master_thesis' directory"""
+def find_project_root() -> Path:
+    """Robustly locate the repository root.
+
+    Strategy (in order):
+    1. Environment variable override: ``QSPECTRO2D_ROOT`` if it points to an existing dir.
+    2. Ascend parents from this file looking for a *marker set* that characterises the repo
+       (``.git`` directory OR simultaneous presence of ``environment.yml`` and ``requirements.txt``).
+    3. Fallback: first parent whose name contains ``master_thesis`` (case‑insensitive) to
+       stay compatible with older naming schemes (e.g. "2025_master_thesis_*...").
+    4. If still not found raise a descriptive error with guidance.
+    """
+
+    # 1. Explicit override
+    override = os.environ.get("QSPECTRO2D_ROOT")
+    if override:
+        p = Path(override).expanduser().resolve()
+        if p.is_dir():
+            return p
+
     current_path = Path(__file__).resolve()
 
-    # Look for Master_thesis directory (case-insensitive search)
+    marker_files = {"environment.yml", "requirements.txt"}
+
     for parent in current_path.parents:
-        if parent.name.lower() == "master_thesis":
+        # 2a. .git directory is a strong indicator
+        if (parent / ".git").is_dir():
+            return parent
+        # 2b. Both marker files present
+        if all((parent / m).exists() for m in marker_files):
             return parent
 
-    # Alternative: look for specific marker files/directories
+    # 3. Name heuristic (substring master_thesis)
     for parent in current_path.parents:
-        if (parent / "Master_thesis").exists() or parent.name == "Master_thesis":
-            return (
-                parent if parent.name == "Master_thesis" else parent / "Master_thesis"
-            )
+        if "master_thesis" in parent.name.lower():
+            return parent
 
+    # 4. Failure – construct guidance
     raise RuntimeError(
-        f"Could not find 'Master_thesis' directory. Current path: {current_path}"
+        "Could not determine project root. Set environment variable 'QSPECTRO2D_ROOT' "
+        "to the repository path or ensure a .git directory / marker files (environment.yml, requirements.txt) exist. "
+        f"Start path: {current_path}"
     )
 
 

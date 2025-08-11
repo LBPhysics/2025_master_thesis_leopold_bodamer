@@ -1,0 +1,43 @@
+###############################################
+# Modern build configuration for qspectro2d   #
+# Enables PEP 517/660 editable installs       #
+# (replaces legacy setup.py only workflow)    #
+###############################################
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qspectro2d"
+# Aligned with setup.py (was 0.1.0 there, __init__ adjusted to match)
+version = "0.1.0"
+description = "Quantum 2D Electronic Spectroscopy simulation package"
+readme = "README.md"
+authors = [
+  { name = "Leopold Bodamer" }
+]
+license = { text = "Proprietary" }
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: Other/Proprietary License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "numpy>=1.20.0",
+  "scipy>=1.7.0",
+  "matplotlib>=3.5.0",
+  "qutip>=4.7.0",
+  "psutil>=5.8.0",
+  "pickle-mixin>=1.0.2",
+  "joblib>=1.1.0",
+]
+
+[project.urls]
+"Repository" = "https://github.com/LBPhysics/2025_master_thesis_leopold_bodamer"
+
+[tool.setuptools]
+packages = ["qspectro2d"]

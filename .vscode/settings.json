@@ -18,6 +18,18 @@
     ],
     "latex-workshop.latex.tools": [
         {
+            "name": "lualatexmk",
+            "command": "latexmk",
+            "args": [
+                "-lualatex",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-halt-on-error",
+                "%DOC%"
+            ]
+        },
+        {
             "name": "latexmk",
             "command": "latexmk",
             "args": [
@@ -66,6 +78,10 @@
     "latex-workshop.latex.autoBuild.run": "onFileChange",
     "latex-workshop.latex.autoClean.run": "onBuilt",
     "latex-workshop.latex.build.clearLog.everyRecipeStep.enabled": false,
+    // ---- LaTeX Formatting (enable latexindent) ----
+    "latex-workshop.formatting.latex": "latexindent",
+    // Absolute path to latexindent to avoid PATH resolution issues
+    "latex-workshop.formatting.latexindent.path": "C:/texlive/2025/bin/windows/latexindent.exe",
     // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
         "editor.defaultFormatter": "James-Yu.latex-workshop",
@@ -90,11 +106,12 @@
     // ---- Hiding Build/Temporary Files from the Explorer ----
     // This is crucial for keeping the project view clean for everyone.
     "files.exclude": {
-        "**/_minted*": true,
-        "**/.DS_Store": true,
         "**/.git": true,
-        "**/.hg": true,
         "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/_minted*": true,
         "**/.texpadtmp": true,
         "**/.venv": true,
         "**/.vscode": true,
@@ -244,8 +261,8 @@
         "**/pythontex-files-*/": true,
         "**/rubber.cache": true,
         "**/sympy-plots-for-*.tex/": true,
-        "**/Thumbs.db": true,
-        "**/TSWLatexianTemp*": true
+        "**/TSWLatexianTemp*": true,
+        "**/__pycache__": true
     },
     "python.testing.unittestArgs": [
         "-v",
@@ -256,4 +273,5 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
+    "explorerExclude.backup": {},
 }

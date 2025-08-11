@@ -20,7 +20,6 @@ import os
 import sys
 import shutil
 import subprocess
-from matplotlib import rcParams
 from qspectro2d.config.paths import FIGURES_PYTHON_DIR, FIGURES_TESTS_DIR
 
 LATEX_DOC_WIDTH = 441.01775  # 510  # Default LaTeX document width in points (pt); FIND OUT WITH "The width of this document is: \the\textwidth"
@@ -297,9 +296,8 @@ COLORS = {
 LINE_STYLES = ["solid", "dashed", "dashdot", "dotted", (0, (3, 1, 1, 1)), (0, (5, 1))]
 MARKERS = ["o", "s", "^", "v", "D", "p", "*", "X", "+", "x"]
 
-
-# SYSTEM CHECKS FOR FAILSAFE
-latex_available = _check_latex_available()
+# AUTOMATIC LaTeX DETECTION (no env opt-in required)
+latex_available = False  # TODO _check_latex_available()
 
 # =============================
 # MATPLOTLIB LaTeX SETTINGS
@@ -341,13 +339,13 @@ if latex_available:
     }
     base_settings.update(latex_settings)
 else:
-    non_latex_settings = {
-        "text.usetex": False,
-        "mathtext.default": "regular",
-    }
-    base_settings.update(non_latex_settings)
+    base_settings.update({"text.usetex": False, "mathtext.default": "regular"})
 
 plt.rcParams.update(base_settings)
+if latex_available:
+    print("LaTeX: enabled (auto-detected)")
+else:
+    print("LaTeX: not available -> using mathtext")
 
 _setup_backend()
 

@@ -60,7 +60,7 @@ ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQS_CM)  # Carrier frequency of the laser
 
 # === SIMULATION DEFAULTS ===
-ODE_SOLVER = "BR"  # ODE solver to use
+ODE_SOLVER = "ME"  # ODE solver to use
 RWA_SL = True
 N_FREQS = 1  # 1 == no inhomogeneous broadening
 N_PHASES = 4  # Number of phase cycles for the simulation

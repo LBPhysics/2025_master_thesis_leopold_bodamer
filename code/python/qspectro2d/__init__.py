@@ -18,15 +18,23 @@ Main subpackages:
 - config: Configuration settings and constants
 """
 
-__version__ = "1.0.0"
+__version__ = "0.1.0"  # Keep in sync with pyproject.toml
 __author__ = "Leopold"
 __email__ = ""
+
 
 # =============================
 # LAZY CORE IMPORTS (avoid circular import during package init)
 # =============================
 def __getattr__(name):  # PEP 562 lazy attribute loading
-    if name in {"AtomicSystem", "LaserPulse", "LaserPulseSequence", "E_pulse", "pulse_envelope", "matrix_ODE_paper"}:
+    if name in {
+        "AtomicSystem",
+        "LaserPulse",
+        "LaserPulseSequence",
+        "E_pulse",
+        "pulse_envelope",
+        "matrix_ODE_paper",
+    }:
         from .core import (
             AtomicSystem,
             LaserPulse,
@@ -35,8 +43,10 @@ def __getattr__(name):  # PEP 562 lazy attribute loading
             pulse_envelope,
             matrix_ODE_paper,
         )
+
         return globals()[name]
     raise AttributeError(name)
+
 
 # =============================
 # BATH MODELS
