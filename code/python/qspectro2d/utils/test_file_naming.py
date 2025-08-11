@@ -5,6 +5,7 @@ import shutil
 from unittest.mock import patch, MagicMock
 
 from qspectro2d.utils.file_naming import generate_unique_data_filename
+from qspectro2d.core.simulation import SimulationConfig
 
 
 def test_basic_functionality():
@@ -18,17 +19,17 @@ def test_basic_functionality():
         mock_system.n_atoms = 1
         mock_system.at_coupling_cm = None
 
-        # Simple config
-        info_config = {
-            "simulation_type": "1d",
-            "t_coh": 10.5,
-            "ode_solver": "ME",
-            "rwa_sl": True,
-            "t_det_max": 100.0,
-            "t_wait": 5.0,
-            "dt": 0.1,
-            "n_freqs": 1,
-        }
+        # Simple configuration instance
+        sim_cfg = SimulationConfig(
+            simulation_type="1d",
+            t_coh=10.5,
+            ode_solver="ME",
+            rwa_sl=True,
+            t_det_max=100.0,
+            t_wait=5.0,
+            dt=0.1,
+            n_freqs=1,
+        )
 
         # Mock the helper functions to see what they're called with
         with patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir), patch(
@@ -47,7 +48,7 @@ def test_basic_functionality():
             )
 
             # Call the function
-            result = generate_unique_data_filename(mock_system, info_config)
+            result = generate_unique_data_filename(mock_system, sim_cfg)
 
             # Print detailed information
             print(f"\n=== TEST RESULTS ===")
@@ -57,12 +58,12 @@ def test_basic_functionality():
 
             print(f"\n=== FUNCTION CALLS ===")
             print(f"generate_base_sub_dir called with:")
-            print(f"  - info_config: {mock_subdir.call_args[0][0]}")
+            print(f"  - sim_config: {mock_subdir.call_args[0][0]}")
             print(f"  - system: {mock_subdir.call_args[0][1]}")
 
             print(f"_generate_base_filename called with:")
             print(f"  - system: {mock_base.call_args[0][0]}")
-            print(f"  - info_config: {mock_base.call_args[0][1]}")
+            print(f"  - sim_config: {mock_base.call_args[0][1]}")
 
             print(f"_generate_unique_filename called with:")
             print(f"  - path: {mock_unique.call_args[0][0]}")
@@ -96,28 +97,28 @@ def test_with_different_configs():
         configs = [
             {
                 "name": "1D simulation",
-                "config": {
-                    "simulation_type": "1d",
-                    "t_coh": 25.0,
-                    "ode_solver": "BR",
-                    "rwa_sl": False,
-                    "t_det_max": 200.0,
-                    "t_wait": 10.0,
-                    "dt": 0.05,
-                    "n_freqs": 5,
-                },
+                "config": SimulationConfig(
+                    simulation_type="1d",
+                    t_coh=25.0,
+                    ode_solver="BR",
+                    rwa_sl=False,
+                    t_det_max=200.0,
+                    t_wait=10.0,
+                    dt=0.05,
+                    n_freqs=5,
+                ),
             },
             {
                 "name": "2D simulation",
-                "config": {
-                    "simulation_type": "2d",
-                    "ode_solver": "ME",
-                    "rwa_sl": True,
-                    "t_det_max": 150.0,
-                    "t_wait": 7.5,
-                    "dt": 0.2,
-                    "n_freqs": 1,
-                },
+                "config": SimulationConfig(
+                    simulation_type="2d",
+                    ode_solver="ME",
+                    rwa_sl=True,
+                    t_det_max=150.0,
+                    t_wait=7.5,
+                    dt=0.2,
+                    n_freqs=1,
+                ),
             },
         ]
 
@@ -133,9 +134,10 @@ def test_with_different_configs():
             ) as mock_unique:
 
                 # Set up return values based on config
-                sim_type = test_case["config"]["simulation_type"]
-                solver = test_case["config"]["ode_solver"]
-                rwa = "RWA" if test_case["config"]["rwa_sl"] else "noRWA"
+                cfg = test_case["config"]
+                sim_type = cfg.simulation_type
+                solver = cfg.ode_solver
+                rwa = "RWA" if cfg.rwa_sl else "noRWA"
 
                 mock_subdir.return_value = Path(
                     f"{sim_type}_spectroscopy/N2/{solver}/{rwa}"
@@ -146,7 +148,7 @@ def test_with_different_configs():
                     / f"{sim_type}_spectroscopy/N2/{solver}/{rwa}/sim_{sim_type}_{solver}_{rwa}"
                 )
 
-                result = generate_unique_data_filename(mock_system, test_case["config"])
+                result = generate_unique_data_filename(mock_system, cfg)
 
                 print(f"Config: {test_case['config']}")
                 print(f"Result: {result}")
@@ -168,15 +170,15 @@ def test_error_scenarios():
         mock_system = MagicMock()
         mock_system.n_atoms = 1
 
-        info_config = {
-            "simulation_type": "1d",
-            "t_coh": 10.0,
-            "ode_solver": "ME",
-            "rwa_sl": True,
-            "t_det_max": 100.0,
-            "t_wait": 5.0,
-            "dt": 0.1,
-        }
+        sim_cfg = SimulationConfig(
+            simulation_type="1d",
+            t_coh=10.0,
+            ode_solver="ME",
+            rwa_sl=True,
+            t_det_max=100.0,
+            t_wait=5.0,
+            dt=0.1,
+        )
 
         # Test error in generate_base_sub_dir
         print(f"\n=== TESTING ERROR IN generate_base_sub_dir ===")
@@ -187,7 +189,7 @@ def test_error_scenarios():
             mock_subdir.side_effect = ValueError("Subdirectory generation failed")
 
             try:
-                result = generate_unique_data_filename(mock_system, info_config)
+                result = generate_unique_data_filename(mock_system, sim_cfg)
                 print(f"Unexpected success: {result}")
             except ValueError as e:
                 print(f"Expected error caught: {e}")
@@ -205,7 +207,7 @@ def test_error_scenarios():
             mock_base.side_effect = RuntimeError("Base filename generation failed")
 
             try:
-                result = generate_unique_data_filename(mock_system, info_config)
+                result = generate_unique_data_filename(mock_system, sim_cfg)
                 print(f"Unexpected success: {result}")
             except RuntimeError as e:
                 print(f"Expected error caught: {e}")
@@ -223,15 +225,15 @@ def test_directory_creation_details():
         mock_system = MagicMock()
         mock_system.n_atoms = 1
 
-        info_config = {
-            "simulation_type": "1d",
-            "t_coh": 10.0,
-            "ode_solver": "ME",
-            "rwa_sl": True,
-            "t_det_max": 100.0,
-            "t_wait": 5.0,
-            "dt": 0.1,
-        }
+        sim_cfg = SimulationConfig(
+            simulation_type="1d",
+            t_coh=10.0,
+            ode_solver="ME",
+            rwa_sl=True,
+            t_det_max=100.0,
+            t_wait=5.0,
+            dt=0.1,
+        )
 
         # Create nested directory structure
         nested_path = "deep/nested/directory/structure"
@@ -254,7 +256,7 @@ def test_directory_creation_details():
             print(f"Full expected path: {temp_dir / nested_path}")
             print(f"Directory exists before: {(temp_dir / nested_path).exists()}")
 
-            result = generate_unique_data_filename(mock_system, info_config)
+            result = generate_unique_data_filename(mock_system, sim_cfg)
 
             print(f"Result: {result}")
             print(f"Directory exists after: {(temp_dir / nested_path).exists()}")

@@ -12,7 +12,7 @@ Example:
 """
 
 import os
-from typing import Optional
+from typing import Optional, Callable, Union
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -351,6 +351,73 @@ plt.rcParams.update(base_settings)
 
 _setup_backend()
 
+# =============================
+# LATEX FALLBACK HELPERS (shared with plotting)
+# =============================
+import re as _re
+
+_LATEX_REGEX_REPLACEMENTS: list[
+    tuple[_re.Pattern, Union[str, Callable[["_re.Match"], str]]]
+] = [
+    (_re.compile(r"\\mathrm\{([^}]*)\}"), r"\1"),
+    (_re.compile(r"\\text\{([^}]*)\}"), r"\1"),
+    (_re.compile(r"\\left"), ""),
+    (_re.compile(r"\\right"), ""),
+    (
+        _re.compile(r"\\(langle|rangle)"),
+        lambda m: "<" if m.group(1) == "langle" else ">",
+    ),
+    (_re.compile(r"\\omega"), "w"),
+    (_re.compile(r"\\mu"), "mu"),
+    (_re.compile(r"\\Delta"), "Δ"),
+    (_re.compile(r"\\propto"), "∝"),
+]
+
+
+def strip_latex(text: str) -> str:
+    """Convert a LaTeX/math string into a plain-text approximation.
+
+    Removes math delimiters and common formatting commands while keeping
+    semantic meaning where possible.
+    """
+    if not text:
+        return text
+    out = text.replace("$", "")
+    for pat, repl in _LATEX_REGEX_REPLACEMENTS:
+        out = pat.sub(repl, out)
+    out = _re.sub(r"\s+", " ", out).strip()
+    return out
+
+
+def maybe_latex(label_latex: str, label_plain: str | None = None) -> str:
+    """Return LaTeX label if LaTeX is available else a plain fallback.
+
+    If label_plain is omitted it's inferred via strip_latex.
+    """
+    if latex_available:
+        return label_latex
+    return label_plain if label_plain is not None else strip_latex(label_latex)
+
+
+def simplify_figure_text(fig, force: bool = False) -> None:
+    """Downgrade all axis titles/labels/legend texts to plain text if LaTeX unavailable.
+
+    Set force=True to apply even when LaTeX is available (debug/testing).
+    """
+    if latex_available and not force:
+        return
+    try:
+        for ax in fig.get_axes():
+            ax.set_title(strip_latex(ax.get_title()))
+            ax.set_xlabel(strip_latex(ax.get_xlabel()))
+            ax.set_ylabel(strip_latex(ax.get_ylabel()))
+            leg = ax.get_legend()
+            if leg:
+                for txt in leg.get_texts():
+                    txt.set_text(strip_latex(txt.get_text()))
+    except Exception as e:  # non-fatal
+        print(f"Warning (simplify_figure_text): {e}")
+
 
 def save_fig(
     fig: plt.Figure,
@@ -444,6 +511,10 @@ __all__ = [
     "set_size",
     "format_sci_notation",
     "save_fig",
+    # helpers
+    "strip_latex",
+    "maybe_latex",
+    "simplify_figure_text",
 ]
 
 """

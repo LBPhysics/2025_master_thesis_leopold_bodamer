@@ -23,13 +23,7 @@ from qspectro2d.core.laser_system.laser_class import (
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.utils import apply_RWA_phase_factors, get_expect_vals_with_RWA
 from qspectro2d.spectroscopy.polarization import complex_polarization
-from qspectro2d.config import (
-    PHASE_CYCLING_PHASES,
-    SOLVER_OPTIONS,
-    NEGATIVE_EIGVAL_THRESHOLD,
-    TRACE_TOLERANCE,
-    DETECTION_PHASE,
-)
+from qspectro2d.config import CONFIG
 
 
 # =============================
@@ -68,7 +62,7 @@ def compute_pulse_evolution(
     options = solver_options.copy() if solver_options else {}
 
     # Update options with defaults only if not already set
-    for key, value in SOLVER_OPTIONS.items():
+    for key, value in CONFIG.solver.solver_options.items():
         options.setdefault(key, value)
 
     all_states, all_times = [], []
@@ -219,12 +213,12 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
             error_messages.append(f"Density matrix is not Hermitian after t = {time}")
             logger.error(f"Non-Hermitian density matrix at t = {time}")
         eigvals = state.eigenenergies()
-        if not np.all(eigvals >= NEGATIVE_EIGVAL_THRESHOLD):
+        if not np.all(eigvals >= CONFIG.solver.negative_eigval_threshold):
             error_messages.append(
                 f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {eigvals.min()}"
             )
             time_cut = time
-        if not np.isclose(state.tr(), 1.0, atol=TRACE_TOLERANCE):
+        if not np.isclose(state.tr(), 1.0, atol=CONFIG.solver.trace_tolerance):
             error_messages.append(
                 f"Density matrix is not trace-preserving after t = {time}: The trace is {state.tr()}"
             )
@@ -234,7 +228,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
                 "Density matrix validation failed: " + "; ".join(error_messages)
             )
             break
-    else:
+    if not error_messages:
         logger.info("Checks passed. DM remains Hermitian and positive.")
 
     return result, time_cut
@@ -694,7 +688,7 @@ def _process_single_1d_combination(
         local_sim_oqs = deepcopy(sim_oqs)
 
         local_sim_oqs.laser.update_phases(
-            phases=[phi1, phi2, DETECTION_PHASE]
+            phases=[phi1, phi2, CONFIG.signal.detection_phase]
         )  # Update the laser phases in the local copy
 
         local_sim_oqs.system.at_freqs_cm = (
@@ -758,7 +752,7 @@ def parallel_compute_1d_E_with_inhomogenity(
     n_phases = sim_oqs.simulation_config.n_phases
     n_freqs = sim_oqs.simulation_config.n_freqs
     max_workers = sim_oqs.simulation_config.max_workers
-    phases = PHASE_CYCLING_PHASES[:n_phases]  # Use predefined phases
+    phases = CONFIG.signal.phase_cycling_phases[:n_phases]
     if n_phases != 4:
         logger.warning(
             f"Phase cycling with {n_phases} phases may not be optimal for IFT"
@@ -962,7 +956,7 @@ def extract_ift_signal_component(
         for phi2_idx, phi_2 in enumerate(phases):
             if results_matrix[phi1_idx, phi2_idx] is not None:
                 phase_factor = np.exp(
-                    -1j * (l * phi_1 + m * phi_2 + n * DETECTION_PHASE)
+                    -1j * (l * phi_1 + m * phi_2 + n * CONFIG.signal.detection_phase)
                 )
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 

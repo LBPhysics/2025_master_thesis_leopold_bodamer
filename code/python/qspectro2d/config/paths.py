@@ -1,9 +1,27 @@
-"""
-Path configurations for the qspectro2d project.
+"""Project path definitions (no side effects).
 
-This module provides cross-platform path definitions for data and figure directories.
-Paths are defined relative to the project root to ensure compatibility across different
-operating systems and user environments.
+This module exposes lazily-resolved paths relative to the detected project root.
+It intentionally performs **no filesystem mutations at import time** (no directory
+creation) to keep imports pure and to avoid surprising side effects in contexts like
+unit tests, packaging, or documentation builds.
+
+Call :func:`ensure_dirs` explicitly in entry‑point scripts (e.g. simulation runners,
+CLI tools, notebooks) before writing data / figures.
+
+Rationale for removing side effects:
+    * Deterministic imports (import does not touch disk)
+    * Easier mocking of filesystem in tests
+    * Clearer responsibility boundary (callers decide when to create output dirs)
+    * Avoids accidental creation of large directory trees during static analysis
+
+Example::
+
+    from qspectro2d.config.paths import DATA_DIR, FIGURES_DIR, ensure_dirs
+    ensure_dirs()  # creates the base output directory structure if missing
+    (DATA_DIR / "1d_spectroscopy").mkdir(exist_ok=True)
+
+Future extension: accept a ``base=Path`` override or environment variable to allow
+redirecting outputs (e.g. for scratch / temporary runs) without modifying code.
 """
 
 from pathlib import Path
@@ -32,17 +50,11 @@ def find_project_root():
 
 PROJECT_ROOT = find_project_root()
 
-# Define directory paths
-DATA_DIR = PROJECT_ROOT / "data"
-FIGURES_DIR = PROJECT_ROOT / "figures"
-
-# Create directories if they don't exist
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-FIGURES_DIR.mkdir(parents=True, exist_ok=True)
-
-# Convert to absolute paths for consistency
-DATA_DIR = DATA_DIR.resolve()
-FIGURES_DIR = FIGURES_DIR.resolve()
+#########################
+# Base directories (pure)
+#########################
+DATA_DIR = (PROJECT_ROOT / "data").resolve()
+FIGURES_DIR = (PROJECT_ROOT / "figures").resolve()
 
 # Additional useful paths (NOT used)
 PYTHON_CODE_DIR = PROJECT_ROOT / "code" / "python"
@@ -50,29 +62,35 @@ SCRIPTS_DIR = PYTHON_CODE_DIR / "scripts"
 NOTEBOOKS_DIR = PYTHON_CODE_DIR / "notebooks"
 LATEX_DIR = PROJECT_ROOT / "latex"
 
-# Figures subdirectories (NOT used)
+##############################
+# Figure subdirectories (lazy)
+##############################
 FIGURES_PYTHON_DIR = FIGURES_DIR / "figures_from_python"
 FIGURES_BATH_DIR = FIGURES_PYTHON_DIR / "bath_correlator"
 FIGURES_PULSES_DIR = FIGURES_PYTHON_DIR / "pulses"
-FIGURES_TESTS_DIR = FIGURES_PYTHON_DIR / "tests"  # Added for test figures
+FIGURES_TESTS_DIR = FIGURES_PYTHON_DIR / "tests"  # For test figures
 
-# Create figure subdirectories if they don't exist
-for fig_dir in [
-    FIGURES_PYTHON_DIR,
-    FIGURES_BATH_DIR,
-    FIGURES_PULSES_DIR,
-    FIGURES_TESTS_DIR,  # Added for test figures
-]:
-    fig_dir.mkdir(parents=True, exist_ok=True)
+
+def ensure_dirs() -> None:
+    """Create the canonical output directory hierarchy if missing.
+
+    Safe to call multiple times. Kept separate from import to avoid side effects.
+    """
+
+    for path in [
+        DATA_DIR,
+        FIGURES_DIR,
+        FIGURES_PYTHON_DIR,
+        FIGURES_BATH_DIR,
+        FIGURES_PULSES_DIR,
+        FIGURES_TESTS_DIR,
+    ]:
+        path.mkdir(parents=True, exist_ok=True)
+
 
 # Print paths for debugging (only when directly executed)
-if __name__ == "__main__":
-    print("Project paths configuration:")
-    print(f"Project root: {PROJECT_ROOT}")
-    print(f"Data directory: {DATA_DIR}")
-    print(f"Figures directory: {FIGURES_DIR}")
-    print(f"Figures Python directory: {FIGURES_PYTHON_DIR}")
-    print(f"Python code directory: {PYTHON_CODE_DIR}")
-    print(f"Scripts directory: {SCRIPTS_DIR}")
-    print(f"Notebooks directory: {NOTEBOOKS_DIR}")
-    print(f"LaTeX directory: {LATEX_DIR}")
+if __name__ == "__main__":  # manual debug helper
+    print("Project root:", PROJECT_ROOT)
+    print("Data directory:", DATA_DIR)
+    print("Figures directory:", FIGURES_DIR)
+    print("(Call ensure_dirs() to create directories)")

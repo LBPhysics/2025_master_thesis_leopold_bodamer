@@ -5,6 +5,8 @@ This module provides functionality for loading and saving simulation data,
 including standardized file formats and directory management.
 """
 
+from __future__ import annotations
+
 # =============================
 # IMPORTS
 # =============================
@@ -21,8 +23,9 @@ from qspectro2d.config.paths import DATA_DIR
 # Type checking imports to avoid circular imports
 if TYPE_CHECKING:
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.simulation import SimulationConfig
 from qutip import BosonicEnvironment
-from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d.utils.file_naming import generate_unique_data_filename
 
 
@@ -32,23 +35,49 @@ from qspectro2d.utils.file_naming import generate_unique_data_filename
 def save_data_file(
     abs_data_path: Path,
     data: np.ndarray,
-    axis1: np.ndarray,
-    axis2: Optional[np.ndarray] = None,
+    t_det: np.ndarray,
+    t_coh: Optional[np.ndarray] = None,
 ) -> None:
-    """
-    Save numpy data and axes to compressed .npz file.
+    """Save spectroscopy data arrays (.npz) with semantic axis names & description.
 
-    Args:
-        abs_data_path: Absolute path for the numpy data file (.npz)
-        data: Simulation results (1D or 2D data)
-        axis1: First axis (e.g., time or frequency for 1D or 2D data)
-        axis2: Second axis (e.g., coherence time for 2D data)
+    Stored keys:
+        data  : array (1D or 2D)
+        t_det : detection time axis (always present)
+        t_coh : coherence time axis (only for 2D data)
+        axes_description : list[str] describing axis ordering of 'data'
+
+    Axis ordering convention:
+        1D: data.shape == (len(t_det),)                     ; axes_description=["t_det → axis 0"]
+        2D: data.shape == (len(t_coh), len(t_det))           ; axes_description=["t_coh → axis 0", "t_det → axis 1"]
     """
     try:
-        if axis2 is not None:
-            np.savez_compressed(abs_data_path, data=data, axis1=axis1, axis2=axis2)
+        # Ensure target directory exists
+        abs_data_path.parent.mkdir(parents=True, exist_ok=True)
+        if t_coh is not None:
+            if data.shape[0] != len(t_coh) or data.shape[1] != len(t_det):
+                raise ValueError(
+                    "2D data shape must be (len(t_coh), len(t_det)) matching provided axes"
+                )
+            axes_description = ["t_coh → axis 0", "t_det → axis 1"]
+            np.savez_compressed(
+                abs_data_path,
+                data=data,
+                t_det=t_det,
+                t_coh=t_coh,
+                axes_description=np.array(axes_description, dtype=object),
+            )
         else:
-            np.savez_compressed(abs_data_path, data=data, axis1=axis1)
+            if data.shape[0] != len(t_det):
+                raise ValueError(
+                    "1D data shape must be (len(t_det),) matching provided detection axis"
+                )
+            axes_description = ["t_det → axis 0"]
+            np.savez_compressed(
+                abs_data_path,
+                data=data,
+                t_det=t_det,
+                axes_description=np.array(axes_description, dtype=object),
+            )
         print(f"✅ Data saved successfully to: {abs_data_path}")
     except Exception as e:
         print(f"❌ ERROR: Failed to save data: {e}")
@@ -57,10 +86,10 @@ def save_data_file(
 
 def save_info_file(
     abs_info_path: Path,
-    system,  # "AtomicSystem"
+    system: "AtomicSystem",
     bath: BosonicEnvironment,
     laser: "LaserPulseSequence",
-    info_config: dict,
+    sim_config: "SimulationConfig",
 ) -> None:
     """
     Save system parameters and data configuration to pickle file.
@@ -70,7 +99,7 @@ def save_info_file(
         system: System parameters object
         bath: QuTip Environment instance
         laser: Laser pulse sequence object
-        info_config: Simulation configuration dictionary
+        sim_config: SimulationConfig instance used for the run (stored as object, not dict)
     """
     try:
         with open(abs_info_path, "wb") as info_file:
@@ -79,7 +108,8 @@ def save_info_file(
                     "system": system,
                     "bath": bath,
                     "laser": laser,
-                    "info_config": info_config,
+                    # Store the SimulationConfig instance directly for full fidelity
+                    "sim_config": sim_config,
                 },
                 info_file,
             )
@@ -90,13 +120,13 @@ def save_info_file(
 
 
 def save_simulation_data(
-    system,  # "AtomicSystem"
-    info_config: dict,
+    system: "AtomicSystem",
+    sim_config: "SimulationConfig",
     bath: BosonicEnvironment,
     laser: "LaserPulseSequence",
     data: np.ndarray,
-    axis1: np.ndarray,
-    axis2: Optional[np.ndarray] = None,
+    t_det: np.ndarray,
+    t_coh: Optional[np.ndarray] = None,
 ) -> Path:
     """
     Save spectroscopy simulation data (numpy arrays) along with known axes in one file,
@@ -104,10 +134,10 @@ def save_simulation_data(
 
     Parameters:
         data (np.ndarray): Simulation results (1D or 2D data).
-        axis1 (np.ndarray): First axis (e.g., time or frequency for 1D or 2D data).
-        axis2 (Optional[np.ndarray]): Second axis (e.g., coherence time for 2D data).
+    t_det (np.ndarray): Detection time axis.
+    t_coh (Optional[np.ndarray]): Coherence time axis for 2D data.
         system (AtomicSystem): System parameters object.
-        info_config (dict): Simulation configuration dictionary.
+    sim_config (SimulationConfig): Simulation configuration object.
 
     Returns:
         Path]: absolute path to DATA_DIR for the saved numpy data file and info file.
@@ -115,15 +145,15 @@ def save_simulation_data(
     # =============================
     # Generate unique filenames
     # =============================
-    abs_base_path = generate_unique_data_filename(system, info_config)
-    abs_data_path = Path(f"{abs_base_path}_data.npz")
+    abs_base_path = generate_unique_data_filename(system, sim_config)
+    abs_data_path = Path(f"{abs_base_path}_data.npz")  # still legacy suffix pattern
     abs_info_path = Path(f"{abs_base_path}_info.pkl")
 
     # =============================
     # Save files
     # =============================
-    save_data_file(abs_data_path, data, axis1, axis2)
-    save_info_file(abs_info_path, system, bath, laser, info_config)
+    save_data_file(abs_data_path, data, t_det, t_coh)
+    save_info_file(abs_info_path, system, bath, laser, sim_config)
 
     # =============================
     # Return absolute path to DATA_DIR
@@ -147,6 +177,9 @@ def load_data_file(abs_data_path: Path) -> dict:
     try:
         with np.load(abs_data_path, allow_pickle=True) as data_file:
             data_dict = {key: data_file[key] for key in data_file.files}
+        # Enforce required key
+        if "t_det" not in data_dict:
+            raise KeyError("Missing 't_det' axis in data file (new format requirement)")
         print(f"✅ Loaded data from: {abs_data_path}")
         return data_dict
     except Exception as e:
@@ -204,7 +237,7 @@ def load_data_from_abs_path(abs_path: str) -> dict:
         abs_path: absolute path for the numpy data file (.npz) or info file (.pkl)
 
     Returns:
-        dict: Dictionary containing loaded data, axes, system, and info_config
+    dict: Dictionary containing loaded data, axes, system, and sim_config
     """
     ### Determine the base path (without file extensions)
     if abs_path.endswith("_data.npz"):
@@ -227,19 +260,23 @@ def load_data_from_abs_path(abs_path: str) -> dict:
     # =============================
     # Combine data and info into standardized structure
     # =============================
+    # Require new key only (legacy 'info_config' removed)
+    if "sim_config" not in info_dict:
+        raise KeyError(
+            "Missing 'sim_config' in info file (legacy 'info_config' no longer supported)"
+        )
+    sim_cfg = info_dict.get("sim_config")
     result = {
         "data": data_dict.get("data"),
-        "axes": {
-            "axis1": data_dict.get("axis1"),
-        },
+        "axes": {"t_det": data_dict.get("t_det")},
         "system": info_dict.get("system"),
         "bath": info_dict.get("bath"),
         "laser": info_dict.get("laser"),
-        "info_config": info_dict.get("info_config"),
+        "sim_config": sim_cfg,
     }
-    # Add second axis if it exists (for 2D data)
-    if "axis2" in data_dict:
-        result["axes"]["axis2"] = data_dict["axis2"]
+    # Add coherence axis if present
+    if "t_coh" in data_dict and data_dict.get("t_coh") is not None:
+        result["axes"]["t_coh"] = data_dict["t_coh"]
 
     return result
 
@@ -283,7 +320,7 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
     abs_path = latest_path
     abs_path_str = str(abs_path)
     if abs_path_str.endswith("_data.npz"):
-        abs_path_str = abs_path_str[:-9]  # Remove '_data.npz'
+        abs_path_str = abs_path_str[:-9]  # Remove suffix
     print(f"📅 Loading latest file: {abs_path_str}")
 
     # =============================
@@ -292,7 +329,7 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
     return load_data_from_abs_path(abs_path_str)
 
 
-def list_available_data_files(abs_base_dir: Path) -> Dict[str, dict]:
+def list_available_data_files(abs_base_dir: Path) -> List[str]:
     """
     List all available data files in a directory with their metadata without loading the full data.
 
@@ -300,7 +337,7 @@ def list_available_data_files(abs_base_dir: Path) -> Dict[str, dict]:
         abs_base_dir: Base directory path absolute to DATA_DIR
 
     Returns:
-        Dict[str, dict]: Dictionary with file paths as keys and metadata as values
+        List[str]: Sorted list of data/info file paths (strings)
     """
     if not abs_base_dir.is_dir():
         print(f"⚠️  {abs_base_dir} is not a directory, checking parent directory.")

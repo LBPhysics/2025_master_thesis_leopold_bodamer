@@ -71,60 +71,37 @@ def create_base_sim_oqs(
         tuple: (SimulationModuleOQS instance, time_cut from solver validation)
     """
     # Import config values here to avoid circular imports
-    from qspectro2d.config import (
-        N_ATOMS,
-        ODE_SOLVER,
-        RWA_SL,
-        BATH_TYPE,
-        BATH_TEMP,
-        BATH_CUTOFF,
-        BATH_COUPLING,
-        N_FREQS,
-        N_PHASES,
-        DELTA_CM,
-        IFT_COMPONENT,
-        RELATIVE_E0S,
-        PULSE_FWHM,
-        BASE_AMPLITUDE,
-        ENVELOPE_TYPE,
-        CARRIER_FREQ_CM,
-        DIP_MOMENTS,
-        FREQS_CM,
-        AT_COUPLING_CM,
-    )
+    from qspectro2d.config import CONFIG
 
     print("🔧 Creating base simulation configuration...")
 
     atomic_config = {
-        "n_atoms": N_ATOMS,
-        "at_freqs_cm": FREQS_CM,  # Frequency of atom A [cm⁻¹]
-        "dip_moments": DIP_MOMENTS,  # Dipole moments for each atom
-        "delta_cm": DELTA_CM,  # inhomogeneous broadening [cm⁻¹]
+        "n_atoms": CONFIG.atomic.n_atoms,
+        "at_freqs_cm": list(CONFIG.atomic.freqs_cm),
+        "dip_moments": list(CONFIG.atomic.dip_moments),
+        "delta_cm": CONFIG.atomic.delta_cm,
     }
-    if N_ATOMS >= 2:
-        atomic_config["at_coupling_cm"] = AT_COUPLING_CM
+    if CONFIG.atomic.n_atoms >= 2:
+        atomic_config["at_coupling_cm"] = CONFIG.atomic.at_coupling_cm
 
     # Use dummy t_coh=0 for initial setup and solver check
     pulse_config = {
-        "pulse_fwhm": PULSE_FWHM,
-        "base_amplitude": BASE_AMPLITUDE,
-        "envelope_type": ENVELOPE_TYPE,
-        "carrier_freq_cm": CARRIER_FREQ_CM,
-        "relative_E0s": RELATIVE_E0S,  # relative amplitudes for each pulse
-        "delays": [
-            args.t_coh,
-            args.t_wait,
-        ],  # dummy delays, will be updated
+        "pulse_fwhm": CONFIG.laser.pulse_fwhm_fs,
+        "base_amplitude": CONFIG.laser.base_amplitude,
+        "envelope_type": CONFIG.laser.envelope_type,
+        "carrier_freq_cm": CONFIG.laser.carrier_freq_cm,
+        "relative_E0s": list(CONFIG.signal.relative_e0s),
+        "delays": [args.t_coh, args.t_wait],
     }
 
     max_workers = get_max_workers()
     simulation_config_dict = {
         "simulation_type": "1d",
         "max_workers": max_workers,
-        "IFT_component": IFT_COMPONENT,
+        "IFT_component": list(CONFIG.signal.ift_component),
         ### Simulation parameters
-        "ode_solver": ODE_SOLVER,
-        "rwa_sl": RWA_SL,
+        "ode_solver": CONFIG.solver.solver,
+        "rwa_sl": CONFIG.window.rwa_sl,
         "keep_track": "basis",
         # times
         "t_coh": args.t_coh,  # dummy value, will be updated
@@ -132,17 +109,16 @@ def create_base_sim_oqs(
         "t_det_max": args.t_det_max,
         "dt": args.dt,
         # phase cycling
-        "n_phases": N_PHASES,
+        "n_phases": CONFIG.signal.n_phases,
         # inhomogeneous broadening
-        "n_freqs": N_FREQS,
+        "n_freqs": CONFIG.window.n_freqs,
     }
 
     bath_config = {
-        ### Bath parameters
-        "bath_type": BATH_TYPE,
-        "Temp": BATH_TEMP,  # zero temperature
-        "cutoff": BATH_CUTOFF,  # cutoff frequency in cm⁻¹
-        "alpha": BATH_COUPLING,
+        "bath_type": CONFIG.bath.bath_type,
+        "Temp": CONFIG.bath.temperature,
+        "cutoff": CONFIG.bath.cutoff,
+        "alpha": CONFIG.bath.coupling,
     }
 
     # Create the simulation class instance

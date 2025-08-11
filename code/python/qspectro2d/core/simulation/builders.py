@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 import numpy as np
 from qutip import (
     Qobj,
@@ -11,6 +12,7 @@ from qutip import (
     liouvillian,
 )
 from typing import List
+from qutip import BosonicEnvironment
 
 from .config import SimulationConfig
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
@@ -18,8 +20,10 @@ from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.laser_system.laser_fcts import E_pulse, Epsilon_pulse
 from qspectro2d.core.system_bath_class import SystemBathCoupling
 from qspectro2d.core.system_laser_class import SystemLaserCoupling
-from qutip import BosonicEnvironment
-from qspectro2d.config import HBAR
+from qspectro2d.constants import HBAR
+
+## NOTE: Do NOT import paper/redfield helpers at module load to avoid circular import.
+## They are imported lazily inside __post_init__ when needed.
 
 
 def H_int_(t: float, sm_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qobj:
@@ -44,12 +48,29 @@ def H_int_(t: float, sm_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qo
     return -dip_op * (E_field + np.conj(E_field))
 
 
+def paper_eqs_evo(
+    sim: "SimulationModuleOQS", t: float
+) -> Qobj:  # pragma: no cover simple wrapper
+    """Global helper for 'Paper_eqs' solver evolution.
+
+    Kept at module scope so partial(paper_eqs_evo, sim) remains pickleable.
+    Lazy import inside to avoid circular import at module load.
+    """
+    from qspectro2d.core.simulation.liouvillian_paper import (
+        matrix_ODE_paper as _matrix_ODE_paper,
+    )
+
+    return _matrix_ODE_paper(t, sim)
+
+
 @dataclass
 class SimulationModuleOQS:
     simulation_config: SimulationConfig
+
     system: AtomicSystem
     laser: LaserPulseSequence
     bath: BosonicEnvironment
+
     sl_coupling: SystemLaserCoupling = field(init=False)
     sb_coupling: SystemBathCoupling = field(init=False)
 
@@ -58,12 +79,46 @@ class SimulationModuleOQS:
         self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
 
         solver = self.simulation_config.ode_solver
-        if solver == "ME":
+        H0_diagonalized = self.H0_diagonalized
+
+        if solver == "Paper_eqs":
+            # Use a module-level wrapper + functools.partial to keep object pickleable under Windows spawn.
+            self.evo_obj_free = partial(paper_eqs_evo, self)
+            self.evo_obj_int = self.evo_obj_free
+            self.decay_channels = []
+
+        elif solver == "Paper_BR":
+            # TODO somehow contains 2 RWAs for n_atoms == 2.
+            from qspectro2d.core.simulation.redfield import R_paper as _R_paper
+
+            # This version is computable with mesolve H -> evo_obj; no need for a_ops
+            custom_free = liouvillian(self.H0_diagonalized) + _R_paper(self)
+            self.evo_obj_free = custom_free
+            self.evo_obj_int = custom_free + liouvillian(QobjEvo(self.H_int_sl))
+
+            """
+            # This version can be passed to brmesolve?
+            R_super = _R_paper(self)  # time-independent Redfield tensor (Qobj)
+            self.evo_obj_free = H0_diagonalized
+            self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
+            self.decay_channels = R_super  # Redfield handled separately
+            """
+
+        elif solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
+            self.evo_obj_free = H0_diagonalized
+            self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
+
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
-        else:  # Paper variants manage decay separately
+            self.evo_obj_free = H0_diagonalized
+            self.evo_obj_int = QobjEvo(self.H_int_sl)
+        else:
+            # Fallback: treat as ME-style with no decay channels
+            # TODO return warning
             self.decay_channels = []
+            self.evo_obj_free = H0_diagonalized
+            self.evo_obj_int = QobjEvo(self.H_int_sl)
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -82,60 +137,14 @@ class SimulationModuleOQS:
                 Es[1] -= HBAR * self.laser.omega_laser
                 Es[2] -= HBAR * self.laser.omega_laser
                 Es[3] -= 2 * HBAR * self.laser.omega_laser
+            else:
+                print(
+                    "TODO extend the H_diag to N_atoms > 2 ?Es[i] -= self.laser.omega_laser?"
+                )
         return Qobj(np.diag(Es), dims=self.system.H0_N_canonical.dims)
 
     def H_int_sl(self, t: float) -> Qobj:
         return H_int_(t, self.system.sm_op, self.simulation_config.rwa_sl, self.laser)
-
-    # --- Evolution objects -------------------------------------------------------
-    @property
-    def evo_obj_free(self) -> Qobj:
-        """Free evolution Hamiltonian (no driving field).
-
-        Returned as a static Qobj so QuTiP can use the optimized code-path.
-        For BR solver this is still acceptable (brmesolve will use `a_ops`).
-        """
-        ode_solver = self.simulation_config.ode_solver
-        if ode_solver == "ME":
-            return self.H0_diagonalized
-        elif ode_solver == "BR":
-            return self.H0_diagonalized
-        elif ode_solver in ["Paper_eqs", "Paper_BR"]:
-            return self.H0_diagonalized
-        return self.H0_diagonalized
-
-    @property
-    def evo_obj_int(self):  # type: ignore[override]
-        """Time-dependent driven Hamiltonian H(t) = H0 + H_int(t).
-
-        Provided in a mesolve / brmesolve compatible list form:
-            [H0, [callable, args_dict]]
-
-        This representation (instead of a lambda capture / QobjEvo) keeps the
-        object picklable for potential use in process pools.
-        """
-        if not hasattr(self, "_evo_obj_int"):
-
-            def _H_int_callable(t, args):  # QuTiP signature: (t, args) -> Qobj
-                return H_int_(
-                    t,
-                    args["sm_op"],
-                    args["rwa_sl"],
-                    args["laser"],
-                )
-
-            self._evo_obj_int = [
-                self.H0_diagonalized,
-                [
-                    _H_int_callable,
-                    {
-                        "sm_op": self.system.sm_op,
-                        "rwa_sl": self.simulation_config.rwa_sl,
-                        "laser": self.laser,
-                    },
-                ],
-            ]
-        return self._evo_obj_int
 
     # --- Observables ---------------------------------------------------------------
     @property

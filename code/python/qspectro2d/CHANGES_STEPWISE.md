@@ -72,3 +72,39 @@ M. (DONE) Extended lazy import: replaced remaining eager imports (baths, spectro
 - Legacy public API path removed; attempting to import `qspectro2d.core.simulation_class` will now fail (intentional simplification).
 
 (End of log – append further steps below as they are approved and implemented.)
+ 
+Date: 2025-08-10
+
+## Completed Changes (new)
+
+9. Structured configuration dataclasses (experimental layer)
+   - Added `config/models.py` with grouped dataclasses: AtomicConfig, LaserConfig, BathConfig, SignalProcessingConfig, SolverConfig, SimulationWindowConfig, MasterConfig.
+   - Added `config/loader.py` exposing `load_config()` returning MasterConfig from legacy defaults.
+   - Updated `config/__init__.py` to export new symbols (backwards compatible; flat constants untouched).
+   - Validation pattern: per-section validate() plus existing `validate_defaults()` call for physics-specific warnings.
+   - No behavioral change for existing code paths; purely additive API to enable gradual migration.
+
+10. Removed flat constant exports (breaking change by request)
+   - Deleted re-export of legacy simulation parameter constants from `config.__init__`.
+   - Added single global `CONFIG` instance; all code now accesses structured fields.
+   - Updated usages in `spectroscopy/calculations.py`, `utils/simulation_utils.py` to use `CONFIG`.
+   - Redirected `HBAR` imports to `qspectro2d.constants` in builders & system_laser_class.
+   - NOTE: Any external user code must migrate to structured API.
+
+## Pending / Proposed Next Steps (awaiting user go)
+N. YAML/TOML override support in `load_config(path)` with deep merge.
+O. Environment variable override layer (`QSPEC_*`).
+P. Aggregated validation report returning structured warnings list.
+Q. Remove directory-creation side effects from `paths.py` (introduce explicit `ensure_dirs()`).
+R. Migrate any remaining internal modules (if discovered) & documentation update for new API.
+
+(End of log – append further steps below as they are approved and implemented.)
+
+11. Added layered configuration loader + pure paths
+   - Implemented YAML/TOML/JSON + environment + runtime override support in `config/loader.py` (`load_config(...)`).
+   - Precedence: defaults < project file < user file < env < overrides.
+   - Added deep merge utility and environment parsing (int/float/bool/JSON heuristics).
+   - Introduced optional project root file discovery (`qspectro2d.config.{yml,toml,json}`).
+   - Refactored `config/paths.py` to remove import-time directory creation; added `ensure_dirs()`.
+   - Exported `ensure_dirs` via `config.__init__` and documented usage in README.
+   - Added PyYAML dependency to `requirements.txt` for YAML support.

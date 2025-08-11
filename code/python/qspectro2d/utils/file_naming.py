@@ -8,58 +8,91 @@ and directory paths for simulation data and plots.
 # =============================
 # IMPORTS
 # =============================
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Union
+from typing import Union, Any, Protocol, runtime_checkable, TYPE_CHECKING
+
+
+@runtime_checkable
+class AtomicSystemProto(Protocol):  # minimal structural contract for naming
+    n_atoms: int
+    at_coupling_cm: float | int
+    at_freqs_cm: Any
+    delta_cm: Any
+
+
+@runtime_checkable
+class SimulationConfigProto(Protocol):  # minimal structural contract for naming
+    simulation_type: str
+    ode_solver: str
+    rwa_sl: bool
+    t_det_max: float
+    t_wait: float
+    dt: float
+    t_coh: float
+    n_freqs: int
+
+
+if TYPE_CHECKING:  # real imports only for type checkers
+    from qspectro2d.core.atomic_system.system_class import (
+        AtomicSystem as AtomicSystemType,
+    )
+    from qspectro2d.core.simulation import SimulationConfig as SimulationConfigType
+
+    AtomicSystem = AtomicSystemType  # alias for readability
+    SimulationConfig = SimulationConfigType
+else:  # runtime uses Protocols (duck typing)
+    AtomicSystem = AtomicSystemProto  # type: ignore
+    SimulationConfig = SimulationConfigProto  # type: ignore
 
 ### Project-specific imports
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR
+from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR, ensure_dirs
 
 
 # =============================
 # FILENAME GENERATION FUNCTIONS
 # =============================
-def _generate_base_filename(system: AtomicSystem, info_config: dict) -> str:
+def _extract_system_fields(system: AtomicSystem) -> dict:
+    """Extract required filename-related fields from an AtomicSystem.
+
+    Assumes attributes exist; keeps minimalist surface for naming only.
     """
-    Generate a universal base filename for a calculation based on system and info_config parameters.
+    freqs = getattr(system, "at_freqs_cm", None)
+    return {
+        "n_atoms": getattr(system, "n_atoms", None),
+        "at_coupling_cm": getattr(system, "at_coupling_cm", None),
+        "freqs": freqs,
+        "delta_cm": getattr(system, "delta_cm", None),
+    }
 
-    Args:
-        system: System parameters object
-        info_config: Dictionary containing simulation parameters
 
-    Returns:
-        str: Base filename without path
-    """
+def _extract_sim_fields(sim: SimulationConfig) -> dict:
+    return {
+        "simulation_type": getattr(sim, "simulation_type", "1d"),
+        "ode_solver": getattr(sim, "ode_solver", None),
+        "rwa_sl": getattr(sim, "rwa_sl", None),
+        "t_det_max": getattr(sim, "t_det_max", None),
+        "t_wait": getattr(sim, "t_wait", None),
+        "dt": getattr(sim, "dt", None),
+        "t_coh": getattr(sim, "t_coh", None),
+        "n_freqs": getattr(sim, "n_freqs", 1),
+    }
 
-    parts = []
 
-    if info_config.get("simulation_type") == "1d":
-        # Round t_coh to 2 decimal places for filename clarity
-        t_coh_val = round(float(info_config["t_coh"]), 2)
-        parts.append(f"t_coh_{t_coh_val}")
+def _generate_base_filename(system: AtomicSystem, sim_config: SimulationConfig) -> str:
+    sys_f = _extract_system_fields(system)
+    sim_f = _extract_sim_fields(sim_config)
+    parts: list[str] = []
+    if sim_f["simulation_type"] == "1d":
+        t_coh_val = sim_f.get("t_coh")
+        if t_coh_val is not None:
+            parts.append(f"t_coh_{round(float(t_coh_val), 2)}")
     else:
-        parts.append(system.at_freqs_cm_cm.__str__())
-
-    """
-    n_atoms = system.n_atoms
-    # simulation_type = info_config.get("simulation_type", "spectroscopy")
-    # parts.append(simulation_type)
-    # parts.append(f"N{n_atoms}")
-    parts.append(f"wA{system.omega_A_cm/1e4:.2f}e4")
-    parts.append(f"muA{system.mu_A:.2f}")
-    if n_atoms == 2:
-        parts.append(f"wB{system.omega_B_cm/1e4:.2f}e4")
-        parts.append(f"muB{system.mu_B:.2f}")
-        J_val = system.at_coupling_cm if system.at_coupling_cm else info_config.get("at_coupling_cm", 0)
-        if J_val > 0:
-            parts.append(f"at_coupling_cm{J_val:.2f}au")  # TODO arbitrary units
-    n_freqs = info_config.get("n_freqs", 1)
-
-    if n_freqs > 1:
-        parts.append(f"Delta{system.delta_cm/1e4:.2f}e4")
-    parts.append("cm-1")
-    """
-    return "_".join(parts)
+        freqs = sys_f.get("freqs")
+        if freqs is not None:
+            parts.append(str(freqs))
+    return "_".join(parts) or "run"
 
 
 def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
@@ -109,7 +142,7 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
     return result
 
 
-def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
+def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) -> Path:
     """
     Generate standardized subdirectory path based on system and configuration.
     WILL BE subdir of DATA_DIR OR FIGURES_DIR
@@ -125,38 +158,33 @@ def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
     parts = []
 
     # Add simulation dimension (1d/2d)
-    if "simulation_type" in info_config:
-        parts.append(f"{info_config['simulation_type']}_spectroscopy")
-    else:
-        # Default to the most common case
-        parts.append("spectroscopy")
+    sim_f = _extract_sim_fields(sim_config)
+    sys_f = _extract_system_fields(system)
+
+    parts.append(f"{sim_f['simulation_type']}_spectroscopy")
 
     # Add system details
-    n_atoms = system.n_atoms
+    n_atoms = sys_f.get("n_atoms") or "N?"
     parts.append(f"N{n_atoms}")
 
     # Add solver if available
-    parts.append(info_config["ode_solver"])
+    parts.append(sim_f.get("ode_solver") or "solver?")
 
     # Add RWA if available
-    parts.append("RWA" if info_config["rwa_sl"] else "noRWA")
+    parts.append("RWA" if sim_f.get("rwa_sl") else "noRWA")
 
     # Add time parameters
-    parts.append(
-        f"t_dm{info_config.get('t_det_max', 'not_provided')}"
-    )  # maximum detection time
-    parts.append(f"t_wait_{info_config.get('t_wait', 'not_provided')}")
-    parts.append(f"dt_{info_config.get('dt', 'not_provided')}")
+    parts.append(f"t_dm{sim_f.get('t_det_max', 'na')}")
+    parts.append(f"t_wait_{sim_f.get('t_wait', 'na')}")
+    parts.append(f"dt_{sim_f.get('dt', 'na')}")
 
     if n_atoms == 2:
         # Add coupling strength if applicable
-        at_coupling_cm = (
-            system.at_coupling_cm if system.at_coupling_cm is not None else 0
-        )
+        at_coupling_cm = sys_f.get("at_coupling_cm") or 0
         if at_coupling_cm > 0:
             parts.append(f"Coupled")
 
-    n_freqs = info_config.get("n_freqs", 1)
+    n_freqs = sim_f.get("n_freqs", 1)
     if n_freqs > 1:
         parts.append("inhom")
     # Join all parts with path separator
@@ -165,33 +193,28 @@ def generate_base_sub_dir(info_config: dict, system: AtomicSystem) -> Path:
 
 def generate_unique_data_filename(
     system: AtomicSystem,
-    info_config: dict,
+    sim_config: SimulationConfig,
+    *,
+    ensure: bool = True,
 ) -> str:
-    """
-    Build a standardized filename for data files.
+    """Return unique base filename (without extension) for a run.
 
-    Args:
-        system: System parameters object
-        info_config: Dictionary containing simulation parameters
-
-    Returns:
-        str: Standardized base filename for the data file (without extension)
+    Accepts either object instances (AtomicSystem / SimulationConfig) or dict-like
+    mappings for flexibility.
     """
-    # Start with basic structure
-    relative_path = generate_base_sub_dir(info_config, system)
+    relative_path = generate_base_sub_dir(sim_config, system)
+    if ensure:
+        ensure_dirs()
     abs_path = DATA_DIR / relative_path
-    print("saving data to:", abs_path)
-    abs_path.mkdir(parents=True, exist_ok=True)
-    base_name = _generate_base_filename(system, info_config)
-    filename = _generate_unique_filename(abs_path, base_name)
-    return filename
+    base_name = _generate_base_filename(system, sim_config)
+    return _generate_unique_filename(abs_path, base_name)
 
 
 def generate_unique_plot_filename(
     system: AtomicSystem,
-    info_config: dict,
+    sim_config: SimulationConfig,
     domain: str,
-    component: str = None,
+    component: str | None = None,
 ) -> str:
     """
     Build a standardized filename for plots.
@@ -216,11 +239,11 @@ def generate_unique_plot_filename(
         )
 
     # Start with basic structure
-    relative_path = generate_base_sub_dir(info_config, system)
-    path = FIGURES_PYTHON_DIR / relative_path
-    path.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+    relative_path = generate_base_sub_dir(sim_config, system)
+    ensure_dirs()
+    path = FIGURES_PYTHON_DIR / relative_path  # Caller may create as needed
 
-    base_name = _generate_base_filename(system, info_config)
+    base_name = _generate_base_filename(system, sim_config)
     base_name += f"_{domain}_domain"
     if component:
         base_name += f"_{component}"

@@ -88,12 +88,14 @@ def main():
     abs_info_path = [Path(path) for path in abs_paths if path.endswith("_info.pkl")]
     loaded_info_data = load_info_file(abs_info_path[0])
     system = loaded_info_data["system"]
-    bath = loaded_info_data["bath_params"]
+    bath = loaded_info_data.get("bath") or loaded_info_data.get("bath_params")
     laser = loaded_info_data["laser"]
-    info_config = loaded_info_data["info_config"]
+    sim_config = loaded_info_data.get("sim_config") or loaded_info_data.get(
+        "info_config"
+    )
 
     # Get time axis (assumes same for all)
-    t_det_vals = data_npz["axis1"]
+    t_det_vals = data_npz["t_det"]  # new required key
     if t_det_vals[0] != t_coh_vals[0] or t_det_vals[-1] != t_coh_vals[-1]:
         print(
             "❌ Inconsistent time axes between t_coh and t_det. "
@@ -101,17 +103,22 @@ def main():
         )
         sys.exit(1)
     # Update config
-    info_config["simulation_type"] = "2d"
-    info_config["t_coh"] = ""  # now spans many values
+    if isinstance(sim_config, dict):
+        sim_config["simulation_type"] = "2d"
+        sim_config["t_coh"] = ""  # now spans many values
+    else:  # object -> adjust attributes directly
+        sim_config.simulation_type = "2d"
+        sim_config.t_coh = 0.0  # indicates varied
 
+    # stacked_data shape: (num_t_coh, len(t_det_vals)) => axes: t_coh (axis0), t_det (axis1)
     abs_path = save_simulation_data(
-        system,
-        info_config,
-        bath,
-        laser,
-        stacked_data,
-        axis1=t_coh_vals,
-        axis2=t_det_vals,
+        system=system,
+        sim_config=sim_config,
+        bath=bath,
+        laser=laser,
+        data=stacked_data,
+        t_det=t_det_vals,
+        t_coh=t_coh_vals,
     )
 
     print(f"\n✅ Final 2D data saved to: {abs_path}")

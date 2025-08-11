@@ -348,3 +348,91 @@ FIGURES_DIR/
 5. **Add unit tests** for the unified functions
 
 The refactoring successfully achieves the ideal structure you outlined while maintaining full backward compatibility!
+
+## Configuration System (Structured CONFIG)
+
+The legacy flat module-level constants have been replaced by a single structured dataclass tree exposed as `CONFIG`.
+
+Access pattern (read-only defaults):
+
+```python
+from qspectro2d.config import CONFIG
+n_atoms      = CONFIG.atomic.n_atoms
+solver_name  = CONFIG.solver.solver
+det_phase    = CONFIG.signal.detection_phase
+dt_fs        = CONFIG.window.dt_fs
+```
+
+Validate (optional, raises on inconsistency):
+
+```python
+from qspectro2d.config import CONFIG
+CONFIG.validate()
+```
+
+### Why structured?
+1. Namespacing improves discoverability (`CONFIG.laser.pulse_fwhm_fs` vs dozens of globals)
+2. Stronger typing (dataclasses) enables future IDE / static analysis help
+3. Foundation for layered overrides (see below)
+4. Cleaner separation of concerns (physics validation vs structural grouping)
+
+### Planned: Override Layers (YAML / TOML / Environment)
+
+Goal: allow users to customize defaults without editing source code, with a clear precedence order.
+
+Proposed precedence (lowest to highest):
+1. Built-in defaults (current values in `default_simulation_params.py`)
+2. Project config file (e.g. `qspectro2d.config.yml` at repo root)
+3. User override file passed explicitly (`load_config(path="my_run.yml")`)
+4. Environment variables (e.g. `QSPEC_WINDOW_DT_FS=1.0`)
+5. Runtime kwargs (`load_config(overrides={"window": {"dt_fs": 1.0}})`)
+
+Merge semantics:
+- Deep merge by section. Only provided keys overwrite; others inherit defaults.
+- Validation run after merge; aggregated errors reported together.
+
+Example future YAML (`run_settings.yml`):
+
+```yaml
+atomic:
+    n_atoms: 2
+    freqs_cm: [12300, 12550]
+laser:
+    pulse_fwhm_fs: 30.0
+window:
+    t_det_max_fs: 1200.0
+    dt_fs: 2.0
+solver:
+    solver: mesolve
+```
+
+Then:
+```python
+from qspectro2d.config.loader import load_config
+cfg = load_config(path="run_settings.yml")
+```
+
+Environment override example (planned):
+```
+QSPEC_WINDOW_DT_FS=1.0 QSPEC_SOLVER_SOLVER=brmesolve python run_sim.py
+```
+
+### Path Management & Side-Effects
+
+`qspectro2d.config.paths` now defines only pure path constants. It no longer creates directories at import time to avoid hidden side effects. Explicitly create the directory tree in entry points:
+
+```python
+from qspectro2d.config import ensure_dirs, DATA_DIR
+ensure_dirs()  # idempotent
+output_dir = DATA_DIR / "1d_spectroscopy" / "N1"
+output_dir.mkdir(parents=True, exist_ok=True)
+```
+
+Benefits:
+1. Pure imports (safe in tests, docs builds)
+2. Caller controls when filesystem is touched
+3. Easier to redirect outputs (future: base path override / environment variable)
+
+---
+
+If you need additional configuration capabilities soon (e.g. reading YAML), open an issue or implement a prototype in `config/loader.py` following the precedence outline above.

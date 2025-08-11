@@ -8,7 +8,6 @@ and reduces code duplication.
 
 import numpy as np
 from qspectro2d.constants import (
-    HBAR,  # re-export compatibility via config.__init__ later
     BOLTZMANN,
     convert_cm_to_fs,
 )
@@ -40,7 +39,7 @@ SOLVER_OPTIONS = {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
 NEGATIVE_EIGVAL_THRESHOLD = -1e-3
 TRACE_TOLERANCE = 1e-6
 
-# physical constants now imported from qspectro2d.constants (kept names for backward compat)
+# physical constants imported from qspectro2d.constants
 
 # supported solvers and bath models
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]

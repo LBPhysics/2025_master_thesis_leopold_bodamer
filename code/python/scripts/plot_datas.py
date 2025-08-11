@@ -41,17 +41,15 @@ def main():
     }
 
     try:
-        # LOAD DATA
         print(f"📁 Loading specific file: {args.abs_path}")
         data_and_info_dict = load_data_from_abs_path(abs_path=args.abs_path)
-
         ndim = data_and_info_dict["data"].ndim
-
-        print(
-            f"✅ Data shape: {data_and_info_dict['data'].shape}, Time range: {data_and_info_dict['axes']['axis1'][0]:.1f} to {data_and_info_dict['axes']['axis1'][-1]:.1f} fs"
-        )
-
-        # ============== PLOT ==============
+        t_det_axis = data_and_info_dict["axes"].get("t_det")
+        if t_det_axis is not None:
+            print(
+                f"✅ Data shape: {data_and_info_dict['data'].shape}, Time range: {t_det_axis[0]:.1f} to {t_det_axis[-1]:.1f} fs"
+            )
+        # Plot
         if ndim == 1:
             plot_1d_data(data_and_info_dict, plot_config)
         elif ndim == 2:
@@ -59,9 +57,7 @@ def main():
         else:
             print(f"❌ Unsupported data dimension: {ndim}")
             sys.exit(1)
-
         print("✅ Plotting completed!")
-
     except Exception as e:
         print(f"❌ Error: {e}")
         sys.exit(1)

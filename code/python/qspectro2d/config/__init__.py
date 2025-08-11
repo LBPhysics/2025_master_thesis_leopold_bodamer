@@ -1,7 +1,15 @@
-"""
-Configuration package for the Master's thesis project.
+"""Configuration package (new structured API only).
 
-This package contains all configuration files for the project.
+All former flat simulation parameter constants have been removed in favor of a
+single structured configuration object ``CONFIG`` (instance of ``MasterConfig``).
+
+Access pattern examples:
+    from qspectro2d.config import CONFIG
+    n_atoms = CONFIG.atomic.n_atoms
+    phases = CONFIG.signal.phase_cycling_phases
+    solver_name = CONFIG.solver.solver
+
+Call ``CONFIG.validate()`` if you need explicit validation.
 """
 
 # Make modules importable
@@ -26,7 +34,7 @@ from .mpl_tex_settings import (
 )
 
 from .paths import (
-    # Paths
+    # Paths (pure; call ensure_dirs() explicitly when needed)
     DATA_DIR,
     FIGURES_DIR,
     FIGURES_PYTHON_DIR,
@@ -34,52 +42,33 @@ from .paths import (
     FIGURES_BATH_DIR,
     FIGURES_PULSES_DIR,
     FIGURES_TESTS_DIR,
+    ensure_dirs,
 )
 
-from .default_simulation_params import (
-    # Fundamental constants
-    HBAR,
-    BOLTZMANN,
-    # Atomic system defaults
-    N_ATOMS,
-    FREQS_CM,
-    DELTA_CM,
-    AT_COUPLING_CM,
-    DIP_MOMENTS,
-    # Simulation defaults
-    ODE_SOLVER,
-    RWA_SL,
-    N_FREQS,
-    N_PHASES,
-    # Bath system defaults
-    BATH_TYPE,
-    BATH_TEMP,
-    BATH_CUTOFF,
-    BATH_COUPLING,
-    # Laser system defaults
-    PULSE_FWHM,
-    CARRIER_FREQ_CM,
-    ENVELOPE_TYPE,
-    BASE_AMPLITUDE,
-    # Signal processing defaults
-    IFT_COMPONENT,
-    RELATIVE_E0S,
-    # Solver defaults
-    SOLVER_OPTIONS,
-    NEGATIVE_EIGVAL_THRESHOLD,
-    TRACE_TOLERANCE,
-    PHASE_CYCLING_PHASES,
-    DETECTION_PHASE,
-    # 2d simulation defaults
-    T_DET_MAX,
-    DT,
-    BATCHES,
-    # Supported options
-    SUPPORTED_SOLVERS,
-    SUPPORTED_BATHS,
-    # Validation function
-    validate_defaults,
+from .default_simulation_params import validate_defaults  # kept for physics warnings
+from qspectro2d.constants import HBAR, BOLTZMANN  # ensure re-export
+
+# Structured config API
+from .models import (
+    MasterConfig,
+    AtomicConfig,
+    LaserConfig,
+    BathConfig,
+    SignalProcessingConfig,
+    SolverConfig,
+    SimulationWindowConfig,
 )
+from .loader import load_config
+
+# Instantiate single global configuration object
+CONFIG: MasterConfig = load_config()
+
+# Optionally run validation at import (can be commented out if too strict)
+try:
+    CONFIG.validate()
+except Exception as _e:
+    # Defer hard failures to explicit user validation; just emit message.
+    print(f"[qspectro2d.config] Validation warning during import: {_e}")
 
 # Export all important symbols for import *
 __all__ = [
@@ -108,45 +97,20 @@ __all__ = [
     "FIGURES_BATH_DIR",
     "FIGURES_PULSES_DIR",
     "FIGURES_TESTS_DIR",
+    "ensure_dirs",
     # default simulation parameters
     "HBAR",
     "BOLTZMANN",
-    "N_ATOMS",
-    "DELTA_CM",
-    "FREQS_CM",
-    "DIP_MOMENTS",
-    "AT_COUPLING_CM",
-    # simulation defaults
-    "ODE_SOLVER",
-    "RWA_SL",
-    "N_FREQS",
-    "N_PHASES",
-    # bath system defaults
-    "BATH_TYPE",
-    "BATH_TEMP",
-    "BATH_CUTOFF",
-    "BATH_COUPLING",
-    # laser system defaults
-    "PULSE_FWHM",
-    "CARRIER_FREQ_CM",
-    "ENVELOPE_TYPE",
-    "BASE_AMPLITUDE",
-    # signal processing defaults
-    "IFT_COMPONENT",
-    "RELATIVE_E0S",
-    # solver defaults
-    "SOLVER_OPTIONS",
-    "NEGATIVE_EIGVAL_THRESHOLD",
-    "TRACE_TOLERANCE",
-    "PHASE_CYCLING_PHASES",
-    "DETECTION_PHASE",
-    # 2d simulation defaults
-    "T_DET_MAX",
-    "DT",
-    "BATCHES",
-    # supported options
-    "SUPPORTED_SOLVERS",
-    "SUPPORTED_BATHS",
     # validation
     "validate_defaults",
+    # structured config API
+    "MasterConfig",
+    "AtomicConfig",
+    "LaserConfig",
+    "BathConfig",
+    "SignalProcessingConfig",
+    "SolverConfig",
+    "SimulationWindowConfig",
+    "load_config",
+    "CONFIG",
 ]

@@ -1,11 +1,16 @@
-from encodings.punycode import T
 from matplotlib.colors import TwoSlopeNorm
 import numpy as np
 from qspectro2d.core.laser_system.laser_fcts import *
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 import matplotlib.pyplot as plt
-from typing import Literal, Union
-from qspectro2d.config.mpl_tex_settings import COLORS, LINE_STYLES
+from typing import Literal, Union, Tuple
+from qspectro2d.config.mpl_tex_settings import (
+    COLORS,
+    LINE_STYLES,
+    latex_available as USE_LATEX,
+    maybe_latex as _maybe,
+    simplify_figure_text as _simplify_figure_text,
+)
 
 
 def plot_pulse_envelope(
@@ -32,13 +37,13 @@ def plot_pulse_envelope(
     ax.plot(
         times,
         envelope,
-        label=r"$\text{Combined Envelope}$",
-        linestyle=LINE_STYLES[0],  # "solid"
+        label=_maybe(r"$\text{Combined Envelope}$"),
+        linestyle=LINE_STYLES[0],
         alpha=0.8,
-        color=list(COLORS.keys())[0],  # "C0"
+        color=list(COLORS.keys())[0],
     )  # Styles for up to three pulses
-    linestyles = LINE_STYLES[1:4]  # ["dashed", "dashdot", "dotted"]
-    colors = [list(COLORS.keys())[i] for i in [1, 2, 3]]  # ["C1", "C2", "C3"]
+    linestyles = LINE_STYLES[1:4]
+    colors = [list(COLORS.keys())[i] for i in [1, 2, 3]]
 
     # Plot individual envelopes and annotations
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
@@ -65,35 +70,42 @@ def plot_pulse_envelope(
         )  # Annotate pulse key points
         ax.axvline(
             t_peak - Delta_width,
-            linestyle=LINE_STYLES[3],  # "dotted"
-            label=rf"$t_{{peak, {idx + 1}}} - \Delta_{{{idx + 1}}}$",
+            linestyle=LINE_STYLES[3],
+            label=_maybe(
+                rf"$t_{{peak, {idx + 1}}} - \Delta_{{{idx + 1}}}$",
+                f"t_peak{idx+1}-Δ{idx+1}",
+            ),
             alpha=0.4,
             color=colors[idx % len(colors)],
         )
         ax.axvline(
             t_peak,
-            linestyle=LINE_STYLES[0],  # "solid"
-            label=rf"$t_{{peak, {idx + 1}}}$",
+            linestyle=LINE_STYLES[0],
+            label=_maybe(rf"$t_{{peak, {idx + 1}}}$", f"t_peak{idx+1}"),
             alpha=0.8,
             color=colors[idx % len(colors)],
             linewidth=2,
         )
         ax.axvline(
             t_peak + Delta_width,
-            linestyle=LINE_STYLES[3],  # "dotted"
-            label=rf"$t_{{peak, {idx + 1}}} + \Delta_{{{idx + 1}}}$",
+            linestyle=LINE_STYLES[3],
+            label=_maybe(
+                rf"$t_{{peak, {idx + 1}}} + \Delta_{{{idx + 1}}}$",
+                f"t_peak{idx+1}+Δ{idx+1}",
+            ),
             alpha=0.4,
             color=colors[idx % len(colors)],
         )
 
     # Final plot labeling
-    ax.set_xlabel(r"Time $t$")
-    ax.set_ylabel(r"Envelope Amplitude")
-    ax.set_title(r"Pulse Envelopes for Up to Three Pulses")
+    ax.set_xlabel(_maybe(r"Time $t$", "Time t"))
+    ax.set_ylabel(_maybe(r"Envelope Amplitude"))
+    ax.set_title(_maybe(r"Pulse Envelopes for Up to Three Pulses"))
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     plt.close(fig)
+    _simplify_figure_text(fig)
     return fig, ax
 
 
@@ -121,14 +133,14 @@ def plot_e_pulse(
     ax.plot(
         times,
         np.real(E_field),
-        label=r"$\mathrm{Re}[E(t)]$",
+        label=_maybe(r"$\mathrm{Re}[E(t)]$", "Re E(t)"),
         linestyle=LINE_STYLES[0],  # "solid"
         color=list(COLORS.keys())[0],  # "C0"
     )
     ax.plot(
         times,
         np.imag(E_field),
-        label=r"$\mathrm{Im}[E(t)]$",
+        label=_maybe(r"$\mathrm{Im}[E(t)]$", "Im E(t)"),
         linestyle=LINE_STYLES[1],  # "dashed"
         color=list(COLORS.keys())[1],  # "C1"
     )
@@ -142,17 +154,18 @@ def plot_e_pulse(
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[3],  # "dotted"
-            label=rf"$t_{{peak, {idx + 1}}}$",
+            label=_maybe(rf"$t_{{peak, {idx + 1}}}$", f"t_peak{idx+1}"),
             color=colors[idx % len(colors)],
         )
 
     # Final plot labeling
-    ax.set_xlabel(r"Time $t$")
-    ax.set_ylabel(r"Electric Field (RWA)")
-    ax.set_title(r"RWA Electric Field Components")
+    ax.set_xlabel(_maybe(r"Time $t$", "Time t"))
+    ax.set_ylabel(_maybe(r"Electric Field (RWA)"))
+    ax.set_title(_maybe(r"RWA Electric Field Components"))
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.close(fig)
+    _simplify_figure_text(fig)
     return fig, ax
 
 
@@ -172,54 +185,115 @@ def plot_epsilon_pulse(
     """
     # Calculate the full electric field over time
     Epsilon_field = np.array([Epsilon_pulse(t, pulse_seq) for t in times])
-
-    # Create figure and axis if not provided
     fig = None
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))  # Plot real and imaginary parts
+        fig, ax = plt.subplots(figsize=(10, 6))
     ax.plot(
         times,
         np.real(Epsilon_field),
-        label=r"$\mathrm{Re}[\varepsilon(t)]$",
-        linestyle=LINE_STYLES[0],  # "solid"
-        color=list(COLORS.keys())[3],  # "C3"
+        label=_maybe(r"$\mathrm{Re}[\varepsilon(t)]$", "Re eps(t)"),
+        linestyle=LINE_STYLES[0],
+        color=list(COLORS.keys())[3],
     )
     ax.plot(
         times,
         np.imag(Epsilon_field),
-        label=r"$\mathrm{Im}[\varepsilon(t)]$",
-        linestyle=LINE_STYLES[1],  # "dashed"
-        color=list(COLORS.keys())[4],  # "C4"
+        label=_maybe(r"$\mathrm{Im}[\varepsilon(t)]$", "Im eps(t)"),
+        linestyle=LINE_STYLES[1],
+        color=list(COLORS.keys())[4],
     )
     ax.plot(
         times,
         np.abs(Epsilon_field),
-        label=r"$|\varepsilon(t)|$",
-        linestyle=LINE_STYLES[2],  # "dashdot"
-        color=list(COLORS.keys())[5],  # "C5"
+        label=_maybe(r"$|\varepsilon(t)|$", "|eps(t)|"),
+        linestyle=LINE_STYLES[2],
+        color=list(COLORS.keys())[5],
     )
-
-    # Styles for up to three pulses
-    colors = [list(COLORS.keys())[i] for i in [0, 1, 2]]  # ["C0", "C1", "C2"]
-
-    # Plot pulse peak times
-    for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
+    colors = [list(COLORS.keys())[i] for i in [0, 1, 2]]
+    for idx, pulse in enumerate(pulse_seq.pulses[:3]):
         t_peak = pulse.pulse_peak_time
         ax.axvline(
             t_peak,
-            linestyle=LINE_STYLES[3],  # "dotted"
-            label=rf"$t_{{peak, {idx + 1}}}$",
+            linestyle=LINE_STYLES[3],
+            label=_maybe(rf"$t_{{peak, {idx + 1}}}$", f"t_peak{idx+1}"),
             color=colors[idx % len(colors)],
         )
-
-    # Final plot labeling
-    ax.set_xlabel(r"Time $t$")
-    ax.set_ylabel(r"Electric Field (Full)")
-    ax.set_title(r"Full Electric Field with Carrier")
+    ax.set_xlabel(_maybe(r"Time $t$", "Time t"))
+    ax.set_ylabel(_maybe(r"Electric Field (Full)", "Electric field (full)"))
+    ax.set_title(_maybe(r"Full Electric Field with Carrier", "Full electric field"))
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.close(fig)
+    _simplify_figure_text(fig)
     return fig, ax
+
+
+def plot_1d_el_field(
+    axis_det: np.ndarray,
+    data: np.ndarray,
+    domain: Literal["time", "freq"] = "time",
+    component: Literal["real", "imag", "abs", "phase"] = "real",
+    title: str | None = None,
+    section: Union[tuple[float, float], None] = None,
+    function_symbol: str = "S",
+    figsize: Tuple[float, float] = (6.5, 4.0),
+    normalize: bool = True,
+    **kwargs: dict,
+) -> plt.Figure:
+    """Plot 1D complex data (time or frequency domain).
+
+    # =============================
+    # CONTRACT
+    # =============================
+    Inputs: axis_det (1d), complex data (same length), domain selector, component selector
+    Output: matplotlib Figure object
+    Normalization: optional (default True) to max absolute amplitude
+    Cropping: optional via section=(min,max)
+    """
+    fig = plt.figure(figsize=figsize)
+
+    # =============================
+    # CROP + NORMALIZE
+    # =============================
+    if section is not None:
+        axis_det, data = crop_nd_data_along_axis(
+            axis_det, data, section=section, axis=0
+        )
+    if normalize:
+        max_abs = np.abs(data).max()
+        if max_abs == 0:
+            raise ValueError("Data array is all zeros, cannot normalize.")
+        data = data / max_abs
+
+    # =============================
+    # COMPONENT HANDLING
+    # =============================
+    y_data, label, ylabel, x_label, final_title = _resolve_1d_labels_and_component(
+        data=data,
+        domain=domain,
+        component=component,
+        function_symbol=function_symbol,
+        provided_title=title,
+    )
+
+    # =============================
+    # STYLE
+    # =============================
+    color, linestyle = _style_for_component(component)
+
+    # =============================
+    # PLOT
+    # =============================
+    plt.plot(axis_det, y_data, label=_maybe(label), color=color, linestyle=linestyle)
+    plt.xlabel(_maybe(x_label))
+    plt.ylabel(_maybe(ylabel))
+    plt.title(_maybe(final_title))
+    plt.legend()
+    add_text_box(ax=plt.gca(), kwargs=kwargs)
+    plt.tight_layout()
+    _simplify_figure_text(fig)
+    plt.close(fig)
+    return fig
 
 
 def plot_all_pulse_components(
@@ -304,14 +378,14 @@ def plot_example_evo(
         np.real(E_total),
         color=list(COLORS.keys())[0],
         linestyle=LINE_STYLES[0],
-        label=r"$\mathrm{Re}[E(t)]$",
+        label=_maybe(r"$\mathrm{Re}[E(t)]$", "Re E(t)"),
     )
     axes[0].plot(
         times_plot,
         np.imag(E_total),
         color=list(COLORS.keys())[1],
         linestyle=LINE_STYLES[1],
-        label=r"$\mathrm{Im}[E(t)]$",
+        label=_maybe(r"$\mathrm{Im}[E(t)]$", "Im E(t)"),
     )
     axes[0].set_ylabel(r"$E(t) / E_0$")
     axes[0].legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -332,7 +406,10 @@ def plot_example_evo(
             np.real(data),
             color=list(COLORS.keys())[0],
             linestyle=LINE_STYLES[0],
-            label=r"$\mathrm{Re}\langle" + " " + observable_str + " " + r"\rangle$",
+            label=_maybe(
+                r"$\mathrm{Re}\langle" + " " + observable_str + " " + r"\rangle$",
+                f"Re <{observable_str}>",
+            ),
         )
 
         # Plot imaginary part
@@ -341,20 +418,25 @@ def plot_example_evo(
             np.imag(data),
             color=list(COLORS.keys())[1],
             linestyle=LINE_STYLES[1],
-            label=r"$\mathrm{Im}\langle" + " " + observable_str + " " + r"\rangle$",
+            label=_maybe(
+                r"$\mathrm{Im}\langle" + " " + observable_str + " " + r"\rangle$",
+                f"Im <{observable_str}>",
+            ),
         )
 
-        ax.set_ylabel(r"$\langle" + observable_str + r"\rangle$")
-        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    ax.set_ylabel(
+        _maybe(r"$\langle" + observable_str + r"\rangle$", f"<{observable_str}>")
+    )
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     add_text_box(ax=axes[0], kwargs=kwargs)
 
     # Set x-label only on the bottom subplot
-    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
+    axes[-1].set_xlabel(_maybe(r"$t\,/\,\mathrm{fs}$", "t / fs"))
 
     plt.tight_layout()
+    _simplify_figure_text(fig)
     plt.close(fig)
-
     return fig
 
 
@@ -462,34 +544,36 @@ def plot_1d_el_field(
     plt.plot(
         axis_det,
         y_data,
-        label=label,
+        label=_maybe(label),
         color=color,
         linestyle=linestyle,
     )
 
-    plt.xlabel(x_label)
-    plt.ylabel(ylabel)
-    plt.title(title)
+    plt.xlabel(_maybe(x_label))
+    plt.ylabel(_maybe(ylabel))
+    plt.title(_maybe(title))
     plt.legend()
 
     # Add additional parameters as a text box if provided
     add_text_box(ax=plt.gca(), kwargs=kwargs)
 
     plt.tight_layout()
+    _simplify_figure_text(fig)
     plt.close(fig)
-
     return fig
 
 
 def plot_2d_el_field(
-    axis_det: np.ndarray,  # 1d
-    axis_coh: np.ndarray,  # 1d
-    data: np.ndarray,  # 2d
+    axis_det: np.ndarray,  # detection axis
+    axis_coh: np.ndarray,  # coherence axis
+    data: np.ndarray,  # complex 2D array
     t_wait: float = np.inf,
     domain: Literal["time", "freq"] = "time",
     component: Literal["real", "imag", "abs", "phase"] = "real",
     use_custom_colormap: bool = False,
     section: Union[list[tuple[float, float]], None] = None,
+    figsize: Tuple[float, float] = (7.0, 5.6),
+    normalize: bool = True,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
@@ -557,62 +641,35 @@ def plot_2d_el_field(
         )
         return None
 
-    # Convert to real arrays for plotting
+    # Convert axes to real (robust against minor numerical complex drift)
     axis_det = np.real(axis_det)
     axis_coh = np.real(axis_coh)
-
-    data = np.array(data, dtype=np.complex128)  # why did you do this?
+    data = np.asarray(data, dtype=np.complex128)
     # =============================
     # SECTION CROPPING
     # =============================
     if section is not None:
+        # expect list[(coh_min, coh_max),(det_min, det_max)]
         axis_coh, data = crop_nd_data_along_axis(
             axis_coh, data, section=section[0], axis=0
         )
         axis_det, data = crop_nd_data_along_axis(
             axis_det, data, section=section[1], axis=1
         )
-
-    if np.abs(data).max() == 0:
-        raise ValueError("Data array is all zeros, cannot normalize.")
-    data = data / np.abs(data).max()  # normalize
+    if normalize:
+        max_abs = np.abs(data).max()
+        if max_abs == 0:
+            raise ValueError("Data array is all zeros, cannot normalize.")
+        data = data / max_abs
 
     # =============================
     # SET PLOT LABELS AND COLORMAP
     # =============================
-    if component not in ("real", "imag", "abs", "phase"):
-        raise ValueError(
-            "Invalid component. Must be 'real', 'imag', 'abs', or 'phase'."
-        )
-    if component == "real":
-        title = r"$\text{2D Real }$"
-        data = np.real(data)
-    elif component == "imag":
-        title = r"$\text{2D Imag }$"
-        data = np.imag(data)
-    elif component == "abs":
-        title = r"$\text{2D Abs }$"
-        data = np.abs(data)
-        use_custom_colormap = False
-    elif component == "phase":
-        title = r"$\text{2D Phase }$"
-        data = np.angle(data)
-
-    if domain not in ("time", "freq"):
-        raise ValueError("Invalid domain. Must be 'time' or 'freq'.")
-    if domain == "time":
-        colormap = "viridis"
-        title += r"$\text{Time domain signal}$"
-        y_title = r"$t_{\text{coh}}$ [fs]"
-        x_title = r"$t_{\text{det}}$ [fs]"
-    else:
-        colormap = "plasma"
-        title += r"$\text{Spectrum}$"
-        y_title = r"$\omega_{t_{\text{coh}}}$ [$10^4$ cm$^{-1}$]"
-        x_title = r"$\omega_{t_{\text{det}}}$ [$10^4$ cm$^{-1}$]"
-
+    data, title_base = _component_2d_data(data=data, component=component)
+    colormap, x_title, y_title, domain_suffix = _domain_2d_labels(domain=domain)
+    title = title_base + domain_suffix
     if t_wait != np.inf:
-        title += rf"$\ \text{{at }} T = {t_wait:.2f}$ fs"
+        title += rf"$\ (T = {t_wait:.2f}\,\text{{fs}})$"
 
     # =============================
     # CUSTOM COLORMAP FOR ZERO-CENTERED DATA
@@ -643,7 +700,7 @@ def plot_2d_el_field(
     # =============================
     # GENERATE FIGURE
     # =============================
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=figsize)
     # Create the pcolormesh plot for the 2D data
     im_plot = ax.imshow(
         data,  # data shape: [len(axis_coh), len(axis_det)]
@@ -665,9 +722,9 @@ def plot_2d_el_field(
     # add_custom_contour_lines(axis_coh, axis_det, data, component)
 
     # Improve overall plot appearance
-    ax.set_title(title)
-    ax.set_xlabel(x_title)
-    ax.set_ylabel(y_title)
+    ax.set_title(_maybe(title))
+    ax.set_xlabel(_maybe(x_title))
+    ax.set_ylabel(_maybe(y_title))
 
     # Add additional parameters as a text box if provided
     add_text_box(ax=ax, kwargs=kwargs)
@@ -676,7 +733,8 @@ def plot_2d_el_field(
 
     """# Add a border around the plot for better visual definition plt.gca().spines["top"].set_visible(True); plt.gca().spines["bottom"].set_linewidth(1.5)"""
 
-    # plt.close(fig)
+    # plt.close(fig)  # keep figure open for further user modification if desired
+    _simplify_figure_text(fig)
     return fig
 
 
@@ -708,40 +766,40 @@ def plot_example_polarization(
     plt.plot(
         times,
         np.abs(P_full),
-        label=r"$|P_{\mathrm{full}}(t)|$",
+        label=_maybe(r"$|P_{\mathrm{full}}(t)|$", "|P_full(t)|"),
         color=list(COLORS.keys())[0],  # "C0"
         linestyle=LINE_STYLES[0],  # "solid"
     )
     plt.plot(
         times,
         np.abs(P_only0),
-        label=r"$|P_0(t)|$",
+        label=_maybe(r"$|P_0(t)|$", "|P0(t)|"),
         color=list(COLORS.keys())[1],
         linestyle=LINE_STYLES[1],  # "C1", "dashed"
     )
     plt.plot(
         times,
         np.abs(P_only1),
-        label=r"$|P_1(t)|$",
+        label=_maybe(r"$|P_1(t)|$", "|P1(t)|"),
         color=list(COLORS.keys())[2],
         linestyle=LINE_STYLES[2],  # "C2", "dashdot"
     )
     plt.plot(
         times,
         np.abs(P_only2),
-        label=r"$|P_2(t)|$",
+        label=_maybe(r"$|P_2(t)|$", "|P2(t)|"),
         color=list(COLORS.keys())[3],
         linestyle=LINE_STYLES[3],  # "C3", "dotted"
     )
     plt.plot(
         times,
         np.abs(P_full - P_only0 - P_only1 - P_only2),
-        label=r"$|P^{3}(t)|$",
+        label=_maybe(r"$|P^{3}(t)|$", "|P3(t)|"),
         color=list(COLORS.keys())[4],  # "C4"
         linestyle=LINE_STYLES[0],  # "solid"
     )
-    plt.xlabel(r"$t_{\mathrm{det}}$ [fs]")
-    plt.ylabel(r"$|P(t)|$")
+    plt.xlabel(_maybe(r"$t_{\mathrm{det}}$ [fs]", "t_det [fs]"))
+    plt.ylabel(_maybe(r"$|P(t)|$", "|P(t)|"))
     plt.title(title)
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
@@ -749,6 +807,7 @@ def plot_example_polarization(
     add_text_box(ax=plt.gca(), kwargs=kwargs)
 
     plt.tight_layout()
+    _simplify_figure_text(fig)
     plt.close(fig)
     return fig
 
@@ -806,6 +865,122 @@ def crop_nd_data_along_axis(
     cropped_data = np.take(nd_data, indices, axis=axis)
 
     return cropped_coords, cropped_data
+
+
+# =============================
+# NEW INTERNAL HELPERS (1D/2D LABEL + COMPONENT LOGIC)
+# =============================
+def _style_for_component(component: str) -> Tuple[str, str]:
+    """Return (color, linestyle) for a given 1D component.
+
+    Strategy: distinct color per component; primary solid line style.
+    Fallback: first style/color.
+    """
+    color_map = {"abs": 0, "real": 1, "imag": 2, "phase": 3}
+    idx = color_map.get(component, 0)
+    color = list(COLORS.keys())[idx]
+    linestyle = LINE_STYLES[0]
+    return color, linestyle
+
+
+def _resolve_1d_labels_and_component(
+    data: np.ndarray,
+    domain: str,
+    component: str,
+    function_symbol: str,
+    provided_title: str | None,
+) -> Tuple[np.ndarray, str, str, str, str]:
+    """Process complex 1D data component + build labels.
+
+    Returns: (y_data, legend_label, y_label, x_label, final_title)
+    """
+    if domain not in ("time", "freq"):
+        raise ValueError("Domain not recognized. Use 'time' or 'freq'.")
+
+    in_time = domain == "time"
+    var_symbol = "t" if in_time else "\omega"
+    x_label = r"$t \, [\text{fs}]$" if in_time else r"$\omega$ [$10^4$ cm$^{-1}$]"
+    default_title = f"{function_symbol} in {'Time' if in_time else 'Frequency'} Domain"
+    title = provided_title or default_title
+
+    # Compute component
+    if component == "abs":
+        y_data = np.abs(data)
+        base = f"|{function_symbol}({var_symbol})|"
+    elif component == "real":
+        y_data = np.real(data)
+        base = f"\mathrm{{Re}}[{function_symbol}({var_symbol})]"
+    elif component == "imag":
+        y_data = np.imag(data)
+        base = f"\mathrm{{Im}}[{function_symbol}({var_symbol})]"
+    elif component == "phase":
+        y_data = np.angle(data)
+        base = f"\mathrm{{Arg}}[{function_symbol}({var_symbol})]"
+    else:
+        raise ValueError("Component must be one of 'abs','real','imag','phase'.")
+
+    label = f"${base}$"
+    ylabel = label if component != "phase" else f"${base}$ [rad]"
+    return y_data, label, ylabel, x_label, title
+
+
+def _component_2d_data(data: np.ndarray, component: str) -> Tuple[np.ndarray, str]:
+    """Return transformed 2D data + base title according to component."""
+    if component not in ("real", "imag", "abs", "phase"):
+        raise ValueError("Invalid component for 2D plot.")
+    if component == "real":
+        return np.real(data), r"$\text{2D Real }$"
+    if component == "imag":
+        return np.imag(data), r"$\text{2D Imag }$"
+    if component == "abs":
+        return np.abs(data), r"$\text{2D Abs }$"
+    return np.angle(data), r"$\text{2D Phase }$"  # phase
+
+
+def _domain_2d_labels(domain: str) -> Tuple[str, str, str, str]:
+    """Return (colormap, x_label, y_label, title_suffix) for domain."""
+    if domain not in ("time", "freq"):
+        raise ValueError("Invalid domain. Use 'time' or 'freq'.")
+    if domain == "time":
+        return (
+            "viridis",
+            _axis_label_time_det(),
+            _axis_label_time_coh(),
+            r"$\text{Time domain signal}$",
+        )
+    return (
+        "plasma",
+        _axis_label_freq_det(),
+        _axis_label_freq_coh(),
+        r"$\text{Spectrum}$",
+    )
+
+
+# =============================
+# AXIS LABEL HELPERS (central definitions)
+# =============================
+def _axis_label_time() -> str:
+    return r"$t$ [fs]"
+
+
+def _axis_label_freq() -> str:
+    return r"$\omega$ [$10^4$ cm$^{-1}$]"
+
+
+def _axis_label_time_det() -> str:
+    return r"$t_{\text{det}}$ [fs]"
+
+
+def _axis_label_time_coh() -> str:
+    return r"$t_{\text{coh}}$ [fs]"
+
+
+def _axis_label_freq_det() -> str:
+    return r"$\omega_{\text{det}}$ [$10^4$ cm$^{-1}$]"
+
+
+def _axis_label_freq_coh() -> str:
+    return r"$\omega_{\text{coh}}$ [$10^4$ cm$^{-1}$]"
 
 
 def add_custom_contour_lines(
@@ -908,10 +1083,10 @@ def add_text_box(ax, kwargs: dict, position: tuple = (0.98, 0.98), fontsize: int
                 # Convert other types to string and escape LaTeX special characters
                 safe_str = (
                     str(value)
-                    .replace("_", "\\_")
-                    .replace("^", "\\^")
-                    .replace("{", "\\{")
-                    .replace("}", "\\}")
+                    .replace("_", "\_")
+                    .replace("^", "\^")
+                    .replace("{", "\{")
+                    .replace("}", "\}")
                 )
                 text_lines.append(f"{key}: {safe_str}")
 

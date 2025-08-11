@@ -4,7 +4,7 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 import numpy as np
 import json
 
-from qspectro2d.config import HBAR
+from qspectro2d.constants import HBAR
 
 
 @dataclass

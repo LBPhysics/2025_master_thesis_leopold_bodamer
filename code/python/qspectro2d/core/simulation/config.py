@@ -9,19 +9,15 @@ from dataclasses import dataclass, asdict
 from typing import Tuple
 import warnings
 
-# Import available solvers constant to validate (if present)
-try:
-    from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS
-except Exception:  # pragma: no cover - fallback if constant moved
-    SUPPORTED_SOLVERS = {"ME", "BR", "Paper_eqs", "Paper_BR"}
+# Strict import of supported solvers (no fallback)
+from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS  # type: ignore
 
 
 @dataclass
 class SimulationConfig:
     """Primary configuration object for simulations.
 
-    Parameters mirror the previous dataclass. Validation and derived
-    attributes remain here; solver specific logic lives elsewhere.
+    Focused immutable configuration object; no legacy compatibility paths.
     """
 
     ode_solver: str = "Paper_BR"

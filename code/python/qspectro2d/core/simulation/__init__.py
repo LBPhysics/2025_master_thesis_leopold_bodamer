@@ -1,15 +1,14 @@
 """Simulation subpackage.
 
-Structured components formerly contained in a single monolithic
-`simulation_class.py` (now removed). Import directly from this
-subpackage instead of the old legacy path.
+Modular simulation components. Legacy `simulation_class.py` has been
+fully removed; import from here or concrete submodules directly.
 
 Modules
 -------
-config              : SimulationConfig dataclass & validation
-builders            : Core helper functions (interaction Hamiltonians)
-liouvillian_paper   : Paper specific time–dependent Liouvillian builders
-redfield            : Redfield tensor construction helpers
+config            : SimulationConfig dataclass & validation
+builders          : Core helper functions (interaction Hamiltonians)
+liouvillian_paper : Paper specific time–dependent Liouvillian builders
+redfield          : Redfield tensor construction helpers
 """
 
 from .config import SimulationConfig

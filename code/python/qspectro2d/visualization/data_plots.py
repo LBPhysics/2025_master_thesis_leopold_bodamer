@@ -8,8 +8,10 @@ spectroscopy data with standardized formatting and output.
 # =============================
 # IMPORTS
 # =============================
+import sys
 import matplotlib.pyplot as plt
 import gc
+from typing import cast, TYPE_CHECKING
 
 ### Project-specific imports
 from qspectro2d.visualization.plotting import (
@@ -24,6 +26,13 @@ from qspectro2d.spectroscopy.post_processing import (
 from qspectro2d.utils import generate_unique_plot_filename
 from qspectro2d.config.mpl_tex_settings import save_fig
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
+
+if TYPE_CHECKING:
+    # Imported only for static type checking / IDE autocomplete
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.simulation import SimulationConfig
+    from qutip import BosonicEnvironment
 
 
 # =============================
@@ -42,27 +51,31 @@ def plot_1d_data(
     # Validate and extract data structure
     data = loaded_data_and_info["data"]
     axes = loaded_data_and_info["axes"]
-    t_det_vals = axes["axis1"]  # detection times
-    if "axis2" in axes:
+    t_det_vals = axes.get("t_det")  # detection times
+    if axes.get("t_coh") is not None:
         print(
-            "❌ 1D data should not have 'axis2' in axes. Check your data structure.",
+            "❌ 1D data should not have 't_coh' axis. Check your data structure.",
             flush=True,
         )
         return
 
-    system = loaded_data_and_info["system"]
-    bath_dict = loaded_data_and_info["bath"]
-    # QuTip Environment - extract parameters
+    # Explicitly cast for static typing & IDE autocomplete
+    system = cast("AtomicSystem", loaded_data_and_info["system"])
+    w0 = system.at_freqs_fs(0)
+    bath_env = cast("BosonicEnvironment", loaded_data_and_info["bath"])
+    bath_dict = extract_bath_parameters(bath_env, w0)
 
-    laser = loaded_data_and_info["laser"]
-    info_config = loaded_data_and_info["info_config"]
+    laser = cast("LaserPulseSequence", loaded_data_and_info["laser"])
+    # Require new key 'sim_config'
+    sim_config = cast("SimulationConfig", loaded_data_and_info["sim_config"])
 
     laser_dict = {
         k: v for k, v in laser.to_dict().items() if k != "pulses"
     }  # Exclude "pulses" key
 
     # Combine dictionaries
-    dict_combined = {**system.to_dict(), **bath_dict, **laser_dict, **info_config}
+    dict_combined = {**system.to_dict(), **bath_dict, **laser_dict}
+    dict_combined.update(sim_config.to_dict())
 
     print(f"✅ Data loaded with shape: {data.shape}")
     print(f"   Time points: {len(t_det_vals)}")
@@ -86,8 +99,8 @@ def plot_1d_data(
                 **dict_combined,
             )
             filename = generate_unique_plot_filename(
-                system,
-                info_config=info_config,
+                system=system,
+                sim_config=sim_config,
                 domain="time",
                 component="abs",
             )
@@ -104,8 +117,8 @@ def plot_1d_data(
                 **dict_combined,
             )
             filename = generate_unique_plot_filename(
-                system,
-                info_config=info_config,
+                system=system,
+                sim_config=sim_config,
                 domain="time",
                 component="abs",
             )
@@ -144,8 +157,8 @@ def plot_1d_data(
                     section=section,
                 )
                 filename = generate_unique_plot_filename(
-                    system,
-                    info_config=info_config,
+                    system=system,
+                    sim_config=sim_config,
                     domain="freq",
                     component=component,
                 )
@@ -173,28 +186,29 @@ def plot_2d_data(
     # Validate and extract data structure
     data = loaded_data_and_info["data"]
     axes = loaded_data_and_info["axes"]
-    t_det_vals = axes["axis1"]  # detection times
-    if "axis2" not in axes:
+    t_det_vals = axes.get("t_det")  # detection times
+    if "t_coh" not in axes:
         print(
-            "❌ 2D data should have 'axis2' in axes for coherence times. Check your data structure.",
+            "❌ 2D data should have 't_coh' axis for coherence times. Check your data structure.",
             flush=True,
         )
         return
-    t_coh_vals = axes["axis2"]  # coherence times
-    system = loaded_data_and_info["system"]
-
-    bath_dict = loaded_data_and_info["bath"]
-    # bath_dict = extract_bath_parameters(bath)
-    laser = loaded_data_and_info["laser"]
-
-    info_config = loaded_data_and_info["info_config"]
-    t_wait = info_config["t_wait"]
+    t_coh_vals = axes["t_coh"]  # coherence times
+    # Explicitly cast objects for static typing & autocomplete (mirror plot_1d_data)
+    system = cast("AtomicSystem", loaded_data_and_info["system"])
+    w0 = system.at_freqs_fs(0)
+    bath_env = cast("BosonicEnvironment", loaded_data_and_info["bath"])
+    bath_dict = extract_bath_parameters(bath_env, w0)
+    laser = cast("LaserPulseSequence", loaded_data_and_info["laser"])
+    sim_config = cast("SimulationConfig", loaded_data_and_info["sim_config"])
+    t_wait = getattr(sim_config, "t_wait", 0.0)
     laser_dict = {
         k: v for k, v in laser.to_dict().items() if k != "pulses"
     }  # Exclude "pulses" key
 
     # Combine dictionaries
-    dict_combined = {**system.to_dict(), **bath_dict, **laser_dict, **info_config}
+    dict_combined = {**system.to_dict(), **bath_dict, **laser_dict}
+    dict_combined.update(sim_config.to_dict())
 
     # Get configuration values
     spectral_components_to_plot = plot_config.get(
@@ -223,7 +237,7 @@ def plot_2d_data(
                 )
                 filename = generate_unique_plot_filename(
                     system=system,
-                    info_config=info_config,
+                    sim_config=sim_config,
                     domain="time",
                     component=component,
                 )
@@ -273,7 +287,7 @@ def plot_2d_data(
                     )
                     filename = generate_unique_plot_filename(
                         system=system,
-                        info_config=info_config,
+                        sim_config=sim_config,
                         domain="freq",
                         component=component,
                     )

@@ -86,8 +86,8 @@ def run_single_t_coh_with_sim(
         raise
 
     # Save data
-    simulation_config_dict = sim_oqs.simulation_config.to_dict()
-    abs_path = generate_unique_data_filename(sim_oqs.system, simulation_config_dict)
+    sim_config_obj = sim_oqs.simulation_config
+    abs_path = generate_unique_data_filename(sim_oqs.system, sim_config_obj)
     abs_data_path = Path(f"{abs_path}_data.npz")
 
     save_data_file(abs_data_path, data, sim_oqs.times_det)
@@ -100,7 +100,7 @@ def run_single_t_coh_with_sim(
             sim_oqs.system,
             bath=sim_oqs.bath,
             laser=sim_oqs.laser,
-            info_config=simulation_config_dict,
+            sim_config=sim_config_obj,
         )
 
         print(f"{'='*60}")
