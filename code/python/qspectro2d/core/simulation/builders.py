@@ -22,9 +22,6 @@ from qspectro2d.core.system_bath_class import SystemBathCoupling
 from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qspectro2d.constants import HBAR
 
-## NOTE: Do NOT import paper/redfield helpers at module load to avoid circular import.
-## They are imported lazily inside __post_init__ when needed.
-
 
 def H_int_(t: float, sm_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qobj:
     """Interaction Hamiltonian (-μ·E) with optional RWA.

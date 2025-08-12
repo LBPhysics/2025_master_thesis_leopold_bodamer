@@ -249,18 +249,48 @@ def _check_latex_available():
 
 # BACKEND SELECTION - AUTOMATIC BASED ON ENVIRONMENT
 def _setup_backend():
-    if mpl.get_backend() not in ["", "agg"]:
-        return
+    """Select an appropriate matplotlib backend.
+
+    Logic:
+    - Inside a Jupyter kernel: always prefer inline backend (deterministic, no GUI popups).
+    - Headless / SLURM / no DISPLAY: use Agg.
+    - Otherwise: prefer TkAgg (simple widely available interactive GUI) as fallback.
+
+    The previous implementation had an early return that prevented correction when the
+    backend was already set to 'Agg' (capitalization differences) or another non-empty
+    value. We now normalize case and only skip when already in a satisfactory state.
+    """
     try:
+        current = mpl.get_backend()
+        current_lower = (current or "").lower()
+
+        # If in Jupyter/ipykernel, force inline unless already inline
         if "ipykernel" in sys.modules:
-            mpl.use("module://matplotlib_inline.backend_inline")
-            print("✅ Matplotlib backend: Jupyter inline")
-        elif "DISPLAY" not in os.environ or os.environ.get("SLURM_JOB_ID"):
-            mpl.use("Agg")
-            print("✅ Matplotlib backend: Agg (headless/HPC environment)")
-        else:
-            mpl.use("TkAgg")
-            print("✅ Matplotlib backend: TkAgg (interactive)")
+            inline_name = "module://matplotlib_inline.backend_inline"
+            if current_lower != inline_name:
+                mpl.use(inline_name)
+                print("✅ Matplotlib backend: Jupyter inline")
+            return
+
+        # Headless detection
+        headless = ("DISPLAY" not in os.environ) or bool(os.environ.get("SLURM_JOB_ID"))
+        if headless:
+            if current_lower != "agg":
+                mpl.use("Agg")
+                print("✅ Matplotlib backend: Agg (headless/HPC environment)")
+            return
+
+        # Interactive local environment
+        # If already an interactive GUI backend (tkagg, qt, wx, macosx) keep it
+        interactive_ok = any(k in current_lower for k in ["tk", "qt", "wx", "macosx"])
+        if not interactive_ok:
+            try:
+                mpl.use("TkAgg")
+                print("✅ Matplotlib backend: TkAgg (interactive)")
+            except Exception:
+                # Fall back silently to Agg
+                mpl.use("Agg")
+                print("ℹ️ Fallback to Agg (no GUI backend usable)")
     except (ImportError, ValueError) as e:
         mpl.use("Agg")
         print(f"ℹ️ Matplotlib backend set to Agg (fallback): {e}")
@@ -365,8 +395,10 @@ _LATEX_REGEX_REPLACEMENTS: list[
         _re.compile(r"\\(langle|rangle)"),
         lambda m: "<" if m.group(1) == "langle" else ">",
     ),
-    (_re.compile(r"\\omega"), "w"),
-    (_re.compile(r"\\mu"), "mu"),
+    # Common physics/math symbols -> unicode (retain readability)
+    (_re.compile(r"\\hbar"), "ℏ "),
+    (_re.compile(r"\\omega"), "ω "),
+    (_re.compile(r"\\mu"), "μ "),
     (_re.compile(r"\\Delta"), "Δ"),
     (_re.compile(r"\\propto"), "∝"),
 ]
@@ -383,7 +415,10 @@ def strip_latex(text: str) -> str:
     out = text.replace("$", "")
     for pat, repl in _LATEX_REGEX_REPLACEMENTS:
         out = pat.sub(repl, out)
+    # Remove accidental double spaces introduced by trailing spaces in replacements
     out = _re.sub(r"\s+", " ", out).strip()
+    # Compact patterns like 'ℏ ω' remain; ensure no residual space before punctuation
+    out = _re.sub(r"\s+([,.;:])", r"\1", out)
     return out
 
 

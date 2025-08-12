@@ -107,7 +107,9 @@ class SystemBathCoupling:
                 ]
             )
             sm_op = sys.sm_op
-            down_rate, up_rate = bath_to_rates(self.bath, sys.at_freqs_fs(0), mode="decay")
+            down_rate, up_rate = bath_to_rates(
+                self.bath, sys.at_freqs_fs(0), mode="decay"
+            )
             me_decay_channels_.append(
                 [
                     sm_op

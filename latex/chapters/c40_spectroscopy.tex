@@ -25,6 +25,64 @@ This powerful analytical technique provides insights into the composition, struc
 
 \noindent where $h$ is Planck's constant and $c$ is the speed of light. This relation forms the basis for spectroscopic analysis, allowing researchers to probe the energy structure of matter by observing the spectrum of absorbed or emitted radiation.
 
+%----------------------------------------------------------------------------------------
+%   NEW SUBSECTION: CHARACTERIZATION OF ELECTROMAGNETIC RADIATION
+%----------------------------------------------------------------------------------------
+
+\subsection{Characterization of Electromagnetic Radiation}
+\label{subsec:em_radiation_characterization}
+
+\noindent A monochromatic plane electromagnetic wave in free space (vacuum) may be written in one spatial dimension (propagation along $z$) as
+\begin{equation}
+    E(z,t) = E_0 \cos(k z - \omega t + \phi)
+    \label{eq:plane_wave}
+\end{equation}
+where $E_0$ is the (real) amplitude, $\phi$ a constant phase, $k$ the magnitude of the wavevector (spatial angular frequency), and $\omega$ the angular frequency. The fundamental kinematic relations for propagation in vacuum are
+\begin{equation}
+    \omega = 2\pi\nu, \qquad k = \frac{2\pi}{\lambda}, \qquad \lambda = \frac{c}{\nu} = \frac{2\pi c}{\omega}
+    \label{eq:wavelength_frequency_relation}
+\end{equation}
+with $\nu$ the (cycle) frequency in hertz (Hz), $\lambda$ the wavelength in metres (m), and $c$ the speed of light in vacuum. In a material medium the phase velocity is $v_p = c/n(\nu)$ and $\lambda$ is replaced by $\lambda_n = v_p/\nu = \lambda/n(\nu)$, where $n(\nu)$ is the refractive index.
+
+\noindent Two closely related but distinct reciprocal spatial quantities are used in spectroscopy and should not be conflated:
+\begin{itemize}
+    \item The \emph{wavevector magnitude} $k = 2\pi/\lambda$ (units m$^{-1}$), which appears explicitly in the plane wave phase $kz$.
+    \item The \emph{(spectroscopic) wavenumber} $\tilde{\nu}$, defined conventionally as the reciprocal wavelength expressed in centimetres:
+          \begin{equation}
+              \tilde{\nu} = \frac{1}{\lambda_{\text{(cm)}}} = \frac{1}{\lambda / \mathrm{cm}} \quad [\mathrm{cm}^{-1}].
+              \label{eq:wavenumber_definition}
+          \end{equation}
+          It follows that $\tilde{\nu} = 10^{-2} / \lambda$ when $\lambda$ is given in metres.
+\end{itemize}
+
+\noindent The notation $\nu$ (Greek letter nu) is widely used for the frequency (Hz). To avoid ambiguity we use a tilde for the spectroscopic wavenumber: $\tilde{\nu}$. The energetic content of radiation can be expressed equivalently using any of the variables above:
+\begin{equation}
+    E = h\nu = \hbar\omega = h c \, \tilde{\nu}
+    \label{eq:energy_wavenumber_conversion}
+\end{equation}
+with $h$ Planck's constant and $\hbar = h/2\pi$. Equation~\eqref{eq:energy_wavenumber_conversion} is a restatement of Eq.~\eqref{eq:planck_relation} using alternative spectral variables.
+
+\noindent Useful unit conversions (exact in the SI or by definition) frequently encountered in spectroscopy are:
+\begin{align}
+    1\,\mathrm{nm}      & = 10^{-9}\,\mathrm{m},                        &
+    1\,\mu\mathrm{m}    & = 10^{-6}\,\mathrm{m},                        &
+    1\,\mathrm{\AA}     & = 10^{-10}\,\mathrm{m},                         \\
+    1\,\mathrm{cm}^{-1} & \approx 29.9792458\,\mathrm{GHz},             &
+    1\,\mathrm{cm}^{-1} & \approx 1.23984198\times10^{-4}\,\mathrm{eV}.
+    \label{eq:unit_conversions}
+\end{align}
+The gigahertz conversion uses $c = 2.99792458\times10^{10}\,\mathrm{cm\,s^{-1}}$; the electronvolt conversion uses Eq.~\eqref{eq:energy_wavenumber_conversion} and $1\,\mathrm{eV} = 1.602176634\times10^{-19}\,\mathrm{J}$.
+
+%--- Spectral regions + energy dissipation addendum (Banwell) -----------------
+\paragraph{Spectral Regions and Notation}
+\noindent Spectral domains are commonly quoted in either wavelength $\lambda$ or (spectroscopic) wavenumber $\tilde{\nu}$ to avoid large powers of ten. Representative vacuum ranges are (non-unique boundaries): microwave ($\tilde{\nu} \lesssim 10\,\mathrm{cm}^{-1}$), terahertz ($\sim 10$--$100\,\mathrm{cm}^{-1}$), mid-infrared ($\sim 400$--$4000\,\mathrm{cm}^{-1}$), near-infrared ($\sim 4000$--$12500\,\mathrm{cm}^{-1}$), visible ($\sim 12500$--$25000\,\mathrm{cm}^{-1}$; $800$--$400\,\mathrm{nm}$), ultraviolet ($\gtrsim 25000\,\mathrm{cm}^{-1}$). Exact numerical cutoffs vary slightly between sources. The linear relation $E = h c \tilde{\nu}$ (cf. Eq.~\eqref{eq:energy_wavenumber_conversion}) makes $\tilde{\nu}$ a convenient axis for comparing transition energies.
+
+\paragraph{Remark on Re-Emission}
+\noindent Following absorption, isotropic spontaneous re-emission (radiative relaxation) redistributes photon directions so that only a negligible fraction re-enters the forward detection solid angle, yielding a net attenuation of the incident beam while preserving the possibility of repeated absorption events. The corresponding emission (fluorescence / phosphorescence) spectra, arising from these radiative pathways, will be exploited later in this work for extracting dynamical information from heterodyne-detected emitted fields.
+
+\noindent Finally, we remark that $\tilde{\nu}$ (in cm$^{-1}$) is a convenient linear measure of photon energy, since differences $\Delta\tilde{\nu}$ correspond directly to energy gaps $\Delta E = h c\, \Delta\tilde{\nu}$ without requiring explicit factors of $2\pi$.
+
+
 \subsection{Classification of Spectroscopic Techniques}
 \label{subsec:spectroscopy_classification}
 
@@ -62,6 +120,22 @@ higher frequency radiation carries more energy per photon, enabling interactions
 \end{itemize}
 
 \noindent This energy hierarchy demonstrates why spectroscopic techniques using different frequency ranges provide complementary information about molecular structure and dynamics. The systematic increase in photon energy enables probing of molecular systems from their lowest-energy rotational modes to high-energy electronic excitations and bond-breaking processes.
+
+%----------------------------------------------------------------------------------------
+%   NEW SUBSECTION: ENERGY DISSIPATION AFTER ABSORPTION
+%----------------------------------------------------------------------------------------
+
+\subsection{Energy Dissipation After Absorption}
+\label{subsec:energy_dissipation}
+
+\noindent After a molecule absorbs a photon of energy $E = h\nu$ its energy must be redistributed or released; otherwise continuous irradiation would rapidly saturate all accessible states. Experimentally, ordinary samples exhibit persistent absorption bands under prolonged illumination, demonstrating that excited molecules relax efficiently. Two principal classes of de-excitation pathways operate:
+\begin{itemize}
+    \item \textbf{Non-radiative (thermal) relaxation:} Collisional (vibrational) energy transfer to surrounding molecules leads to rapid conversion of excess internal energy into lattice / solvent kinetic energy (heating). This typically proceeds through intramolecular vibrational redistribution followed by intermolecular energy transfer.
+    \item \textbf{Radiative relaxation:} Spontaneous emission (fluorescence or phosphorescence, depending on spin manifold) returns population to lower electronic (and vibrational) states with emission of photons of characteristic frequencies. The emitted photons are (for an isotropic medium without cavity structuring) distributed nearly isotropically, so only a small solid angle fraction reaches a forward detector aligned with the incident collimated beam, yielding a net attenuation (absorption) of the directed beam intensity despite re-emission events.
+\end{itemize}
+
+\noindent Consequently, an absorption spectrum records the net loss from the incident mode; re-emitted photons largely populate other directions (or are spectrally shifted). The corresponding emission spectra (steady-state or time-resolved) provide complementary information on excited-state structure, relaxation cascades, and will play an important role in later parts of this work where emitted (heterodyne-detected) fields are analysed.
+
 
 \subsection{Time Scales in Spectroscopy}
 \label{subsec:time_scales}

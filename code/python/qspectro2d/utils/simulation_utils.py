@@ -77,11 +77,16 @@ def create_base_sim_oqs(
 
     atomic_config = {
         "n_atoms": CONFIG.atomic.n_atoms,
+        "n_rings": getattr(CONFIG.atomic, "n_rings", None),
         "at_freqs_cm": list(CONFIG.atomic.freqs_cm),
         "dip_moments": list(CONFIG.atomic.dip_moments),
-        "delta_cm": CONFIG.atomic.delta_cm,
+        "delta_cm": getattr(CONFIG.atomic, "delta_cm", None),
+        "max_excitation": getattr(CONFIG.atomic, "max_excitation", 1),
     }
-    if CONFIG.atomic.n_atoms >= 2:
+    if (
+        CONFIG.atomic.n_atoms >= 2
+        and getattr(CONFIG.atomic, "at_coupling_cm", None) is not None
+    ):
         atomic_config["at_coupling_cm"] = CONFIG.atomic.at_coupling_cm
 
     # Use dummy t_coh=0 for initial setup and solver check

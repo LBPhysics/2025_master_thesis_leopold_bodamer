@@ -47,11 +47,15 @@ SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 
 
 # === ATOMIC SYSTEM DEFAULTS ===
-N_ATOMS = 1
-FREQS_CM = [16000.0]  # Number of frequency components in the system
-DIP_MOMENTS = [1.0]  # Dipole moments for each atom
+N_ATOMS = 2
+N_RINGS = (
+    None  # If N_ATOMS>2 and None -> defaults to linear chain (single chain layout)
+)
+FREQS_CM = [15900.0, 16100.0]  # Number of frequency components in the system
+DIP_MOMENTS = [1.0, 1.0]  # Dipole moments for each atom
 AT_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
+MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
 
 # === LASER SYSTEM DEFAULTS ===
 PULSE_FWHM = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
@@ -60,7 +64,7 @@ ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQS_CM)  # Carrier frequency of the laser
 
 # === SIMULATION DEFAULTS ===
-ODE_SOLVER = "ME"  # ODE solver to use
+ODE_SOLVER = "BR"  # ODE solver to use
 RWA_SL = True
 N_FREQS = 1  # 1 == no inhomogeneous broadening
 N_PHASES = 4  # Number of phase cycles for the simulation
@@ -116,6 +120,19 @@ def validate_defaults():
     # Validate phases
     if N_PHASES <= 0:
         raise ValueError("N_PHASES must be positive")
+
+    # Validate excitation truncation
+    if MAX_EXCITATION not in (1, 2):
+        raise ValueError("MAX_EXCITATION must be 1 or 2")
+
+    # Validate n_rings divisibility if provided and relevant
+    if N_RINGS is not None and N_ATOMS > 2:
+        if N_RINGS < 1:
+            raise ValueError("N_RINGS must be >=1 when specified")
+        if N_ATOMS % N_RINGS != 0:
+            raise ValueError(
+                f"N_RINGS ({N_RINGS}) does not divide N_ATOMS ({N_ATOMS}) for cylindrical geometry"
+            )
 
     # Validate relative amplitudes
     if len(RELATIVE_E0S) != 3:
