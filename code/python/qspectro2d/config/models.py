@@ -32,16 +32,30 @@ class AtomicConfig:
     """Atomic system parameters (frequencies in cm^-1)."""
 
     n_atoms: int = _defs.N_ATOMS
+    # Optional geometry spec for multi-atom systems (see AtomicSystem); if n_atoms>2 and None -> linear chain
+    n_rings: int | None = _defs.N_RINGS  # type: ignore[assignment]
     freqs_cm: Sequence[float] = tuple(_defs.FREQS_CM)
     dip_moments: Sequence[float] = tuple(_defs.DIP_MOMENTS)
     at_coupling_cm: float = _defs.AT_COUPLING_CM
     delta_cm: float = _defs.DELTA_CM
+    # Excitation manifold truncation (1: ground+single, 2: add double manifold)
+    max_excitation: int = _defs.MAX_EXCITATION
 
     def validate(self) -> None:
         if len(self.freqs_cm) != self.n_atoms:
             raise ValueError("AtomicConfig: freqs_cm length != n_atoms")
         if len(self.dip_moments) != self.n_atoms:
             raise ValueError("AtomicConfig: dip_moments length != n_atoms")
+        if self.max_excitation not in (1, 2):
+            raise ValueError("AtomicConfig: max_excitation must be 1 or 2")
+        # Geometry divisibility checks (mirrors default validation)
+        if self.n_rings is not None and self.n_atoms > 2:
+            if self.n_rings < 1:
+                raise ValueError("AtomicConfig: n_rings must be >=1 when specified")
+            if self.n_atoms % self.n_rings != 0:
+                raise ValueError(
+                    f"AtomicConfig: n_rings ({self.n_rings}) does not divide n_atoms ({self.n_atoms})"
+                )
 
 
 @dataclass(slots=True)

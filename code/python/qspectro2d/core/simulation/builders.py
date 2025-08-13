@@ -94,7 +94,7 @@ class SimulationModuleOQS:
             self.evo_obj_int = custom_free + liouvillian(QobjEvo(self.H_int_sl))
 
             """
-            # This version can be passed to brmesolve?
+            # TODO This version can be passed to brmesolve?
             R_super = _R_paper(self)  # time-independent Redfield tensor (Qobj)
             self.evo_obj_free = H0_diagonalized
             self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)

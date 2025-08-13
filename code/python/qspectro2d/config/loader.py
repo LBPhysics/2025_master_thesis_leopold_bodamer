@@ -70,10 +70,12 @@ def _as_dict(cfg: MasterConfig) -> dict:
     return {
         "atomic": dict(
             n_atoms=cfg.atomic.n_atoms,
+            n_rings=cfg.atomic.n_rings,
             freqs_cm=list(cfg.atomic.freqs_cm),
             dip_moments=list(cfg.atomic.dip_moments),
             at_coupling_cm=cfg.atomic.at_coupling_cm,
             delta_cm=cfg.atomic.delta_cm,
+            max_excitation=cfg.atomic.max_excitation,
         ),
         "laser": dict(
             pulse_fwhm_fs=cfg.laser.pulse_fwhm_fs,
@@ -149,10 +151,12 @@ def _dict_to_config(cfg_dict: Mapping[str, Any]) -> MasterConfig:
     # atomic
     a = cfg_dict.get("atomic", {})
     base.atomic.n_atoms = a.get("n_atoms", base.atomic.n_atoms)
+    base.atomic.n_rings = a.get("n_rings", base.atomic.n_rings)
     base.atomic.freqs_cm = a.get("freqs_cm", base.atomic.freqs_cm)
     base.atomic.dip_moments = a.get("dip_moments", base.atomic.dip_moments)
     base.atomic.at_coupling_cm = a.get("at_coupling_cm", base.atomic.at_coupling_cm)
     base.atomic.delta_cm = a.get("delta_cm", base.atomic.delta_cm)
+    base.atomic.max_excitation = a.get("max_excitation", base.atomic.max_excitation)
     # laser
     l = cfg_dict.get("laser", {})
     base.laser.pulse_fwhm_fs = l.get("pulse_fwhm_fs", base.laser.pulse_fwhm_fs)
