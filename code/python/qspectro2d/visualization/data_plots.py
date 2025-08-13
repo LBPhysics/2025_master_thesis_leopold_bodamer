@@ -24,7 +24,9 @@ from qspectro2d.spectroscopy.post_processing import (
     compute_2d_fft_wavenumber,
 )
 from qspectro2d.utils import generate_unique_plot_filename
-from qspectro2d.config.mpl_tex_settings import save_fig
+from plotstyle import init_style, save_fig
+
+init_style()
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 
 if TYPE_CHECKING:

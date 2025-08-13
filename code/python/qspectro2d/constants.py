@@ -8,6 +8,8 @@ functions here.
 from __future__ import annotations
 import numpy as np
 
+__all__ = ["HBAR", "BOLTZMANN", "convert_cm_to_fs", "convert_fs_to_cm"]
+
 # Fundamental constants (natural units convention inside project)
 HBAR: float = 1.0  # Reduced Planck constant
 BOLTZMANN: float = 1.0  # Boltzmann constant
@@ -40,6 +42,3 @@ def convert_fs_to_cm(value):
         float: Value in cm^-1
     """
     return value / (_C_CM_PER_FS * _TWOPI * 1e-5)
-
-
-__all__ = ["HBAR", "BOLTZMANN", "convert_cm_to_fs", "convert_fs_to_cm"]

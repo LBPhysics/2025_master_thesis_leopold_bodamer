@@ -16,124 +16,138 @@ class SystemBathCoupling:
 
     @property
     def br_decay_channels(self):
-        """Generate the a_ops for the Bloch Redfield Master Equation solver."""
+        """Generate the a_ops list for Bloch-Redfield solver.
+        Index  State (site1 site2 site3 site4)
+        -----  -------------------------------
+        0      0 0 0 0    (ground)
+        1      1 0 0 0    (excite site 1)
+        2      0 1 0 0    (excite site 2)
+        3      0 0 1 0    (excite site 3)
+        4      0 0 0 1    (excite site 4)
+        5      1 1 0 0    (sites 1 & 2 excited)
+        6      1 0 1 0    (sites 1 & 3 excited)
+        7      1 0 0 1    (sites 1 & 4 excited)
+        8      0 1 1 0    (sites 2 & 3 excited)
+        9      0 1 0 1    (sites 2 & 4 excited)
+        10     0 0 1 1    (sites 3 & 4 excited)
+
+                Includes:
+                  - Pure dephasing projectors for all single-excitation states
+                  - (If max_excitation == 2) dephasing for each double-excitation state
+                  - Radiative decay channels (lowering operators) from singles to ground
+                  - (If max_excitation == 2) lowering from double states to singles
+
+                NOTE: BR formalism usually builds rates from bath correlation functions; here we
+                provide operator structures only. Coupling strengths are encoded in the bath object.
+        """
         sys = self.system
-        br_decay_channels_ = []
+        br_ops: list[list] = []
         n_atoms = sys.n_atoms
+        max_exc = getattr(sys, "max_excitation", 1)
+
+        # Helper: add dephasing projector for basis index k
+        def add_projector(k: int):
+            br_ops.append([ket2dm(sys.basis[k]), self.bath])
 
         if n_atoms == 1:
-            # deph_rate = 4.425221e-06
-            # down_rate = 3.333437e-03
-            ## alpha = rates_to_alpha(deph_rate, self.bath, sys.at_freqs_fs(0), mode="deph")
-            ## self.bath.alpha = alpha  # set the alpha in the bath
-            deph_i = sys.deph_op_i(0)  # dephasing operator for single atom
-            dip_op = sys.dip_op
-            br_decay_channels_ += [
-                [
-                    deph_i,
-                    self.bath,
-                ],
-                [
-                    dip_op,
-                    self.bath,
-                ],
-            ]
+            # Single atom: dephasing + total dipole (emission/absorption channel)
+            add_projector(1)
+            br_ops.append([sys.dip_op, self.bath])
+            return br_ops
 
-        elif n_atoms == 2:  # TODO REDO this to implement the appendix C
-            for i in range(n_atoms):
-                deph_i = sys.deph_op_i(i)  # i = A, B
-                br_decay_channels_.append(
-                    [
-                        deph_i,  # atom i dephasing
-                        self.bath,
-                    ]
-                )
+        # Multi-atom: singles manifold projectors
+        # For dimer truncated (max_exc=1) or generic N, singles indices are 1..n_atoms
+        for single_idx in range(1, n_atoms + 1):
+            add_projector(single_idx)
 
-            # ALSO ADD THE DOUBLE EXCITED STATE
-            deph_AB = ket2dm(sys.basis[3])
-            br_decay_channels_ += [
-                [
-                    deph_AB,  # part from A on double excited state
-                    self.bath,
-                ],
-                [
-                    deph_AB,  # part from B on double excited state
-                    self.bath,
-                ],
-            ]
-        else:
-            for i in range(n_atoms):  # from 0 to n_atoms - 1
-                deph_i = sys.deph_op_i(i)  # i = A, B, C, ...
-                br_decay_channels_.append(
-                    [
-                        deph_i,  # atom i dephasing
-                        self.bath,
-                    ]
-                )
-                """ TODO IF I ALSO WANT TO INCLUDE THE DECAY CHANNELS for each atom
-                br_decay_channels_.append(
-                    [
-                        (
-                            sys.basis[0]
-                            * sys.basis[i].dag(),  # this is sm_m[i]
-                            self.bath,
-                        )
-                        for i in range(1, sys.n_atoms)
-                    ],
-                )
-                """
+        # Double manifold projectors only if available
+        if max_exc == 2 and n_atoms >= 2:
+            # Dimer special-case: full basis has index 3 as double excitation
+            if n_atoms == 2:
+                add_projector(3)
+            else:
+                # Generic mapping stored internally
+                index_to_pair = getattr(sys, "_index_to_pair", {})
+                for idx in index_to_pair.keys():
+                    add_projector(idx)
 
-        return br_decay_channels_
+        # Radiative-like decay (lowering) operators from singles to ground: |0><i|
+        for single_idx in range(1, n_atoms + 1):
+            Li = sys.basis[0] * sys.basis[single_idx].dag()
+            br_ops.append([Li, self.bath])
+
+        # Double -> single lowering (if double manifold present)
+        if max_exc == 2 and n_atoms >= 2:
+            if n_atoms == 2:
+                # |eg><ee| and |ge><ee|
+                L1 = sys.basis[1] * sys.basis[3].dag()
+                L2 = sys.basis[2] * sys.basis[3].dag()
+                br_ops.append([L1, self.bath])
+                br_ops.append([L2, self.bath])
+            else:
+                index_to_pair = getattr(sys, "_index_to_pair", {})
+                for idx, (i, j) in index_to_pair.items():  # i<j atom labels
+                    # |i> corresponds to basis index i, etc.
+                    Li = sys.basis[i] * sys.basis[idx].dag()
+                    Lj = sys.basis[j] * sys.basis[idx].dag()
+                    br_ops.append([Li, self.bath])
+                    br_ops.append([Lj, self.bath])
+
+        return br_ops
 
     @property
     def me_decay_channels(self):
-        """Generate the c_ops for the Linblad Master Equation solver."""
+        """Generate c_ops for Lindblad solver respecting max_excitation.
+
+        Strategy:
+          - Pure dephasing: projectors on each populated basis state (singles; doubles if present)
+          - Population relaxation/excitation: per-site lowering/raising (|0><i|, |i><0|) with rates from bath
+            (double-manifold relaxation omitted for simplicity; can be added later)
+        """
         sys = self.system
         n_atoms = sys.n_atoms
+        max_exc = getattr(sys, "max_excitation", 1)
+        c_ops = []
 
-        me_decay_channels_ = []
+        # Dephasing rate (assumed identical structure for all single excitations)
+        deph_rate = bath_to_rates(self.bath, mode="deph")
 
         if n_atoms == 1:
-            # deph_rate = 1 / 100
-            # alpha = rates_to_alpha(deph_rate, self.bath, sys.at_freqs_fs(0), mode="deph")
-            # self.bath.alpha = alpha  # set the alpha in the bath
-
-            deph_rate = bath_to_rates(self.bath, mode="deph")
-            deph_op_i = sys.deph_op_i(0)  # dephasing operator for single atom
-            me_decay_channels_.append(
-                [
-                    deph_op_i
-                    * np.sqrt(deph_rate),  # Collapse operator for pure dephasing
-                ]
-            )
-            sm_op = sys.sm_op
+            # Single atom: projector on excited state
+            c_ops.append(sys.deph_op_i(0) * np.sqrt(deph_rate))
+            # Relaxation / excitation between |g> and |e>
             down_rate, up_rate = bath_to_rates(
                 self.bath, sys.at_freqs_fs(0), mode="decay"
             )
-            me_decay_channels_.append(
-                [
-                    sm_op
-                    * np.sqrt(down_rate),  # Collapse operator for population relaxation
-                    sm_op.dag()
-                    * np.sqrt(up_rate),  # Collapse operator for population excitation
-                ],
-            )
+            sm = sys.sm_op  # |g><e|
+            c_ops.append(sm * np.sqrt(down_rate))
+            if up_rate > 0:
+                c_ops.append(sm.dag() * np.sqrt(up_rate))
+            return c_ops
 
-        elif n_atoms == 2:
-            dephasing_rate = bath_to_rates(self.bath, mode="deph")
-            for i in range(n_atoms):
-                deph_op_i = sys.deph_op_i(i)
-                me_decay_channels_.append(deph_op_i * np.sqrt(dephasing_rate))
-            deph_AB = ket2dm(sys.basis[3])
-            me_decay_channels_.append(
-                deph_AB * np.sqrt(dephasing_rate)
-            )  # double excited state dephasing
-        else:
-            dephasing_rate = bath_to_rates(self.bath, mode="deph")
-            for i in range(n_atoms):
-                deph_op_i = sys.deph_op_i(i)
-                me_decay_channels_.append(deph_op_i * np.sqrt(dephasing_rate))
-        return me_decay_channels_
+        # Multi-atom: singles dephasing
+        for single_idx in range(1, n_atoms + 1):
+            c_ops.append(ket2dm(sys.basis[single_idx]) * np.sqrt(deph_rate))
+
+        # Double-state dephasing if manifold present
+        if max_exc == 2:
+            if n_atoms == 2:
+                c_ops.append(ket2dm(sys.basis[3]) * np.sqrt(deph_rate))
+            else:
+                for idx in getattr(sys, "_index_to_pair", {}).keys():
+                    c_ops.append(ket2dm(sys.basis[idx]) * np.sqrt(deph_rate))
+
+        # Radiative-like single-site relaxation (singles -> ground) and thermal excitation
+        for i_atom in range(1, n_atoms + 1):
+            freq = sys.at_freqs_fs(i_atom - 1)
+            down_rate, up_rate = bath_to_rates(self.bath, freq, mode="decay")
+            L_down = sys.basis[0] * sys.basis[i_atom].dag()  # |0><i|
+            if down_rate > 0:
+                c_ops.append(L_down * np.sqrt(down_rate))
+            if up_rate > 0:
+                c_ops.append(L_down.dag() * np.sqrt(up_rate))  # |i><0|
+
+        return c_ops
 
     # only for the paper solver
     def gamma_small_ij(self, i: int, j: int) -> float:

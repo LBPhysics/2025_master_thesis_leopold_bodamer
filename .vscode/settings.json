@@ -262,7 +262,9 @@
         "**/rubber.cache": true,
         "**/sympy-plots-for-*.tex/": true,
         "**/TSWLatexianTemp*": true,
-        "**/__pycache__": true
+        "**/__pycache__": true,
+        "**/*.egg-info": true,
+        "**/.ipynb_checkpoints": true
     },
     "python.testing.unittestArgs": [
         "-v",

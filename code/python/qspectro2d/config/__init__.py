@@ -12,26 +12,9 @@ Access pattern examples:
 Call ``CONFIG.validate()`` if you need explicit validation.
 """
 
-# Make modules importable
-from .mpl_tex_settings import (
-    # Constants
-    LATEX_DOC_WIDTH,
-    LATEX_FONT_SIZE,
-    FIGSIZE,
-    DPI,
-    FONT_SIZE,
-    FIG_FORMAT,
-    TRANSPARENCY,
-    COLORS,
-    LINE_STYLES,
-    MARKERS,
-    # Settings
-    latex_available,
-    # Functions
-    set_size,
-    format_sci_notation,
-    save_fig,
-)
+# Plotting utilities are no longer imported eagerly to avoid side effects during
+# parallel worker initialization. Use `from plotstyle import init_style, ...`
+# where plotting is actually needed.
 
 from .paths import (
     # Paths (pure; call ensure_dirs() explicitly when needed)
@@ -73,22 +56,7 @@ except Exception as _e:
 # Export all important symbols for import *
 __all__ = [
     # constants
-    "LATEX_DOC_WIDTH",
-    "LATEX_FONT_SIZE",
-    "FIGSIZE",
-    "DPI",
-    "FONT_SIZE",
-    "FIG_FORMAT",
-    "TRANSPARENCY",
-    "COLORS",
-    "LINE_STYLES",
-    "MARKERS",
-    # settings
-    "latex_available",
-    # functions
-    "set_size",
-    "format_sci_notation",
-    "save_fig",
+    # (plotting symbols intentionally not re-exported; import from plotstyle)
     # paths
     "DATA_DIR",
     "FIGURES_DIR",

@@ -47,12 +47,12 @@ SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 
 
 # === ATOMIC SYSTEM DEFAULTS ===
-N_ATOMS = 2
+N_ATOMS = 1
 N_RINGS = (
     None  # If N_ATOMS>2 and None -> defaults to linear chain (single chain layout)
 )
-FREQS_CM = [15900.0, 16100.0]  # Number of frequency components in the system
-DIP_MOMENTS = [1.0, 1.0]  # Dipole moments for each atom
+FREQS_CM = [15900.0]  # , 16100.0]  # Number of frequency components in the system
+DIP_MOMENTS = [1.0]  # , 1.0]  # Dipole moments for each atom
 AT_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold

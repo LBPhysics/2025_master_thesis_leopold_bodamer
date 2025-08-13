@@ -104,10 +104,6 @@ try:
     from .config import (
         DATA_DIR,
         FIGURES_DIR,
-        set_size,
-        save_fig,
-        COLORS,
-        LINE_STYLES,
     )
 except ImportError as e:
     print(f"Warning: Could not import config module: {e}")
@@ -145,10 +141,6 @@ __all__ = [
     # Configuration
     "DATA_DIR",
     "FIGURES_DIR",
-    "set_size",
-    "save_fig",
-    "COLORS",
-    "LINE_STYLES",
 ]
 
 

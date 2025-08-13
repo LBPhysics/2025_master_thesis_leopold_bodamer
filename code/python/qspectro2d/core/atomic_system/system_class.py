@@ -39,7 +39,12 @@ class AtomicSystem:
         self._positions: Optional[np.ndarray] = None
         self._dipole_vectors: Optional[np.ndarray] = None
 
-        # Handle case where single frequency is provided for multiple atoms
+        # Handle case where single frequency is provided for multiple atoms and vice versa
+        if self.n_atoms < len(self.at_freqs_cm):
+            # cap the freqs and dip moments to n_atoms
+            self.at_freqs_cm = self.at_freqs_cm[: self.n_atoms]
+            self.dip_moments = self.dip_moments[: self.n_atoms]
+
         if len(self.at_freqs_cm) == 1 and self.n_atoms > 1:
             self.at_freqs_cm = self.at_freqs_cm * self.n_atoms  # repeat for all atoms
         elif len(self.at_freqs_cm) != self.n_atoms:

@@ -101,6 +101,7 @@ This section explains the core end‑to‑end flow used by both 1D and 2D spectr
     - Compressed `.pkl.gz` written under structured directory (1d_spectroscopy / 2d_spectroscopy).
 8. Plotting & Analysis
     - Load payload, select spectral components (real/imag/abs/phase), optionally crop to spectral window, save figures.
+    - Styling is now handled via the standalone `plotstyle` package (lazy; no side effects on import).
 9. Reproducibility (Planned Enhancements)
     - Serialize `SimulationConfig` (to_dict / from_dict) + embed hash & git commit.
     - Record environment + RNG state for full provenance.
@@ -151,22 +152,13 @@ Both use the same `output_subdir` logic (e.g., `N_2/br/t_max_600fs`).
 2D: 2d_time_N2_br_T300fs.svg, 2d_freq_N2_br_T300fs_real.svg
 ```
 
-### 🔧 Updated `save_fig()` Function ✅
-Enhanced `save_fig()` in `config/mpl_tex_settings.py` to accept `output_dir` parameter:
-
+### 🔧 Plot Styling Migration ✅
+The old `mpl_tex_settings` module was removed. Use:
 ```python
-def save_fig(
-    fig,
-    filename,
-    formats=["svg", "png", "pdf"],
-    dpi=DPI,
-    transparent=False,
-    category=None,
-    output_dir=None,  # NEW PARAMETER
-):
+from plotstyle import init_style, save_fig, set_size
+init_style()
 ```
-
-When `output_dir` is provided, files are saved directly to that directory, bypassing the category-based logic.
+`save_fig` now lives in `plotstyle`; pass full path (without extension) and optionally `formats`.
 
 ### 🔄 Unified Simulation Interface ✅
 **Standardized function signatures:**
@@ -259,6 +251,16 @@ plot_from_relative_path(relative_path, plot_config, simulation_type="2d")
 # Direct file plotting
 plot_from_filepath(Path("data/1d_spectroscopy/.../*.pkl.gz"), plot_config, simulation_type="1d")
 plot_from_filepath(Path("data/2d_spectroscopy/.../*.pkl.gz"), plot_config, simulation_type="2d")
+```
+
+### Plot Styling Example
+```python
+from plotstyle import init_style, set_size, save_fig
+import matplotlib.pyplot as plt
+init_style()
+fig, ax = plt.subplots(figsize=set_size(fraction=0.6))
+ax.plot([0,1,2],[0,1,0])
+save_fig(fig, "figures/example_plot")  # saves figures/example_plot.svg
 ```
 
 ### Complete Workflow

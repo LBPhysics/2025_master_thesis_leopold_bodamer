@@ -4,13 +4,21 @@ from qspectro2d.core.laser_system.laser_fcts import *
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 import matplotlib.pyplot as plt
 from typing import Literal, Union, Tuple
-from qspectro2d.config.mpl_tex_settings import (
-    COLORS,
-    LINE_STYLES,
-    latex_available as USE_LATEX,
-    maybe_latex as _maybe,
-    simplify_figure_text as _simplify_figure_text,
-)
+from plotstyle import init_style, COLORS, LINE_STYLES
+
+init_style()
+
+
+# Provide minimal fallbacks for former helper names
+def _maybe(latex_label: str, plain: str | None = None):
+    return latex_label if plain is None else plain
+
+
+def _simplify_figure_text(fig):
+    return fig
+
+
+USE_LATEX = False
 
 
 def plot_pulse_envelope(
