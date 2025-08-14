@@ -8,7 +8,6 @@ spectroscopy data with standardized formatting and output.
 # =============================
 # IMPORTS
 # =============================
-import sys
 import matplotlib.pyplot as plt
 import gc
 from typing import cast, TYPE_CHECKING
@@ -217,7 +216,7 @@ def plot_2d_data(
         "spectral_components_to_plot", ["abs"]
     )
     extend_for = plot_config.get("extend_for", (1, 1))
-    section = plot_config.get("section", [(0, 2), (0, 2)])
+    section = plot_config.get("section", None)
 
     print(f"✅ 2D data loaded successfully!")
 

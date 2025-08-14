@@ -36,7 +36,7 @@ def main():
         "plot_frequency_domain": True,
         "extend_for": (1, 10),
         "spectral_components_to_plot": ["abs", "real", "imag"],
-        "section": [(1, 2), (1, 2)],
+        "section": [(1, 3), (1, 3)],
         # "section": [(1.5, 1.7), (1.5, 1.7)],
     }
 

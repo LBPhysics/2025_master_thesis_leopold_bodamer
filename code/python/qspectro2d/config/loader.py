@@ -1,48 +1,27 @@
-"""Configuration loader with layered overrides.
+"""Minimal configuration loader (defaults + optional explicit file).
 
-Provides ``load_config`` returning a ``MasterConfig`` constructed from:
-    1. Built-in defaults (dataclass defaults sourced from ``default_simulation_params``)
-    2. Optional project config file (``qspectro2d.config.{yml,toml}``) at repo root
-    3. Optional user-specified file passed via ``path=`` (YAML or TOML)
-    4. Optional environment variables (``QSPEC_<SECTION>_<FIELD>=value``)
-    5. Optional runtime overrides dict supplied via ``overrides=`` argument
-
-Precedence increases downward (later layers override earlier). Only provided
-keys are merged; unspecified keys inherit earlier-layer values.
-
-Environment variable mapping rules:
-    * Prefix ``QSPEC_`` (configurable via ``env_prefix`` argument)
-    * Section & field names joined by underscore, case-insensitive
-      Example: QSPEC_WINDOW_DT_FS=2.0  ->  CONFIG.window.dt_fs = 2.0
-    * Values are parsed with a small heuristic: int -> float -> bool -> literal
-
-TOML support is basic and uses the stdlib ``tomllib`` (Python 3.11+). YAML
-requires ``PyYAML``; if missing and a YAML file is requested an informative
-error is raised.
+This simplified loader returns a ``MasterConfig`` constructed from:
+    1. Built-in defaults (dataclass defaults from ``default_simulation_params``)
+    2. Optional explicit config file passed via ``path=`` (YAML/TOML/JSON)
 
 Usage examples::
 
     from qspectro2d.config.loader import load_config
 
-    # Pure defaults
+    # Defaults only
     cfg = load_config()
 
-    # With user file + env layer
-    cfg = load_config(path="run.yml", use_env=True)
+    # Merge explicit file over defaults
+    cfg = load_config(path="config.yaml")
 
-    # Inline runtime overrides
-    cfg = load_config(overrides={"window": {"dt_fs": 1.0}})
-
-Call ``cfg.validate()`` explicitly for strict validation.
+Call ``cfg.validate()`` explicitly for strict validation if desired.
 """
 
 from __future__ import annotations
 
 from .models import MasterConfig
 from pathlib import Path
-import os
 import json
-from copy import deepcopy
 from typing import Any, Mapping, MutableMapping
 
 try:  # YAML optional
@@ -111,38 +90,6 @@ def _as_dict(cfg: MasterConfig) -> dict:
             rwa_sl=cfg.window.rwa_sl,
         ),
     }
-
-
-def _apply_env(cfg_dict: MutableMapping[str, Any], prefix: str) -> None:
-    plen = len(prefix)
-    for key, value in os.environ.items():
-        if not key.startswith(prefix):
-            continue
-        tail = key[plen:]
-        parts = tail.lower().split("_")
-        if len(parts) < 2:
-            continue
-        section, field = parts[0], "_".join(parts[1:])
-        sect = cfg_dict.get(section)
-        if not isinstance(sect, MutableMapping):
-            continue
-        # heuristic parse order
-        parsed: Any = value
-        for caster in (int, float):
-            try:
-                parsed = caster(value)
-                break
-            except Exception:
-                pass
-        if value.lower() in {"true", "false"}:
-            parsed = value.lower() == "true"
-        # JSON objects/arrays
-        if isinstance(parsed, str) and (value.startswith("[") or value.startswith("{")):
-            try:
-                parsed = json.loads(value)
-            except Exception:
-                pass
-        sect[field] = parsed  # type: ignore[index]
 
 
 def _dict_to_config(cfg_dict: Mapping[str, Any]) -> MasterConfig:
@@ -221,56 +168,22 @@ def _load_file(path: Path) -> dict:
     raise ValueError(f"Unsupported config file extension: {suffix}")
 
 
-def load_config(
-    path: str | os.PathLike | None = None,
-    *,
-    overrides: Mapping[str, Any] | None = None,
-    use_env: bool = False,
-    env_prefix: str = "QSPEC_",
-    project_file: bool = True,
-) -> MasterConfig:
-    """Load configuration applying layered overrides.
+def load_config(path: str | Path | None = None) -> MasterConfig:
+    """Load configuration from defaults and optionally merge an explicit file.
 
     Parameters
     ----------
     path:
-        Optional explicit config file (YAML / TOML / JSON). Applied after project file.
-    overrides:
-        Final in-memory mapping to deep-merge last (highest precedence).
-    use_env:
-        Include environment variable layer.
-    env_prefix:
-        Prefix for environment variables (default 'QSPEC_'). Case-insensitive.
-    project_file:
-        If True, attempt to load `qspectro2d.config.yml` or `.toml` from repository root.
+        Optional explicit config file (YAML / TOML / JSON). If provided, values
+        from the file are deep-merged over defaults. If None, pure defaults are
+        returned.
     """
 
     base_cfg = MasterConfig.from_defaults()
     cfg_dict = _as_dict(base_cfg)
 
-    # project file search (same directory traversal as paths.find_project_root could offer; simplified here)
-    if project_file:
-        root = (
-            Path(__file__).resolve().parents[2]
-        )  # .../code/python/qspectro2d -> project root
-        for candidate in [
-            root / "qspectro2d.config.yml",
-            root / "qspectro2d.config.yaml",
-            root / "qspectro2d.config.toml",
-            root / "qspectro2d.config.json",
-        ]:
-            if candidate.exists():
-                _deep_merge(cfg_dict, _load_file(candidate))
-                break
-
     if path is not None:
         _deep_merge(cfg_dict, _load_file(Path(path)))
-
-    if use_env:
-        _apply_env(cfg_dict, env_prefix)
-
-    if overrides:
-        _deep_merge(cfg_dict, overrides)
 
     return _dict_to_config(cfg_dict)
 

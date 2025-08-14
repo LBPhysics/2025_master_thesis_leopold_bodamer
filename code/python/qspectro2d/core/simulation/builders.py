@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import partial
+from logging import warning
 import numpy as np
 from qutip import (
     Qobj,
@@ -78,6 +79,7 @@ class SimulationModuleOQS:
         solver = self.simulation_config.ode_solver
         H0_diagonalized = self.H0_diagonalized
 
+        # if solver != "Paper_eqs" or "Paper_BR" or "BR" or "ME": -> case already covered with warning
         if solver == "Paper_eqs":
             # Use a module-level wrapper + functools.partial to keep object pickleable under Windows spawn.
             self.evo_obj_free = partial(paper_eqs_evo, self)
@@ -108,12 +110,6 @@ class SimulationModuleOQS:
 
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
-            self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = QobjEvo(self.H_int_sl)
-        else:
-            # Fallback: treat as ME-style with no decay channels
-            # TODO return warning
-            self.decay_channels = []
             self.evo_obj_free = H0_diagonalized
             self.evo_obj_int = QobjEvo(self.H_int_sl)
 

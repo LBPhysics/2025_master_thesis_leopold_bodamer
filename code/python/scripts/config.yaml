@@ -1,0 +1,46 @@
+# qspectro2d run configuration (merges over defaults)
+# Place in the scripts directory next to calc_datas.py
+
+atomic:
+  n_atoms: 1
+  n_rings: null
+  freqs_cm: [15000.0]#, 16000.0, 17000.0]#, 15950.0, 16050.0, 16000.0]
+  dip_moments: [1.0]#, 1.0, 1.0]#, 1.0, 1.0, 1.0]
+  at_coupling_cm: 0.0
+  delta_cm: 0.0
+  max_excitation: 1
+
+laser:
+  pulse_fwhm_fs: 5.0
+  base_amplitude: 0.5
+  envelope_type: gaussian
+  carrier_freq_cm: 16000.0
+
+bath:
+  bath_type: ohmic
+  temperature: 0.00001  # actually in terms of frequency
+  cutoff: 100           # actually in terms of frequency
+  coupling: 0.0001      # actually in terms of frequency
+
+signal:
+  phase_cycling_phases: [0, 1.57079632679, 3.14159265359, 4.71238898038]
+  detection_phase: 0
+  ift_component: [1, -1, 1]
+  relative_e0s: [1.0, 1.0, 0.1]
+  n_phases: 4
+
+solver:
+  solver: ME
+  solver_options:
+    nsteps: 200000
+    atol: 1.0e-7
+    rtol: 1.0e-5
+  negative_eigval_threshold: -1.0e-3
+  trace_tolerance: 1.0e-6
+
+window:
+  t_det_max_fs: 800.0   # For reference; calc_datas.py uses CLI flags for times
+  dt_fs: 1.0            # For reference; calc_datas.py uses CLI flags for times
+  batches: 10
+  n_freqs: 1
+  rwa_sl: true

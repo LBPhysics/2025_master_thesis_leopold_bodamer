@@ -5,20 +5,9 @@ from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 import matplotlib.pyplot as plt
 from typing import Literal, Union, Tuple
 from plotstyle import init_style, COLORS, LINE_STYLES
+from plotstyle.style import simplify_figure_text
 
 init_style()
-
-
-# Provide minimal fallbacks for former helper names
-def _maybe(latex_label: str, plain: str | None = None):
-    return latex_label if plain is None else plain
-
-
-def _simplify_figure_text(fig):
-    return fig
-
-
-USE_LATEX = False
 
 
 def plot_pulse_envelope(
@@ -45,13 +34,13 @@ def plot_pulse_envelope(
     ax.plot(
         times,
         envelope,
-        label=_maybe(r"$\text{Combined Envelope}$"),
+        label=r"$\text{Combined Envelope}$",
         linestyle=LINE_STYLES[0],
         alpha=0.8,
-        color=list(COLORS.keys())[0],
+        color=COLORS[0],
     )  # Styles for up to three pulses
     linestyles = LINE_STYLES[1:4]
-    colors = [list(COLORS.keys())[i] for i in [1, 2, 3]]
+    colors = [COLORS[i] for i in [1, 2, 3]]
 
     # Plot individual envelopes and annotations
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
@@ -79,17 +68,14 @@ def plot_pulse_envelope(
         ax.axvline(
             t_peak - Delta_width,
             linestyle=LINE_STYLES[3],
-            label=_maybe(
-                rf"$t_{{peak, {idx + 1}}} - \Delta_{{{idx + 1}}}$",
-                f"t_peak{idx+1}-Δ{idx+1}",
-            ),
+            label=rf"$t_{{peak, {idx + 1}}} - \Delta_{{{idx + 1}}}$",
             alpha=0.4,
             color=colors[idx % len(colors)],
         )
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[0],
-            label=_maybe(rf"$t_{{peak, {idx + 1}}}$", f"t_peak{idx+1}"),
+            label=rf"$t_{{peak, {idx + 1}}}$",
             alpha=0.8,
             color=colors[idx % len(colors)],
             linewidth=2,
@@ -97,23 +83,20 @@ def plot_pulse_envelope(
         ax.axvline(
             t_peak + Delta_width,
             linestyle=LINE_STYLES[3],
-            label=_maybe(
-                rf"$t_{{peak, {idx + 1}}} + \Delta_{{{idx + 1}}}$",
-                f"t_peak{idx+1}+Δ{idx+1}",
-            ),
+            label=rf"$t_{{peak, {idx + 1}}} + \Delta_{{{idx + 1}}}$",
             alpha=0.4,
             color=colors[idx % len(colors)],
         )
 
     # Final plot labeling
-    ax.set_xlabel(_maybe(r"Time $t$", "Time t"))
-    ax.set_ylabel(_maybe(r"Envelope Amplitude"))
-    ax.set_title(_maybe(r"Pulse Envelopes for Up to Three Pulses"))
+    ax.set_xlabel(r"Time $t$")
+    ax.set_ylabel(r"Envelope Amplitude")
+    ax.set_title(r"Pulse Envelopes for Up to Three Pulses")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     plt.close(fig)
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     return fig, ax
 
 
@@ -141,20 +124,20 @@ def plot_e_pulse(
     ax.plot(
         times,
         np.real(E_field),
-        label=_maybe(r"$\mathrm{Re}[E(t)]$", "Re E(t)"),
-        linestyle=LINE_STYLES[0],  # "solid"
-        color=list(COLORS.keys())[0],  # "C0"
+        label=r"$\mathrm{Re}[E(t)]$",
+        linestyle=LINE_STYLES[0],
+        color=COLORS[0],
     )
     ax.plot(
         times,
         np.imag(E_field),
-        label=_maybe(r"$\mathrm{Im}[E(t)]$", "Im E(t)"),
-        linestyle=LINE_STYLES[1],  # "dashed"
-        color=list(COLORS.keys())[1],  # "C1"
+        label=r"$\mathrm{Im}[E(t)]$",
+        linestyle=LINE_STYLES[1],
+        color=COLORS[1],
     )
 
     # Styles for up to three pulses
-    colors = [list(COLORS.keys())[i] for i in [2, 3, 4]]  # ["C2", "C3", "C4"]
+    colors = [COLORS[i] for i in [2, 3, 4]]
 
     # Plot pulse peak times
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
@@ -162,18 +145,18 @@ def plot_e_pulse(
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[3],  # "dotted"
-            label=_maybe(rf"$t_{{peak, {idx + 1}}}$", f"t_peak{idx+1}"),
+            label=rf"$t_{{peak, {idx + 1}}}$",
             color=colors[idx % len(colors)],
         )
 
     # Final plot labeling
-    ax.set_xlabel(_maybe(r"Time $t$", "Time t"))
-    ax.set_ylabel(_maybe(r"Electric Field (RWA)"))
-    ax.set_title(_maybe(r"RWA Electric Field Components"))
+    ax.set_xlabel(r"Time $t$")
+    ax.set_ylabel(r"Electric Field (RWA)")
+    ax.set_title(r"RWA Electric Field Components")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.close(fig)
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     return fig, ax
 
 
@@ -199,40 +182,40 @@ def plot_epsilon_pulse(
     ax.plot(
         times,
         np.real(Epsilon_field),
-        label=_maybe(r"$\mathrm{Re}[\varepsilon(t)]$", "Re eps(t)"),
+        label=r"$\mathrm{Re}[\varepsilon(t)]$",
         linestyle=LINE_STYLES[0],
-        color=list(COLORS.keys())[3],
+        color=COLORS[3],
     )
     ax.plot(
         times,
         np.imag(Epsilon_field),
-        label=_maybe(r"$\mathrm{Im}[\varepsilon(t)]$", "Im eps(t)"),
+        label=r"$\mathrm{Im}[\varepsilon(t)]$",
         linestyle=LINE_STYLES[1],
-        color=list(COLORS.keys())[4],
+        color=COLORS[4],
     )
     ax.plot(
         times,
         np.abs(Epsilon_field),
-        label=_maybe(r"$|\varepsilon(t)|$", "|eps(t)|"),
+        label=r"$|\varepsilon(t)|$",
         linestyle=LINE_STYLES[2],
-        color=list(COLORS.keys())[5],
+        color=COLORS[5],
     )
-    colors = [list(COLORS.keys())[i] for i in [0, 1, 2]]
+    colors = [COLORS[i] for i in [0, 1, 2]]
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):
         t_peak = pulse.pulse_peak_time
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[3],
-            label=_maybe(rf"$t_{{peak, {idx + 1}}}$", f"t_peak{idx+1}"),
+            label=rf"$t_{{peak, {idx + 1}}}$",
             color=colors[idx % len(colors)],
         )
-    ax.set_xlabel(_maybe(r"Time $t$", "Time t"))
-    ax.set_ylabel(_maybe(r"Electric Field (Full)", "Electric field (full)"))
-    ax.set_title(_maybe(r"Full Electric Field with Carrier", "Full electric field"))
+    ax.set_xlabel(r"Time $t$")
+    ax.set_ylabel(r"Electric Field (Full)")
+    ax.set_title(r"Full Electric Field with Carrier")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.close(fig)
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     return fig, ax
 
 
@@ -292,14 +275,14 @@ def plot_1d_el_field(
     # =============================
     # PLOT
     # =============================
-    plt.plot(axis_det, y_data, label=_maybe(label), color=color, linestyle=linestyle)
-    plt.xlabel(_maybe(x_label))
-    plt.ylabel(_maybe(ylabel))
-    plt.title(_maybe(final_title))
+    plt.plot(axis_det, y_data, label=label, color=color, linestyle=linestyle)
+    plt.xlabel(x_label)
+    plt.ylabel(ylabel)
+    plt.title(final_title)
     plt.legend()
     add_text_box(ax=plt.gca(), kwargs=kwargs)
     plt.tight_layout()
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     plt.close(fig)
     return fig
 
@@ -384,16 +367,16 @@ def plot_example_evo(
     axes[0].plot(
         times_plot,
         np.real(E_total),
-        color=list(COLORS.keys())[0],
+        color=COLORS[0],
         linestyle=LINE_STYLES[0],
-        label=_maybe(r"$\mathrm{Re}[E(t)]$", "Re E(t)"),
+        label=r"$\mathrm{Re}[E(t)]$",
     )
     axes[0].plot(
         times_plot,
         np.imag(E_total),
-        color=list(COLORS.keys())[1],
+        color=COLORS[1],
         linestyle=LINE_STYLES[1],
-        label=_maybe(r"$\mathrm{Im}[E(t)]$", "Im E(t)"),
+        label=r"$\mathrm{Im}[E(t)]$",
     )
     axes[0].set_ylabel(r"$E(t) / E_0$")
     axes[0].legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -412,38 +395,30 @@ def plot_example_evo(
         ax.plot(
             times_plot,
             np.real(data),
-            color=list(COLORS.keys())[0],
+            color=COLORS[0],
             linestyle=LINE_STYLES[0],
-            label=_maybe(
-                r"$\mathrm{Re}\langle" + " " + observable_str + " " + r"\rangle$",
-                f"Re <{observable_str}>",
-            ),
+            label=r"$\mathrm{Re}\langle" + " " + observable_str + " " + r"\rangle$",
         )
 
         # Plot imaginary part
         ax.plot(
             times_plot,
             np.imag(data),
-            color=list(COLORS.keys())[1],
+            color=COLORS[1],
             linestyle=LINE_STYLES[1],
-            label=_maybe(
-                r"$\mathrm{Im}\langle" + " " + observable_str + " " + r"\rangle$",
-                f"Im <{observable_str}>",
-            ),
+            label=r"$\mathrm{Im}\langle" + " " + observable_str + " " + r"\rangle$",
         )
 
-    ax.set_ylabel(
-        _maybe(r"$\langle" + observable_str + r"\rangle$", f"<{observable_str}>")
-    )
+    ax.set_ylabel(r"$\langle" + observable_str + r"\rangle$")
     ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     add_text_box(ax=axes[0], kwargs=kwargs)
 
     # Set x-label only on the bottom subplot
-    axes[-1].set_xlabel(_maybe(r"$t\,/\,\mathrm{fs}$", "t / fs"))
+    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$", "t / fs")
 
     plt.tight_layout()
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     plt.close(fig)
     return fig
 
@@ -545,28 +520,28 @@ def plot_1d_el_field(
 
     # Select color and linestyle
     color_idx = {"abs": 0, "real": 1, "imag": 2, "phase": 3}.get(component, 0)
-    color = list(COLORS.keys())[color_idx]  # "C0", "C1", etc.
+    color = COLORS[color_idx]  # "C0", "C1", etc.
     linestyle = LINE_STYLES[0]  # "solid"
 
     # Create the plot
     plt.plot(
         axis_det,
         y_data,
-        label=_maybe(label),
+        label=label,
         color=color,
         linestyle=linestyle,
     )
 
-    plt.xlabel(_maybe(x_label))
-    plt.ylabel(_maybe(ylabel))
-    plt.title(_maybe(title))
+    plt.xlabel(x_label)
+    plt.ylabel(ylabel)
+    plt.title(title)
     plt.legend()
 
     # Add additional parameters as a text box if provided
     add_text_box(ax=plt.gca(), kwargs=kwargs)
 
     plt.tight_layout()
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     plt.close(fig)
     return fig
 
@@ -671,6 +646,20 @@ def plot_2d_el_field(
         data = data / max_abs
 
     # =============================
+    # ENSURE MONOTONIC AXES ORIENTATIONS MATCH DATA
+    # =============================
+    # imshow with an extent assumes the first element of each axis maps to the
+    # lower-left corner (when origin='lower'). If axes are descending, flip data
+    # along that axis and sort the axis to be ascending so diagonal features
+    # remain along y=x and no 90° rotation occurs.
+    if axis_det[0] > axis_det[-1]:
+        axis_det = axis_det[::-1]
+        data = data[:, ::-1]
+    if axis_coh[0] > axis_coh[-1]:
+        axis_coh = axis_coh[::-1]
+        data = data[::-1, :]
+
+    # =============================
     # SET PLOT LABELS AND COLORMAP
     # =============================
     data, title_base = _component_2d_data(data=data, component=component)
@@ -686,6 +675,8 @@ def plot_2d_el_field(
     # For real and imag data, use red-white-blue colormap by default
     if component in ("real", "imag", "phase"):
         use_custom_colormap = True
+    elif component == "abs":
+        use_custom_colormap = False
 
     if use_custom_colormap:
         vmin = np.min(data)
@@ -730,9 +721,9 @@ def plot_2d_el_field(
     # add_custom_contour_lines(axis_coh, axis_det, data, component)
 
     # Improve overall plot appearance
-    ax.set_title(_maybe(title))
-    ax.set_xlabel(_maybe(x_title))
-    ax.set_ylabel(_maybe(y_title))
+    ax.set_title(title)
+    ax.set_xlabel(x_title)
+    ax.set_ylabel(y_title)
 
     # Add additional parameters as a text box if provided
     add_text_box(ax=ax, kwargs=kwargs)
@@ -741,8 +732,8 @@ def plot_2d_el_field(
 
     """# Add a border around the plot for better visual definition plt.gca().spines["top"].set_visible(True); plt.gca().spines["bottom"].set_linewidth(1.5)"""
 
-    # plt.close(fig)  # keep figure open for further user modification if desired
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
+    plt.close(fig)  # keep figure open for further user modification if desired
     return fig
 
 
@@ -774,40 +765,40 @@ def plot_example_polarization(
     plt.plot(
         times,
         np.abs(P_full),
-        label=_maybe(r"$|P_{\mathrm{full}}(t)|$", "|P_full(t)|"),
-        color=list(COLORS.keys())[0],  # "C0"
-        linestyle=LINE_STYLES[0],  # "solid"
+        label=r"$|P_{\mathrm{full}}(t)|$",
+        color=COLORS[0],
+        linestyle=LINE_STYLES[0],
     )
     plt.plot(
         times,
         np.abs(P_only0),
-        label=_maybe(r"$|P_0(t)|$", "|P0(t)|"),
-        color=list(COLORS.keys())[1],
-        linestyle=LINE_STYLES[1],  # "C1", "dashed"
+        label=r"$|P_0(t)|$",
+        color=COLORS[1],
+        linestyle=LINE_STYLES[1],
     )
     plt.plot(
         times,
         np.abs(P_only1),
-        label=_maybe(r"$|P_1(t)|$", "|P1(t)|"),
-        color=list(COLORS.keys())[2],
-        linestyle=LINE_STYLES[2],  # "C2", "dashdot"
+        label=r"$|P_1(t)|$",
+        color=COLORS[2],
+        linestyle=LINE_STYLES[2],
     )
     plt.plot(
         times,
         np.abs(P_only2),
-        label=_maybe(r"$|P_2(t)|$", "|P2(t)|"),
-        color=list(COLORS.keys())[3],
-        linestyle=LINE_STYLES[3],  # "C3", "dotted"
+        label=r"$|P_2(t)|$",
+        color=COLORS[3],
+        linestyle=LINE_STYLES[3],
     )
     plt.plot(
         times,
         np.abs(P_full - P_only0 - P_only1 - P_only2),
-        label=_maybe(r"$|P^{3}(t)|$", "|P3(t)|"),
-        color=list(COLORS.keys())[4],  # "C4"
+        label=r"$|P^{3}(t)|$",
+        color=COLORS[4],  # "C4"
         linestyle=LINE_STYLES[0],  # "solid"
     )
-    plt.xlabel(_maybe(r"$t_{\mathrm{det}}$ [fs]", "t_det [fs]"))
-    plt.ylabel(_maybe(r"$|P(t)|$", "|P(t)|"))
+    plt.xlabel(r"$t_{\mathrm{det}}$ [fs]")
+    plt.ylabel(r"$|P(t)|$")
     plt.title(title)
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
@@ -815,7 +806,7 @@ def plot_example_polarization(
     add_text_box(ax=plt.gca(), kwargs=kwargs)
 
     plt.tight_layout()
-    _simplify_figure_text(fig)
+    simplify_figure_text(fig)
     plt.close(fig)
     return fig
 
@@ -886,7 +877,7 @@ def _style_for_component(component: str) -> Tuple[str, str]:
     """
     color_map = {"abs": 0, "real": 1, "imag": 2, "phase": 3}
     idx = color_map.get(component, 0)
-    color = list(COLORS.keys())[idx]
+    color = COLORS[idx]
     linestyle = LINE_STYLES[0]
     return color, linestyle
 
@@ -967,14 +958,6 @@ def _domain_2d_labels(domain: str) -> Tuple[str, str, str, str]:
 # =============================
 # AXIS LABEL HELPERS (central definitions)
 # =============================
-def _axis_label_time() -> str:
-    return r"$t$ [fs]"
-
-
-def _axis_label_freq() -> str:
-    return r"$\omega$ [$10^4$ cm$^{-1}$]"
-
-
 def _axis_label_time_det() -> str:
     return r"$t_{\text{det}}$ [fs]"
 

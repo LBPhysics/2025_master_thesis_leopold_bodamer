@@ -214,15 +214,22 @@ def compute_1d_fft_wavenumber(
 
 
 def compute_2d_fft_wavenumber(
-    t_dets: np.ndarray, t_cohs: np.ndarray, data: np.ndarray
+    t_dets: np.ndarray,
+    t_cohs: np.ndarray,
+    data: np.ndarray,
+    *,
+    coh_sign: str = "forward",
+    shift: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute 2D FFT of spectroscopy data and convert frequency axes to wavenumber units.
 
-    This function performs a 2D FFT on the input data following the formula:
-    S2D(ω_coh,T, ω_det) ~ ∫dt exp(-iω_det*t) × ∫dcoh exp(iω_coh*coh) E_ks(coh,T,t)
+    This function performs a 2D transform on the input data with selectable coherence-axis sign:
+    - coh_sign = 'forward': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{-i ω_coh coh} E(coh,T,t)
+    - coh_sign = 'inverse': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{+i ω_coh coh} E(coh,T,t)
 
-    The t-axis uses forward FFT (exp(-iω_det*t)) and coh-axis uses inverse FFT (exp(+iω_coh*coh)).
+    Historically, this code used 'forward' on both axes (np.fft.fft2). Set coh_sign='inverse'
+    if your theoretical convention expects +i ω_coh coh.
 
     Parameters
     ----------
@@ -253,23 +260,25 @@ def compute_2d_fft_wavenumber(
     dt_coh = t_cohs[1] - t_cohs[0]  # coh step
     dt_det = t_dets[1] - t_dets[0]  # t step
 
-    ### Perform 2D FFT according to the formula
-    # Forward FFT along t-axis (axis=1): exp(-iω_det*t)
-    # Inverse FFT along coh-axis (axis=0): exp(+iω_coh*coh)
-    # s2d = np.fft.fft(data, axis=0)  # * len(t_cohs)
-    # s2d = np.fft.fft(s2d, axis=1)
-
-    s2d = np.fft.fft2(data)
+    ### Perform 2D transform according to the chosen convention
+    # Detection axis (t): always forward FFT (exp(-i ω_det t))
+    if coh_sign.lower() == "inverse":
+        # Coherence axis: inverse FFT (exp(+i ω_coh coh))
+        s2d = np.fft.ifft(data, axis=0)
+    else:
+        # Coherence axis: forward FFT (exp(-i ω_coh coh))
+        s2d = np.fft.fft(data, axis=0)
+    s2d = np.fft.fft(s2d, axis=1)
 
     ### Generate frequency axes
     freq_dets = np.fft.fftfreq(len(t_dets), d=dt_det)
     freq_cohs = np.fft.fftfreq(len(t_cohs), d=dt_coh)
 
-    ### Apply frequency shifts for centered display
-    # s2d = np.fft.fftshift(s2d, axes=(0))
-    # s2d = np.fft.fftshift(s2d, axes=(1))
-    # freq_cohs = np.fft.fftshift(freq_cohs)
-    # freq_dets = np.fft.fftshift(freq_dets)
+    ### Apply frequency shifts for centered, ascending axes (negative → zero → positive)
+    if shift:
+        s2d = np.fft.fftshift(s2d, axes=(0, 1))
+        freq_cohs = np.fft.fftshift(freq_cohs)
+        freq_dets = np.fft.fftshift(freq_dets)
 
     ### Convert to wavenumber units [10^4 cm⁻¹]
     # Speed of light: c ≈ 2.998 × 10^-4 cm/fs

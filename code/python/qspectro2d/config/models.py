@@ -161,14 +161,28 @@ class MasterConfig:
     window: SimulationWindowConfig = field(default_factory=SimulationWindowConfig)
 
     def validate(self) -> None:
-        self.atomic.validate()
+        # Keep section-specific checks (unique to these models)
         self.laser.validate()
-        self.bath.validate()
-        self.signal.validate()
-        self.solver.validate()
         self.window.validate()
-        # leverage legacy global validation (includes RWA detuning warning)
-        _defs.validate_defaults()
+
+        # Unified cross-section validation using defaults module
+        params = {
+            "solver": self.solver.solver,
+            "bath_type": self.bath.bath_type,
+            "freqs_cm": list(self.atomic.freqs_cm),
+            "n_atoms": self.atomic.n_atoms,
+            "dip_moments": list(self.atomic.dip_moments),
+            "temperature": self.bath.temperature,
+            "cutoff": self.bath.cutoff,
+            "coupling": self.bath.coupling,
+            "n_phases": self.signal.n_phases,
+            "max_excitation": self.atomic.max_excitation,
+            "n_rings": self.atomic.n_rings,
+            "relative_e0s": list(self.signal.relative_e0s),
+            "rwa_sl": self.window.rwa_sl,
+            "carrier_freq_cm": self.laser.carrier_freq_cm,
+        }
+        _defs.validate(params)
 
     @classmethod
     def from_defaults(cls) -> "MasterConfig":

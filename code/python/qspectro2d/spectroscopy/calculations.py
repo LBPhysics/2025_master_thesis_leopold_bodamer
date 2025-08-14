@@ -505,7 +505,7 @@ def _ensure_valid_times(
             f"times_segment is empty. Using first two time points from full array: {full_times[:2]}"
         )
         # Second fallback: use first two time points from full array
-        return full_times[:1]  # TODO check if this is better?
+        return full_times[:1]
 
     # Time segment is valid, return as-is
     return times_segment

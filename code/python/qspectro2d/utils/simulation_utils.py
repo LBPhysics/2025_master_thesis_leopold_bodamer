@@ -16,6 +16,8 @@ from qutip import OhmicEnvironment
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
+from qspectro2d.config.models import MasterConfig
+from qspectro2d.config.loader import load_config
 
 
 # =============================
@@ -59,10 +61,10 @@ def create_simulation_module_from_configs(
 
 
 def create_base_sim_oqs(
-    args, overwrite_config: dict = None
+    args,
+    cfg: MasterConfig | None = None,
 ) -> tuple[SimulationModuleOQS, float]:
-    """TODO write this function such that i can also overwrite the default values with a optional dictionary
-    Create base simulation instance and perform solver validation once.
+    """Create base simulation instance and perform solver validation once.
 
     Parameters:
         args: Parsed command line arguments
@@ -70,10 +72,14 @@ def create_base_sim_oqs(
     Returns:
         tuple: (SimulationModuleOQS instance, time_cut from solver validation)
     """
-    # Import config values here to avoid circular imports
-    from qspectro2d.config import CONFIG
+    # Resolve configuration: use provided cfg, else load defaults
+    CONFIG = cfg if cfg is not None else load_config()
 
     print("🔧 Creating base simulation configuration...")
+
+    # Validate merged configuration (defaults or file-based)
+    print("🔎 Validating configuration...")
+    CONFIG.validate()
 
     atomic_config = {
         "n_atoms": CONFIG.atomic.n_atoms,

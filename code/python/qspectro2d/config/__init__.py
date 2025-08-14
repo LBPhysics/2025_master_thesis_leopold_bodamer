@@ -43,7 +43,7 @@ from .models import (
 )
 from .loader import load_config
 
-# Instantiate single global configuration object
+# Instantiate single global configuration object (defaults only unless caller provides a path)
 CONFIG: MasterConfig = load_config()
 
 # Optionally run validation at import (can be commented out if too strict)

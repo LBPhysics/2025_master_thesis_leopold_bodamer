@@ -47,12 +47,12 @@ SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 
 
 # === ATOMIC SYSTEM DEFAULTS ===
-N_ATOMS = 3
+N_ATOMS = 1
 N_RINGS = (
     None  # If N_ATOMS>2 and None -> defaults to linear chain (single chain layout)
 )
-FREQS_CM = [15900.0, 16100.0, 16200.0]  # Number of frequency components in the system
-DIP_MOMENTS = [1.0, 1.0, 1.0]  # Dipole moments for each atom
+FREQS_CM = [15900.0]  # Number of frequency components in the system
+DIP_MOMENTS = [1.0]  # Dipole moments for each atom
 AT_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
@@ -87,68 +87,101 @@ DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
 # =============================
 # VALIDATION AND SANITY CHECKS
 # =============================
-def validate_defaults():
-    """Validate that all default values are consistent and sensible."""
+def validate(params: dict):
+    """Validate that a parameter dictionary is consistent and sensible."""
+    # Extract parameters with defaults fallback
+    ode_solver = params.get("solver", ODE_SOLVER)
+    bath_type = params.get("bath_type", BATH_TYPE)
+    freqs_cm = params.get("freqs_cm", FREQS_CM)
+    n_atoms = params.get("n_atoms", N_ATOMS)
+    dip_moments = params.get("dip_moments", DIP_MOMENTS)
+    bath_temp = params.get("temperature", BATH_TEMP)
+    bath_cutoff = params.get("cutoff", BATH_CUTOFF)
+    bath_coupling = params.get("coupling", BATH_COUPLING)
+    n_phases = params.get("n_phases", N_PHASES)
+    max_excitation = params.get("max_excitation", MAX_EXCITATION)
+    n_rings = params.get("n_rings", N_RINGS)
+    relative_e0s = params.get("relative_e0s", RELATIVE_E0S)
+    rwa_sl = params.get("rwa_sl", RWA_SL)
+    carrier_freq_cm = params.get("carrier_freq_cm", CARRIER_FREQ_CM)
 
     # Validate solver
-    if ODE_SOLVER not in SUPPORTED_SOLVERS:
-        raise ValueError(f"ODE_SOLVER '{ODE_SOLVER}' not in {SUPPORTED_SOLVERS}")
+    if ode_solver not in SUPPORTED_SOLVERS:
+        raise ValueError(f"ODE_SOLVER '{ode_solver}' not in {SUPPORTED_SOLVERS}")
 
     # Validate bath type
-    if BATH_TYPE not in SUPPORTED_BATHS:
-        raise ValueError(f"BATH_TYPE '{BATH_TYPE}' not in {SUPPORTED_BATHS}")
+    if bath_type not in SUPPORTED_BATHS:
+        raise ValueError(f"BATH_TYPE '{bath_type}' not in {SUPPORTED_BATHS}")
 
     # Validate atomic system consistency
-    if len(FREQS_CM) != N_ATOMS:
-        raise ValueError(f"FREQS_CM length ({len(FREQS_CM)}) != N_ATOMS ({N_ATOMS})")
+    if len(freqs_cm) != n_atoms:
+        raise ValueError(f"FREQS_CM length ({len(freqs_cm)}) != N_ATOMS ({n_atoms})")
 
-    if len(DIP_MOMENTS) != N_ATOMS:
+    if len(dip_moments) != n_atoms:
         raise ValueError(
-            f"DIP_MOMENTS length ({len(DIP_MOMENTS)}) != N_ATOMS ({N_ATOMS})"
+            f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})"
         )
 
     # Validate positive values
-    if BATH_TEMP <= 0:
+    if bath_temp <= 0:
         raise ValueError("BATH_TEMP must be positive")
 
-    if BATH_CUTOFF <= 0:
+    if bath_cutoff <= 0:
         raise ValueError("BATH_CUTOFF must be positive")
 
-    if BATH_COUPLING <= 0:
+    if bath_coupling <= 0:
         raise ValueError("BATH_COUPLING must be positive")
 
     # Validate phases
-    if N_PHASES <= 0:
+    if n_phases <= 0:
         raise ValueError("N_PHASES must be positive")
 
     # Validate excitation truncation
-    if MAX_EXCITATION not in (1, 2):
+    if max_excitation not in (1, 2):
         raise ValueError("MAX_EXCITATION must be 1 or 2")
 
     # Validate n_rings divisibility if provided and relevant
-    if N_RINGS is not None and N_ATOMS > 2:
-        if N_RINGS < 1:
+    if n_rings is not None and n_atoms > 2:
+        if n_rings < 1:
             raise ValueError("N_RINGS must be >=1 when specified")
-        if N_ATOMS % N_RINGS != 0:
+        if n_atoms % n_rings != 0:
             raise ValueError(
-                f"N_RINGS ({N_RINGS}) does not divide N_ATOMS ({N_ATOMS}) for cylindrical geometry"
+                f"N_RINGS ({n_rings}) does not divide N_ATOMS ({n_atoms}) for cylindrical geometry"
             )
 
     # Validate relative amplitudes
-    if len(RELATIVE_E0S) != 3:
+    if len(relative_e0s) != 3:
         raise ValueError("RELATIVE_E0S must have exactly 3 elements")
 
-    if RWA_SL:
-        freqs_array = np.array(FREQS_CM)
-        max_detuning = np.max(np.abs(freqs_array - CARRIER_FREQ_CM))
+    if rwa_sl:
+        freqs_array = np.array(freqs_cm)
+        max_detuning = np.max(np.abs(freqs_array - carrier_freq_cm))
         rel_detuning = (
-            max_detuning / CARRIER_FREQ_CM if CARRIER_FREQ_CM != 0 else np.inf
+            max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
         )
         if rel_detuning > 1e-2:
             print(
-                f"WARNING: RWA probably not valid, since relative detuning: {rel_detuning} is too large"
+                f"WARNING: RWA probably not valid, since relative detuning: {rel_detuning} is too large",
+                flush=True,
             )
 
 
-# Run validation when module is imported
-validate_defaults()
+def validate_defaults():
+    """Validate that all default values are consistent and sensible."""
+    params = {
+        "solver": ODE_SOLVER,
+        "bath_type": BATH_TYPE,
+        "freqs_cm": FREQS_CM,
+        "n_atoms": N_ATOMS,
+        "dip_moments": DIP_MOMENTS,
+        "temperature": BATH_TEMP,
+        "cutoff": BATH_CUTOFF,
+        "coupling": BATH_COUPLING,
+        "n_phases": N_PHASES,
+        "max_excitation": MAX_EXCITATION,
+        "n_rings": N_RINGS,
+        "relative_e0s": RELATIVE_E0S,
+        "rwa_sl": RWA_SL,
+        "carrier_freq_cm": CARRIER_FREQ_CM,
+    }
+    validate(params)

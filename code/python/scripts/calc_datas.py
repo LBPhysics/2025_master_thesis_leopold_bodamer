@@ -44,6 +44,7 @@ from qspectro2d.utils import (
 )
 from qspectro2d.utils.simulation_utils import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
+from qspectro2d.config.loader import load_config
 
 
 def run_single_t_coh_with_sim(
@@ -93,7 +94,6 @@ def run_single_t_coh_with_sim(
     save_data_file(abs_data_path, data, sim_oqs.times_det)
 
     if save_info:
-        # all_infos_as_dict = sim_oqs.to_dict() TODO update the saving to incorporate all the info data in one dict?
         abs_info_path = Path(f"{abs_path}_info.pkl")
         save_info_file(
             abs_info_path,
@@ -122,8 +122,13 @@ def run_1d_mode(args):
     """
     print(f"🎯 Running 1D mode with t_coh = {args.t_coh:.2f} fs")
 
+    # Load YAML config from scripts directory if present
+    scripts_dir = Path(__file__).resolve().parent
+    cfg_path = scripts_dir / "config.yaml"
+    cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
+
     # Create base simulation and validate solver once
-    sim_oqs, time_cut = create_base_sim_oqs(args)
+    sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
 
     # Run single simulation
     abs_data_path = run_single_t_coh_with_sim(
@@ -143,8 +148,13 @@ def run_2d_mode(args):
     """
     print(f"🎯 Running 2D mode - batch {args.batch_idx + 1}/{args.n_batches}")
 
+    # Load YAML config from scripts directory if present
+    scripts_dir = Path(__file__).resolve().parent
+    cfg_path = scripts_dir / "config.yaml"
+    cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
+
     # Create base simulation and validate solver once
-    sim_oqs, time_cut = create_base_sim_oqs(args)
+    sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
 
     # Generate t_coh values for the full range
     t_coh_vals = sim_oqs.times_det
