@@ -548,6 +548,14 @@ class AtomicSystem:
             return self._Hamilton_multi_single_excitation()
         return self._Hamilton_multi_double_excitation()
 
+    def excitation_number_from_index(self, idx: int) -> int:
+        if idx == 0:
+            return 0
+        elif 1 <= idx <= self.n_atoms:
+            return 1
+        else:
+            return 2
+
     @cached_property
     def eigenstates(self) -> Tuple[np.ndarray, np.ndarray]:
         """Eigenvalues & eigenstates (cached).

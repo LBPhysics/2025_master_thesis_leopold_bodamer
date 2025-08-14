@@ -1,11 +1,6 @@
 import numpy as np
 from typing import Union, List, overload
 from qutip import Qobj, expect
-from qspectro2d.constants import convert_cm_to_fs, convert_fs_to_cm  # canonical conversions
-
-
-### NOTE: Conversion functions now imported from qspectro2d.constants.
-
 
 # =============================
 # ROTATING WAVE APPROXIMATION FUNCTIONS
@@ -55,32 +50,31 @@ def apply_RWA_phase_factors(
 
 def _apply_single_rwa(rho: Qobj, t: float, n_atoms: int, omega: float) -> Qobj:
     """
-    Apply time-dependent phase factors to the density matrix entries.
-    Dispatches to the appropriate implementation based on n_atoms.
+    Apply RWA phase factors for arbitrary n_atoms (supports up to 2 excitations).
+
+    Each density matrix element rho_ij picks up a phase factor
+    exp(-i * omega * t * (n_i - n_j)), where n_i is excitation number of basis state i.
     """
-    # Extract the density matrix as a NumPy array
+    from qspectro2d.constants import HBAR
+
     rho_array = rho.full()
-    e_m_iwt = np.exp(-1j * omega * t)
+    dim = rho_array.shape[0]
 
-    # Apply the phase factors to the specified elements
-    if n_atoms == 1:
-        rho_array[1, 0] *= e_m_iwt
-        rho_array[0, 1] *= np.conj(e_m_iwt)
+    # Build excitation number list
+    excitation_numbers = [0] * dim
+    for i in range(1, n_atoms + 1):
+        excitation_numbers[i] = 1
+    for i in range(n_atoms + 1, dim):
+        excitation_numbers[i] = 2
 
-    elif n_atoms == 2:
-        e_m_2iwt = np.exp(-1j * 2 * omega * t)
-        bar_alpha = 3
-        for alpha in range(1, 3):
-            rho_array[alpha, 0] *= e_m_iwt
-            rho_array[0, alpha] *= np.conj(e_m_iwt)
-            rho_array[bar_alpha, alpha] *= e_m_iwt
-            rho_array[alpha, bar_alpha] *= np.conj(e_m_iwt)
-
-        rho_array[bar_alpha, 0] *= e_m_2iwt
-        rho_array[0, bar_alpha] *= np.conj(e_m_2iwt)
-
-    else:
-        raise ValueError("TODO implement RWA for n_atoms > 2")
+    # Apply phase factors
+    for i in range(dim):
+        n_i = excitation_numbers[i]
+        for j in range(dim):
+            n_j = excitation_numbers[j]
+            delta_n = n_i - n_j
+            if delta_n != 0:
+                rho_array[i, j] *= np.exp(-1j * delta_n * HBAR * omega * t)
 
     return Qobj(rho_array, dims=rho.dims)
 

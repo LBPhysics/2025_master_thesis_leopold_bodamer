@@ -126,18 +126,17 @@ class SimulationModuleOQS:
         """
         Es, _ = self.system.eigenstates
         Es = Es.copy()  # avoid in-place modification of upstream arrays
-        n_atoms = self.system.n_atoms
+        N = self.system.n_atoms
+
         if self.simulation_config.rwa_sl:
-            if n_atoms == 1:
-                Es[1] -= HBAR * self.laser.omega_laser
-            elif n_atoms == 2:
-                Es[1] -= HBAR * self.laser.omega_laser
-                Es[2] -= HBAR * self.laser.omega_laser
-                Es[3] -= 2 * HBAR * self.laser.omega_laser
-            else:
-                print(
-                    "TODO extend the H_diag to N_atoms > 2 ?Es[i] -= self.laser.omega_laser?"
-                )
+            omega_L = self.laser.omega_laser
+
+            # Determine excitation number for each eigenstate
+            # Based on index: 0 -> 0 excitations, 1..N -> 1, N+1..end -> 2
+            for i in range(len(Es)):
+                n_exc = self.system.excitation_number_from_index(i)
+                Es[i] -= n_exc * HBAR * omega_L
+
         return Qobj(np.diag(Es), dims=self.system.H0_N_canonical.dims)
 
     def H_int_sl(self, t: float) -> Qobj:
