@@ -150,6 +150,7 @@ class SimulationModuleOQS:
             ]
         if self.simulation_config.keep_track == "basis":
             return [ket2dm(b) for b in self.system.basis]
+        # else use the eigenstates
         return [ket2dm(state) for state in self.system.eigenstates[1]]
 
     # --- Time grids ----------------------------------------------------------------
