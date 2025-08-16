@@ -90,8 +90,6 @@ LATEX_DIR = PROJECT_ROOT / "latex"
 # Figure subdirectories (lazy)
 ##############################
 FIGURES_PYTHON_DIR = FIGURES_DIR / "figures_from_python"
-FIGURES_BATH_DIR = FIGURES_PYTHON_DIR / "bath_correlator"
-FIGURES_PULSES_DIR = FIGURES_PYTHON_DIR / "pulses"
 FIGURES_TESTS_DIR = FIGURES_PYTHON_DIR / "tests"  # For test figures
 
 
@@ -105,8 +103,6 @@ def ensure_dirs() -> None:
         DATA_DIR,
         FIGURES_DIR,
         FIGURES_PYTHON_DIR,
-        FIGURES_BATH_DIR,
-        FIGURES_PULSES_DIR,
         FIGURES_TESTS_DIR,
     ]:
         path.mkdir(parents=True, exist_ok=True)

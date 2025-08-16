@@ -6,7 +6,7 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 
 from qutip import ket2dm, BosonicEnvironment
 
-from qspectro2d.core.bath_system.bath_fcts import bath_to_rates, rates_to_alpha
+from qspectro2d.core.bath_system.bath_fcts import bath_to_rates
 
 
 @dataclass
@@ -149,6 +149,36 @@ class SystemBathCoupling:
 
         return c_ops
 
+    @property
+    def theta(self) -> float:
+        """Return dimer mixing angle θ (radians) for n_atoms == 2.
+
+        Definition (standard exciton / coupled two-level system):
+
+            tan(2θ) = 2J / Δ
+
+        where
+            J  = coupling (fs^-1)
+            Δ  = ω_1 - ω_2 (fs^-1)  (bare transition frequency detuning)
+
+        We compute:
+            θ = 0.5 * arctan2(2J, Δ)
+
+        Range: θ ∈ (-π/4, π/4]; magnitude governs the degree of state mixing.
+        The previous implementation used arctan(J/Δ), which differs by a
+        factor-of-two in the argument and is non-standard. Coefficients used
+        in `lowering_op` retain their algebraic definitions (sinθ, cosθ), so this
+        correction yields physically consistent mixing when J ~ Δ.
+
+        Raises
+        ------
+        ValueError: if called for systems with n_atoms != 2.
+        """
+        if self.system.n_atoms != 2:
+            raise ValueError("theta is only defined for n_atoms == 2")
+        detuning = self.system.frequencies(0) - self.system.frequencies(1)  # Δ
+        return 0.5 * np.arctan2(2 * self.system.coupling, detuning)
+
     # only for the paper solver
     def gamma_small_ij(self, i: int, j: int) -> float:
         """
@@ -163,7 +193,7 @@ class SystemBathCoupling:
         """
 
         w_ij = self.system.omega_ij(i, j)
-        return np.sin(2 * self.system.theta) ** 2 * self.bath.power_spectrum(w_ij)
+        return np.sin(2 * self.theta) ** 2 * self.bath.power_spectrum(w_ij)
 
     def Gamma_big_ij(self, i: int, j: int) -> float:
         """
@@ -178,8 +208,8 @@ class SystemBathCoupling:
         """
         # Pure dephasing rates helper
         P_0 = self.bath.power_spectrum(0)
-        Gamma_t_ab = 2 * np.cos(2 * self.system.theta) ** 2 * P_0  # tilde
-        Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.system.theta) ** 2) * P_0
+        Gamma_t_ab = 2 * np.cos(2 * self.theta) ** 2 * P_0  # tilde
+        Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.theta) ** 2) * P_0
         Gamma_11 = self.gamma_small_ij(2, 1)
         Gamma_22 = self.gamma_small_ij(1, 2)
         Gamma_abar_0 = 2 * P_0

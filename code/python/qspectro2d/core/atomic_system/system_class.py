@@ -31,9 +31,6 @@ class AtomicSystem:
 
     def __post_init__(self):
         # mostly for validation and initialization
-        # Cache ground and excited states for single atom
-        self._atom_g = basis(2, 0)  # ground state |g>
-        self._atom_e = basis(2, 1)  # excited state |e>
         # Internal storage for couplings & geometry (not part of public dataclass fields)
         self._positions: Optional[np.ndarray] = None
 
@@ -210,7 +207,7 @@ class AtomicSystem:
         # Start in the truncated Hilbert space (0,1,2)-excitation basis
         HJ = 0
 
-        # Singles couplings
+        # Singles excitation couplings
         for i in range(1, N + 1):
             for j in range(i + 1, N + 1):
                 Jij = float(J[i - 1, j - 1])
@@ -219,34 +216,6 @@ class AtomicSystem:
                 ket_i = self.basis[i]
                 ket_j = self.basis[j]
                 HJ += HBAR * Jij * (ket_i * ket_j.dag() + ket_j * ket_i.dag())
-        """
-        # Double-manifold couplings if present
-        if self.max_excitation == 2 and hasattr(self, "_index_to_pair"):
-            # For pairs that differ by one index, couple them with the J of the differing sites
-            for idx_a, (i, k) in self._index_to_pair.items():
-                for j in range(1, N + 1):
-                    if j in (i, k):
-                        continue
-                    # Candidate paired state shares k: (j,k) if ordering j<k else (k,j)
-                    p = (j, k) if j < k else (k, j)
-                    idx_b = self._pair_to_index.get(p)
-                    if idx_b is None:
-                        continue
-                    # Add each unordered pair (idx_a, idx_b) only once
-                    if idx_a >= idx_b:
-                        continue
-                    Jij = float(J[i - 1, j - 1])
-                    if Jij == 0.0:
-                        continue
-                    HJ += (
-                        HBAR
-                        * Jij
-                        * (
-                            self.basis[idx_a] * self.basis[idx_b].dag()
-                            + self.basis[idx_b] * self.basis[idx_a].dag()
-                        )
-                    )
-        """
         return HJ
 
     # -----------------------------
@@ -320,33 +289,9 @@ class AtomicSystem:
         For n_atoms == 2, the existing explicit 4-level basis is retained but unified
         with the generic mapping when max_excitation == 2.
         """
+        # Generic cases
         N = self.n_atoms
-        if N == 1:
-            self._basis = [self._atom_g, self._atom_e]
-            self._pair_to_index = {}
-            self._index_to_pair = {}
-            return
-
-        if N == 2 and self.max_excitation == 2:
-            self._basis = [
-                tensor(self._atom_g, self._atom_g),
-                tensor(self._atom_e, self._atom_g),
-                tensor(self._atom_g, self._atom_e),
-                tensor(self._atom_e, self._atom_e),
-            ]
-            self._pair_to_index = {(1, 2): 3}
-            self._index_to_pair = {3: (1, 2)}
-            return
-
-        # Generic N >= 2 cases
         dim = self.dimension
-        if self.max_excitation == 1:
-            self._basis = [basis(dim, i) for i in range(dim)]
-            self._pair_to_index = {}
-            self._index_to_pair = {}
-            return
-
-        # max_excitation == 2: full truncated (0,1,2) excitation space (hard-core bosons)
         self._basis = [basis(dim, i) for i in range(dim)]
         # Build mapping (i<j) -> index
         pair_index_start = 1 + N  # first double-excitation basis index
@@ -361,7 +306,7 @@ class AtomicSystem:
         self._pair_to_index = pair_to_index
         self._index_to_pair = index_to_pair
 
-    def build_Hamilton(self) -> Qobj:
+    def _build_Hamilton(self) -> Qobj:
         """Return Hamiltonian including up to two excitations (hard-core boson model).
 
         H = Σ_i ħ ω_i a_i^† a_i + Σ_{i≠j} ħ J_ij a_i^† a_j, truncated to 0,1,2 excitations.
@@ -525,7 +470,7 @@ class AtomicSystem:
 
     @property
     def H0_N_canonical(self) -> Qobj:
-        return self.build_Hamilton()
+        return self._build_Hamilton()
 
     def excitation_number_from_index(self, idx: int) -> int:
         if idx == 0:
@@ -651,38 +596,3 @@ class AtomicSystem:
         """
         d = json.loads(json_str)
         return cls.from_dict(d)
-
-
-# =============================
-# USAGE EXAMPLES
-# =============================
-""" HOW TO USE AtomicSystem:
-
-# Create a single atom system
-system1 = AtomicSystem(n_atoms=1, at_freqs_cm=[16000.0], dip_moments=[1.0])
-
-# Create a two-atom system with coupling
-system2 = AtomicSystem(
-    n_atoms=2, 
-    at_freqs_cm=[16000.0, 15640.0], 
-    dip_moments=[1.0, 1.2],
-    at_coupling_cm=50.0
-)
-
-# Serialize to JSON for saving/loading
-json_str = system2.to_json()
-system2_loaded = AtomicSystem.from_json(json_str)
-
-# View system properties
-system2.summary()
-
-# Access computed properties
-eigenvals, eigenvecs = system2.eigenstates
-hamiltonian = system2.H0_N_canonical
-dipole_op = system2.dip_op
-"""
-
-if __name__ == "__main__":
-    print("AtomicSystem class loaded successfully!")
-    print("Run 'python test_system_class.py' to execute tests.")
-    print("\nFor usage examples, see the docstring above.")

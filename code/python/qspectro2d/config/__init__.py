@@ -22,8 +22,6 @@ from .paths import (
     FIGURES_DIR,
     FIGURES_PYTHON_DIR,
     SCRIPTS_DIR,
-    FIGURES_BATH_DIR,
-    FIGURES_PULSES_DIR,
     FIGURES_TESTS_DIR,
     ensure_dirs,
 )
@@ -62,8 +60,6 @@ __all__ = [
     "FIGURES_DIR",
     "FIGURES_PYTHON_DIR",
     "SCRIPTS_DIR",
-    "FIGURES_BATH_DIR",
-    "FIGURES_PULSES_DIR",
     "FIGURES_TESTS_DIR",
     "ensure_dirs",
     # default simulation parameters
