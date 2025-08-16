@@ -469,12 +469,12 @@ def plot_1d_el_field(
 
         if component == "abs":
             y_data = np.abs(data)
-            label = rf"$|{function_symbol}(t)|$"
-            ylabel = rf"$|{function_symbol}(t)|$"
+            label = "|" + function_symbol + "(t)|"
+            ylabel = "|" + function_symbol + "(t)|"
         elif component == "real":
             y_data = np.real(data)
-            label = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
-            ylabel = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
+            label = r"$\mathrm{Re}[" + function_symbol + "(t)]$"
+            ylabel = r"$\mathrm{Re}[" + function_symbol + "(t)]$"
         elif component == "imag":
             y_data = np.imag(data)
             label = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"

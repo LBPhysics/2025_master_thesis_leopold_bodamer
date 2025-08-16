@@ -7,7 +7,7 @@ break.
 
 Goals:
 1. Semantic grouping (atomic, laser, bath, signal, solver, window)
-2. Type hints & discoverability (``cfg.atomic.freqs_cm`` vs flat names)
+2. Type hints & discoverability (``cfg.atomic.frequencies_cm`` vs flat names)
 3. Foundation for layered overrides (file/env/runtime) later
 4. No import-time side effects; explicit validation
 
@@ -33,28 +33,28 @@ class AtomicConfig:
 
     n_atoms: int = _defs.N_ATOMS
     # Optional geometry spec for multi-atom systems (see AtomicSystem); if n_atoms>2 and None -> linear chain
-    n_rings: int | None = _defs.N_RINGS  # type: ignore[assignment]
-    freqs_cm: Sequence[float] = tuple(_defs.FREQS_CM)
+    n_chains: int = _defs.N_CHAINS
+    frequencies_cm: Sequence[float] = tuple(_defs.FREQUENCIES_CM)
     dip_moments: Sequence[float] = tuple(_defs.DIP_MOMENTS)
-    at_coupling_cm: float = _defs.AT_COUPLING_CM
+    coupling_cm: float = _defs.COUPLING_CM
     delta_cm: float = _defs.DELTA_CM
     # Excitation manifold truncation (1: ground+single, 2: add double manifold)
     max_excitation: int = _defs.MAX_EXCITATION
 
     def validate(self) -> None:
-        if len(self.freqs_cm) != self.n_atoms:
-            raise ValueError("AtomicConfig: freqs_cm length != n_atoms")
+        if len(self.frequencies_cm) != self.n_atoms:
+            raise ValueError("AtomicConfig: frequencies_cm length != n_atoms")
         if len(self.dip_moments) != self.n_atoms:
             raise ValueError("AtomicConfig: dip_moments length != n_atoms")
         if self.max_excitation not in (1, 2):
             raise ValueError("AtomicConfig: max_excitation must be 1 or 2")
         # Geometry divisibility checks (mirrors default validation)
-        if self.n_rings is not None and self.n_atoms > 2:
-            if self.n_rings < 1:
-                raise ValueError("AtomicConfig: n_rings must be >=1 when specified")
-            if self.n_atoms % self.n_rings != 0:
+        if self.n_chains is not None and self.n_atoms > 2:
+            if self.n_chains < 1:
+                raise ValueError("AtomicConfig: n_chains must be >=1 when specified")
+            if self.n_atoms % self.n_chains != 0:
                 raise ValueError(
-                    f"AtomicConfig: n_rings ({self.n_rings}) does not divide n_atoms ({self.n_atoms})"
+                    f"AtomicConfig: n_chains ({self.n_chains}) does not divide n_atoms ({self.n_atoms})"
                 )
 
 
@@ -169,7 +169,7 @@ class MasterConfig:
         params = {
             "solver": self.solver.solver,
             "bath_type": self.bath.bath_type,
-            "freqs_cm": list(self.atomic.freqs_cm),
+            "frequencies_cm": list(self.atomic.frequencies_cm),
             "n_atoms": self.atomic.n_atoms,
             "dip_moments": list(self.atomic.dip_moments),
             "temperature": self.bath.temperature,
@@ -177,7 +177,7 @@ class MasterConfig:
             "coupling": self.bath.coupling,
             "n_phases": self.signal.n_phases,
             "max_excitation": self.atomic.max_excitation,
-            "n_rings": self.atomic.n_rings,
+            "n_chains": self.atomic.n_chains,
             "relative_e0s": list(self.signal.relative_e0s),
             "rwa_sl": self.window.rwa_sl,
             "carrier_freq_cm": self.laser.carrier_freq_cm,

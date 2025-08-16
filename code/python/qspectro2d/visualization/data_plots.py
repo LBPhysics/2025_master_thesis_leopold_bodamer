@@ -62,7 +62,7 @@ def plot_1d_data(
 
     # Explicitly cast for static typing & IDE autocomplete
     system = cast("AtomicSystem", loaded_data_and_info["system"])
-    w0 = system.at_freqs_fs(0)
+    w0 = system.frequencies[0]
     bath_env = cast("BosonicEnvironment", loaded_data_and_info["bath"])
     bath_dict = extract_bath_parameters(bath_env, w0)
 
@@ -96,7 +96,7 @@ def plot_1d_data(
                 data=data,
                 domain="time",
                 component="abs",
-                function_symbol="E_{k_s}",
+                function_symbol=r"$E_{k_s}$",
                 **dict_combined,
             )
             filename = generate_unique_plot_filename(
@@ -114,14 +114,14 @@ def plot_1d_data(
                 data=data,
                 domain="time",
                 component="real",
-                function_symbol="E_{k_s}",
+                function_symbol=r"$E_{k_s}$",
                 **dict_combined,
             )
             filename = generate_unique_plot_filename(
                 system=system,
                 sim_config=sim_config,
                 domain="time",
-                component="abs",
+                component="real",
             )
 
             save_fig(
@@ -197,7 +197,7 @@ def plot_2d_data(
     t_coh_vals = axes["t_coh"]  # coherence times
     # Explicitly cast objects for static typing & autocomplete (mirror plot_1d_data)
     system = cast("AtomicSystem", loaded_data_and_info["system"])
-    w0 = system.at_freqs_fs(0)
+    w0 = system.frequencies[0]
     bath_env = cast("BosonicEnvironment", loaded_data_and_info["bath"])
     bath_dict = extract_bath_parameters(bath_env, w0)
     laser = cast("LaserPulseSequence", loaded_data_and_info["laser"])
@@ -224,7 +224,7 @@ def plot_2d_data(
     if plot_config.get("plot_time_domain", True):
         print("📊 Plotting 2D time domain data...")
         # Plot each spectral component separately
-        time_domain_comps = ["real"]  # , "imag", "abs", "phase"]
+        time_domain_comps = ["real", "abs"]  # , "imag", "phase"]
         for component in time_domain_comps:
             try:
                 fig = plot_2d_el_field(

@@ -18,7 +18,6 @@ Call ``cfg.validate()`` explicitly for strict validation if desired.
 """
 
 from __future__ import annotations
-
 from .models import MasterConfig
 from pathlib import Path
 import json
@@ -49,10 +48,10 @@ def _as_dict(cfg: MasterConfig) -> dict:
     return {
         "atomic": dict(
             n_atoms=cfg.atomic.n_atoms,
-            n_rings=cfg.atomic.n_rings,
-            freqs_cm=list(cfg.atomic.freqs_cm),
+            n_chains=cfg.atomic.n_chains,
+            frequencies_cm=list(cfg.atomic.frequencies_cm),
             dip_moments=list(cfg.atomic.dip_moments),
-            at_coupling_cm=cfg.atomic.at_coupling_cm,
+            coupling_cm=cfg.atomic.coupling_cm,
             delta_cm=cfg.atomic.delta_cm,
             max_excitation=cfg.atomic.max_excitation,
         ),
@@ -98,10 +97,10 @@ def _dict_to_config(cfg_dict: Mapping[str, Any]) -> MasterConfig:
     # atomic
     a = cfg_dict.get("atomic", {})
     base.atomic.n_atoms = a.get("n_atoms", base.atomic.n_atoms)
-    base.atomic.n_rings = a.get("n_rings", base.atomic.n_rings)
-    base.atomic.freqs_cm = a.get("freqs_cm", base.atomic.freqs_cm)
+    base.atomic.n_chains = a.get("n_chains", base.atomic.n_chains)
+    base.atomic.frequencies_cm = a.get("frequencies_cm", base.atomic.frequencies_cm)
     base.atomic.dip_moments = a.get("dip_moments", base.atomic.dip_moments)
-    base.atomic.at_coupling_cm = a.get("at_coupling_cm", base.atomic.at_coupling_cm)
+    base.atomic.coupling_cm = a.get("coupling_cm", base.atomic.coupling_cm)
     base.atomic.delta_cm = a.get("delta_cm", base.atomic.delta_cm)
     base.atomic.max_excitation = a.get("max_excitation", base.atomic.max_excitation)
     # laser

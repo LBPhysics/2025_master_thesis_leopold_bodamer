@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import partial
-from logging import warning
 import numpy as np
 from qutip import (
     Qobj,
     QobjEvo,
     ket2dm,
     liouvillian,
+    basis,
 )
 from typing import List
 from qutip import BosonicEnvironment
@@ -24,14 +24,16 @@ from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qspectro2d.constants import HBAR
 
 
-def H_int_(t: float, sm_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qobj:
+def H_int_(
+    t: float, lowering_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence
+) -> Qobj:
     """Interaction Hamiltonian (-μ·E) with optional RWA.
 
     Parameters
     ----------
     t : float
         Time.
-    sm_op : Qobj
+    lowering_op : Qobj
         System lowering operator.
     rwa_sl : bool
         Apply rotating wave approximation.
@@ -40,10 +42,10 @@ def H_int_(t: float, sm_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qo
     """
     if rwa_sl:
         E_field_RWA = E_pulse(t, laser)
-        return -(sm_op.dag() * E_field_RWA + sm_op * np.conj(E_field_RWA))
-    dip_op = sm_op + sm_op.dag()
+        return -(lowering_op.dag() * E_field_RWA + lowering_op * np.conj(E_field_RWA))
+    dipole_op = lowering_op + lowering_op.dag()
     E_field = Epsilon_pulse(t, laser)
-    return -dip_op * (E_field + np.conj(E_field))
+    return -dipole_op * (E_field + np.conj(E_field))
 
 
 def paper_eqs_evo(
@@ -133,20 +135,24 @@ class SimulationModuleOQS:
                 n_exc = self.system.excitation_number_from_index(i)
                 Es[i] -= n_exc * HBAR * omega_L
 
-        return Qobj(np.diag(Es), dims=self.system.H0_N_canonical.dims)
+        return Qobj(np.diag(Es), dims=self.system.hamiltonian.dims)
 
     def H_int_sl(self, t: float) -> Qobj:
-        return H_int_(t, self.system.sm_op, self.simulation_config.rwa_sl, self.laser)
+        return H_int_(
+            t, self.system.lowering_op, self.simulation_config.rwa_sl, self.laser
+        )
 
     # --- Observables ---------------------------------------------------------------
     @property
     def observable_ops(self) -> List[Qobj]:
         if self.system.n_atoms == 1:
+            atom_g = basis(2, 0)
+            atom_e = basis(2, 1)
             return [
-                ket2dm(self.system._atom_g),
-                self.system._atom_g * self.system._atom_e.dag(),
-                self.system._atom_e * self.system._atom_g.dag(),
-                ket2dm(self.system._atom_e),
+                ket2dm(atom_g),  # |g><g|
+                atom_g * atom_e.dag(),  # |g><e|
+                atom_e * atom_g.dag(),  # |e><g|
+                ket2dm(atom_e),  # |e><e|
             ]
         if self.simulation_config.keep_track == "basis":
             return [ket2dm(b) for b in self.system.basis]

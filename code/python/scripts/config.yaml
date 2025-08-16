@@ -3,11 +3,11 @@
 
 atomic:
   n_atoms: 1
-  n_rings: null
-  freqs_cm: [15000.0]#, 16000.0, 17000.0]#, 15950.0, 16050.0, 16000.0]
+  n_chains: 1
+  frequencies_cm: [16000.0]#, 16000.0, 17000.0]#, 15950.0, 16050.0, 16000.0]
   dip_moments: [1.0]#, 1.0, 1.0]#, 1.0, 1.0, 1.0]
-  at_coupling_cm: 0.0
-  delta_cm: 0.0
+  coupling_cm: 0.0
+  delta_cm: 100.0
   max_excitation: 1
 
 laser:
@@ -18,9 +18,9 @@ laser:
 
 bath:
   bath_type: ohmic
-  temperature: 0.00001  # actually in terms of frequency
-  cutoff: 100           # actually in terms of frequency
-  coupling: 0.0001      # actually in terms of frequency
+  temperature: 1    # actually in terms of frequency
+  cutoff: 100       # actually in terms of frequency
+  coupling: 0.001   # actually in terms of frequency
 
 signal:
   phase_cycling_phases: [0, 1.57079632679, 3.14159265359, 4.71238898038]
@@ -42,5 +42,5 @@ window:
   t_det_max_fs: 800.0   # For reference; calc_datas.py uses CLI flags for times
   dt_fs: 1.0            # For reference; calc_datas.py uses CLI flags for times
   batches: 10
-  n_freqs: 1
+  n_freqs: 10
   rwa_sl: true

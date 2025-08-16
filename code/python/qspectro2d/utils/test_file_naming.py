@@ -17,7 +17,7 @@ def test_basic_functionality():
         # Mock system object
         mock_system = MagicMock()
         mock_system.n_atoms = 1
-        mock_system.at_coupling_cm = None
+        mock_system.coupling_cm = None
 
         # Simple configuration instance
         sim_cfg = SimulationConfig(
@@ -92,7 +92,7 @@ def test_with_different_configs():
     try:
         mock_system = MagicMock()
         mock_system.n_atoms = 2
-        mock_system.at_coupling_cm = 15.0
+        mock_system.coupling_cm = 15.0
 
         configs = [
             {

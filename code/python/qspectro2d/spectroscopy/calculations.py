@@ -303,7 +303,7 @@ def compute_1d_polarization(
         data = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
         states = data.states
         times = data.times
-        dip_op = sim_oqs.system.dip_op
+        dipole_op = sim_oqs.system.dipole_op
         n_atoms = sim_oqs.system.n_atoms
         e_ops = sim_oqs.observable_ops
         rwa_sl = sim_oqs.simulation_config.rwa_sl
@@ -315,7 +315,7 @@ def compute_1d_polarization(
             e_ops=e_ops,
             omega_laser=omega_laser,
             rwa_sl=rwa_sl,
-            dip_op=dip_op,
+            dipole_op=dipole_op,
         )
         return times, datas, sim_oqs
 
@@ -546,15 +546,15 @@ def _extract_detection_data(
             )
 
     # Calculate polarizations
-    dip_op = sim_oqs.system.dip_op
+    dipole_op = sim_oqs.system.dipole_op
     polarizations = {}
-    polarizations_full = complex_polarization(dip_op, evolution_data)
+    polarizations_full = complex_polarization(dipole_op, evolution_data)
     logger.debug(
         f"polarizations_full shape: {polarizations_full.shape if hasattr(polarizations_full, 'shape') else type(polarizations_full)}"
     )
 
     for key in linear_signals:
-        polarizations[key] = complex_polarization(dip_op, linear_signals[key])
+        polarizations[key] = complex_polarization(dipole_op, linear_signals[key])
         logger.debug(
             f"polarizations[{key}] shape: {polarizations[key].shape if hasattr(polarizations[key], 'shape') else type(polarizations[key])}"
         )
@@ -691,7 +691,7 @@ def _process_single_1d_combination(
             phases=[phi1, phi2, CONFIG.signal.detection_phase]
         )  # Update the laser phases in the local copy
 
-        local_sim_oqs.system.at_freqs_cm = (
+        local_sim_oqs.system.frequencies_cm = (
             new_freqs  # Update frequencies in the local copy
         )
 
@@ -760,14 +760,15 @@ def parallel_compute_1d_E_with_inhomogenity(
 
     # Sample frequency offsets for inhomogeneous broadening
     delta_cm = sim_oqs.system.delta_cm
-    at_freqs_cm = sim_oqs.system.at_freqs_cm
+    frequencies_cm = sim_oqs.system.frequencies_cm
 
     # Each row = one realization, each column = atom index
     # Shape: (n_freqs, n_atoms)
     all_freq_sets = np.stack(
-        [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in at_freqs_cm], axis=1
+        [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in frequencies_cm],
+        axis=1,
     )
-    # print(f"Using frequency samples ={all_freq_sets}", flush=True)
+    print(f"Using frequency samples ={all_freq_sets}", flush=True)
 
     # Prepare all jobs: one per (omega_idx, phi1_idx, phi2_idx)
     combinations = []

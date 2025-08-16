@@ -33,7 +33,6 @@ from .units_and_rwa import apply_RWA_phase_factors, get_expect_vals_with_RWA
 # Simulation utilities
 from .simulation_utils import (
     create_base_sim_oqs,
-    create_simulation_module_from_configs,
     get_max_workers,
     print_simulation_summary,
 )
@@ -61,5 +60,4 @@ __all__ = [
     "get_max_workers",
     "print_simulation_summary",
     "create_base_sim_oqs",
-    "create_simulation_module_from_configs",
 ]

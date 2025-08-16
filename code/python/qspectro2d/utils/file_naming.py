@@ -17,8 +17,8 @@ from typing import Union, Any, Protocol, runtime_checkable, TYPE_CHECKING
 @runtime_checkable
 class AtomicSystemProto(Protocol):  # minimal structural contract for naming
     n_atoms: int
-    at_coupling_cm: float | int
-    at_freqs_cm: Any
+    coupling_cm: float | int
+    frequencies_cm: Any
     delta_cm: Any
 
 
@@ -58,10 +58,10 @@ def _extract_system_fields(system: AtomicSystem) -> dict:
 
     Assumes attributes exist; keeps minimalist surface for naming only.
     """
-    freqs = getattr(system, "at_freqs_cm", None)
+    freqs = getattr(system, "frequencies_cm", None)
     return {
         "n_atoms": getattr(system, "n_atoms", None),
-        "at_coupling_cm": getattr(system, "at_coupling_cm", None),
+        "coupling_cm": getattr(system, "coupling_cm", None),
         "freqs": freqs,
         "delta_cm": getattr(system, "delta_cm", None),
     }
@@ -180,8 +180,8 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
 
     if n_atoms == 2:
         # Add coupling strength if applicable
-        at_coupling_cm = sys_f.get("at_coupling_cm") or 0
-        if at_coupling_cm > 0:
+        coupling_cm = sys_f.get("coupling_cm") or 0
+        if coupling_cm > 0:
             parts.append(f"Coupled")
 
     n_freqs = sim_f.get("n_freqs", 1)
@@ -248,5 +248,4 @@ def generate_unique_plot_filename(
     if component:
         base_name += f"_{component}"
     filename = _generate_unique_filename(path, base_name)
-    print(f"Generated unique plot filename: {filename}")
     return filename

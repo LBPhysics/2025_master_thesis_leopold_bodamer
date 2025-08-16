@@ -24,7 +24,7 @@ Results are saved automatically using the qspectro2d I/O framework.
 python calc_datas.py --t_coh 10.0 --t_wait 25.0 --dt 2.0
 python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 20
 # full simulations
-python calc_datas.py --t_coh 300.0 --t_det_max 1000.0 --dt 2
+python calc_datas.py --t_coh 300.0 --t_det_max 1000.0 --dt 0.1
 python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 0.1
 """
 
@@ -33,6 +33,7 @@ import argparse
 import numpy as np
 from pathlib import Path
 
+from qspectro2d.config.paths import SCRIPTS_DIR
 from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
 )
@@ -45,6 +46,8 @@ from qspectro2d.utils import (
 from qspectro2d.utils.simulation_utils import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
 from qspectro2d.config.loader import load_config
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 
 
 def run_single_t_coh_with_sim(
@@ -122,10 +125,11 @@ def run_1d_mode(args):
     """
     print(f"🎯 Running 1D mode with t_coh = {args.t_coh:.2f} fs")
 
-    # Load YAML config from scripts directory if present
-    scripts_dir = Path(__file__).resolve().parent
-    cfg_path = scripts_dir / "config.yaml"
-    cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
+    cfg_path = SCRIPTS_DIR / "config.yaml"
+    if getattr(args, "config", None):
+        cfg = load_config(args.config)
+    else:
+        cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
 
     # Create base simulation and validate solver once
     sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
@@ -134,7 +138,6 @@ def run_1d_mode(args):
     abs_data_path = run_single_t_coh_with_sim(
         sim_oqs, args.t_coh, save_info=True, time_cut=time_cut
     )
-    print(f"\nSaved data to: {abs_data_path}")
 
     print(f"\n✅ 1D simulation completed!")
 
@@ -148,10 +151,11 @@ def run_2d_mode(args):
     """
     print(f"🎯 Running 2D mode - batch {args.batch_idx + 1}/{args.n_batches}")
 
-    # Load YAML config from scripts directory if present
-    scripts_dir = Path(__file__).resolve().parent
-    cfg_path = scripts_dir / "config.yaml"
-    cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
+    cfg_path = SCRIPTS_DIR / "config.yaml"
+    if getattr(args, "config", None):
+        cfg = load_config(args.config)
+    else:
+        cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
 
     # Create base simulation and validate solver once
     sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
@@ -204,10 +208,12 @@ def main():
         epilog="""cd 
 Examples:
   # Run single 1D simulation
-  python calc_data.py --simulation_type 1d --t_coh 50.0
+  python calc_data.py --simulation_type 1d --t_coh 50.0  # uses scripts_dir/config.yaml if present
+  python calc_data.py --simulation_type 1d --t_coh 50.0 --config path/to/config.yaml
 
   # Run 2D batch mode
-  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10
+  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10  # uses scripts_dir/config.yaml if present
+  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10 --config path/to/config.yaml
         """,
     )
 
@@ -220,6 +226,18 @@ Examples:
         default="1d",
         choices=["1d", "2d"],
         help="Type of simulation: '1d' for single t_coh, '2d' for batch processing (default: 1d)",
+    )
+
+    # =============================
+    # CONFIGURATION FILE (optional)
+    # =============================
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help=(
+            "Path to configuration file (YAML/TOML/JSON). If omitted, config.yaml next to this script is used if present; otherwise built-in defaults are used."
+        ),
     )
 
     # =============================

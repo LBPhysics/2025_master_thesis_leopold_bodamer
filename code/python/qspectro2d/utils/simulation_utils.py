@@ -23,41 +23,7 @@ from qspectro2d.config.loader import load_config
 # =============================
 # SIMULATION CONFIGURATION UTILITIES
 # =============================
-def create_simulation_module_from_configs(
-    atom_config: dict,
-    laser_config: dict,
-    bath_config: dict,
-    simulation_config: dict,
-) -> SimulationModuleOQS:
-    """
-    Create a simulation module from the provided configuration dictionaries.
-
-    Parameters:
-        atom_config (dict): Atomic system configuration.
-        laser_config (dict): Laser pulse sequence configuration.
-        bath_config (dict): Bath parameters configuration.
-        simulation_config (dict): Simulation parameters configuration.
-
-    Returns:
-        SimulationModuleOQS: Configured simulation class instance.
-    """
-    system = AtomicSystem.from_dict(atom_config)
-    laser = LaserPulseSequence.from_delays(**laser_config)
-    # for now only use the ohmic case: LATER EXTEND TODO
-    bath = OhmicEnvironment(
-        T=bath_config["Temp"],
-        alpha=bath_config["alpha"],
-        wc=bath_config["cutoff"],
-        s=1.0,
-        tag=bath_config["bath_type"],
-    )
-
-    return SimulationModuleOQS(
-        simulation_config=SimulationConfig(**simulation_config),
-        system=system,
-        laser=laser,
-        bath=bath,
-    )
+# Removed create_simulation_module_from_configs to simplify the code path.
 
 
 def create_base_sim_oqs(
@@ -83,17 +49,17 @@ def create_base_sim_oqs(
 
     atomic_config = {
         "n_atoms": CONFIG.atomic.n_atoms,
-        "n_rings": getattr(CONFIG.atomic, "n_rings", None),
-        "at_freqs_cm": list(CONFIG.atomic.freqs_cm),
+        "n_chains": getattr(CONFIG.atomic, "n_chains", None),
+        "frequencies_cm": list(CONFIG.atomic.frequencies_cm),
         "dip_moments": list(CONFIG.atomic.dip_moments),
         "delta_cm": getattr(CONFIG.atomic, "delta_cm", None),
         "max_excitation": getattr(CONFIG.atomic, "max_excitation", 1),
     }
     if (
         CONFIG.atomic.n_atoms >= 2
-        and getattr(CONFIG.atomic, "at_coupling_cm", None) is not None
+        and getattr(CONFIG.atomic, "coupling_cm", None) is not None
     ):
-        atomic_config["at_coupling_cm"] = CONFIG.atomic.at_coupling_cm
+        atomic_config["coupling_cm"] = CONFIG.atomic.coupling_cm
 
     # Use dummy t_coh=0 for initial setup and solver check
     pulse_config = {
@@ -132,12 +98,21 @@ def create_base_sim_oqs(
         "alpha": CONFIG.bath.coupling,
     }
 
-    # Create the simulation class instance
-    sim_oqs = create_simulation_module_from_configs(
-        atom_config=atomic_config,
-        laser_config=pulse_config,
-        bath_config=bath_config,
-        simulation_config=simulation_config_dict,
+    # Create the simulation class instance (inline, simple and explicit)
+    system = AtomicSystem.from_dict(atomic_config)
+    laser = LaserPulseSequence.from_delays(**pulse_config)
+    bath = OhmicEnvironment(
+        T=bath_config["Temp"],
+        alpha=bath_config["alpha"],
+        wc=bath_config["cutoff"],
+        s=1.0,
+        tag=bath_config["bath_type"],
+    )
+    sim_oqs = SimulationModuleOQS(
+        simulation_config=SimulationConfig(**simulation_config_dict),
+        system=system,
+        laser=laser,
+        bath=bath,
     )
 
     # print(sim_oqs.simulation_config)

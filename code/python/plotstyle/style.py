@@ -128,13 +128,52 @@ def save_fig(
     simplify_figure_text(fig)
 
     # Determine formats and targets
+    # Only treat a suffix as a format if Matplotlib supports it
+    try:
+        supported_formats = {k.lower() for k in fig.canvas.get_supported_filetypes().keys()}  # type: ignore[attr-defined]
+    except Exception:
+        # Reasonable fallback set
+        supported_formats = {
+            "eps",
+            "jpeg",
+            "jpg",
+            "pdf",
+            "pgf",
+            "png",
+            "ps",
+            "raw",
+            "rgba",
+            "svg",
+            "svgz",
+            "tif",
+            "tiff",
+            "webp",
+        }
+
+    def _append_ext(p: Path, ext: str) -> Path:
+        return Path(str(p) + ("." + ext.lstrip(".")))
+
+    ext = path.suffix.lower().lstrip(".")
+    has_supported_ext = bool(ext) and (ext in supported_formats)
+
     if formats is None:
-        if path.suffix:
-            targets = [(path, path.suffix.lstrip("."))]
+        if has_supported_ext:
+            targets = [(path, ext)]
         else:
-            targets = [(path.with_suffix("." + FIG_FORMAT), FIG_FORMAT)]
+            # Keep the current name intact and append the default extension
+            targets = [(_append_ext(path, FIG_FORMAT), FIG_FORMAT)]
     else:
-        targets = [(path.with_suffix("." + fmt), fmt) for fmt in formats]
+        # Normalize and filter requested formats by supported set
+        targets = []
+        # Use a base path: if there's a supported ext, drop it; otherwise keep as-is
+        base_path = path.with_suffix("") if has_supported_ext else path
+        for fmt in formats:
+            f = str(fmt).lower().lstrip(".")
+            if f in supported_formats:
+                targets.append((_append_ext(base_path, f), f))
+        if not targets:
+            # Fallback if all requested formats were invalid
+            targets = [(_append_ext(base_path, FIG_FORMAT), FIG_FORMAT)]
 
     for out_path, fmt in targets:
         fig.savefig(
@@ -145,6 +184,15 @@ def save_fig(
             transparent=transparent,
         )
         saved.append(out_path)
+
+    # Optionally close the figure to free resources
+    if close:
+        try:
+            import matplotlib.pyplot as _plt  # local import to avoid global pyplot dependency
+
+            _plt.close(fig)
+        except Exception:
+            pass
 
     return saved
 

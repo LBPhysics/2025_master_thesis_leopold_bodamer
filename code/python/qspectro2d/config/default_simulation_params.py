@@ -48,12 +48,11 @@ SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 
 # === ATOMIC SYSTEM DEFAULTS ===
 N_ATOMS = 1
-N_RINGS = (
-    None  # If N_ATOMS>2 and None -> defaults to linear chain (single chain layout)
-)
-FREQS_CM = [15900.0]  # Number of frequency components in the system
+N_CHAINS = 1  # defaults to linear chain (single chain layout)
+
+FREQUENCIES_CM = [15900.0]  # Number of frequency components in the system
 DIP_MOMENTS = [1.0]  # Dipole moments for each atom
-AT_COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
+COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
 
@@ -61,7 +60,7 @@ MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation ma
 PULSE_FWHM = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
 BASE_AMPLITUDE = 0.5  # should be such that only one interaction at a time, here that |excitation|² < 1%
 ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
-CARRIER_FREQ_CM = 16000.0  # np.mean(FREQS_CM)  # Carrier frequency of the laser
+CARRIER_FREQ_CM = 16000.0  # np.mean(FREQUENCIES_CM)  # Carrier frequency of the laser
 
 # === SIMULATION DEFAULTS ===
 ODE_SOLVER = "BR"  # ODE solver to use
@@ -71,11 +70,11 @@ N_PHASES = 4  # Number of phase cycles for the simulation
 
 
 # === BATH SYSTEM DEFAULTS ===
-at_freqs_fs = [convert_cm_to_fs(freq_cm) for freq_cm in FREQS_CM]
+frequencies = [convert_cm_to_fs(freq_cm) for freq_cm in FREQUENCIES_CM]
 BATH_TYPE = "ohmic"  # TODO at the moment only ohmic baths are supported
-BATH_CUTOFF = 1e2 * at_freqs_fs[0]  # Cutoff frequency in cm⁻¹
-BATH_TEMP = 1e-5 * at_freqs_fs[0] / BOLTZMANN
-BATH_COUPLING = 1e-4 * at_freqs_fs[0]
+BATH_CUTOFF = 1e2 * frequencies[0]  # Cutoff frequency in cm⁻¹
+BATH_TEMP = 1e3 * frequencies[0] / BOLTZMANN
+BATH_COUPLING = 1e-4 * frequencies[0]
 
 
 # === 2D SIMULATION DEFAULTS ===
@@ -92,7 +91,7 @@ def validate(params: dict):
     # Extract parameters with defaults fallback
     ode_solver = params.get("solver", ODE_SOLVER)
     bath_type = params.get("bath_type", BATH_TYPE)
-    freqs_cm = params.get("freqs_cm", FREQS_CM)
+    frequencies_cm = params.get("frequencies_cm", FREQUENCIES_CM)
     n_atoms = params.get("n_atoms", N_ATOMS)
     dip_moments = params.get("dip_moments", DIP_MOMENTS)
     bath_temp = params.get("temperature", BATH_TEMP)
@@ -100,7 +99,7 @@ def validate(params: dict):
     bath_coupling = params.get("coupling", BATH_COUPLING)
     n_phases = params.get("n_phases", N_PHASES)
     max_excitation = params.get("max_excitation", MAX_EXCITATION)
-    n_rings = params.get("n_rings", N_RINGS)
+    n_chains = params.get("n_chains", N_CHAINS)
     relative_e0s = params.get("relative_e0s", RELATIVE_E0S)
     rwa_sl = params.get("rwa_sl", RWA_SL)
     carrier_freq_cm = params.get("carrier_freq_cm", CARRIER_FREQ_CM)
@@ -114,8 +113,10 @@ def validate(params: dict):
         raise ValueError(f"BATH_TYPE '{bath_type}' not in {SUPPORTED_BATHS}")
 
     # Validate atomic system consistency
-    if len(freqs_cm) != n_atoms:
-        raise ValueError(f"FREQS_CM length ({len(freqs_cm)}) != N_ATOMS ({n_atoms})")
+    if len(frequencies_cm) != n_atoms:
+        raise ValueError(
+            f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})"
+        )
 
     if len(dip_moments) != n_atoms:
         raise ValueError(
@@ -140,13 +141,13 @@ def validate(params: dict):
     if max_excitation not in (1, 2):
         raise ValueError("MAX_EXCITATION must be 1 or 2")
 
-    # Validate n_rings divisibility if provided and relevant
-    if n_rings is not None and n_atoms > 2:
-        if n_rings < 1:
-            raise ValueError("N_RINGS must be >=1 when specified")
-        if n_atoms % n_rings != 0:
+    # Validate n_chains divisibility if provided and relevant
+    if n_chains is not None and n_atoms > 2:
+        if n_chains < 1:
+            raise ValueError("N_CHAINS must be >=1 when specified")
+        if n_atoms % n_chains != 0:
             raise ValueError(
-                f"N_RINGS ({n_rings}) does not divide N_ATOMS ({n_atoms}) for cylindrical geometry"
+                f"N_CHAINS ({n_chains}) does not divide N_ATOMS ({n_atoms}) for cylindrical geometry"
             )
 
     # Validate relative amplitudes
@@ -154,7 +155,7 @@ def validate(params: dict):
         raise ValueError("RELATIVE_E0S must have exactly 3 elements")
 
     if rwa_sl:
-        freqs_array = np.array(freqs_cm)
+        freqs_array = np.array(frequencies_cm)
         max_detuning = np.max(np.abs(freqs_array - carrier_freq_cm))
         rel_detuning = (
             max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
@@ -171,7 +172,7 @@ def validate_defaults():
     params = {
         "solver": ODE_SOLVER,
         "bath_type": BATH_TYPE,
-        "freqs_cm": FREQS_CM,
+        "frequencies_cm": FREQUENCIES_CM,
         "n_atoms": N_ATOMS,
         "dip_moments": DIP_MOMENTS,
         "temperature": BATH_TEMP,
@@ -179,7 +180,7 @@ def validate_defaults():
         "coupling": BATH_COUPLING,
         "n_phases": N_PHASES,
         "max_excitation": MAX_EXCITATION,
-        "n_rings": N_RINGS,
+        "n_chains": N_CHAINS,
         "relative_e0s": RELATIVE_E0S,
         "rwa_sl": RWA_SL,
         "carrier_freq_cm": CARRIER_FREQ_CM,

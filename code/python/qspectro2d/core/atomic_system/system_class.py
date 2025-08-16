@@ -4,9 +4,9 @@
 import numpy as np
 import json
 from dataclasses import dataclass, field
-from typing import Optional, List, Tuple, Union
+from typing import Optional, List, Tuple
 from functools import cached_property
-from qutip import basis, ket2dm, tensor, Qobj
+from qutip import basis, ket2dm, Qobj
 from qspectro2d.constants import HBAR, convert_cm_to_fs
 
 
@@ -14,34 +14,49 @@ from qspectro2d.constants import HBAR, convert_cm_to_fs
 class AtomicSystem:
     # VITAL ATTRIBUTES
     n_atoms: int = 1
-    n_rings: Optional[int] = (
-        None  # If n_atoms>2 and None -> defaults to linear chain: n_chains=1, n_rings=n_atoms
-    )
-    at_freqs_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
+    n_chains: int = 1
+    frequencies_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
-    at_coupling_cm: Optional[float] = (
-        None  # legacy uniform coupling (used for n_atoms == 2 or fallback)
-    )
-    max_excitation: int = (
-        1  # 1 = existing behaviour (ground + single manifold); 2 adds double manifold
-    )
+    coupling_cm: float = 0.0
+    # 1 = existing behaviour (ground + single exc manifold); 2 adds double manifold
+    max_excitation: int = 1
 
     psi_ini: Optional[Qobj] = None  # initial state, default is ground state
     delta_cm: Optional[float] = None  # inhomogeneous broadening, default is None
 
     def __post_init__(self):
-        # mostly for validation and initialization
-        # Internal storage for couplings & geometry (not part of public dataclass fields)
-        self._positions: Optional[np.ndarray] = None
+        # Only basic validation - no complex setup
+        self._validate_parameters()
+        self._normalize_arrays()
+        # Build basis (and mappings if needed) according to selected excitation truncation
+        self._build_basis()
 
-        if len(self.at_freqs_cm) == 1 and self.n_atoms > 1:
-            self.at_freqs_cm = self.at_freqs_cm * self.n_atoms  # repeat for all atoms
-        elif len(self.at_freqs_cm) != self.n_atoms:
+        # we always start in the ground state
+        self.psi_ini = ket2dm(self.basis[0])
+
+        # store the initial frequencies in history
+        self._frequencies_cm_history = [self.frequencies_cm.copy()]
+
+        # Always set cylindrical positions and compute isotropic couplings
+        self.n_rings = self.n_atoms // self.n_chains
+        self._setup_geometry_and_couplings()
+
+    def _validate_parameters(self):
+        """Simple parameter validation only."""
+        if self.max_excitation not in (1, 2):
+            raise ValueError("max_excitation must be 1 or 2")
+
+    def _normalize_arrays(self):
+        """Ensure arrays have correct length."""
+        if len(self.frequencies_cm) == 1 and self.n_atoms > 1:
+            self.frequencies_cm = (
+                self.frequencies_cm * self.n_atoms
+            )  # repeat for all atoms
+        elif len(self.frequencies_cm) != self.n_atoms:
             raise ValueError(
-                f"at_freqs_cm has {len(self.at_freqs_cm)} elements but n_atoms={self.n_atoms}. "
+                f"frequencies_cm has {len(self.frequencies_cm)} elements but n_atoms={self.n_atoms}. "
                 f"Expected either 1 frequency (applied to all atoms) or {self.n_atoms} frequencies."
             )
-
         # Handle case where single dipole moment is provided for multiple atoms
         if len(self.dip_moments) == 1 and self.n_atoms > 1:
             self.dip_moments = self.dip_moments * self.n_atoms  # repeat for all atoms
@@ -51,48 +66,15 @@ class AtomicSystem:
                 f"Expected either 1 dipole moment (applied to all atoms) or {self.n_atoms} dipole moments."
             )
 
-        # store the initial frequencies in history
-        self._freqs_cm_history = [self.at_freqs_cm.copy()]
-
-        if self.n_atoms >= 2 and self.at_coupling_cm is None:
-            self.at_coupling_cm = 0.0
-
-        # Validate max_excitation
-        if self.max_excitation not in (1, 2):
-            raise ValueError("max_excitation must be 1 or 2")
-
-        # Build basis (and mappings if needed) according to selected excitation truncation
-        self._build_basis()
-
-        if self.psi_ini is None:
-            self.psi_ini = ket2dm(self.basis[0])
-
-        # Geometry spec for multi-atom (N>2) systems
-        # If user omitted n_rings -> default to a single linear chain: n_chains=1, n_rings=n_atoms
-        self._n_chains: Optional[int] = None
-        if self.n_atoms > 2:
-            if self.n_rings is None:
-                self.n_rings = self.n_atoms  # all sites along z
-                self._n_chains = 1
-            else:
-                if self.n_rings < 1:
-                    raise ValueError("n_rings must be >= 1")
-                if self.n_atoms % self.n_rings != 0:
-                    raise ValueError(
-                        f"n_rings={self.n_rings} does not divide n_atoms={self.n_atoms}."
-                    )
-                self._n_chains = self.n_atoms // self.n_rings
-            self.set_cylindrical_geometry(distance=1.0)
-
-    def update_freqs_cm(self, new_freqs: List[float]):
+    def update_frequencies_cm(self, new_freqs: List[float]):
         if len(new_freqs) != self.n_atoms:
             raise ValueError(
                 f"Expected {self.n_atoms} frequencies, got {len(new_freqs)}"
             )
 
         # Save current freqs before updating
-        self._freqs_cm_history.append(new_freqs.copy())
-        self.at_freqs_cm = new_freqs.copy()
+        self._frequencies_cm_history.append(new_freqs.copy())
+        self.frequencies_cm = new_freqs.copy()
 
         # Invalidate cached properties depending on frequencies
         self.reset_cache()
@@ -103,17 +85,22 @@ class AtomicSystem:
         Removes cached properties whose values depend on the intrinsic
         system parameters (frequencies, coupling, dipole moments). Use this
         after any *in-place* modification of such parameters. Note that
-        :meth:`update_freqs_cm` already calls this automatically.
+        :meth:`update_frequencies_cm` already calls this automatically.
 
         Cached attributes cleared:
         - eigenstates
-        - sm_op
-        - dip_op
+        - lowering_op
+        - dipole_op
         """
-        for attr in ("eigenstates", "sm_op", "dip_op", "coupling_operator"):
+        for attr in ("eigenstates", "lowering_op", "dipole_op", "coupling_op"):
             if attr in self.__dict__:
                 del self.__dict__[attr]
 
+        # Recompute geometry and couplings if parameters changed
+        if hasattr(self, "_positions"):
+            self._compute_and_cache_couplings()
+
+    # === CORE PARAMETERS ===
     @cached_property
     def dimension(self):
         N = self.n_atoms
@@ -129,88 +116,84 @@ class AtomicSystem:
     def basis(self):
         return self._basis
 
+    # Store everything in fs^-1 internally
     @property
-    def freqs_cm_history(self):
-        """Access history of all frequency lists (including current)."""
-        return self._freqs_cm_history
-
-    def at_freqs_fs(self, i: int) -> float:
-        """Return frequency in fs^-1 for the i-th atom."""
-        return convert_cm_to_fs(self.at_freqs_cm[i])
+    def frequencies(self) -> np.ndarray:
+        """Frequencies in fs^-1 (internal)."""
+        return np.array([convert_cm_to_fs(f) for f in self.frequencies_cm])
 
     @property
-    def at_coupling(self) -> float:
-        return convert_cm_to_fs(self.at_coupling_cm)
+    def coupling(self) -> float:
+        """Coupling in fs^-1 (internal)."""
+        return convert_cm_to_fs(self.coupling_cm) if self.coupling_cm else 0.0
 
     @property
-    def theta(
-        self,
-    ) -> (
-        float
-    ):  # NOTE could also move this to system_bath_class as it is just needed for the paper
-        """Return dimer mixing angle θ (radians) for n_atoms == 2.
-
-        Definition (standard exciton / coupled two-level system):
-
-            tan(2θ) = 2J / Δ
-
-        where
-            J  = at_coupling (fs^-1)
-            Δ  = ω_1 - ω_2 (fs^-1)  (bare transition frequency detuning)
-
-        We compute:
-            θ = 0.5 * arctan2(2J, Δ)
-
-        Range: θ ∈ (-π/4, π/4]; magnitude governs the degree of state mixing.
-        The previous implementation used arctan(J/Δ), which differs by a
-        factor-of-two in the argument and is non-standard. Coefficients used
-        in `sm_op` retain their algebraic definitions (sinθ, cosθ), so this
-        correction yields physically consistent mixing when J ~ Δ.
-
-        Raises
-        ------
-        ValueError: if called for systems with n_atoms != 2.
-        """
-        if self.n_atoms != 2:
-            raise ValueError("theta is only defined for n_atoms == 2")
-        detuning = self.at_freqs_fs(0) - self.at_freqs_fs(1)  # Δ
-        return 0.5 * np.arctan2(2 * self.at_coupling, detuning)
-
-    @property
-    def Delta(self) -> float:
+    def delta(self) -> float:
+        """Return the inhomogeneous broadening, IF the simulation is run with a lot of atoms (fs^-1)."""
         return convert_cm_to_fs(self.delta_cm)
 
-    # Removed duplicate per-case Hamiltonian helpers in favor of unified logic
+    @property
+    def frequencies_cm_history(self):
+        """Access history of all frequency lists (including current)."""
+        return self._frequencies_cm_history
 
-    # =============================
-    # SINGLE-EXCITATION HAMILTONIAN FOR n_atoms > 2
-    # =============================
+    # === QUANTUM OPERATORS ===
+    @property
+    def hamiltonian(self) -> Qobj:
+        return self._build_hamiltonian()
+
+    @property
+    def lowering_op(self) -> Qobj:
+        lowering_op = 0
+        if self.max_excitation == 1:
+            # Single-excitation lowering operator: sum_i μ_i |0><i|
+            for i, mu in enumerate(self.dip_moments, start=1):
+                lowering_op += mu * (self.basis[0] * self.basis[i].dag())
+            return lowering_op
+        # max_excitation == 2: add terms connecting double -> single manifolds
+        # |0><i|
+        for i, mu in enumerate(self.dip_moments, start=1):
+            lowering_op += mu * (self.basis[0] * self.basis[i].dag())
+        # |j><i,j| and |j><j,i| but only one ordering stored (i<j)
+        for (i, j), idx in self._pair_to_index.items():  # i<j
+            mu_i = self.dip_moments[i - 1]
+            mu_j = self.dip_moments[j - 1]
+            # Annihilating excitation on site i from |i,j> leaves |j>, and vice versa
+            lowering_op += mu_i * (self.basis[j] * self.basis[idx].dag())
+            lowering_op += mu_j * (self.basis[i] * self.basis[idx].dag())
+        return lowering_op
+
+    @property
+    def dipole_op(self) -> Qobj:
+        return self.lowering_op + self.lowering_op.dag()
+
     @cached_property
-    def coupling_operator(self):
-        """Build the system-bath-free inter-site coupling operator from J_ij.
+    def eigenstates(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Eigenvalues & eigenstates (cached).
 
-        Priority:
-        1) If a coupling matrix has been set (e.g., via geometry), use it.
-        2) Else, if uniform coupling is provided (at_coupling_cm), use J_ij = const for i!=j.
-        3) Else, no coupling.
+        Invalidated when `update_frequencies_cm` is called.
+        """
+        return self.hamiltonian.eigenstates()
 
-        Includes:
-        - Single-manifold couplings: |i><j| + |j><i| with strength ħ J_ij.
-        - If max_excitation == 2, also couples double states that share one site:
-          |i,k> <-> |j,k| with strength ħ J_ij.
+    def coupling_op(self):
+        """Build the inter-site coupling operator using isotropic couplings.
+
+        Uses the coupling matrix computed from cylindrical geometry.
+        Single-manifold couplings: |i><j| + |j><i| with strength ħ J_ij.
+        If max_excitation == 2, also couples double states that share one site.
         """
         N = self.n_atoms
         if N <= 1:
             return 0
 
-        J = self.coupling_matrix  # shape (N,N)
-        # Start in the truncated Hilbert space (0,1,2)-excitation basis
+        # Use the isotropic coupling matrix
+        J_matrix = self._coupling_matrix  # Already in fs^-1
         HJ = 0
 
         # Singles excitation couplings
         for i in range(1, N + 1):
             for j in range(i + 1, N + 1):
-                Jij = float(J[i - 1, j - 1])
+                Jij = float(J_matrix[i - 1, j - 1])
                 if Jij == 0.0:
                     continue
                 ket_i = self.basis[i]
@@ -218,65 +201,74 @@ class AtomicSystem:
                 HJ += HBAR * Jij * (ket_i * ket_j.dag() + ket_j * ket_i.dag())
         return HJ
 
-    # -----------------------------
-    # Coupling matrix helpers
-    # -----------------------------
-    @property
-    def coupling_matrix(self) -> np.ndarray:
-        """Return the NxN coupling matrix J (fs^-1) with cylindrical-geometry priority.
+    def _setup_geometry_and_couplings(self):
+        """Set up cylindrical geometry and compute isotropic couplings."""
+        self._set_cylindrical_positions(
+            distance=1.0
+        )  # TODO this could be parameterized
+        self._compute_and_cache_couplings()
 
-        Priority order:
-        1) If an explicit/cached matrix exists, return a copy of it.
-        2) If positions are defined (e.g. via set_cylindrical_geometry or set_positions) and
-           no explicit J is cached, compute isotropic couplings J_ij ∝ μ_i μ_j / r^3 and cache.
-        3) Else, if at_coupling_cm is provided, return uniform off-diagonal J.
-        4) Else, return zeros.
-        """
-        # 1) Return cached/explicit J if present
-        if getattr(self, "_J", None) is not None:
-            return self._J.copy()
+    def _set_cylindrical_positions(self, distance: float):
+        """Set cylindrical atom positions."""
+        n_rings = self.n_rings
+        n_chains = self.n_chains
 
-        # 2) Geometry-first: build J from positions if available and not already cached
-        if (
-            getattr(self, "_positions", None) is not None
-            and getattr(self, "_J", None) is None
-        ):
-            J = self._compute_isotropic_J(power=3.0, use_dipole_product=True)
-            # Cache and return
-            self._J = J
-            return J.copy()
-
-        # 3) Uniform fallback
-        N = self.n_atoms
-        if self.at_coupling_cm is not None:
-            J = np.full((N, N), float(self.at_coupling), dtype=float)
-            np.fill_diagonal(J, 0.0)
-            return J
-
-        # 4) No coupling
-        return np.zeros((N, N), dtype=float)
-
-    def set_coupling_matrix(self, J: Union[np.ndarray, List[List[float]]]):
-        """Set the NxN coupling matrix (in fs^-1) and reset caches."""
-        arr = np.array(J, dtype=float)
-        if arr.shape != (self.n_atoms, self.n_atoms):
-            raise ValueError(
-                f"Coupling matrix must be shape ({self.n_atoms}, {self.n_atoms}), got {arr.shape}"
+        # Ring centers in xy-plane
+        if n_chains == 1:
+            # Linear chain
+            positions = np.array([[0.0, 0.0, z * distance] for z in range(n_rings)])
+        else:
+            # Multiple chains in cylinder
+            dphi = 2.0 * np.pi / n_chains
+            radius = distance / (2.0 * np.sin(np.pi / n_chains))
+            ring_centers = np.array(
+                [
+                    [radius * np.cos(k * dphi), radius * np.sin(k * dphi), 0.0]
+                    for k in range(n_chains)
+                ]
             )
-        # Enforce zero diagonal (no on-site hopping)
-        np.fill_diagonal(arr, 0.0)
-        self._J = arr
-        self.reset_cache()
 
-    def clear_coupling_matrix(self):
-        """Clear any custom coupling matrix (reverting to uniform or zero)."""
-        if hasattr(self, "_J"):
-            delattr(self, "_J")
-        self.reset_cache()
+            positions = np.array(
+                [
+                    ring_centers[c] + np.array([0.0, 0.0, z * distance])
+                    for c in range(n_chains)
+                    for z in range(n_rings)
+                ]
+            )
 
-    # =============================
-    # MULTI-ATOM HAMILTONIAN WITH DOUBLE-EXCITATION MANIFOLD (OPTIONAL)
-    # =============================
+        self._positions = positions
+
+    def _compute_and_cache_couplings(self):
+        """Compute isotropic coupling matrix and cache it."""
+        self._coupling_matrix = self._compute_isotropic_couplings()
+
+    def _compute_isotropic_couplings(self, power: float = 3.0) -> np.ndarray:
+        """Compute isotropic J_ij = coupling * μ_i * μ_j / r^power."""
+        N = self.n_atoms
+        pos = self._positions
+        J = np.zeros((N, N), dtype=float)
+
+        base_coupling_fs = self.coupling  # Convert cm^-1 to fs^-1
+
+        for i in range(N):
+            for j in range(i + 1, N):
+                r_vec = pos[j] - pos[i]
+                r = float(np.linalg.norm(r_vec))
+                if r == 0:
+                    raise ValueError("Duplicate positions encountered (zero distance).")
+
+                # Isotropic coupling with dipole product
+                coupling_ij = (
+                    base_coupling_fs
+                    * self.dip_moments[i]
+                    * self.dip_moments[j]
+                    / (r**power)
+                )
+                J[i, j] = coupling_ij
+                J[j, i] = coupling_ij
+
+        return J
+
     def _build_basis(self):
         """Construct basis depending on n_atoms and max_excitation.
 
@@ -306,8 +298,8 @@ class AtomicSystem:
         self._pair_to_index = pair_to_index
         self._index_to_pair = index_to_pair
 
-    def _build_Hamilton(self) -> Qobj:
-        """Return Hamiltonian including up to two excitations (hard-core boson model).
+    def _build_hamiltonian(self) -> Qobj:
+        """Return Hamiltonian including up to two excitations (hard-core boson model / fock-basis).
 
         H = Σ_i ħ ω_i a_i^† a_i + Σ_{i≠j} ħ J_ij a_i^† a_j, truncated to 0,1,2 excitations.
 
@@ -324,19 +316,17 @@ class AtomicSystem:
             (other elements zero in this simple Frenkel model)
         """
         N = self.n_atoms
-        omegas = np.array([self.at_freqs_fs(i) for i in range(N)], dtype=float)
-
-        # Start with zero operator in full truncated space
-        H = 0
+        omegas = self.frequencies
 
         # Helper lambdas for kets
         def ket(idx: int):
             return self._basis[idx]
 
+        H = 0
         # Singles diagonal
         for i in range(1, N + 1):
             H += HBAR * omegas[i - 1] * ket(i) * ket(i).dag()
-        J_fs = self.coupling_operator
+        J_fs = self.coupling_op()  # Call the method
         H += J_fs
 
         # If only max_excitation==1 we stop here
@@ -348,129 +338,16 @@ class AtomicSystem:
             H += HBAR * (omegas[i - 1] + omegas[j - 1]) * ket2dm(ket(idx))
         return H
 
-    # =============================
-    # GEOMETRY / COUPLING HELPERS (MINIMAL INITIAL SET)
-    # =============================
-    def set_positions(self, positions: Union[np.ndarray, List[List[float]]]):
-        """Set Cartesian positions (shape (N,3)); does NOT build couplings automatically."""
-        arr = np.array(positions, dtype=float)
-        if arr.shape != (self.n_atoms, 3):
-            raise ValueError(f"positions must have shape ({self.n_atoms}, 3)")
-        self._positions = arr
-        # Invalidate only if later couplings depend on geometry (user may rebuild)
-        # (No cached Hamiltonian property currently, so just clear eigen-related caches)
-        self.reset_cache()
-
-    def build_isotropic_couplings(
-        self, use_dipole_product: bool = True, power: float = 3.0
-    ):
-        """Construct isotropic J_ij ∝ (μ_i μ_j)/r^power (default 1/r^3).
-
-        Parameters
-        ----------
-        use_dipole_product : bool
-            If True multiply by μ_i μ_j; else omit dipole magnitudes.
-        power : float
-            Exponent of distance in denominator (default 3).
-        """
-        if self._positions is None:
-            raise RuntimeError(
-                "Positions not set. Call set_positions or set_cylindrical_geometry first."
-            )
-        J = self._compute_isotropic_J(
-            power=power, use_dipole_product=use_dipole_product
-        )
-        self.set_coupling_matrix(J)
-
-    def _compute_isotropic_J(
-        self, power: float = 3.0, use_dipole_product: bool = True
-    ) -> np.ndarray:
-        """Compute isotropic geometry-based J using current positions and dipoles.
-
-        J_ij = at_coupling / r_ij^power * (μ_i μ_j if use_dipole_product else 1)
-
-        Returns a new NxN numpy array (fs^-1). Raises if positions are unset or invalid.
-        """
-        if self._positions is None:
-            raise RuntimeError("Positions not set; cannot compute isotropic couplings.")
-        N = self.n_atoms
-        pos = self._positions
-        J = np.zeros((N, N), dtype=float)
-        for i in range(N):
-            for j in range(i + 1, N):
-                r_vec = pos[j] - pos[i]
-                r = float(np.linalg.norm(r_vec))
-                if r == 0:
-                    raise ValueError("Duplicate positions encountered (zero distance).")
-                base = float(self.at_coupling) / (r**power)
-                if use_dipole_product:
-                    base *= float(self.dip_moments[i]) * float(self.dip_moments[j])
-                J[i, j] = base
-                J[j, i] = base
-        np.fill_diagonal(J, 0.0)
-        return J
-
-    def set_cylindrical_geometry(
-        self,
-        distance: float,
-        build_couplings: bool = True,
-        use_dipole_product: bool = True,
-    ):
-        """Construct cylindrical geometry using mandatory n_rings (for n_atoms>2).
-
-        Assumes: n_atoms = n_chains * n_rings with n_rings provided at init.
-        distance: axial spacing and chord length between adjacent chains.
-        """
-        if self.n_atoms <= 2:
-            raise ValueError("Cylindrical geometry only meaningful for n_atoms > 2")
-        if self.n_rings is None or self._n_chains is None:
-            # Should not happen: __post_init__ sets defaults; safeguard fallback to linear chain
-            self.n_rings = self.n_atoms
-            self._n_chains = 1
-        n_rings = self.n_rings
-        n_chains = self._n_chains
-
-        # Ring centers in xy-plane
-        if n_chains == 1:
-            ring_centers = np.array([[0.0, 0.0, 0.0]])
-        else:
-            dphi = 2.0 * np.pi / n_chains
-            radius = distance / (2.0 * np.sin(np.pi / n_chains))
-            ring_centers = np.array(
-                [
-                    [radius * np.cos(k * dphi), radius * np.sin(k * dphi), 0.0]
-                    for k in range(n_chains)
-                ]
-            )
-
-        positions = np.array(
-            [
-                ring_centers[c] + np.array([0.0, 0.0, z * distance])
-                for c in range(n_chains)
-                for z in range(n_rings)
-            ]
-        )
-        self.set_positions(positions)
-
-        if not build_couplings:
-            return
-        self.build_isotropic_couplings(
-            use_dipole_product=use_dipole_product,
-            power=3.0,
-        )
+    # === GEOMETRY AND POSITIONS ===
+    @property
+    def positions(self) -> np.ndarray:
+        """Return atom positions (always set during initialization)."""
+        return self._positions.copy()
 
     @property
-    def n_chains(self) -> Optional[int]:
-        """Derived number of chains if `n_rings` specified (only meaningful for n_atoms>2)."""
-        return self._n_chains
-
-    @property
-    def positions(self) -> Optional[np.ndarray]:  # type: ignore
-        return getattr(self, "_positions", None)
-
-    @property
-    def H0_N_canonical(self) -> Qobj:
-        return self._build_Hamilton()
+    def coupling_matrix_cm(self) -> np.ndarray:
+        """Return coupling matrix in cm^-1 for display."""
+        return self._coupling_matrix / convert_cm_to_fs(1.0)
 
     def excitation_number_from_index(self, idx: int) -> int:
         if idx == 0:
@@ -479,39 +356,6 @@ class AtomicSystem:
             return 1
         else:
             return 2
-
-    @cached_property
-    def eigenstates(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Eigenvalues & eigenstates (cached).
-
-        Invalidated when `update_freqs_cm` is called.
-        """
-        return self.H0_N_canonical.eigenstates()
-
-    @cached_property
-    def sm_op(self) -> Qobj:
-        sm = 0
-        if self.max_excitation == 1:
-            # Single-excitation lowering operator: sum_i μ_i |0><i|
-            for i, mu in enumerate(self.dip_moments, start=1):
-                sm += mu * (self.basis[0] * self.basis[i].dag())
-            return sm
-        # max_excitation == 2: add terms connecting double -> single manifolds
-        # |0><i|
-        for i, mu in enumerate(self.dip_moments, start=1):
-            sm += mu * (self.basis[0] * self.basis[i].dag())
-        # |j><i,j| and |j><j,i| but only one ordering stored (i<j)
-        for (i, j), idx in self._pair_to_index.items():  # i<j
-            mu_i = self.dip_moments[i - 1]
-            mu_j = self.dip_moments[j - 1]
-            # Annihilating excitation on site i from |i,j> leaves |j>, and vice versa
-            sm += mu_i * (self.basis[j] * self.basis[idx].dag())
-            sm += mu_j * (self.basis[i] * self.basis[idx].dag())
-        return sm
-
-    @cached_property
-    def dip_op(self) -> Qobj:
-        return self.sm_op + self.sm_op.dag()
 
     def deph_op_i(self, i: int) -> Qobj:
         """Return site i population operator in the site basis (|i><i|)."""
@@ -531,24 +375,27 @@ class AtomicSystem:
         lines.append("\n# Frequencies and Dipole Moments:")
         for i in range(self.n_atoms):
             lines.append(
-                f"    Atom {i}: ω = {self.at_freqs_cm[i]} cm^-1, μ = {self.dip_moments[i]}"
+                f"    Atom {i}: ω = {self.frequencies_cm[i]} cm^-1, μ = {self.dip_moments[i]}"
             )
         lines.append("\n# Coupling / Inhomogeneity:")
         if self.n_atoms == 2:
-            if self.at_coupling_cm is not None:
-                lines.append(f"    {'at_coupling':<20}: {self.at_coupling_cm} cm^-1")
+            if self.coupling_cm is not None:
+                lines.append(f"    {'coupling':<20}: {self.coupling_cm} cm^-1")
             if self.delta_cm is not None:
-                lines.append(f"    {'Delta':<20}: {self.delta_cm} cm^-1")
+                lines.append(f"    {'delta':<20}: {self.delta_cm} cm^-1")
         elif self.n_atoms > 2 and self.n_rings is not None:
             lines.append(
-                f"    {'n_rings':<20}: {self.n_rings} (derived n_chains = {self.n_chains})"
+                f"    {'n_rings':<20}: {self.n_rings} (n_chains = {self.n_chains})"
             )
+            lines.append(f"    {'positions shape':<20}: {self.positions.shape}")
+            lines.append(f"    {'coupling matrix (cm^-1)':<20}:")
+            lines.append(str(self.coupling_matrix_cm))
         lines.append(f"\n    {'psi_ini':<20}:")
         lines.append(str(self.psi_ini))
         lines.append(f"\n    {'System Hamiltonian (undiagonalized)':<20}:")
-        lines.append(str(self.H0_N_canonical))
-        lines.append("\n# Dipole operator (dip_op):")
-        lines.append(str(self.dip_op))
+        lines.append(str(self.hamiltonian))
+        lines.append("\n# Dipole operator (dipole_op):")
+        lines.append(str(self.dipole_op))
         lines.append("\n=== End of Summary ===")
         return "\n".join(lines)
 
@@ -559,20 +406,20 @@ class AtomicSystem:
     def to_dict(self):
         d = {
             "n_atoms": self.n_atoms,
-            "at_freqs_cm": self.at_freqs_cm,
+            "frequencies_cm": self.frequencies_cm,
             "dip_moments": self.dip_moments,
         }
         if self.delta_cm is not None:
             d["delta_cm"] = self.delta_cm
-        if self.at_coupling_cm is not None:
-            d["at_coupling_cm"] = self.at_coupling_cm
+        if self.coupling_cm is not None:
+            d["coupling_cm"] = self.coupling_cm
         return d
 
     def to_json(self):
         """
         Serialize the system parameters to a JSON string.
 
-        Only basic attributes are included: n_atoms, at_freqs_cm, dip_moments, delta_cm, at_coupling_cm.
+        Only basic attributes are included: n_atoms, frequencies_cm, dip_moments, delta_cm, coupling_cm.
         Quantum objects (Qobj) and computed properties (like Hamiltonians or eigenstates)
         are not serialized and will be recomputed on deserialization.
         """

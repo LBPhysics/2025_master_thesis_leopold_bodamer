@@ -11,30 +11,30 @@ from qutip import Qobj, ket2dm
 
 
 def complex_polarization(
-    dip_op: Qobj, state: Union[Qobj, List[Qobj]]
+    dipole_op: Qobj, state: Union[Qobj, List[Qobj]]
 ) -> Union[complex, np.ndarray]:
     """Return complex polarization(s) for state(s) given dipole operator.
 
     Accepts a single Qobj (ket or density matrix) or list of Qobj.
     """
     if isinstance(state, Qobj):
-        return _single_qobj_polarization(dip_op, state)
+        return _single_qobj_polarization(dipole_op, state)
     if isinstance(state, list):
         if len(state) == 0:
             return np.array([], dtype=np.complex64)
         return np.array(
-            [_single_qobj_polarization(dip_op, s) for s in state], dtype=np.complex64
+            [_single_qobj_polarization(dipole_op, s) for s in state], dtype=np.complex64
         )
     raise TypeError(f"State must be Qobj or list[Qobj], got {type(state)}")
 
 
-def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
+def _single_qobj_polarization(dipole_op: Qobj, state: Qobj) -> complex:
     """
     Calculate polarization for a single quantum state or density matrix.
 
     Parameters
     ----------
-    dip_op : Qobj
+    dipole_op : Qobj
         Dipole operator
     state : Qobj
         Quantum state (ket) or density matrix.
@@ -54,10 +54,10 @@ def _single_qobj_polarization(dip_op: Qobj, state: Qobj) -> complex:
     if state.isket:
         state = ket2dm(state)
     pol = 0j
-    for i in range(dip_op.shape[0]):
+    for i in range(dipole_op.shape[0]):
         for j in range(i):
-            if i != j and abs(dip_op[i, j]) != 0:
-                pol += dip_op[i, j] * state[j, i]
+            if i != j and abs(dipole_op[i, j]) != 0:
+                pol += dipole_op[i, j] * state[j, i]
     return pol
 
 
