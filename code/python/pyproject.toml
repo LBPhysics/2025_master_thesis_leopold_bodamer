@@ -40,4 +40,4 @@ dependencies = [
 "Repository" = "https://github.com/LBPhysics/2025_master_thesis_leopold_bodamer"
 
 [tool.setuptools]
-packages = ["qspectro2d", "plotstyle"]
+packages = ["qspectro2d", "plotstyle", "project_config"]

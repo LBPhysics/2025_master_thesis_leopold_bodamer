@@ -47,7 +47,7 @@ else:  # runtime uses Protocols (duck typing)
     SimulationConfig = SimulationConfigProto  # type: ignore
 
 ### Project-specific imports
-from qspectro2d.config.paths import DATA_DIR, FIGURES_PYTHON_DIR, ensure_dirs
+from project_config.paths import DATA_DIR, FIGURES_PYTHON_DIR, ensure_dirs
 
 
 # =============================

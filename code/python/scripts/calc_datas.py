@@ -33,7 +33,7 @@ import argparse
 import numpy as np
 from pathlib import Path
 
-from qspectro2d.config.paths import SCRIPTS_DIR
+from project_config.paths import SCRIPTS_DIR
 from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
 )

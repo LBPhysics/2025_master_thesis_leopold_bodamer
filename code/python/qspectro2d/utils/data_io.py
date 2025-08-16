@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Dict, Optional, List, TYPE_CHECKING
 
 ### Project-specific imports
-from qspectro2d.config.paths import DATA_DIR
+from project_config.paths import DATA_DIR
 
 # Type checking imports to avoid circular imports
 if TYPE_CHECKING:

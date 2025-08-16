@@ -16,7 +16,7 @@ Call ``CONFIG.validate()`` if you need explicit validation.
 # parallel worker initialization. Use `from plotstyle import init_style, ...`
 # where plotting is actually needed.
 
-from .paths import (
+from project_config.paths import (
     # Paths (pure; call ensure_dirs() explicitly when needed)
     DATA_DIR,
     FIGURES_DIR,
