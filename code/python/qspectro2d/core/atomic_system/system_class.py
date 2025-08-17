@@ -359,6 +359,8 @@ class AtomicSystem:
 
     def deph_op_i(self, i: int) -> Qobj:
         """Return site i population operator in the site basis (|i><i|)."""
+        if i == 0:
+            raise ValueError("indexing ground state -> use i elem 1,...,N+1")
         return ket2dm(self.basis[i])
 
     def omega_ij(self, i: int, j: int) -> float:

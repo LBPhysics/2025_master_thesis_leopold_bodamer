@@ -14,17 +14,18 @@ class SystemBathCoupling:
     system: AtomicSystem
     bath: BosonicEnvironment
 
+    # TODO now the decay channels DO NOT match the paper cases
     @property
     def br_decay_channels(self):
         """Generate the a_ops list for Bloch-Redfield solver.
-                Includes:
-                  - Pure dephasing projectors for all single-excitation states
-                  - (If max_excitation == 2) dephasing for each double-excitation state
-                  - Radiative decay channels (lowering operators) from singles to ground
-                  - (If max_excitation == 2) lowering from double states to singles
+        Includes:
+          - Pure dephasing projectors for all single-excitation states
+          - (If max_excitation == 2) dephasing for each double-excitation state
+          - Radiative decay channels (lowering operators) from singles to ground
+          - (If max_excitation == 2) lowering from double states to singles
 
-                NOTE: BR formalism usually builds rates from bath correlation functions; here we
-                provide operator structures only. Coupling strengths are encoded in the bath object.
+        NOTE: BR formalism usually builds rates from bath correlation functions; here we
+        provide operator structures only. Coupling strengths are encoded in the bath object.
         """
         sys = self.system
         br_ops: list[list] = []
@@ -33,38 +34,33 @@ class SystemBathCoupling:
 
         # Helper: add dephasing projector for basis index k
         def add_projector(k: int):
-            br_ops.append([ket2dm(sys.basis[k]), self.bath])
+            """Return site k population operator in the site basis (|k><k|)."""
+            if k == 0:
+                raise ValueError("indexing ground state -> use k elem 1,...,N+1")
 
-        if n_atoms == 1:
-            # Single atom: dephasing + total dipole (emission/absorption channel)
-            add_projector(1)
-            br_ops.append([sys.dipole_op, self.bath])
-            return br_ops
+            br_ops.append([sys.deph_op_i(k), self.bath])
 
-        # Multi-atom: singles manifold projectors
-        # For dimer truncated (max_exc=1) or generic N, singles indices are 1..n_atoms
-        for single_idx in range(1, n_atoms + 1):
-            add_projector(single_idx)
+        # Multi-atom:
+        for i_atom in range(1, n_atoms + 1):
+            # singles manifold projectors
+            add_projector(i_atom)
 
-            # Radiative-like decay (lowering) operators from singles to ground: |0><i|
-            Li = sys.basis[0] * sys.basis[single_idx].dag()
-            br_ops.append([Li, self.bath])
+            # Radiative-like decay (lowering + raising) operators from singles to ground: |0><i| + |i><0|
+            Li = sys.basis[0] * sys.basis[i_atom].dag()
+            br_ops.append([Li + Li.dag(), self.bath])
 
         # Double manifold projectors only if available
-        if max_exc == 2 and n_atoms >= 2:
-            # Generic mapping stored internally
-            index_to_pair = sys._index_to_pair
-            for idx in index_to_pair.keys():
-                add_projector(idx)
+        index_to_pair = sys._index_to_pair
+        for idx, (i, j) in index_to_pair.items():  # i<j atom labels
+            add_projector(idx)
 
             """
             # Double -> single lowering (if double manifold present)
-            for idx, (i, j) in index_to_pair.items():  # i<j atom labels
-                # |i> corresponds to basis index i, etc.
-                Li = (sys.basis[i] * sys.basis[idx].dag() + sys.basis[idx] * sys.basis[i].dag())
-                Lj = (sys.basis[j] * sys.basis[idx].dag() + sys.basis[idx] * sys.basis[j].dag())
-                br_ops.append([Li, self.bath])
-                br_ops.append([Lj, self.bath])
+            # |i> corresponds to basis index i, etc.
+            Li = sys.basis[i] * sys.basis[idx].dag()
+            Lj = sys.basis[j] * sys.basis[idx].dag()
+            br_ops.append([Li + Li.dag(), self.bath])
+            br_ops.append([Lj + Lj.dag(), self.bath])
             """
         return br_ops
 
@@ -79,23 +75,16 @@ class SystemBathCoupling:
         """
         sys = self.system
         n_atoms = sys.n_atoms
-        max_exc = sys.max_excitation
         c_ops = []
 
         # Dephasing rate (assumed identical structure for all single excitations)
         deph_rate = bath_to_rates(self.bath, mode="deph")
 
-        # Multi-atom: singles dephasing
-        for single_idx in range(1, n_atoms + 1):
-            c_ops.append(ket2dm(sys.basis[single_idx]) * np.sqrt(deph_rate))
-
-        # Double-state dephasing if manifold present
-        index_to_pair = sys._index_to_pair
-        for idx in index_to_pair.keys():
-            c_ops.append(ket2dm(sys.basis[idx]) * np.sqrt(deph_rate))
-
-        # Radiative-like single-site relaxation (singles -> ground) and thermal excitation
         for i_atom in range(1, n_atoms + 1):
+            # singles dephasing
+            c_ops.append(sys.deph_op_i(i_atom) * np.sqrt(deph_rate))
+
+            # Radiative-like single-site relaxation (singles -> ground) and thermal excitation
             freq = sys.frequencies[i_atom - 1]
             down_rate, up_rate = bath_to_rates(self.bath, freq, mode="decay")
             L_down = sys.basis[0] * sys.basis[i_atom].dag()  # |0><i|
@@ -103,22 +92,28 @@ class SystemBathCoupling:
                 c_ops.append(L_down * np.sqrt(down_rate))
             if up_rate > 0:
                 c_ops.append(L_down.dag() * np.sqrt(up_rate))  # |i><0|
+
+        # Double-state dephasing if manifold present
+        index_to_pair = sys._index_to_pair
+        for idx, (i, j) in index_to_pair.items():  # i<j atom labels
+            c_ops.append(ket2dm(sys.basis[idx]) * np.sqrt(deph_rate))
+
             """
             # Double -> single lowering (if double manifold present)
-            for idx, (i, j) in index_to_pair.items():  # i<j atom labels
-                freq_idx = sys.frequencies[idx - 1]
-                freq_i = sys.frequencies[i - 1]
-                freq_j = sys.frequencies[j - 1]
+            freq_idx = sys.frequencies[idx - 1]
+            freq_i = sys.frequencies[i - 1]
+            freq_j = sys.frequencies[j - 1]
 
-                down_rate_i, up_rate_i = bath_to_rates(self.bath, (freq_idx - freq_i), mode="decay")
-                down_rate_j, up_rate_j = bath_to_rates(self.bath, (freq_idx - freq_j), mode="decay")
-                # |i> corresponds to basis index i, etc.
-                Li = sys.basis[i] * sys.basis[idx].dag()
-                Lj = sys.basis[j] * sys.basis[idx].dag()
-                c_ops.append([Li * np.sqrt(down_rate_i)])
-                c_ops.append([Lj * np.sqrt(down_rate_j)])
-                c_ops.append([Li.dag() * np.sqrt(up_rate_i)])
-                c_ops.append([Lj.dag() * np.sqrt(up_rate_j)])
+            down_rate_i, up_rate_i = bath_to_rates(self.bath, (freq_idx - freq_i), mode="decay")
+            down_rate_j, up_rate_j = bath_to_rates(self.bath, (freq_idx - freq_j), mode="decay")
+            # |i> corresponds to basis index i, etc.
+            Li = sys.basis[i] * sys.basis[idx].dag()
+            c_ops.append([Li * np.sqrt(down_rate_i)])
+            c_ops.append([Li.dag() * np.sqrt(up_rate_i)])
+
+            Lj = sys.basis[j] * sys.basis[idx].dag()
+            c_ops.append([Lj * np.sqrt(down_rate_j)])
+            c_ops.append([Lj.dag() * np.sqrt(up_rate_j)])
             """
 
         return c_ops
