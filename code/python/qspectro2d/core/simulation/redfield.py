@@ -10,9 +10,8 @@ import numpy as np
 from qutip import Qobj, stacked_index
 
 from .builders import SimulationModuleOQS
-__all__ = [
-    "R_paper"
-]
+
+__all__ = ["R_paper"]
 
 
 def R_paper(sim_oqs: SimulationModuleOQS) -> Qobj:
@@ -36,8 +35,10 @@ def _R_paper_1atom(sim_oqs: SimulationModuleOQS) -> Qobj:
     idx_11 = stacked_index(size, 1, 1)
 
     w0 = sim_oqs.system.frequencies[0]
-    deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")
-    down_rate, up_rate = bath_to_rates(sim_oqs.bath, w0, mode="decay")
+    deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")  # TODO THIS IS NON-SENSE
+    down_rate, up_rate = bath_to_rates(
+        sim_oqs.bath, w0, mode="decay"
+    )  # TODO THIS IS NON-SENSE
     deph_rate_tot = deph_rate_pure + 0.5 * (down_rate + up_rate)
 
     R = np.zeros((size * size, size * size), dtype=complex)

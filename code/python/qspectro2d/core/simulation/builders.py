@@ -124,7 +124,6 @@ class SimulationModuleOQS:
         """
         Es, _ = self.system.eigenstates
         Es = Es.copy()  # avoid in-place modification of upstream arrays
-        N = self.system.n_atoms
 
         if self.simulation_config.rwa_sl:
             omega_L = self.laser.omega_laser
