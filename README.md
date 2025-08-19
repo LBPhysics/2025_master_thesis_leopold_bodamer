@@ -362,7 +362,7 @@ from qspectro2d.config import CONFIG
 n_atoms      = CONFIG.atomic.n_atoms
 solver_name  = CONFIG.solver.solver
 det_phase    = CONFIG.signal.detection_phase
-dt_fs        = CONFIG.window.dt_fs
+dt        = CONFIG.window.dt
 ```
 
 Validate (optional, raises on inconsistency):
@@ -386,8 +386,8 @@ Proposed precedence (lowest to highest):
 1. Built-in defaults (current values in `default_simulation_params.py`)
 2. Project config file (e.g. `qspectro2d.config.yml` at repo root)
 3. User override file passed explicitly (`load_config(path="my_run.yml")`)
-4. Environment variables (e.g. `QSPEC_WINDOW_DT_FS=1.0`)
-5. Runtime kwargs (`load_config(overrides={"window": {"dt_fs": 1.0}})`)
+4. Environment variables (e.g. `QSPEC_WINDOW_dt=1.0`)
+5. Runtime kwargs (`load_config(overrides={"window": {"dt": 1.0}})`)
 
 Merge semantics:
 - Deep merge by section. Only provided keys overwrite; others inherit defaults.
@@ -402,8 +402,8 @@ atomic:
 laser:
     pulse_fwhm_fs: 30.0
 window:
-    t_det_max_fs: 1200.0
-    dt_fs: 2.0
+    t_det_max: 1200.0
+    dt: 2.0
 solver:
     solver: mesolve
 ```
@@ -416,7 +416,7 @@ cfg = load_config(path="run_settings.yml")
 
 Environment override example (planned):
 ```
-QSPEC_WINDOW_DT_FS=1.0 QSPEC_SOLVER_SOLVER=brmesolve python run_sim.py
+QSPEC_WINDOW_dt=1.0 QSPEC_SOLVER_SOLVER=brmesolve python run_sim.py
 ```
 
 ### Path Management & Side-Effects

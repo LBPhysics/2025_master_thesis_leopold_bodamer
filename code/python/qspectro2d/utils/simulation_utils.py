@@ -23,9 +23,6 @@ from qspectro2d.config.loader import load_config
 # =============================
 # SIMULATION CONFIGURATION UTILITIES
 # =============================
-# Removed create_simulation_module_from_configs to simplify the code path.
-
-
 def create_base_sim_oqs(
     args,
     cfg: MasterConfig | None = None,
@@ -47,6 +44,24 @@ def create_base_sim_oqs(
     print("🔎 Validating configuration...")
     CONFIG.validate()
 
+    # Resolve precedence: args > YAML > defaults
+    t_coh_res = (
+        args.t_coh
+        if getattr(args, "t_coh", None) is not None
+        else getattr(CONFIG.window, "t_coh", 0.0)
+    )
+    t_wait_res = (
+        args.t_wait
+        if getattr(args, "t_wait", None) is not None
+        else getattr(CONFIG.window, "t_wait", 0.0)
+    )
+    tdet_res = (
+        args.t_det_max
+        if getattr(args, "t_det_max", None) is not None
+        else CONFIG.window.t_det_max
+    )
+    dt_res = args.dt if getattr(args, "dt", None) is not None else CONFIG.window.dt
+
     atomic_config = {
         "n_atoms": CONFIG.atomic.n_atoms,
         "n_chains": getattr(CONFIG.atomic, "n_chains", None),
@@ -61,14 +76,14 @@ def create_base_sim_oqs(
     ):
         atomic_config["coupling_cm"] = CONFIG.atomic.coupling_cm
 
-    # Use dummy t_coh=0 for initial setup and solver check
+    # Use dummy t_coh for initial setup and solver check
     pulse_config = {
         "pulse_fwhm": CONFIG.laser.pulse_fwhm_fs,
         "base_amplitude": CONFIG.laser.base_amplitude,
         "envelope_type": CONFIG.laser.envelope_type,
         "carrier_freq_cm": CONFIG.laser.carrier_freq_cm,
         "relative_E0s": list(CONFIG.signal.relative_e0s),
-        "delays": [args.t_coh, args.t_wait],
+        "delays": [t_coh_res, t_wait_res],
     }
 
     max_workers = get_max_workers()
@@ -78,17 +93,17 @@ def create_base_sim_oqs(
         "IFT_component": list(CONFIG.signal.ift_component),
         ### Simulation parameters
         "ode_solver": CONFIG.solver.solver,
-        "rwa_sl": CONFIG.window.rwa_sl,
+        "rwa_sl": CONFIG.laser.rwa_sl,
         "keep_track": "basis",
         # times
-        "t_coh": args.t_coh,  # dummy value, will be updated
-        "t_wait": args.t_wait,
-        "t_det_max": args.t_det_max,
-        "dt": args.dt,
+        "t_coh": t_coh_res,
+        "t_wait": t_wait_res,
+        "t_det_max": tdet_res,
+        "dt": dt_res,
         # phase cycling
         "n_phases": CONFIG.signal.n_phases,
         # inhomogeneous broadening
-        "n_freqs": CONFIG.window.n_freqs,
+        "n_freqs": CONFIG.atomic.n_freqs,
     }
 
     bath_config = {

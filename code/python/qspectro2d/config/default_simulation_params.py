@@ -49,23 +49,24 @@ SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 # === ATOMIC SYSTEM DEFAULTS ===
 N_ATOMS = 1
 N_CHAINS = 1  # defaults to linear chain (single chain layout)
-
 FREQUENCIES_CM = [15900.0]  # Number of frequency components in the system
 DIP_MOMENTS = [1.0]  # Dipole moments for each atom
 COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
+N_FREQS = 1  # 1 == no inhomogeneous broadening
+
 
 # === LASER SYSTEM DEFAULTS ===
 PULSE_FWHM = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
 BASE_AMPLITUDE = 0.5  # should be such that only one interaction at a time, here that |excitation|² < 1%
 ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQUENCIES_CM)  # Carrier frequency of the laser
+RWA_SL = True
+
 
 # === SIMULATION DEFAULTS ===
 ODE_SOLVER = "BR"  # ODE solver to use
-RWA_SL = True
-N_FREQS = 1  # 1 == no inhomogeneous broadening
 N_PHASES = 4  # Number of phase cycles for the simulation
 
 
@@ -78,7 +79,7 @@ BATH_COUPLING = 1e-4 * frequencies[0]
 
 
 # === 2D SIMULATION DEFAULTS ===
-BATCHES = 10  # You can increase/decrease this
+N_BATCHES = 10  # You can increase/decrease this
 T_DET_MAX = 200.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
 

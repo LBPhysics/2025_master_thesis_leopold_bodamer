@@ -9,12 +9,14 @@ atomic:
   coupling_cm: 200.0
   delta_cm: 0.0
   max_excitation: 1
+  n_freqs: 1
 
 laser:
   pulse_fwhm_fs: 5.0
   base_amplitude: 0.5
   envelope_type: gaussian
   carrier_freq_cm: 16000.0
+  rwa_sl: false
 
 bath:
   bath_type: ohmic
@@ -28,19 +30,14 @@ solver:
     nsteps: 200000
     atol: 1.0e-7
     rtol: 1.0e-5
-  negative_eigval_threshold: -1.0e-3
-  trace_tolerance: 1.0e-6
 
 window:
-  rwa_sl: false
-  t_det_max_fs: 800.0   # For reference; calc_datas.py uses CLI flags for times
-  dt_fs: 1.0            # For reference; calc_datas.py uses CLI flags for times
-  batches: 10
-  n_freqs: 1
-
-signal:
-  phase_cycling_phases: [0, 1.57079632679, 3.14159265359, 4.71238898038]
-  detection_phase: 0
-  ift_component: [1, -1, 1]
-  relative_e0s: [1.0, 1.0, 0.1]
-  n_phases: 4
+  # parameters that can be adjusted in the cli args of calc_datas.py
+  t_wait: 0.0
+  dt: 10.0
+  t_det_max: 800.0
+  # 2d params
+  t_coh: 0.0
+  #
+  n_batches: 10
+  batch_idx: 0

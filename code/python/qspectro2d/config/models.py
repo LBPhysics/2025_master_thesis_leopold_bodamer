@@ -22,24 +22,59 @@ Future (not implemented here): file/env override merge & aggregated reports.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Sequence
+from typing import Sequence, Mapping, Any
 
-from . import default_simulation_params as _defs
+from .default_simulation_params import (
+    N_ATOMS,
+    N_CHAINS,
+    FREQUENCIES_CM,
+    DIP_MOMENTS,
+    COUPLING_CM,
+    DELTA_CM,
+    MAX_EXCITATION,
+    N_FREQS,
+    PULSE_FWHM,
+    BASE_AMPLITUDE,
+    ENVELOPE_TYPE,
+    CARRIER_FREQ_CM,
+    RWA_SL,
+    BATH_TYPE,
+    BATH_TEMP,
+    BATH_CUTOFF,
+    BATH_COUPLING,
+    PHASE_CYCLING_PHASES,
+    DETECTION_PHASE,
+    IFT_COMPONENT,
+    RELATIVE_E0S,
+    N_PHASES,
+    ODE_SOLVER,
+    SOLVER_OPTIONS,
+    SUPPORTED_SOLVERS,
+    NEGATIVE_EIGVAL_THRESHOLD,
+    TRACE_TOLERANCE,
+    T_DET_MAX,
+    DT,
+    N_BATCHES,
+    validate as validate_defaults_fn,
+)
 
 
 @dataclass(slots=True)
 class AtomicConfig:
     """Atomic system parameters (frequencies in cm^-1)."""
 
-    n_atoms: int = _defs.N_ATOMS
+    n_atoms: int = N_ATOMS
     # Optional geometry spec for multi-atom systems (see AtomicSystem); if n_atoms>2 and None -> linear chain
-    n_chains: int = _defs.N_CHAINS
-    frequencies_cm: Sequence[float] = tuple(_defs.FREQUENCIES_CM)
-    dip_moments: Sequence[float] = tuple(_defs.DIP_MOMENTS)
-    coupling_cm: float = _defs.COUPLING_CM
-    delta_cm: float = _defs.DELTA_CM
+    n_chains: int = N_CHAINS
+    frequencies_cm: Sequence[float] = field(
+        default_factory=lambda: list(FREQUENCIES_CM)
+    )
+    dip_moments: Sequence[float] = field(default_factory=lambda: list(DIP_MOMENTS))
+    coupling_cm: float = COUPLING_CM
+    delta_cm: float = DELTA_CM
     # Excitation manifold truncation (1: ground+single, 2: add double manifold)
-    max_excitation: int = _defs.MAX_EXCITATION
+    max_excitation: int = MAX_EXCITATION
+    n_freqs: int = N_FREQS  # moved from window
 
     def validate(self) -> None:
         if len(self.frequencies_cm) != self.n_atoms:
@@ -62,10 +97,11 @@ class AtomicConfig:
 class LaserConfig:
     """Laser / pulse parameters."""
 
-    pulse_fwhm_fs: float = _defs.PULSE_FWHM
-    base_amplitude: float = _defs.BASE_AMPLITUDE
-    envelope_type: str = _defs.ENVELOPE_TYPE
-    carrier_freq_cm: float = _defs.CARRIER_FREQ_CM
+    pulse_fwhm_fs: float = PULSE_FWHM
+    base_amplitude: float = BASE_AMPLITUDE
+    envelope_type: str = ENVELOPE_TYPE
+    carrier_freq_cm: float = CARRIER_FREQ_CM
+    rwa_sl: bool = RWA_SL  # moved from window
 
     def validate(self) -> None:
         if self.pulse_fwhm_fs <= 0:
@@ -78,10 +114,10 @@ class LaserConfig:
 class BathConfig:
     """Bath / environment parameters."""
 
-    bath_type: str = _defs.BATH_TYPE
-    temperature: float = _defs.BATH_TEMP
-    cutoff: float = _defs.BATH_CUTOFF
-    coupling: float = _defs.BATH_COUPLING
+    bath_type: str = BATH_TYPE
+    temperature: float = BATH_TEMP
+    cutoff: float = BATH_CUTOFF
+    coupling: float = BATH_COUPLING
 
     def validate(self) -> None:
         if self.temperature <= 0:
@@ -96,11 +132,13 @@ class BathConfig:
 class SignalProcessingConfig:
     """Phase cycling / detection parameters."""
 
-    phase_cycling_phases: Sequence[float] = tuple(_defs.PHASE_CYCLING_PHASES)
-    detection_phase: float = _defs.DETECTION_PHASE
-    ift_component: Sequence[int] = tuple(_defs.IFT_COMPONENT)
-    relative_e0s: Sequence[float] = tuple(_defs.RELATIVE_E0S)
-    n_phases: int = _defs.N_PHASES
+    phase_cycling_phases: Sequence[float] = field(
+        default_factory=lambda: list(PHASE_CYCLING_PHASES)
+    )
+    detection_phase: float = DETECTION_PHASE
+    ift_component: Sequence[int] = field(default_factory=lambda: list(IFT_COMPONENT))
+    relative_e0s: Sequence[float] = field(default_factory=lambda: list(RELATIVE_E0S))
+    n_phases: int = N_PHASES
 
     def validate(self) -> None:
         if self.n_phases <= 0:
@@ -115,11 +153,15 @@ class SignalProcessingConfig:
 class SolverConfig:
     """Solver selection & numerical tolerances."""
 
-    solver: str = _defs.ODE_SOLVER
-    solver_options: dict = field(default_factory=lambda: dict(_defs.SOLVER_OPTIONS))
-    supported_solvers: Sequence[str] = tuple(_defs.SUPPORTED_SOLVERS)
-    negative_eigval_threshold: float = _defs.NEGATIVE_EIGVAL_THRESHOLD
-    trace_tolerance: float = _defs.TRACE_TOLERANCE
+    solver: str = ODE_SOLVER
+    solver_options: Mapping[str, Any] = field(
+        default_factory=lambda: dict(SOLVER_OPTIONS)
+    )
+    supported_solvers: Sequence[str] = field(
+        default_factory=lambda: list(SUPPORTED_SOLVERS)
+    )
+    negative_eigval_threshold: float = NEGATIVE_EIGVAL_THRESHOLD
+    trace_tolerance: float = TRACE_TOLERANCE
 
     def validate(self) -> None:
         if self.solver not in self.supported_solvers:
@@ -132,21 +174,23 @@ class SolverConfig:
 class SimulationWindowConfig:
     """Time / discretization controls for spectroscopy runs."""
 
-    t_det_max_fs: float = _defs.T_DET_MAX
-    dt_fs: float = _defs.DT
-    batches: int = _defs.BATCHES
-    n_freqs: int = _defs.N_FREQS
-    rwa_sl: bool = _defs.RWA_SL
+    t_det_max: float = T_DET_MAX
+    dt: float = DT
+    n_batches: int = N_BATCHES
+    # new: allow YAML to define runtime defaults that CLI can override
+    t_wait: float = 0.0
+    t_coh: float = 0.0
+    batch_idx: int = 0
 
     def validate(self) -> None:
-        if self.dt_fs <= 0:
-            raise ValueError("SimulationWindowConfig: dt_fs must be positive")
-        if self.t_det_max_fs <= 0:
-            raise ValueError("SimulationWindowConfig: t_det_max_fs must be positive")
-        if self.batches <= 0:
-            raise ValueError("SimulationWindowConfig: batches must be positive")
-        if self.n_freqs <= 0:
-            raise ValueError("SimulationWindowConfig: n_freqs must be positive")
+        if self.dt <= 0:
+            raise ValueError("SimulationWindowConfig: dt must be positive")
+        if self.t_det_max <= 0:
+            raise ValueError("SimulationWindowConfig: t_det_max must be positive")
+        if self.n_batches <= 0:
+            raise ValueError("SimulationWindowConfig: n_batches must be positive")
+        if self.batch_idx < 0:
+            raise ValueError("SimulationWindowConfig: batch_idx must be non-negative")
 
 
 @dataclass(slots=True)
@@ -179,14 +223,36 @@ class MasterConfig:
             "max_excitation": self.atomic.max_excitation,
             "n_chains": self.atomic.n_chains,
             "relative_e0s": list(self.signal.relative_e0s),
-            "rwa_sl": self.window.rwa_sl,
+            "rwa_sl": self.laser.rwa_sl,  # moved from window
             "carrier_freq_cm": self.laser.carrier_freq_cm,
         }
-        _defs.validate(params)
+        validate_defaults_fn(params)
 
     @classmethod
     def from_defaults(cls) -> "MasterConfig":
-        return cls()
+        return cls(
+            atomic=AtomicConfig(
+                n_atoms=N_ATOMS,
+                n_chains=N_CHAINS,
+                frequencies_cm=list(FREQUENCIES_CM),
+                dip_moments=list(DIP_MOMENTS),
+                coupling_cm=COUPLING_CM,
+                delta_cm=DELTA_CM,
+                max_excitation=MAX_EXCITATION,
+                n_freqs=N_FREQS,  # new
+            ),
+            laser=LaserConfig(
+                pulse_fwhm_fs=PULSE_FWHM,
+                base_amplitude=BASE_AMPLITUDE,
+                envelope_type=ENVELOPE_TYPE,
+                carrier_freq_cm=CARRIER_FREQ_CM,
+                rwa_sl=RWA_SL,  # new
+            ),
+            bath=BathConfig(),
+            signal=SignalProcessingConfig(),
+            solver=SolverConfig(),
+            window=SimulationWindowConfig(),
+        )
 
 
 __all__ = [

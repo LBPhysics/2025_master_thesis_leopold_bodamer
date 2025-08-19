@@ -54,12 +54,14 @@ def _as_dict(cfg: MasterConfig) -> dict:
             coupling_cm=cfg.atomic.coupling_cm,
             delta_cm=cfg.atomic.delta_cm,
             max_excitation=cfg.atomic.max_excitation,
+            n_freqs=cfg.atomic.n_freqs,
         ),
         "laser": dict(
             pulse_fwhm_fs=cfg.laser.pulse_fwhm_fs,
             base_amplitude=cfg.laser.base_amplitude,
             envelope_type=cfg.laser.envelope_type,
             carrier_freq_cm=cfg.laser.carrier_freq_cm,
+            rwa_sl=cfg.laser.rwa_sl,
         ),
         "bath": dict(
             bath_type=cfg.bath.bath_type,
@@ -67,13 +69,7 @@ def _as_dict(cfg: MasterConfig) -> dict:
             cutoff=cfg.bath.cutoff,
             coupling=cfg.bath.coupling,
         ),
-        "signal": dict(
-            phase_cycling_phases=list(cfg.signal.phase_cycling_phases),
-            detection_phase=cfg.signal.detection_phase,
-            ift_component=list(cfg.signal.ift_component),
-            relative_e0s=list(cfg.signal.relative_e0s),
-            n_phases=cfg.signal.n_phases,
-        ),
+        # signal intentionally omitted -> always use defaults
         "solver": dict(
             solver=cfg.solver.solver,
             solver_options=dict(cfg.solver.solver_options),
@@ -82,11 +78,12 @@ def _as_dict(cfg: MasterConfig) -> dict:
             trace_tolerance=cfg.solver.trace_tolerance,
         ),
         "window": dict(
-            t_det_max_fs=cfg.window.t_det_max_fs,
-            dt_fs=cfg.window.dt_fs,
-            batches=cfg.window.batches,
-            n_freqs=cfg.window.n_freqs,
-            rwa_sl=cfg.window.rwa_sl,
+            t_det_max=cfg.window.t_det_max,
+            dt=cfg.window.dt,
+            n_batches=cfg.window.n_batches,
+            t_wait=cfg.window.t_wait,     # new
+            t_coh=cfg.window.t_coh,       # new
+            batch_idx=cfg.window.batch_idx,  # new
         ),
     }
 
@@ -103,27 +100,21 @@ def _dict_to_config(cfg_dict: Mapping[str, Any]) -> MasterConfig:
     base.atomic.coupling_cm = a.get("coupling_cm", base.atomic.coupling_cm)
     base.atomic.delta_cm = a.get("delta_cm", base.atomic.delta_cm)
     base.atomic.max_excitation = a.get("max_excitation", base.atomic.max_excitation)
+    base.atomic.n_freqs = a.get("n_freqs", base.atomic.n_freqs)
     # laser
     l = cfg_dict.get("laser", {})
     base.laser.pulse_fwhm_fs = l.get("pulse_fwhm_fs", base.laser.pulse_fwhm_fs)
     base.laser.base_amplitude = l.get("base_amplitude", base.laser.base_amplitude)
     base.laser.envelope_type = l.get("envelope_type", base.laser.envelope_type)
     base.laser.carrier_freq_cm = l.get("carrier_freq_cm", base.laser.carrier_freq_cm)
+    base.laser.rwa_sl = l.get("rwa_sl", base.laser.rwa_sl)
     # bath
     b = cfg_dict.get("bath", {})
     base.bath.bath_type = b.get("bath_type", base.bath.bath_type)
     base.bath.temperature = b.get("temperature", base.bath.temperature)
     base.bath.cutoff = b.get("cutoff", base.bath.cutoff)
     base.bath.coupling = b.get("coupling", base.bath.coupling)
-    # signal
-    s = cfg_dict.get("signal", {})
-    base.signal.phase_cycling_phases = s.get(
-        "phase_cycling_phases", base.signal.phase_cycling_phases
-    )
-    base.signal.detection_phase = s.get("detection_phase", base.signal.detection_phase)
-    base.signal.ift_component = s.get("ift_component", base.signal.ift_component)
-    base.signal.relative_e0s = s.get("relative_e0s", base.signal.relative_e0s)
-    base.signal.n_phases = s.get("n_phases", base.signal.n_phases)
+    # signal: omitted -> keep defaults
     # solver
     so = cfg_dict.get("solver", {})
     base.solver.solver = so.get("solver", base.solver.solver)
@@ -137,11 +128,12 @@ def _dict_to_config(cfg_dict: Mapping[str, Any]) -> MasterConfig:
     base.solver.trace_tolerance = so.get("trace_tolerance", base.solver.trace_tolerance)
     # window
     w = cfg_dict.get("window", {})
-    base.window.t_det_max_fs = w.get("t_det_max_fs", base.window.t_det_max_fs)
-    base.window.dt_fs = w.get("dt_fs", base.window.dt_fs)
-    base.window.batches = w.get("batches", base.window.batches)
-    base.window.n_freqs = w.get("n_freqs", base.window.n_freqs)
-    base.window.rwa_sl = w.get("rwa_sl", base.window.rwa_sl)
+    base.window.t_det_max = w.get("t_det_max", base.window.t_det_max)
+    base.window.dt = w.get("dt", base.window.dt)
+    base.window.n_batches = w.get("n_batches", base.window.n_batches)
+    base.window.t_wait = w.get("t_wait", base.window.t_wait)       # new
+    base.window.t_coh = w.get("t_coh", base.window.t_coh)          # new
+    base.window.batch_idx = w.get("batch_idx", base.window.batch_idx)  # new
     return base
 
 

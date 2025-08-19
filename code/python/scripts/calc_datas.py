@@ -7,11 +7,15 @@ It supports two modes of execution:
 # Determine whether to use batch mode or single t_coh mode based on the provided arguments.
     --simulation_type <type>: Type of simulation (default: "1d")
         -> "1d" Run the simulation for one specific coherence time
-        -> "2d" Run the simulation for a range of coherence times, splitted into batches
+        -> "2d" Run the simulation for a range of coherence times, splitted into n_batches
 
 # other arguments:
+    --config <path>: Path to the configuration file (default: scripts/config.yaml)
+                     COVERS all the simulation parameters / nothing else needed,
+                     however with the next couple of parameters, these defaults can be overridden:
+
+    --n_batches <total>: Total number of n_batches (default: 1)
     --batch_idx <index>: Batch index for the current job (0 to n_batches-1, default: 0)
-    --n_batches <total>: Total number of batches (default: 1)
     --t_det_max <fs>   : Maximum detection time (default: 600.0 fs)
     --t_wait <fs>      : Waiting time between pump and probe pulses (default: 0.0 fs)
     --t_coh <value>    : Coherence time between 2 pump pulses (default: 0.0 fs)
@@ -126,23 +130,26 @@ def run_1d_mode(args):
     Parameters:
         args: Parsed command line arguments
     """
-    print(f"🎯 Running 1D mode with t_coh = {args.t_coh:.2f} fs")
-
     cfg_path = SCRIPTS_DIR / "config.yaml"
-    if getattr(args, "config", None):
-        cfg = load_config(args.config)
-    else:
-        cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
+    cfg = (
+        load_config(args.config)
+        if getattr(args, "config", None)
+        else (load_config(cfg_path) if cfg_path.exists() else load_config())
+    )
 
-    # Create base simulation and validate solver once
+    # Resolve for printing: CLI > YAML > defaults
+    t_coh_print = (
+        args.t_coh if args.t_coh is not None else getattr(cfg.window, "t_coh", 0.0)
+    )
+    print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs")
+
+    # Create base simulation and validate solver once (create_base_sim_oqs resolves CLI > YAML > defaults)
     sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
 
     # Run single simulation
     abs_data_path = run_single_t_coh_with_sim(
-        sim_oqs, args.t_coh, save_info=True, time_cut=time_cut
+        sim_oqs, t_coh_print, save_info=True, time_cut=time_cut
     )
-
-    print(f"\n✅ 1D simulation completed!")
 
 
 def run_2d_mode(args):
@@ -152,13 +159,26 @@ def run_2d_mode(args):
     Parameters:
         args: Parsed command line arguments
     """
-    print(f"🎯 Running 2D mode - batch {args.batch_idx + 1}/{args.n_batches}")
-
     cfg_path = SCRIPTS_DIR / "config.yaml"
-    if getattr(args, "config", None):
-        cfg = load_config(args.config)
-    else:
-        cfg = load_config(cfg_path) if cfg_path.exists() else load_config()
+    cfg = (
+        load_config(args.config)
+        if getattr(args, "config", None)
+        else (load_config(cfg_path) if cfg_path.exists() else load_config())
+    )
+
+    # Resolve batching with precedence: CLI > YAML > defaults
+    n_batches = args.n_batches if args.n_batches is not None else cfg.window.n_batches
+    batch_idx = (
+        args.batch_idx
+        if args.batch_idx is not None
+        else getattr(cfg.window, "batch_idx", 0)
+    )
+    if n_batches <= 0:
+        raise ValueError("Number of n_batches must be positive")
+    if batch_idx < 0:
+        raise ValueError("Batch index must be non-negative")
+
+    print(f"🎯 Running 2D mode - batch {batch_idx + 1}/{n_batches}")
 
     # Create base simulation and validate solver once
     sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
@@ -166,16 +186,14 @@ def run_2d_mode(args):
     # Generate t_coh values for the full range
     t_coh_vals = sim_oqs.times_det
 
-    # Split into batches
-    subarrays = np.array_split(t_coh_vals, args.n_batches)
-
-    if args.batch_idx >= len(subarrays):
+    # Split into n_batches
+    subarrays = np.array_split(t_coh_vals, n_batches)
+    if batch_idx >= len(subarrays):
         raise ValueError(
-            f"Batch index {args.batch_idx} exceeds number of batches {args.n_batches}"
+            f"Batch index {batch_idx} exceeds number of n_batches {n_batches}"
         )
 
-    t_coh_subarray = subarrays[args.batch_idx]
-
+    t_coh_subarray = subarrays[batch_idx]
     print(
         f"📊 Processing {len(t_coh_subarray)} t_coh values: [{t_coh_subarray[0]:.1f}, {t_coh_subarray[-1]:.1f}] fs"
     )
@@ -196,7 +214,7 @@ def run_2d_mode(args):
     dummy_data = np.zeros((len(t_coh_subarray), len(sim_oqs.times_det)))
     print_simulation_summary(elapsed, dummy_data, abs_data_path, "2d")
 
-    print(f"\n✅ Batch {args.batch_idx + 1}/{args.n_batches} completed!")
+    print(f"\n✅ Batch {batch_idx + 1}/{n_batches} completed!")
     print(f"\n🎯 To stack this data into 2D, run:")
     print(f'python stack_t_coh_to_2d.py --abs_path "{abs_data_path}"')
 
@@ -249,12 +267,14 @@ Examples:
     parser.add_argument(
         "--batch_idx",
         type=int,
-        default=0,
-        help="Batch index for the current job (0 to n_batches-1, default: 0)",
+        default=None,  # None => take from YAML/defaults
+        help="Batch index for the current job (0 to n_batches-1)",
     )
-
     parser.add_argument(
-        "--n_batches", type=int, default=1, help="Total number of batches (default: 1)"
+        "--n_batches",
+        type=int,
+        default=None,  # None => take from YAML/defaults
+        help="Total number of n_batches",
     )
 
     # =============================
@@ -262,32 +282,27 @@ Examples:
     # =============================
     parser.add_argument(
         "--t_det_max",
-        "--t_det_max_fs",
         type=float,
-        default=600.0,
-        help="Maximum detection time (default: 600.0 fs). Alias: --t_det_max_fs",
+        default=None,  # None => take from YAML/defaults
+        help="Maximum detection time (fs).",
     )
-
     parser.add_argument(
         "--t_wait",
         type=float,
-        default=0.0,
-        help="Waiting time between pump and probe pulses (default: 0.0 fs)",
+        default=None,  # None => take from YAML/defaults
+        help="Waiting time between pump and probe pulses (fs)",
     )
-
     parser.add_argument(
         "--t_coh",
         type=float,
-        default=0.0,
-        help="Coherence time between 2 pump pulses (default: 0.0 fs)",
+        default=None,  # None => take from YAML/defaults (0.0 in 2D mode)
+        help="Coherence time between 2 pump pulses (fs)",
     )
-
     parser.add_argument(
         "--dt",
-        "--dt_fs",
         type=float,
-        default=2.0,
-        help="Spacing between t_coh and t_det values (default: 2.0 fs). Alias: --dt_fs",
+        default=None,  # None => take from YAML/defaults
+        help="Spacing between t_coh and t_det values (fs).",
     )
 
     args = parser.parse_args()
@@ -296,16 +311,15 @@ Examples:
     # ARGUMENT VALIDATION
     # =============================
     if args.simulation_type == "2d":
-        args.t_coh = 0.0  # force default value for 2D mode
-        if args.n_batches <= 0:
-            raise ValueError("Number of batches must be positive for 2D mode")
-        elif args.batch_idx < 0:
+        if args.n_batches is not None and args.n_batches <= 0:
+            raise ValueError("Number of n_batches must be positive for 2D mode")
+        if args.batch_idx is not None and args.batch_idx < 0:
             raise ValueError("Batch index must be non-negative")
-
-    if args.dt <= 0:
+        if args.t_coh is None:
+            args.t_coh = 0.0  # default for 2D mode
+    if args.dt is not None and args.dt <= 0:
         raise ValueError("Time step dt must be positive")
-
-    if args.t_det_max <= 0:
+    if args.t_det_max is not None and args.t_det_max <= 0:
         raise ValueError("Detection time t_det_max must be positive")
 
     # =============================
@@ -314,16 +328,10 @@ Examples:
     print("=" * 80)
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
     print(f"Simulation type: {args.simulation_type}")
-    print(f"Detection time window: {args.t_det_max} fs")
-    print(f"Time step: {args.dt} fs")
-    print(f"Waiting time: {args.t_wait} fs")
 
     if args.simulation_type == "1d":
-        print(f"Coherence time: {args.t_coh} fs")
         run_1d_mode(args)
-
     elif args.simulation_type == "2d":
-        print(f"Batch processing: {args.batch_idx + 1}/{args.n_batches}")
         run_2d_mode(args)
 
     print("\n" + "=" * 80)
