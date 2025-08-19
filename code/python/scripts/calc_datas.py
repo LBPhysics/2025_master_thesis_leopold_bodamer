@@ -47,7 +47,10 @@ from qspectro2d.utils.simulation_utils import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
 from qspectro2d.config.loader import load_config
 import warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
+
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, message="overflow encountered in exp"
+)
 
 
 def run_single_t_coh_with_sim(
@@ -259,9 +262,10 @@ Examples:
     # =============================
     parser.add_argument(
         "--t_det_max",
+        "--t_det_max_fs",
         type=float,
         default=600.0,
-        help="Maximum detection time (default: 600.0 fs)",
+        help="Maximum detection time (default: 600.0 fs). Alias: --t_det_max_fs",
     )
 
     parser.add_argument(
@@ -280,9 +284,10 @@ Examples:
 
     parser.add_argument(
         "--dt",
+        "--dt_fs",
         type=float,
         default=2.0,
-        help="Spacing between t_coh and t_det values (default: 10.0 fs)",
+        help="Spacing between t_coh and t_det values (default: 2.0 fs). Alias: --dt_fs",
     )
 
     args = parser.parse_args()
