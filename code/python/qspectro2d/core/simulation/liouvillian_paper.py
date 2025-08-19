@@ -39,7 +39,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     pulse_seq = sim_oqs.laser
     Et = E_pulse(t, pulse_seq)
     Et_conj = np.conj(Et)
-    mu = sim_oqs.system.dip_moments[0]
+    mu = sim_oqs.system.dip_moments[0]  # dipole op looks the same in both bases
     w0 = sim_oqs.system.frequencies[0]
     wL = pulse_seq.omega_laser
 

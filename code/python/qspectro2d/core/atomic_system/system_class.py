@@ -138,22 +138,32 @@ class AtomicSystem:
         return self._frequencies_cm_history
 
     # === QUANTUM OPERATORS ===
+    def to_eigenbasis(self, operator: Qobj) -> Qobj:
+        """transform an operator into the eigenbasis of the hamiltonian."""
+        _, basis_states = self.eigenstates
+        u = Qobj(
+            np.column_stack([e.full() for e in basis_states]),
+            dims=self.hamiltonian.dims,
+        )
+        op_new = u.dag() * operator * u
+
+        return op_new
+
     @property
     def hamiltonian(self) -> Qobj:
+        """return the hamiltonian in the canonical basis"""
         return self._build_hamiltonian()
 
     @property
     def lowering_op(self) -> Qobj:
+        """return the lowering operator in the eigenbasis of the hamiltonian"""
         lowering_op = 0
-        if self.max_excitation == 1:
-            # Single-excitation lowering operator: sum_i μ_i |0><i|
-            for i, mu in enumerate(self.dip_moments, start=1):
-                lowering_op += mu * (self.basis[0] * self.basis[i].dag())
-            return lowering_op
+        # Single-excitation lowering operator: sum_i μ_i |0><i|
+        for i in range(1, self.n_atoms + 1):
+            mu_i = self.dip_moments[i - 1]
+            lowering_op += mu_i * (self.basis[0] * self.basis[i].dag())
+
         # max_excitation == 2: add terms connecting double -> single manifolds
-        # |0><i|
-        for i, mu in enumerate(self.dip_moments, start=1):
-            lowering_op += mu * (self.basis[0] * self.basis[i].dag())
         # |j><i,j| and |j><j,i| but only one ordering stored (i<j)
         for (i, j), idx in self._pair_to_index.items():  # i<j
             mu_i = self.dip_moments[i - 1]
@@ -161,11 +171,16 @@ class AtomicSystem:
             # Annihilating excitation on site i from |i,j> leaves |j>, and vice versa
             lowering_op += mu_i * (self.basis[j] * self.basis[idx].dag())
             lowering_op += mu_j * (self.basis[i] * self.basis[idx].dag())
+
+        lowering_op = self.to_eigenbasis(lowering_op)
         return lowering_op
 
     @property
     def dipole_op(self) -> Qobj:
-        return self.lowering_op + self.lowering_op.dag()
+        """return the dipole operator in the eigenbasis of the hamiltonian"""
+        dip_op = self.lowering_op + self.lowering_op.dag()
+        # dip_op = self.to_eigenbasis(dip_op)
+        return dip_op
 
     @cached_property
     def eigenstates(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -290,11 +305,12 @@ class AtomicSystem:
         pair_to_index = {}
         index_to_pair = {}
         idx = pair_index_start
-        for i in range(1, N):
-            for j in range(i + 1, N + 1):
-                pair_to_index[(i, j)] = idx
-                index_to_pair[idx] = (i, j)
-                idx += 1
+        if self.max_excitation == 2:
+            for i in range(1, N):
+                for j in range(i + 1, N + 1):
+                    pair_to_index[(i, j)] = idx
+                    index_to_pair[idx] = (i, j)
+                    idx += 1
         self._pair_to_index = pair_to_index
         self._index_to_pair = index_to_pair
 
@@ -361,7 +377,9 @@ class AtomicSystem:
         """Return site i population operator in the site basis (|i><i|)."""
         if i == 0:
             raise ValueError("indexing ground state -> use i elem 1,...,N+1")
-        return ket2dm(self.basis[i])
+        op = ket2dm(self.basis[i])
+        op = self.to_eigenbasis(op)
+        return op
 
     def omega_ij(self, i: int, j: int) -> float:
         """Return energy difference (frequency) between eigenstates i and j in fs^-1."""

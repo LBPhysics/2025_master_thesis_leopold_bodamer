@@ -104,7 +104,6 @@ def save_fig(
     dpi: int = DPI,
     transparent: bool = TRANSPARENCY,
     figsize: Optional[Tuple[float, float]] = None,
-    close: bool = True,
 ) -> List[Path]:
     """Save figure to one or multiple formats, creating directories as needed.
 
@@ -176,24 +175,31 @@ def save_fig(
             targets = [(_append_ext(base_path, FIG_FORMAT), FIG_FORMAT)]
 
     for out_path, fmt in targets:
-        fig.savefig(
-            str(out_path),
-            format=fmt,
-            dpi=dpi,
-            bbox_inches="tight",
-            transparent=transparent,
-        )
+        # Try saving with tight bounding box; if Matplotlib warns that tight layout
+        # cannot be applied (common with colorbars/3D axes), retry without it.
+        import warnings as _warnings
+
+        with _warnings.catch_warnings(record=True) as _w:
+            _warnings.simplefilter("always")
+            fig.savefig(
+                str(out_path),
+                format=fmt,
+                dpi=dpi,
+                bbox_inches="tight",
+                transparent=transparent,
+            )
+            _tight_failed = any(
+                "Tight layout not applied" in str(msg.message) for msg in _w
+            )
+        if _tight_failed:
+            fig.savefig(
+                str(out_path),
+                format=fmt,
+                dpi=dpi,
+                bbox_inches=None,
+                transparent=transparent,
+            )
         saved.append(out_path)
-
-    # Optionally close the figure to free resources
-    if close:
-        try:
-            import matplotlib.pyplot as _plt  # local import to avoid global pyplot dependency
-
-            _plt.close(fig)
-        except Exception:
-            pass
-
     return saved
 
 
@@ -262,24 +268,7 @@ def simplify_figure_text(
     force_sci: bool = False,
     sci_decimals: int = 1,
 ) -> mpl.figure.Figure:
-    """Sanitize all text in a figure and beautify numeric ticks.
-
-    - If LaTeX isn't available, strip LaTeX commands from all text elements.
-    - For every axes (including 3D and colorbar axes), apply a compact numeric
-      tick locator and formatter with sensible rounding and scientific notation
-      when appropriate.
-
-    Parameters
-    ----------
-    fig : Figure
-        Target figure.
-    force_sci : bool
-        If True, apply scientific notation to all numeric ticks using
-        :func:`format_sci_notation` regardless of magnitude.
-    sci_decimals : int
-        Decimals for the coefficient in scientific notation when force_sci=True
-        (or when sci is chosen automatically).
-    """
+    """Sanitize all text in a figure and beautify numeric ticks."""
     _ensure_latex_probe()
 
     def _sanitize_textobjs(objs: Iterable[mpl.text.Text]):
@@ -311,6 +300,14 @@ def simplify_figure_text(
                 return
             vmin, vmax = ax.get_zlim()
             axis = ax.zaxis  # type: ignore[attr-defined]
+
+        # Skip axes whose ticks are intentionally disabled (e.g., colorbar short axis)
+        if which in ("x", "y"):
+            try:
+                if axis.get_ticks_position() == "none":
+                    return
+            except Exception:
+                pass
 
         import numpy as _np
         from matplotlib.ticker import MaxNLocator, FuncFormatter, ScalarFormatter
@@ -354,17 +351,26 @@ def simplify_figure_text(
 
         # Axes content
         for ax in fig.get_axes():
-            # Sanitize titles and labels
-            _sanitize_textobjs([ax.title, ax.xaxis.label, ax.yaxis.label])
-            _sanitize_textobjs(ax.get_xticklabels())
-            _sanitize_textobjs(ax.get_yticklabels())
+            # Sanitize titles and labels (do NOT touch x-axis label)
+            _sanitize_textobjs([ax.title, ax.yaxis.label])
             if hasattr(ax, "zaxis"):
-                _sanitize_textobjs(ax.get_zticklabels())
                 _sanitize_textobjs([ax.zaxis.label])
 
-            # Beautify numeric ticks on x/y(/z)
-            _beautify_linear_axis(ax, "x")
-            _beautify_linear_axis(ax, "y")
+            # Sanitize ticklabels (do NOT touch x ticklabels)
+            try:
+                if ax.yaxis.get_ticks_position() != "none":
+                    _sanitize_textobjs(ax.get_yticklabels())
+            except Exception:
+                pass
+            if hasattr(ax, "zaxis"):
+                _sanitize_textobjs(ax.get_zticklabels())
+
+            # Beautify numeric ticks (do NOT touch x-axis)
+            try:
+                if ax.yaxis.get_ticks_position() != "none":
+                    _beautify_linear_axis(ax, "y")
+            except Exception:
+                pass
             if hasattr(ax, "zaxis"):
                 _beautify_linear_axis(ax, "z")
 
@@ -593,6 +599,3 @@ def _setup_backend() -> None:
             mpl.use("Agg")
         except Exception:
             pass
-
-
-# (Removed unused helper for matching LaTeX font size)

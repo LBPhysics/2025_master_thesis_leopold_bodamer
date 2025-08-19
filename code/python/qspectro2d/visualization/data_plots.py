@@ -28,6 +28,15 @@ from plotstyle import init_style, save_fig
 init_style()
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 
+
+# Helper to collect paths from save_fig (which may return a single path or a list of paths)
+def _collect_saved_paths(accumulator, saved):
+    if isinstance(saved, (list, tuple, set)):  # save_fig may return a list
+        accumulator.extend(saved)
+    else:
+        accumulator.append(saved)
+
+
 if TYPE_CHECKING:
     # Imported only for static type checking / IDE autocomplete
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
@@ -106,9 +115,10 @@ def plot_1d_data(
                 component="abs",
             )
 
-            save_fig(
-                fig, filename=filename, formats=["png"]
-            )  # easy to work with, because data is too big
+            list_of_saved_paths = []
+            saved = save_fig(fig, filename=filename, formats=["png"])
+            _collect_saved_paths(list_of_saved_paths, saved)  # flatten
+
             fig = plot_1d_el_field(
                 axis_det=t_det_vals,
                 data=data,
@@ -124,10 +134,12 @@ def plot_1d_data(
                 component="real",
             )
 
-            save_fig(
-                fig, filename=filename, formats=["png"]
-            )  # easy to work with, because data is too big
-            print("✅ 1D Time domain plots completed!")
+            saved = save_fig(fig, filename=filename, formats=["png"])
+            _collect_saved_paths(list_of_saved_paths, saved)  # flatten
+
+            print("✅ 1D Time domain plots completed!, figs saved under:\n")
+            for path in list_of_saved_paths:
+                print(f" - {str(path)}")
         except Exception as e:
             print(f"❌ Error in time domain plotting: {e}")
 
@@ -148,8 +160,9 @@ def plot_1d_data(
 
         frequencies, data_fft = compute_1d_fft_wavenumber(extended_x, extended_data)
         # Plot each spectral component separately
-        for component in spectral_components_to_plot:
-            try:
+        list_of_saved_paths = []
+        try:
+            for component in spectral_components_to_plot:
                 fig = plot_1d_el_field(
                     axis_det=frequencies,
                     data=data_fft,
@@ -163,11 +176,15 @@ def plot_1d_data(
                     domain="freq",
                     component=component,
                 )
-                save_fig(fig, filename=filename)
-            except Exception as e:
-                print(f"❌ Error plotting {component} component: {e}")
+                saved = save_fig(fig, filename=filename)
+                _collect_saved_paths(list_of_saved_paths, saved)  # flatten
 
-        print("✅ 1D Frequency domain plots completed!")
+            print("✅ 1D Frequency domain plots completed!, figs saved under:\n")
+            for path in list_of_saved_paths:
+                print(f" - {str(path)}")
+
+        except Exception as e:
+            print(f"❌ Error plotting {component} component: {e}")
 
     # Clean up memory
     plt.close("all")
@@ -224,9 +241,10 @@ def plot_2d_data(
     if plot_config.get("plot_time_domain", True):
         print("📊 Plotting 2D time domain data...")
         # Plot each spectral component separately
-        time_domain_comps = ["real", "abs"]  # , "imag", "phase"]
-        for component in time_domain_comps:
-            try:
+        time_domain_comps = ["real", "abs"]  # , "imag", "phase"
+        list_of_saved_paths = []
+        try:
+            for component in time_domain_comps:
                 fig = plot_2d_el_field(
                     axis_det=t_det_vals,
                     axis_coh=t_coh_vals,
@@ -243,10 +261,13 @@ def plot_2d_data(
                     component=component,
                 )
 
-                save_fig(fig, filename=filename, formats=["png"])  # PNG for large data
-            except Exception as e:
-                print(f"❌ Error in 2D time domain plotting: {e}")
-            print("✅ 2D time domain plots completed!")
+                saved = save_fig(fig, filename=filename)
+                _collect_saved_paths(list_of_saved_paths, saved)  # flatten
+            print("✅ 2D Time domain plots completed!, figs saved under:\n")
+            for path in list_of_saved_paths:
+                print(f" - {str(path)}")
+        except Exception as e:
+            print(f"❌ Error in 2D time domain plotting: {e}")
 
     ### Handle frequency domain processing
     if plot_config.get("plot_frequency_domain", True):
@@ -274,8 +295,9 @@ def plot_2d_data(
             )
 
             # Plot each spectral component separately
-            for component in spectral_components_to_plot:
-                try:
+            list_of_saved_paths = []
+            try:
+                for component in spectral_components_to_plot:
                     fig = plot_2d_el_field(
                         axis_det=nu_dets,
                         axis_coh=nu_cohs,
@@ -293,12 +315,13 @@ def plot_2d_data(
                         component=component,
                     )
 
-                    save_fig(fig, filename=filename)
-                except Exception as e:
-                    print(f"❌ Error plotting 2D {component} component: {e}")
-
-            print("✅ 2D frequency domain plots completed!")
-
+                    saved = save_fig(fig, filename=filename)
+                    _collect_saved_paths(list_of_saved_paths, saved)  # flatten
+                print("✅ 2D Frequency domain plots completed!, figs saved under:\n")
+                for path in list_of_saved_paths:
+                    print(f" - {str(path)}")
+            except Exception as e:
+                print(f"❌ Error plotting 2D {component} component: {e}")
         except Exception as e:
             print(f"❌ Error in 2D frequency domain processing: {e}")
 

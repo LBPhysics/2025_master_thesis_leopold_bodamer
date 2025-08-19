@@ -28,6 +28,9 @@ dependencies:
   - mpmath
   - pytest>=7.0.0
   - pip:
-    # Local editable install (provides both qspectro2d and plotstyle packages)
-    - -e ./code/python
+    # Local editable installs for subpackages (ensures imports like 'project_config' work)
+    - -e ./code/python/project_config
+    - -e ./code/python/qspectro2d
+    - -e ./code/python/plotstyle
+    
     - tqdm                  # Progress bar for loops
