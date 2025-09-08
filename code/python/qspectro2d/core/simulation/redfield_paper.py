@@ -9,7 +9,7 @@ from __future__ import annotations
 import numpy as np
 from qutip import Qobj, stacked_index
 
-from .builders import SimulationModuleOQS
+from .simulation_class import SimulationModuleOQS
 
 __all__ = ["redfield_paper"]
 
@@ -72,7 +72,7 @@ def _redfield_paper_2atom(sim_oqs: SimulationModuleOQS) -> Qobj:
     idx_33 = stacked_index(size, 3, 3)
 
     R = np.zeros((size * size, size * size), dtype=complex)
-    omega_laser = sim_oqs.laser.omega_laser
+    omega_laser = sim_oqs.laser._carrier_freq_fs
 
     # One-excitation coherences
     term = -1j * (

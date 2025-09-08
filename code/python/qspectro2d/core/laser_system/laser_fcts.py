@@ -50,11 +50,7 @@ def pulse_envelope(
     t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[float, np.ndarray]:
     """
-    Calculate the combined envelope of multiple pulses at time t using LaserPulseSequence.
-    Works with both scalar and array time inputs.
-
-    Now uses pulse_peak_time as t_peak (where cos² / gaussian attains maximum).
-
+    Combined envelope (unitless) for pulses at time(s) t.
     Envelope semantics:
     - 'cos2': Compact support strictly inside [t_peak - FWHM, t_peak + FWHM]; zero outside.
     - 'gaussian': Finite-support approximation: active window extends to ± n_fwhm * FWHM (n_fwhm≈1.094)
@@ -66,8 +62,6 @@ def pulse_envelope(
         t (Union[float, np.ndarray]): Time value or array of time values
         pulse_seq (LaserPulseSequence): The pulse sequence
 
-    Returns:
-        Union[float, np.ndarray]: Combined envelope value(s)
     """
     # Import here to avoid circular imports
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
@@ -156,7 +150,7 @@ def Epsilon_pulse(
 
     field_total = np.zeros_like(t_array, dtype=complex)
     for pulse in pulse_seq.pulses:
-        omega = pulse.pulse_freq
+        omega = pulse.pulse_freq_fs
         phi = pulse.pulse_phase
         E0 = pulse.pulse_amplitude
         if omega is None or E0 is None or phi is None:

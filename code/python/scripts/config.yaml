@@ -4,7 +4,7 @@
 atomic:
   n_atoms: 1
   n_chains: 1
-  frequencies_cm: [15900.0]#, 16000.0]#, 15950.0, 16050.0, 16000.0]#[16360.0, 15640.0]
+  frequencies_cm: [16000.0]#, 16000.0]#, 15950.0, 16050.0, 16000.0]#[16360.0, 15640.0]
   dip_moments: [1.0]#, 1.0]#, 1.0]#, 1.0]#, 1.0, 1.0, 1.0]
   coupling_cm: 0.0
   delta_cm: 0.0
@@ -16,7 +16,7 @@ laser:
   base_amplitude: 0.5
   envelope_type: gaussian
   carrier_freq_cm: 16000.0
-  rwa_sl: false
+  rwa_sl: true
 
 bath:
   bath_type: ohmic

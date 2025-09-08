@@ -120,8 +120,6 @@ def main():
         t_det=t_det_vals,
         t_coh=t_coh_vals,
     )
-
-    print(f"\n✅ Final 2D data saved to: {abs_path}")
     print(f"\n🎯 To plot this data, run:")
     print(f'python plot_datas.py --abs_path "{abs_path}"')
 

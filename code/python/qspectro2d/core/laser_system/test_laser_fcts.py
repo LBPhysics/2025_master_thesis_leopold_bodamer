@@ -39,7 +39,7 @@ def _make_pulse(
         pulse_phase=phase,
         pulse_fwhm=fwhm,
         pulse_amplitude=amp,
-        pulse_freq=freq_cm,
+        pulse_freq_cm=freq_cm,
         envelope_type=env,
     )
 
@@ -159,7 +159,7 @@ def test_Epsilon_pulse_includes_carrier():
     val = Epsilon_pulse(t_val, seq)
 
     # Manual expectation: E0 * envelope(peak)=E0 * exp(-i*(omega t + phi))
-    omega = pulse.pulse_freq
+    omega = pulse.pulse_freq_fs
     expected = E0 * np.exp(-1j * (omega * t_val + phi))
     assert np.isclose(val, expected)
 

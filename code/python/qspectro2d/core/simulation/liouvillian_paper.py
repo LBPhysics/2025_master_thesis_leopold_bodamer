@@ -1,12 +1,11 @@
-"""Paper-specific time dependent Liouvillian builders.
-"""
+"""Paper-specific time dependent Liouvillian builders."""
 
 from __future__ import annotations
 
 import numpy as np
 from qutip import Qobj, stacked_index
 
-from .builders import SimulationModuleOQS
+from .simulation_class import SimulationModuleOQS
 from qspectro2d.core.laser_system.laser_fcts import E_pulse
 from qspectro2d.config import HBAR
 
@@ -37,7 +36,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     Et_conj = np.conj(Et)
     mu = sim_oqs.system.dip_moments[0]  # dipole op looks the same in both bases
     w0 = sim_oqs.system._frequencies_fs[0]
-    wL = pulse_seq.omega_laser
+    wL = pulse_seq._carrier_freq_fs
 
     deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")
     down_rate, up_rate = bath_to_rates(sim_oqs.bath, w0, mode="decay")
@@ -78,7 +77,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     pulse_seq = sim_oqs.laser
     Et = E_pulse(t, pulse_seq)
     Et_conj = np.conj(Et)
-    omega_laser = pulse_seq.omega_laser
+    omega_laser = pulse_seq._carrier_freq_fs
 
     size = 4
     # Indices

@@ -15,7 +15,7 @@ from qutip import (
 from typing import List
 from qutip import BosonicEnvironment
 
-from .config import SimulationConfig
+from .sim_config import SimulationConfig
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.laser_system.laser_fcts import E_pulse, Epsilon_pulse
@@ -90,7 +90,9 @@ class SimulationModuleOQS:
 
         elif solver == "Paper_BR":
             # TODO somehow contains 2 RWAs for n_atoms == 2.
-            from qspectro2d.core.simulation.redfield_paper import redfield_paper as _redfield_paper
+            from qspectro2d.core.simulation.redfield_paper import (
+                redfield_paper as _redfield_paper,
+            )
 
             # This version is computable with mesolve H -> evo_obj; no need for a_ops
             custom_free = liouvillian(H0_diagonalized) + _redfield_paper(self)
@@ -122,7 +124,7 @@ class SimulationModuleOQS:
         Es, _ = self.system.eigenstates
         H_diag = Qobj(np.diag(Es), dims=self.system.hamiltonian.dims)
         if self.simulation_config.rwa_sl:
-            omega_L = self.laser.omega_laser
+            omega_L = self.laser._carrier_freq_fs
             # Determine excitation number for each eigenstate
             # Based on index: 0 -> 0 excitations, 1..N -> 1, N+1..end -> 2
             H_diag -= HBAR * omega_L * self.system.number_op
@@ -130,9 +132,7 @@ class SimulationModuleOQS:
 
     def H_int_sl(self, t: float) -> Qobj:
         lowering_op = self.system.lowering_op
-        H_int = H_int_(
-            t, lowering_op, self.simulation_config.rwa_sl, self.laser
-        )
+        H_int = H_int_(t, lowering_op, self.simulation_config.rwa_sl, self.laser)
         return H_int
 
     # --- Observables ---------------------------------------------------------------

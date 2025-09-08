@@ -6,13 +6,21 @@ from typing import List, Tuple, Optional, Union
 
 import numpy as np
 import json
-from qspectro2d.constants import convert_cm_to_fs
+from qspectro2d.constants import convert_cm_to_fs, convert_fs_to_cm
 
 
 @dataclass
 class LaserPulse:
     """
     Represents a single optical pulse with its temporal and spectral properties.
+
+    External (public) frequency unit:  cm^-1  (pulse_freq_cm)
+    Internal (private) frequency unit: fs^-1  (_pulse_freq_fs)
+
+    Access patterns:
+        - Provide frequency in cm^-1 via pulse_freq_cm at construction
+        - Use .pulse_freq_cm for human readable output / serialization
+        - Use .pulse_freq_fs internally for dynamics
     """
 
     pulse_index: int
@@ -20,26 +28,31 @@ class LaserPulse:
     pulse_phase: float  # [rad]
     pulse_fwhm: float  # [fs]
     pulse_amplitude: float
-    pulse_freq: float  # [cm^-1], converted to rad/fs in __post_init__
+    pulse_freq_cm: float  # user supplied central frequency [cm^-1]
     envelope_type: str = "cos2"
-    _freq_converted: bool = field(default=False)  # Track conversion state
+
+    # internal cache (not part of __init__ signature)
+    _pulse_freq_fs: float = field(init=False, repr=False)
 
     def __post_init__(self):
+        # =============================
+        # VALIDATION
+        # =============================
         if self.pulse_fwhm <= 0:
             raise ValueError("Pulse FWHM must be positive")
         if not np.isfinite(self.pulse_amplitude):
             raise ValueError("Pulse amplitude must be finite")
-        if self.pulse_freq <= 0:
-            raise ValueError("Pulse frequency must be positive.")
+        if self.pulse_freq_cm <= 0:
+            raise ValueError("Pulse frequency (cm^-1) must be positive.")
 
-        if not self._freq_converted:
-            # Direct conversion (constants module is safe for early import)
-            self.pulse_freq = convert_cm_to_fs(self.pulse_freq)
-            self._freq_converted = True
+        # =============================
+        # UNIT CONVERSION (single source of truth)
+        # =============================
+        self._pulse_freq_fs = float(convert_cm_to_fs(self.pulse_freq_cm))
 
-        # Precompute envelope invariants (cached) for performance.
-        # For gaussian we use the extended active_time_range (≈1% cutoff at n_fwhm=1.094)
-        # For cos2 (and other compact-support envelopes) we keep the strict ±FWHM range.
+        # =============================
+        # PRECOMPUTE ENVELOPE SUPPORT
+        # =============================
         if self.envelope_type == "gaussian":
             # Use extended active window (≈1% cutoff) defined by active_time_range (± n_fwhm * FWHM)
             self._t_start, self._t_end = (
@@ -57,12 +70,20 @@ class LaserPulse:
             self._boundary_val = None
 
     @property
-    def omega_laser(self) -> float:
-        return self.pulse_freq
+    def pulse_freq_fs(self) -> float:
+        """Internal frequency in fs^-1 (read-only)."""
+        return self._pulse_freq_fs
+
+    def update_frequency_cm(self, new_freq_cm: float) -> None:
+        """Update the carrier frequency (cm^-1) and keep internal cache synchronized."""
+        if new_freq_cm <= 0:
+            raise ValueError("new_freq_cm must be positive")
+        self.pulse_freq_cm = float(new_freq_cm)
+        self._pulse_freq_fs = float(convert_cm_to_fs(self.pulse_freq_cm))
 
     @property
     def active_time_range(self, n_fwhm: float = 1.094) -> Tuple[float, float]:
-        """n_fwhm = 1.094-> here the gaussia-pulse is ~1% of max (like in the paper)"""
+        """Return (t_min, t_max) where gaussian envelope ≳1% (n_fwhm=1.094)."""
         duration = n_fwhm * self.pulse_fwhm
         return (self.pulse_peak_time - duration, self.pulse_peak_time + duration)
 
@@ -72,7 +93,7 @@ class LaserPulse:
             f"t = {self.pulse_peak_time:6.2f} fs | "
             f"E₀ = {self.pulse_amplitude:.3e} | "
             f"FWHM = {self.pulse_fwhm:4.1f} fs | "
-            f"ω = {self.pulse_freq:8.2f} rad/fs | "
+            f"ω = {self.pulse_freq_cm:8.2f} cm^-1 | "
             f"ϕ = {self.pulse_phase:6.3f} rad | "
             f"type = {self.envelope_type:<7}"
         )
@@ -84,15 +105,15 @@ class LaserPulse:
             "pulse_phase": self.pulse_phase,
             "pulse_fwhm": self.pulse_fwhm,
             "pulse_amplitude": self.pulse_amplitude,
-            "pulse_freq": self.pulse_freq,
+            "pulse_freq_cm": self.pulse_freq_cm,
             "envelope_type": self.envelope_type,
-            "_freq_converted": self._freq_converted,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "LaserPulse":
-        instance = cls(**data)
-        return instance
+        if "pulse_freq_cm" not in data:
+            raise KeyError("Missing required key 'pulse_freq_cm' (cm^-1).")
+        return cls(**data)
 
 
 @dataclass
@@ -101,17 +122,16 @@ class LaserPulseSequence:
 
     def __post_init__(self):
         self.pulses.sort(key=lambda p: p.pulse_peak_time)
-
-        # Set base E0 and omega_laser if consistent
-        if self.pulses:
-            self.E0 = self.pulses[0].pulse_amplitude
-            if all(p.pulse_freq == self.pulses[0].pulse_freq for p in self.pulses):
-                self.omega_laser = self.pulses[0].pulse_freq
-            else:
-                self.omega_laser = None
-        else:
+        if not self.pulses:
             self.E0 = 0.0
-            self.omega_laser = None
+            self._carrier_freq_fs: Optional[float] = None
+            return
+        self.E0 = self.pulses[0].pulse_amplitude
+        first_fs = self.pulses[0].pulse_freq_fs
+        if all(np.isclose(p.pulse_freq_fs, first_fs) for p in self.pulses):
+            self._carrier_freq_fs = first_fs
+        else:
+            self._carrier_freq_fs = None
 
     # --- Dynamic Properties ---
     @property
@@ -131,8 +151,12 @@ class LaserPulseSequence:
         return [p.pulse_fwhm for p in self.pulses]
 
     @property
-    def pulse_freqs(self) -> List[float]:
-        return [p.pulse_freq for p in self.pulses]
+    def pulse_freqs_cm(self) -> List[float]:
+        return [p.pulse_freq_cm for p in self.pulses]
+
+    @property
+    def pulse_freqs_fs(self) -> List[float]:
+        return [p.pulse_freq_fs for p in self.pulses]
 
     @property
     def envelope_types(self) -> List[str]:
@@ -142,14 +166,24 @@ class LaserPulseSequence:
     def pulse_amplitudes(self) -> List[float]:
         return [p.pulse_amplitude for p in self.pulses]
 
+    @property
+    def carrier_freq_fs(self) -> Optional[float]:
+        return self._carrier_freq_fs
+
+    @property
+    def carrier_freq_cm(self) -> Optional[float]:
+        if self._carrier_freq_fs is None:
+            return None
+        return float(convert_fs_to_cm(self._carrier_freq_fs))
+
     # --- Factory Methods ---
     @staticmethod
-    def _create_pulse(index, t, phi, fwhm, freq, amp, env) -> LaserPulse:
+    def _create_pulse(index, t, phi, fwhm, freq_cm, amp, env) -> LaserPulse:
         return LaserPulse(
             pulse_index=index,
             pulse_peak_time=t,
             pulse_phase=phi,
-            pulse_freq=freq,
+            pulse_freq_cm=freq_cm,
             pulse_fwhm=fwhm,
             pulse_amplitude=amp,
             envelope_type=env,
@@ -198,7 +232,7 @@ class LaserPulseSequence:
         pulse_phases: Union[float, List[float]],
         pulse_amplitudes: Union[float, List[float]],
         pulse_fwhms: Union[float, List[float]],
-        pulse_freqs: Union[float, List[float]],
+        pulse_freqs: Union[float, List[float]],  # cm^-1 interface preserved
         envelope_types: Union[str, List[str]],
         pulse_indices: Optional[List[int]] = None,
     ) -> "LaserPulseSequence":
@@ -219,7 +253,7 @@ class LaserPulseSequence:
         pulse_phases = expand(pulse_phases, "pulse_phases")
         amps = expand(pulse_amplitudes, "pulse_amplitudes")
         fwhms = expand(pulse_fwhms, "pulse_fwhms")
-        freqs = expand(pulse_freqs, "pulse_freqs")
+        freqs_cm = expand(pulse_freqs, "pulse_freqs (cm^-1)")
         envs = expand(envelope_types, "envelope_types")
 
         if pulse_indices is None:
@@ -233,7 +267,7 @@ class LaserPulseSequence:
                 pulse_peak_times[i],
                 pulse_phases[i],
                 fwhms[i],
-                freqs[i],
+                freqs_cm[i],
                 amps[i],
                 envs[i],
             )
@@ -243,18 +277,9 @@ class LaserPulseSequence:
         return LaserPulseSequence(pulses=pulses)
 
     def get_active_pulses_at_time(self, time: float) -> List[LaserPulse]:
-        """
-        Get all pulses that are active at a given time.
-
-        Parameters:
-            time (float): The time at which to check for active pulses
-
-        Returns:
-            List[LaserPulse]: List of pulses that are active at the given time
-        """
-        active_pulses = []
-
-        for i, pulse in enumerate(self.pulses):
+        """Return list of pulses active at given time (within their active_time_range)."""
+        active_pulses: List[LaserPulse] = []
+        for pulse in self.pulses:
             start_time, end_time = pulse.active_time_range
             if start_time <= time <= end_time:
                 active_pulses.append(pulse)
@@ -299,7 +324,7 @@ class LaserPulseSequence:
             "num_active_pulses": len(active),
             "total_amplitude": sum(p.pulse_amplitude for p in active),
             "individual_amplitudes": [p.pulse_amplitude for p in active],
-            "pulse_indices": [i for i, p in enumerate(self.pulses) if p in active],
+            "pulse_indices": [p.pulse_index for p in active],
         }
 
     def update_phases(self, phases: List[float]) -> None:
@@ -342,7 +367,6 @@ class LaserPulseSequence:
             pulse.pulse_peak_time = new_peak
 
     # --- Convenience ---
-    # turn the LaserPulseSequence into a list-like object
     def __len__(self):
         return len(self.pulses)
 
@@ -362,8 +386,8 @@ class LaserPulseSequence:
     def to_dict(self) -> dict:
         return {
             "pulses": [p.to_dict() for p in self.pulses],
-            "E0": self.E0,  # TODO only if i do the initialization with from_delays (for my experiment!)
-            "omega_laser": self.omega_laser,  # carrier frequency
+            "E0": self.E0,
+            "carrier_freq_cm": self.carrier_freq_cm,
         }
 
     @staticmethod
@@ -404,7 +428,7 @@ def identify_non_zero_pulse_regions(
         np.ndarray: Boolean array where True indicates times where envelope is non-zero
     """
 
-    if type(pulse_seq) is not LaserPulseSequence:
+    if not isinstance(pulse_seq, LaserPulseSequence):
         raise TypeError("pulse_seq must be a LaserPulseSequence instance.")
 
     # Initialize an array of all False values

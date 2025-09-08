@@ -20,12 +20,8 @@ from qspectro2d.constants import (
 # === signal processing / phase cycling ===
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 DETECTION_PHASE = 0  # Fixed phase for detection pulse
-# (0, 0, 0) == normal average || (-1, 1, 0) == photon echo signal(phase cycling)
-IFT_COMPONENT = (
-    1,
-    -1,
-    1,  # does not matter because DETECTION_PHASE = 0
-)
+SUPPORTED_SIGNAL_TYPES = ["rephasing", "non-rephasing", "absorptive"]
+SIGNAL_TYPE = "absorptive"
 # last pulse is 10% of the first two to ensure probing character
 RELATIVE_E0S = [1.0, 1.0, 0.1]
 

@@ -1,6 +1,6 @@
-"""Simulation configuration data structures.
+"""Simulation configuration data structures (renamed from `config.py`).
 
-Separated from the former monolithic simulation_class module.
+Primary immutable configuration object for simulations.
 """
 
 from __future__ import annotations
@@ -9,7 +9,6 @@ from dataclasses import dataclass, asdict
 from typing import Tuple
 import warnings
 
-# Strict import of supported solvers (no fallback)
 from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS  # type: ignore
 
 
@@ -22,7 +21,9 @@ class SimulationConfig:
 
     ode_solver: str = "Paper_BR"
     rwa_sl: bool = True
-    keep_track: str = "eigenstates"  # or "basis"
+    keep_track: str = (
+        "eigenstates"  # or "basis" TODO if basis -> we have to back transform at the end??
+    )
 
     dt: float = 0.1
     t_coh: float = 100.0
@@ -34,9 +35,9 @@ class SimulationConfig:
 
     max_workers: int = 1
     simulation_type: str = "1d"
-    IFT_component: Tuple[int, int, int] = (1, -1, 0)
+    signal_type: str = "rephasing"
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: D401
         # Validate solver
         if self.ode_solver not in SUPPORTED_SOLVERS:
             raise ValueError(
@@ -63,6 +64,10 @@ class SimulationConfig:
             raise ValueError("n_phases must be > 0")
         if self.n_freqs <= 0:
             raise ValueError("n_freqs must be > 0")
+
+        allowed_signals = {"rephasing", "non-rephasing", "absorptive"}
+        if self.signal_type not in allowed_signals:
+            raise ValueError(f"signal_type '{self.signal_type}' not in {sorted(allowed_signals)}")
 
         # Derived total window (consistent with original logic)
         if self.t_coh < self.t_det_max:

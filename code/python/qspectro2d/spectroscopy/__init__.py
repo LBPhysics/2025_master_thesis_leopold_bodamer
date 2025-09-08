@@ -47,8 +47,6 @@ from .post_processing import (
 from qspectro2d.utils import (
     apply_RWA_phase_factors,
     get_expect_vals_with_RWA,
-    get_max_workers,
-    print_simulation_summary,
 )
 
 
@@ -68,9 +66,6 @@ __all__ = [
     "extend_time_axes",
     "compute_1d_fft_wavenumber",
     "compute_2d_fft_wavenumber",
-    # Submodules and simulation functions
-    "get_max_workers",
-    "print_simulation_summary",
     # Functions with RWA
     "apply_RWA_phase_factors",
     "get_expect_vals_with_RWA",

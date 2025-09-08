@@ -350,6 +350,73 @@ This technique is particularly valuable in experiments where spatial isolation i
 
 \noindent In modern multidimensional spectroscopy, phase cycling is often combined with phase matching to achieve optimal signal isolation and background suppression \cite{Huang-FuEtAl2024DevelopmentPhasecyclingInterfacespecific, TianEtAl2003FemtosecondPhasecoherentTwodimensional}.
 
+\subsection{Phase-Cycling Fourier Selection and Construction of Absorptive 2D Spectra}
+\label{subsec:phase_cycling_fourier_selection}
+
+\noindent The phase-cycling procedure provides an algebraic alternative (or complement) to spatial phase-matching (cf. Eqs.~\eqref{eq:phase_matching}, \eqref{eq:phase_cycling}) for isolating specific third-order Liouville pathways in four-wave mixing experiments \cite{Mukamel1995PrinciplesNonlinearOptical, Cho2009TwodimensionalOpticalSpectroscopy, Jonas2003TwodimensionalFemtosecondSpectroscopy, BrixnerEtAl2004PhasestabilizedTwodimensionalElectronic, GreenEtAl2024}. The nonlinear polarization is measured (or computed) on a discrete three-dimensional grid of controlled carrier-envelope phases:
+\begin{equation}
+    P(\phi_{1,a}, \phi_{2,b}, \phi_{3,c}; \tau, T, t), \qquad 
+    \phi_{j,m} = \phi_{j,0} + \frac{2\pi m}{M}, \; m=0,\dots,M-1,
+    \label{eq:phase_grid_definition}
+\end{equation}
+with $M$ phase steps per pulse. A discrete triple Fourier transform over the phases yields the phase-resolved polarization components:
+\begin{equation}
+    P_{n_1 n_2 n_3}(\tau, T, t)
+    =
+    \frac{1}{M^{3}}
+    \sum_{a,b,c=0}^{M-1}
+    P(\phi_{1,a}, \phi_{2,b}, \phi_{3,c}; \tau, T, t)\,
+    e^{-i ( n_1 \phi_{1,a} + n_2 \phi_{2,b} + n_3 \phi_{3,c} )}.
+    \label{eq:dft_phase_cycling}
+\end{equation}
+
+\noindent The (wavevector) phase-matched rephasing signal direction $\vec{k}_s = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$ (Eq.~\eqref{eq:fwm_phase_matching}) corresponds to selecting the Fourier index triple $(n_1,n_2,n_3)=(-1,+1,+1)$, while the non-rephasing direction $\vec{k}_s = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$ corresponds to $(+1,-1,+1)$ \cite{Mukamel1995PrinciplesNonlinearOptical, Cho2009TwodimensionalOpticalSpectroscopy, GreenEtAl2024}. Thus:
+\begin{align}
+    E_{R}(\tau, T, t)  & \propto P_{-1,+1,+1}(\tau, T, t),
+    \label{eq:rephasing_selection} \\
+    E_{NR}(\tau, T, t) & \propto P_{+1,-1,+1}(\tau, T, t),
+    \label{eq:nonrephasing_selection}
+\end{align}
+where the proportionality reflects propagation factors and (typically weak) frequency-dependent constants relating polarization to the emitted heterodyne-detected field \cite{Mukamel1995PrinciplesNonlinearOptical, GreenEtAl2024}.
+
+\paragraph{Time--Frequency Transforms.}
+\noindent After phase selection, the complex time-domain fields $E_{R}(\tau, T, t)$ and $E_{NR}(\tau, T, t)$ are Fourier transformed over the detection time $t$ and the coherence time $\tau$ to construct the two-dimensional spectra (cf. Eq.~\eqref{eq:2des_signal}):
+\begin{align}
+    S_{R}(\omega_\tau, T, \omega_t)
+        & =
+        \Delta\tau\, \Delta t
+        \int d\tau \int dt \\;
+        e^{+ i \omega_\tau \tau} e^{- i \omega_t t}
+        E_{R}(\tau, T, t),
+        \label{eq:rephasing_transform} \\
+    S_{NR}(\omega_\tau, T, \omega_t)
+        & =
+        \Delta\tau\, \Delta t
+        \int d\tau \int dt \\;
+        e^{- i \omega_\tau \tau} e^{- i \omega_t t}
+        E_{NR}(\tau, T, t),
+        \label{eq:nonrephasing_transform}
+\end{align}
+where $\Delta\tau$ and $\Delta t$ are the sampling intervals. The opposite sign in the $\tau$-exponent implements the standard convention distinguishing rephasing (photon-echo) and non-rephasing contributions \cite{Cho2009TwodimensionalOpticalSpectroscopy, GreenEtAl2024}. In discrete numerical implementations, Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform} are approximated by (shifted) fast Fourier transforms; care must be taken to (i) include the sampling factors, (ii) verify axis centering ($\omega=0$), and (iii) implement the $+i\omega_\tau\tau$ kernel for the rephasing branch (e.g. via complex conjugation tricks or inverse transforms) \cite{Cho2009TwodimensionalOpticalSpectroscopy, GreenEtAl2024}.
+
+\paragraph{Global Phase and Absorptive Combination.}
+\noindent The experimentally measured (or simulated) complex spectra $S_{R}$ and $S_{NR}$ each carry unknown global phases (e.g. local oscillator offset). A relative phase $\varphi_g$ must be determined before constructing the absorptive (purely in-phase) 2D spectrum \cite{Mukamel1995PrinciplesNonlinearOptical, Jonas2003TwodimensionalFemtosecondSpectroscopy, GreenEtAl2024}. A common strategy is to optimize $\varphi_g$ so that the projection onto the detection axis reproduces an independently measured linear (or pump--probe) absorption spectrum or minimizes dispersive (derivative-like) features in selected slices:
+\begin{equation}
+    S_{\text{abs}}(\omega_\tau, T, \omega_t)
+    =
+    \Re \left\{
+        S_{R}(\omega_\tau, T, \omega_t) + e^{i \varphi_g} S_{NR}(\omega_\tau, T, \omega_t)
+    \right\}.
+    \label{eq:absorptive_spectrum}
+\end{equation}
+When phase referencing is stable (e.g. interferometric phase stabilization), $\varphi_g$ may be close to zero but still requires verification \cite{BrixnerEtAl2004PhasestabilizedTwodimensionalElectronic, GreenEtAl2024}.
+
+\paragraph{Normalization and Practical Considerations.}
+\noindent (i) The $M^{-3}$ factor in Eq.~\eqref{eq:dft_phase_cycling} should be retained (or absorbed consistently) for quantitative comparisons. (ii) The $(\Delta\tau\,\Delta t)$ prefactor in Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform} enforces correspondence with the continuous definitions; omission rescales amplitudes and can obscure quantitative lineshape analysis \cite{Cho2009TwodimensionalOpticalSpectroscopy, GreenEtAl2024}. (iii) Frequency axes must be aligned so that $\omega_\tau$ for $S_{R}$ and $S_{NR}$ are defined with the same orientation before Eq.~\eqref{eq:absorptive_spectrum} is applied. (iv) Consistent sign conventions are essential; mixing conventions leads to mirrored or dispersive residual features \cite{Mukamel1995PrinciplesNonlinearOptical, Cho2009TwodimensionalOpticalSpectroscopy, GreenEtAl2024}.
+
+\paragraph{Summary.}
+\noindent Phase-cycling Fourier selection (Eq.~\eqref{eq:dft_phase_cycling}) cleanly isolates rephasing and non-rephasing field components (Eqs.~\eqref{eq:rephasing_selection}--\eqref{eq:nonrephasing_selection}) without relying solely on spatial separation. Subsequent bidimensional Fourier transforms with pathway-specific phase kernels (Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform}) and careful global phasing yield the absorptive 2D spectrum (Eq.~\eqref{eq:absorptive_spectrum}), which most directly reflects underlying transition energies, homogeneous/inhomogeneous broadening, and coherent couplings \cite{Mukamel1995PrinciplesNonlinearOptical, Cho2009TwodimensionalOpticalSpectroscopy, GreenEtAl2024}.
+
 %----------------------------------------------------------------------------------------
 %	SECTION 4: PHOTON ECHO SPECTROSCOPY
 %----------------------------------------------------------------------------------------

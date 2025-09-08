@@ -5,14 +5,14 @@ fully removed; import from here or concrete submodules directly.
 
 Modules
 -------
-config            : SimulationConfig dataclass & validation
+sim_config        : SimulationConfig dataclass & validation
 builders          : Core helper functions (interaction Hamiltonians)
 liouvillian_paper : Paper specific time–dependent Liouvillian builders
 redfield          : Redfield tensor construction helpers
 """
 
-from .config import SimulationConfig
-from .builders import SimulationModuleOQS, H_int_
+from .sim_config import SimulationConfig
+from .simulation_class import SimulationModuleOQS, H_int_
 from .liouvillian_paper import matrix_ODE_paper
 from .redfield_paper import redfield_paper
 

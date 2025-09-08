@@ -679,8 +679,8 @@ def plot_2d_el_field(
         use_custom_colormap = False
 
     if use_custom_colormap:
-        vmin = np.min(data)
-        vmax = np.max(data)
+        vmax = np.max(np.abs(data))
+        vmin = -vmax
         vcenter = 0
 
         # Use the built-in 'RdBu_r' colormap - reversed to make red=positive, blue=negative

@@ -63,13 +63,13 @@ class TestLaserPulse:
         )
 
         expected_freq = convert_cm_to_fs(freq_cm)
-        assert np.isclose(pulse.pulse_freq, expected_freq)
-        assert pulse.omega_laser == pulse.pulse_freq
+        assert np.isclose(pulse.pulse_freq_fs, expected_freq)
+        assert pulse._carrier_freq_fs == pulse.pulse_freq_fs
 
         print("✓ LaserPulse frequency conversion successful")
         print(f"  - Original: {freq_cm} cm^-1")
-        print(f"  - Converted: {pulse.pulse_freq:.6f} rad/fs")
-        print(f"  - omega_laser: {pulse.omega_laser:.6f} rad/fs")
+        print(f"  - Converted: {pulse.pulse_freq_fs:.6f} rad/fs")
+        print(f"  - omega_laser: {pulse._carrier_freq_fs:.6f} rad/fs")
 
     def test_active_time_range(self):
         """Test active time range calculation."""
@@ -200,14 +200,14 @@ class TestLaserPulseSequence:
 
         assert len(seq.pulses) == 0
         assert seq.E0 == 0.0
-        assert seq.omega_laser is None
+        assert seq._carrier_freq_fs is None
         assert seq.pulse_peak_times == []
         assert seq.pulse_amplitudes == []
 
         print("✓ Empty LaserPulseSequence initialization successful")
         print(f"  - Number of pulses: {len(seq.pulses)}")
         print(f"  - E0: {seq.E0}")
-        print(f"  - omega_laser: {seq.omega_laser}")
+        print(f"  - omega_laser: {seq._carrier_freq_fs}")
 
     def test_basic_initialization_with_pulses(self):
         """Test initialization with a list of pulses."""
@@ -235,14 +235,14 @@ class TestLaserPulseSequence:
 
         assert len(seq.pulses) == 2
         assert seq.E0 == 0.1  # First pulse amplitude
-        assert np.isclose(seq.omega_laser, convert_cm_to_fs(16000.0))
+        assert np.isclose(seq._carrier_freq_fs, convert_cm_to_fs(16000.0))
         assert seq.pulse_peak_times == [50.0, 100.0]
         assert seq.pulse_amplitudes == [0.1, 0.05]
 
         print("✓ LaserPulseSequence initialization with pulses successful")
         print(f"  - Number of pulses: {len(seq.pulses)}")
         print(f"  - E0: {seq.E0}")
-        print(f"  - omega_laser: {seq.omega_laser:.6f} rad/fs")
+        print(f"  - omega_laser: {seq._carrier_freq_fs:.6f} rad/fs")
         print(f"  - Peak times: {seq.pulse_peak_times}")
         print(f"  - Amplitudes: {seq.pulse_amplitudes}")
 

@@ -1,3 +1,4 @@
+from itertools import count
 from qspectro2d.core.laser_system.laser_fcts import *
 import numpy as np
 
@@ -216,77 +217,83 @@ def compute_1d_fft_wavenumber(
 def compute_2d_fft_wavenumber(
     t_dets: np.ndarray,
     t_cohs: np.ndarray,
-    data: np.ndarray,
-    *,
-    exp_signs: str = "forward",
-    shift: bool = True,
+    data: np.ndarray | tuple[np.ndarray, np.ndarray],
+    signal: str = "rephasing",
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Compute 2D FFT and return a single spectrum (always one ndarray output).
+
+    Inputs:
+        data :
+            - single 2D array (N_t_coh, N_t_det)
+            - OR tuple (time_domain_rephasing, time_domain_nonrephasing)
+        signal : {'rephasing','non-rephasing','absorptive'}
+            Meaning when tuple provided:
+                rephasing      -> return only rephasing spectrum
+                non-rephasing  -> return only non-rephasing spectrum
+                absorptive     -> return real((S_re + S_nr)/2) (average of the two)
+            For single array input behaves as before (absorptive combines internally).
+
+    Returns:
+        (nu_dets, nu_cohs, S) with S shape (N_t_coh, N_t_det).
     """
-    Compute 2D FFT of spectroscopy data and convert frequency axes to wavenumber units.
+    dt_coh = t_cohs[1] - t_cohs[0]
+    dt_det = t_dets[1] - t_dets[0]
+    N_coh = len(t_cohs)
+    N_det = len(t_dets)
 
-    This function performs a 2D transform on the input data with selectable coherence-axis sign:
-    - exp_signs = 'forward': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{-i ω_coh coh} E(coh,T,t)
-    - exp_signs = 'mixed': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{+i ω_coh coh} E(coh,T,t)
-    - exp_signs = 'inverse': S2D ~ ∫dt e^{+i ω_det t} × ∫dcoh e^{+i ω_coh coh} E(coh,T,t)
+    def _validate(arr: np.ndarray, label: str):
+        if arr.ndim != 2:
+            raise ValueError(f"{label} must be 2D (N_t_coh, N_t_det)")
+        if arr.shape != (N_coh, N_det):
+            raise ValueError(
+                f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes"
+            )
 
-    Historically, this code used 'forward' on both axes (np.fft.fft2). Set exp_signs='inverse'
-    if your theoretical convention expects +i ω_coh coh.
+    def _fft2(arr: np.ndarray, kind: str) -> np.ndarray:
+        tmp_local = np.fft.fft(arr, axis=0)
+        tmp_local = np.fft.fft(tmp_local, axis=1)
+        if kind == "rephasing":
+            spec = np.flip(tmp_local, axis=0)
+        elif kind == "non-rephasing":
+            spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
+        else:
+            raise ValueError(f"Internal kind '{kind}' unsupported")
+        return spec * (dt_coh * dt_det)
 
-    Parameters
-    ----------
-    t_dets : np.ndarray
-        Time axis for detection (t_det) in femtoseconds. Shape: (N_t_det,)
-        Must be evenly spaced for accurate FFT.
-    t_cohs : np.ndarray
-        Time axis for coherence (t_coh/coh) in femtoseconds. Shape: (N_t_coh,)
-        Must be evenly spaced for accurate FFT.
-    data : np.ndarray
-        2D spectroscopy data array E_ks(coh,T,t).
-        Shape: (N_t_coh, N_t_det).
+    allowed = {"rephasing", "non-rephasing", "absorptive"}
+    if signal not in allowed:
+        raise ValueError(f"Invalid signal '{signal}'. Allowed: {sorted(allowed)}")
 
-    Returns
-    -------
-    tuple[np.ndarray, np.ndarray, np.ndarray]
-        nu_dets : np.ndarray
-            Wavenumber axis for detection in units of 10^4 cm⁻¹.
-            Shape: (N_t_det,).
-        nu_cohs : np.ndarray
-            Wavenumber axis for coherence in units of 10^4 cm⁻¹.
-            Shape: (N_t_coh,).
-        s2d : np.ndarray
-            2D FFT spectrum.
-            Shape: (N_t_coh, N_t_det).
-    """
-    ### Calculate time steps
-    dt_coh = t_cohs[1] - t_cohs[0]  # coh step
-    dt_det = t_dets[1] - t_dets[0]  # t step
-
-    ### Perform 2D transform according to the chosen convention
-    if exp_signs.lower() == "forward":
-        s2d = np.fft.fft(data, axis=0)
-        s2d = np.fft.fft(s2d, axis=1)
-    elif exp_signs.lower() == "mixed":
-        s2d = np.fft.ifft(data, axis=0)
-        s2d = np.fft.fft(s2d, axis=1)
-    elif exp_signs.lower() == "inverse":
-        s2d = np.fft.ifft(data, axis=0)
-        s2d = np.fft.ifft(s2d, axis=1)
+    if isinstance(data, tuple):
+        if len(data) != 2:
+            raise ValueError("Tuple data must have exactly two elements")
+        re_t, nr_t = data
+        _validate(re_t, "Tuple element 0 (rephasing)")
+        _validate(nr_t, "Tuple element 1 (non-rephasing)")
+        S_re = _fft2(re_t, "rephasing")
+        S_nr = _fft2(nr_t, "non-rephasing")
+        if signal == "rephasing":
+            S = S_re
+        elif signal == "non-rephasing":
+            S = S_nr
+        else:  # absorptive average
+            S = np.real((S_re + S_nr) / 2.0)
     else:
-        raise ValueError(f"Invalid exp_signs value: '{exp_signs}'. Must be 'forward', 'mixed', or 'inverse'")
+        _validate(data, "data")
+        tmp = np.fft.fft(data, axis=0)
+        tmp = np.fft.fft(tmp, axis=1)
+        if signal == "rephasing":
+            S = np.flip(tmp, axis=0)
+        elif signal == "non-rephasing":
+            S = np.flip(np.flip(tmp, axis=0), axis=1)
 
-    ### Generate frequency axes
-    freq_dets = np.fft.fftfreq(len(t_dets), d=dt_det)
-    freq_cohs = np.fft.fftfreq(len(t_cohs), d=dt_coh)
+    # Frequency axes & shift
+    freq_cohs = np.fft.fftfreq(N_coh, d=dt_coh)
+    freq_dets = np.fft.fftfreq(N_det, d=dt_det)
+    S = np.fft.fftshift(S, axes=(0, 1))
+    freq_cohs = np.fft.fftshift(freq_cohs)
+    freq_dets = np.fft.fftshift(freq_dets)
 
-    ### Apply frequency shifts for centered, ascending axes (negative → zero → positive)
-    if shift:
-        s2d = np.fft.fftshift(s2d, axes=(0, 1))
-        freq_cohs = np.fft.fftshift(freq_cohs)
-        freq_dets = np.fft.fftshift(freq_dets)
-
-    ### Convert to wavenumber units [10^4 cm⁻¹]
-    # Speed of light: c ≈ 2.998 × 10^-4 cm/fs
-    nu_dets = freq_dets / 2.998 * 10
     nu_cohs = freq_cohs / 2.998 * 10
-
-    return nu_dets, nu_cohs, s2d
+    nu_dets = freq_dets / 2.998 * 10
+    return nu_dets, nu_cohs, S

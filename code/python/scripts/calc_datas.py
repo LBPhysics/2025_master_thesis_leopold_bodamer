@@ -45,16 +45,28 @@ from qspectro2d.utils import (
     save_data_file,
     save_info_file,
     generate_unique_data_filename,
-    print_simulation_summary,
 )
-from qspectro2d.utils.simulation_utils import create_base_sim_oqs
+from qspectro2d.config.create_sim_obj import (
+    create_base_sim_oqs,
+)
 from qspectro2d.core.simulation import SimulationModuleOQS
-from qspectro2d.config.loader import load_config
 import warnings
 
 warnings.filterwarnings(
     "ignore", category=RuntimeWarning, message="overflow encountered in exp"
 )
+
+
+def _resolve_config_path(args) -> Path | None:
+    """Resolve optional config path from CLI or default scripts directory.
+
+    Precedence: CLI --config > scripts/config.yaml (if exists) > None (defaults)
+    """
+    if getattr(args, "config", None):
+        p = Path(args.config).expanduser()
+        return p if p.exists() else None
+    candidate = SCRIPTS_DIR / "config.yaml"
+    return candidate if candidate.exists() else None
 
 
 def run_single_t_coh_with_sim(
@@ -117,34 +129,26 @@ def run_single_t_coh_with_sim(
         print(f"\n🎯 To plot this data, run:")
         print(f'python plot_datas.py --abs_path "{abs_data_path}"')
 
-    elapsed = time.time() - start_time
-    print_simulation_summary(elapsed, data, abs_path, "1d")
+    elapsed_time = time.time() - start_time
+    print(f"Total execution time: {elapsed_time:.2f} seconds")
 
     return abs_data_path
 
 
 def run_1d_mode(args):
-    """
-    Run single 1D simulation for a specific coherence time.
+    """Run single 1D simulation for a specific coherence time."""
+    config_path = _resolve_config_path(args)
 
-    Parameters:
-        args: Parsed command line arguments
-    """
-    cfg_path = SCRIPTS_DIR / "config.yaml"
-    cfg = (
-        load_config(args.config)
-        if getattr(args, "config", None)
-        else (load_config(cfg_path) if cfg_path.exists() else load_config())
+    # Build base simulation (applies CLI overrides inside)
+    sim_oqs, time_cut = create_base_sim_oqs(
+        args, config_path=str(config_path) if config_path else None
     )
 
-    # Resolve for printing: CLI > YAML > defaults
+    # Determine coherence time for printing (already overridden in sim if provided)
     t_coh_print = (
-        args.t_coh if args.t_coh is not None else getattr(cfg.window, "t_coh", 0.0)
+        args.t_coh if args.t_coh is not None else sim_oqs.simulation_config.t_coh
     )
     print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs")
-
-    # Create base simulation and validate solver once  (resolves CLI > YAML > defaults)
-    sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
 
     # Run single simulation
     abs_data_path = run_single_t_coh_with_sim(
@@ -153,26 +157,18 @@ def run_1d_mode(args):
 
 
 def run_2d_mode(args):
-    """
-    Run 2D mode with batch processing for multiple coherence times.
+    """Run 2D mode with batch processing for multiple coherence times."""
+    config_path = _resolve_config_path(args)
 
-    Parameters:
-        args: Parsed command line arguments
-    """
-    cfg_path = SCRIPTS_DIR / "config.yaml"
-    cfg = (
-        load_config(args.config)
-        if getattr(args, "config", None)
-        else (load_config(cfg_path) if cfg_path.exists() else load_config())
+    # Build base simulation (applies CLI overrides inside)
+    sim_oqs, time_cut = create_base_sim_oqs(
+        args, config_path=str(config_path) if config_path else None
     )
 
-    # Resolve batching with precedence: CLI > YAML > defaults
-    n_batches = args.n_batches if args.n_batches is not None else cfg.window.n_batches
-    batch_idx = (
-        args.batch_idx
-        if args.batch_idx is not None
-        else getattr(cfg.window, "batch_idx", 0)
-    )
+    # Resolve batching with precedence: CLI > defaults (no YAML fields now)
+    n_batches = args.n_batches if args.n_batches is not None else 1
+    batch_idx = args.batch_idx if args.batch_idx is not None else 0
+
     if n_batches <= 0:
         raise ValueError("Number of n_batches must be positive")
     if batch_idx < 0:
@@ -180,10 +176,7 @@ def run_2d_mode(args):
 
     print(f"🎯 Running 2D mode - batch {batch_idx + 1}/{n_batches}")
 
-    # Create base simulation and validate solver once
-    sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
-
-    # Generate t_coh values for the full range
+    # Generate t_coh values for the full range (reuse detection times array)
     t_coh_vals = sim_oqs.times_det
 
     # Split into n_batches
@@ -210,9 +203,8 @@ def run_2d_mode(args):
             save_info=save_info,
             time_cut=time_cut,
         )
-    elapsed = time.time() - start_time
-    dummy_data = np.zeros((len(t_coh_subarray), len(sim_oqs.times_det)))
-    print_simulation_summary(elapsed, dummy_data, abs_data_path, "2d")
+    elapsed_time = time.time() - start_time
+    print(f"Total execution time: {elapsed_time:.2f} seconds")
 
     print(f"\n✅ Batch {batch_idx + 1}/{n_batches} completed!")
     print(f"\n🎯 To stack this data into 2D, run:")

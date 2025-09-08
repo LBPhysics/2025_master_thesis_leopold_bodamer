@@ -1,3 +1,4 @@
+# TODO Get rid of this unnecessary stuff
 """
 File naming and path utilities for qspectro2d.
 
