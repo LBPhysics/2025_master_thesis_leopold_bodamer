@@ -118,7 +118,7 @@ def create_base_sim_oqs(
     laser = LaserPulseSequence.from_delays(**pulse_config)
     bath = OhmicEnvironment(
         T=bath_config["Temp"],
-        alpha=bath_config["alpha"],
+        alpha=bath_config["alpha"] / bath_config["cutoff"], # NOTE this is now exactly the paper implementation 
         wc=bath_config["cutoff"],
         s=1.0,
         tag=bath_config["bath_type"],
@@ -139,7 +139,6 @@ def create_base_sim_oqs(
     try:
         # Import here to avoid circular import
         from qspectro2d.spectroscopy.calculations import check_the_solver
-
         _, time_cut = check_the_solver(sim_oqs)
         print("#" * 60)
         print(

@@ -8,8 +8,7 @@ from copy import deepcopy
 from typing import List, Union, Tuple
 import logging
 import numpy as np
-from qutip import Qobj, Result, mesolve, brmesolve, ket2dm
-from qutip.core import QobjEvo
+from qutip import Qobj, QobjEvo, Result, mesolve, brmesolve
 
 # =============================
 # LOCAL IMPORTS
@@ -36,7 +35,7 @@ if not logger.handlers:
     formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.WARNING)  # Only show WARNING, ERROR, CRITICAL messages
+    logger.setLevel(logging.WARNING)  # Changed to WARNING to reduce verbosity
 
 
 def compute_pulse_evolution(
@@ -172,6 +171,41 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     copy_sim_oqs.times_local = times
 
     # =============================
+    # DETAILED SYSTEM DIAGNOSTICS
+    # =============================
+    logger.info(f"=== SOLVER DIAGNOSTICS ===")
+    logger.info(f"Solver: {copy_sim_oqs.simulation_config.ode_solver}")
+    logger.info(f"Time range: t0={t0:.3f}, t_max={t_max:.3f}, dt={dt:.6f}")
+    logger.info(f"Number of time points: {len(times)}")
+    logger.info(f"RWA enabled: {getattr(copy_sim_oqs.simulation_config, 'rwa_sl', False)}")
+    
+    ### Initial state diagnostics
+    psi_ini = copy_sim_oqs.system.psi_ini
+    logger.info(f"Initial state type: {type(psi_ini)}")
+    logger.info(f"Initial state shape: {psi_ini.shape}")
+    logger.info(f"Initial state is Hermitian: {psi_ini.isherm}")
+    logger.info(f"Initial state trace: {psi_ini.tr():.6f}")
+    
+    if psi_ini.type == "oper":  # density matrix
+        ini_eigvals = psi_ini.eigenenergies()
+        logger.info(f"Initial eigenvalues range: [{ini_eigvals.min():.6f}, {ini_eigvals.max():.6f}]")
+        logger.info(f"Initial min eigenvalue: {ini_eigvals.min():.10f}")
+    
+    ### System Hamiltonian diagnostics
+    try:
+        if hasattr(copy_sim_oqs, 'evo_obj_free') and copy_sim_oqs.evo_obj_free is not None:
+            H_free = copy_sim_oqs.evo_obj_free
+            if hasattr(H_free, 'dims'):
+                logger.info(f"Free Hamiltonian dims: {H_free.dims}")
+            logger.info(f"Free Hamiltonian type: {type(H_free)}")
+        
+        if hasattr(copy_sim_oqs, 'decay_channels') and copy_sim_oqs.decay_channels:
+            logger.info(f"Number of decay channels: {len(copy_sim_oqs.decay_channels)}")
+            
+    except Exception as e:
+        logger.warning(f"Could not analyze Hamiltonian: {e}")
+
+    # =============================
     # INPUT VALIDATION
     # =============================
     if not isinstance(copy_sim_oqs.system.psi_ini, Qobj):
@@ -185,8 +219,15 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     if len(times) < 2:
         raise ValueError("times must have at least two elements")
 
+    ### Check solver tolerances
+    solver_opts = CONFIG.solver.solver_options
+    logger.info(f"Solver options: {solver_opts}")
+    logger.info(f"Negative eigenvalue threshold: {CONFIG.solver.negative_eigval_threshold}")
+    logger.info(f"Trace tolerance: {CONFIG.solver.trace_tolerance}")
+
     result = compute_pulse_evolution(copy_sim_oqs, **{"store_states": True})
     states = result.states
+    
     # =============================
     # CHECK THE RESULT
     # =============================
@@ -202,36 +243,192 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     # =============================
     error_messages = []
     time_cut = np.inf  # time after which the checks failed
+    
     # Apply RWA phase factors if needed
     if getattr(copy_sim_oqs.simulation_config, "rwa_sl", False):
         n_atoms = copy_sim_oqs.system.n_atoms
         omega_laser = copy_sim_oqs.laser.omega_laser
+        logger.info(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser}")
         states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
+    
+    ### Enhanced state checking with more diagnostics
+    logger.info("=== STATE-BY-STATE ANALYSIS ===")
+    check_interval = max(1, len(states) // 10)  # Check every 10% of states
+    
     for index, state in enumerate(states):
         time = times[index]
+        
+        ### Detailed analysis for problematic or sample states
+        if index % check_interval == 0 or index < 5:  # First 5 states + samples
+            logger.info(f"State {index} (t={time:.3f}): trace={state.tr():.6f}, Hermitian={state.isherm}")
+            
+        ### Check Hermiticity
         if not state.isherm:
             error_messages.append(f"Density matrix is not Hermitian after t = {time}")
             logger.error(f"Non-Hermitian density matrix at t = {time}")
+            logger.error(f"  State details: trace={state.tr():.6f}, shape={state.shape}")
+            
+        ### Check positive semidefiniteness
         eigvals = state.eigenenergies()
+        min_eigval = eigvals.min()
+        
         if not np.all(eigvals >= CONFIG.solver.negative_eigval_threshold):
             error_messages.append(
-                f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {eigvals.min()}"
+                f"Density matrix is not positive semidefinite after t = {time}: The lowest eigenvalue is {min_eigval}"
             )
+            logger.error(f"NEGATIVE EIGENVALUE DETECTED:")
+            logger.error(f"  Time: {time:.6f}")
+            logger.error(f"  Min eigenvalue: {min_eigval:.12f}")
+            logger.error(f"  Threshold: {CONFIG.solver.negative_eigval_threshold}")
+            logger.error(f"  All eigenvalues: {eigvals[:5]}...")  # Show first 5
+            logger.error(f"  State trace: {state.tr():.10f}")
+            logger.error(f"  State index: {index}/{len(states)}")
+            
+            ### Additional diagnostics for the failing state
+            if index > 0:
+                prev_state = states[index-1]
+                prev_eigvals = prev_state.eigenenergies()
+                logger.error(f"  Previous state (t={times[index-1]:.6f}) min eigval: {prev_eigvals.min():.12f}")
+                logger.error(f"  Eigenvalue change: {min_eigval - prev_eigvals.min():.12f}")
+            
             time_cut = time
-        if not np.isclose(state.tr(), 1.0, atol=CONFIG.solver.trace_tolerance):
+            
+        ### Check trace preservation
+        trace_val = state.tr()
+        if not np.isclose(trace_val, 1.0, atol=CONFIG.solver.trace_tolerance):
             error_messages.append(
-                f"Density matrix is not trace-preserving after t = {time}: The trace is {state.tr()}"
+                f"Density matrix is not trace-preserving after t = {time}: The trace is {trace_val}"
             )
-            time_cut = time
+            logger.error(f"TRACE VIOLATION:")
+            logger.error(f"  Time: {time:.6f}")
+            logger.error(f"  Trace: {trace_val:.10f}")
+            logger.error(f"  Deviation from 1: {abs(trace_val - 1.0):.10f}")
+            logger.error(f"  Tolerance: {CONFIG.solver.trace_tolerance}")
+            
+            time_cut = min(time_cut, time)
+            
+        ### Break on first error for detailed analysis
         if error_messages:
-            logger.error(
-                "Density matrix validation failed: " + "; ".join(error_messages)
-            )
+            logger.error("=== FIRST ERROR ANALYSIS ===")
+            logger.error(f"Stopping analysis at first error (state {index}, t={time:.6f})")
+            logger.error("Density matrix validation failed: " + "; ".join(error_messages))
             break
+            
     if not error_messages:
-        logger.info("Checks passed. DM remains Hermitian and positive.")
+        logger.info("✅ Checks passed. DM remains Hermitian and positive.")
+        logger.info(f"Final state trace: {states[-1].tr():.6f}")
+        logger.info(f"Final state min eigenvalue: {states[-1].eigenenergies().min():.10f}")
 
     return result, time_cut
+
+
+def diagnose_solver_instability(sim_oqs: SimulationModuleOQS) -> dict:
+    """
+    Comprehensive diagnostic function to identify the source of solver instabilities.
+    
+    Parameters
+    ----------
+    sim_oqs : SimulationModuleOQS
+        Simulation configuration object
+        
+    Returns
+    -------
+    dict
+        Diagnostic information including potential issues and recommendations
+    """
+    diagnostics = {
+        "issues_found": [],
+        "recommendations": [],
+        "system_info": {},
+        "solver_info": {}
+    }
+    
+    ### Analyze initial state
+    psi_ini = sim_oqs.system.psi_ini
+    diagnostics["system_info"]["initial_state"] = {
+        "type": psi_ini.type,
+        "shape": psi_ini.shape,
+        "is_hermitian": psi_ini.isherm,
+        "trace": complex(psi_ini.tr()),
+        "is_normalized": abs(psi_ini.tr() - 1.0) < 1e-10
+    }
+    
+    if psi_ini.type == "oper":
+        eigvals = psi_ini.eigenenergies()
+        diagnostics["system_info"]["initial_state"]["min_eigenvalue"] = float(eigvals.min())
+        diagnostics["system_info"]["initial_state"]["max_eigenvalue"] = float(eigvals.max())
+        
+        if eigvals.min() < 0:
+            diagnostics["issues_found"].append("Initial state has negative eigenvalues")
+            diagnostics["recommendations"].append("Check initial state construction/normalization")
+    
+    ### Analyze time parameters
+    t_max = sim_oqs.simulation_config.t_max
+    dt = sim_oqs.simulation_config.dt
+    solver_type = sim_oqs.simulation_config.ode_solver
+    
+    diagnostics["solver_info"] = {
+        "solver_type": solver_type,
+        "t_max": t_max,
+        "dt": dt,
+        "time_steps": int(t_max / dt),
+        "solver_options": CONFIG.solver.solver_options
+    }
+    
+    ### Check if time step is too large
+    if dt > 0.1:  # Arbitrary threshold, adjust based on your system
+        diagnostics["issues_found"].append(f"Large time step: dt={dt}")
+        diagnostics["recommendations"].append("Try reducing dt for better numerical stability")
+    
+    ### Analyze system Hamiltonian
+    try:
+        if hasattr(sim_oqs, 'evo_obj_free'):
+            H = sim_oqs.evo_obj_free
+            if hasattr(H, 'eigenenergies'):
+                H_eigvals = H.eigenenergies()
+                energy_scale = np.max(np.abs(H_eigvals))
+                diagnostics["system_info"]["hamiltonian"] = {
+                    "energy_scale": float(energy_scale),
+                    "max_eigenvalue": float(H_eigvals.max()),
+                    "min_eigenvalue": float(H_eigvals.min())
+                }
+                
+                ### Check if dt is appropriate for energy scale
+                if dt * energy_scale > 1.0:
+                    diagnostics["issues_found"].append(
+                        f"Time step too large for energy scale: dt*E_max = {dt * energy_scale:.3f}"
+                    )
+                    diagnostics["recommendations"].append(
+                        f"Reduce dt below {1.0/energy_scale:.6f} for this energy scale"
+                    )
+    except Exception as e:
+        diagnostics["issues_found"].append(f"Could not analyze Hamiltonian: {e}")
+    
+    ### Check decay operators
+    if hasattr(sim_oqs, 'decay_channels') and sim_oqs.decay_channels:
+        diagnostics["system_info"]["decay_channels"] = len(sim_oqs.decay_channels)
+        
+        ### Basic sanity check on collapse operators
+        try:
+            for i, c_op in enumerate(sim_oqs.decay_channels):
+                if not isinstance(c_op, Qobj):
+                    diagnostics["issues_found"].append(f"Decay channel {i} is not a Qobj")
+        except Exception as e:
+            diagnostics["issues_found"].append(f"Error checking decay channels: {e}")
+    
+    ### Solver-specific recommendations
+    if solver_type == "BR":
+        diagnostics["recommendations"].append("BR solver: Ensure your system is in the Born-Markov regime")
+        diagnostics["recommendations"].append("BR solver: Check that secular approximation is valid")
+    elif solver_type in ["me", "mesolve"]:
+        diagnostics["recommendations"].append("Mesolve: Consider using adaptive time stepping")
+    
+    ### Check RWA settings
+    if getattr(sim_oqs.simulation_config, "rwa_sl", False):
+        diagnostics["system_info"]["rwa_enabled"] = True
+        diagnostics["recommendations"].append("RWA enabled: Verify that rotating wave approximation is appropriate")
+    
+    return diagnostics
 
 
 def _compute_next_start_point(
@@ -964,6 +1161,3 @@ def extract_ift_signal_component(
     # signal /= n_phases * n_phases # TODO to get more prominent signal leave out
 
     return signal
-
-
-## complex_polarization implementation moved to spectroscopy.polarization

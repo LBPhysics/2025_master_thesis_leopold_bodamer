@@ -34,6 +34,9 @@ except Exception:  # pragma: no cover
     tomllib = None
 
 
+__all__ = ["load_config"]
+
+
 def _deep_merge(base: MutableMapping[str, Any], upd: Mapping[str, Any]) -> None:
     """Deep in-place merge of ``upd`` into ``base`` (section-wise)."""
     for k, v in upd.items():
@@ -177,6 +180,3 @@ def load_config(path: str | Path | None = None) -> MasterConfig:
         _deep_merge(cfg_dict, _load_file(Path(path)))
 
     return _dict_to_config(cfg_dict)
-
-
-__all__ = ["load_config"]

@@ -47,10 +47,10 @@ SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 
 
 # === ATOMIC SYSTEM DEFAULTS ===
-N_ATOMS = 1
+N_ATOMS = 2
 N_CHAINS = 1  # defaults to linear chain (single chain layout)
-FREQUENCIES_CM = [15900.0]  # Number of frequency components in the system
-DIP_MOMENTS = [1.0]  # Dipole moments for each atom
+FREQUENCIES_CM = [15900.0, 16000.0]  # Number of frequency components in the system
+DIP_MOMENTS = [1.0, 1.0]  # Dipole moments for each atom
 COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
@@ -73,9 +73,9 @@ N_PHASES = 4  # Number of phase cycles for the simulation
 # === BATH SYSTEM DEFAULTS ===
 frequencies = [convert_cm_to_fs(freq_cm) for freq_cm in FREQUENCIES_CM]
 BATH_TYPE = "ohmic"  # TODO at the moment only ohmic baths are supported
-BATH_CUTOFF = 1e2 * frequencies[0]  # Cutoff frequency in cm⁻¹
-BATH_TEMP = 1e3 * frequencies[0] / BOLTZMANN
-BATH_COUPLING = 1e-4 * frequencies[0]
+BATH_CUTOFF = 1e2 #* frequencies[0]  # Cutoff frequency in cm⁻¹
+BATH_TEMP = 1e-3 #* frequencies[0] / BOLTZMANN
+BATH_COUPLING = 1e-4# * frequencies[0]
 
 
 # === 2D SIMULATION DEFAULTS ===

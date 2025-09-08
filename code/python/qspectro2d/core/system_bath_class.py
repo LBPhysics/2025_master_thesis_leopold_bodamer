@@ -1,12 +1,8 @@
-from dataclasses import dataclass  # for the class definition
+from dataclasses import dataclass
 import numpy as np
-
-# Use TYPE_CHECKING to avoid circular imports during runtime
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
-
 from qutip import ket2dm, BosonicEnvironment
-
-from qspectro2d.core.bath_system.bath_fcts import bath_to_rates
+# from qspectro2d.core.bath_system.bath_fcts import bath_to_rates
 
 
 @dataclass
@@ -14,13 +10,11 @@ class SystemBathCoupling:
     system: AtomicSystem
     bath: BosonicEnvironment
 
-    # TODO now the decay channels DO NOT match the paper cases
     @property
     def br_decay_channels(self):
         """Generate the a_ops list for Bloch-Redfield solver.
         Includes:
-          - Pure dephasing projectors for all single-excitation states
-          - (If max_excitation == 2) dephasing for each double-excitation state
+          - Pure dephasing projectors for all excitation states
           - Radiative decay channels (lowering operators) from singles to ground
           - (If max_excitation == 2) lowering from double states to singles
 
@@ -30,38 +24,44 @@ class SystemBathCoupling:
         sys = self.system
         br_ops: list[list] = []
         n_atoms = sys.n_atoms
-        max_exc = sys.max_excitation
 
         # Helper: add dephasing projector for basis index k
         def add_projector(k: int):
             """Return site k population operator in the site basis (|k><k|)."""
             if k == 0:
                 raise ValueError("indexing ground state -> use k elem 1,...,N+1")
+            deph_op = sys.deph_op_i(k)
+            br_ops.append([sys.to_eigenbasis(deph_op), self.bath])
 
-            br_ops.append([sys.deph_op_i(k), self.bath])
-
-        # Multi-atom:
         for i_atom in range(1, n_atoms + 1):
             # singles manifold projectors
             add_projector(i_atom)
 
             # Radiative-like decay (lowering + raising) operators from singles to ground: |0><i| + |i><0|
-            Li = sys.basis[0] * sys.basis[i_atom].dag()
-            br_ops.append([Li + Li.dag(), self.bath])
+            Li = sys._basis[0] * sys._basis[i_atom].dag()
+            decay_op = Li + Li.dag()
+            br_ops.append([sys.to_eigenbasis(decay_op), self.bath])
 
         # Double manifold projectors only if available
-        index_to_pair = sys._index_to_pair
-        for idx, (i, j) in index_to_pair.items():  # i<j atom labels
-            add_projector(idx)
+        max_exc = sys.max_excitation
+        if max_exc == 2:
+            for i_atom in range(1, n_atoms):
+                for j_atom in range(i_atom + 1, n_atoms + 1):
+                    from qspectro2d.core.atomic_system.system_class import pair_to_index
+                    idx = pair_to_index(i_atom, j_atom, n_atoms)
+                    add_projector(idx - 1)
+                    add_projector(idx - 1) # each double excited state gets one contribution from each site
 
-            """
-            # Double -> single lowering (if double manifold present)
-            # |i> corresponds to basis index i, etc.
-            Li = sys.basis[i] * sys.basis[idx].dag()
-            Lj = sys.basis[j] * sys.basis[idx].dag()
-            br_ops.append([Li + Li.dag(), self.bath])
-            br_ops.append([Lj + Lj.dag(), self.bath])
-            """
+                    # Double -> single lowering (if double manifold present)
+                    # |i> corresponds to basis index i, etc.
+                    Li = sys._basis[i_atom] * sys._basis[idx - 1].dag()
+                    op_ij_i = Li + Li.dag()
+                    br_ops.append([sys.to_eigenbasis(op_ij_i), self.bath])
+
+                    Lj = sys._basis[j_atom] * sys._basis[idx - 1].dag()
+                    op_ij_j = Lj + Lj.dag()
+                    br_ops.append([sys.to_eigenbasis(op_ij_j), self.bath])
+
         return br_ops
 
     @property
@@ -78,43 +78,55 @@ class SystemBathCoupling:
         c_ops = []
 
         # Dephasing rate (assumed identical structure for all single excitations)
-        deph_rate = bath_to_rates(self.bath, mode="deph")
+        deph_rate = 1 / 100 # bath_to_rates(self.bath, mode="deph")
+        down_rate = 1 / 300 # bath_to_rates(self.bath, mode="deph")
 
         for i_atom in range(1, n_atoms + 1):
             # singles dephasing
-            c_ops.append(sys.deph_op_i(i_atom) * np.sqrt(deph_rate))
+            deph_op = sys.deph_op_i(i_atom)
+            c_ops.append(sys.to_eigenbasis(deph_op) * np.sqrt(deph_rate))
 
             # Radiative-like single-site relaxation (singles -> ground) and thermal excitation
-            freq = sys.frequencies[i_atom - 1]
+            '''
+            freq = sys._frequencies_fs[i_atom - 1]
             down_rate, up_rate = bath_to_rates(self.bath, freq, mode="decay")
-            L_down = sys.basis[0] * sys.basis[i_atom].dag()  # |0><i|
-            if down_rate > 0:
-                c_ops.append(L_down * np.sqrt(down_rate))
             if up_rate > 0:
                 c_ops.append(L_down.dag() * np.sqrt(up_rate))  # |i><0|
+            '''
+
+            L_down = sys._basis[0] * sys._basis[i_atom].dag()  # |0><i|
+            c_ops.append(sys.to_eigenbasis(L_down) * np.sqrt(down_rate))
 
         # Double-state dephasing if manifold present
-        index_to_pair = sys._index_to_pair
-        for idx, (i, j) in index_to_pair.items():  # i<j atom labels
-            c_ops.append(ket2dm(sys.basis[idx]) * np.sqrt(deph_rate))
+        if sys.max_excitation == 2:
+            for i in range(1, n_atoms):
+                for j in range(i + 1, n_atoms + 1):
+                    from qspectro2d.core.atomic_system.system_class import pair_to_index
+                    idx = pair_to_index(i, j, n_atoms)
+                    deph_op_ij = sys.deph_op_i(idx - 1)
+                    c_ops.append(sys.to_eigenbasis(deph_op_ij) * np.sqrt(deph_rate))
+                    c_ops.append(sys.to_eigenbasis(deph_op_ij) * np.sqrt(deph_rate)) # each double excited state gets one contribution from each site
 
-            """
-            # Double -> single lowering (if double manifold present)
-            freq_idx = sys.frequencies[idx - 1]
-            freq_i = sys.frequencies[i - 1]
-            freq_j = sys.frequencies[j - 1]
+                    # Double -> single lowering
+                    L_idx_i = sys._basis[i] * sys._basis[idx - 1].dag()  # |i><i,j|
+                    L_idx_j = sys._basis[j] * sys._basis[idx - 1].dag()  # |j><i,j|
+                    c_ops.append(sys.to_eigenbasis(L_idx_i) * np.sqrt(down_rate))
+                    c_ops.append(sys.to_eigenbasis(L_idx_j) * np.sqrt(down_rate))
+                    """
+                    freq_idx = sys._frequencies_fs[idx - 1]
+                    freq_i = sys._frequencies_fs[i - 1]
+                    freq_j = sys._frequencies_fs[j - 1]
 
-            down_rate_i, up_rate_i = bath_to_rates(self.bath, (freq_idx - freq_i), mode="decay")
-            down_rate_j, up_rate_j = bath_to_rates(self.bath, (freq_idx - freq_j), mode="decay")
-            # |i> corresponds to basis index i, etc.
-            Li = sys.basis[i] * sys.basis[idx].dag()
-            c_ops.append([Li * np.sqrt(down_rate_i)])
-            c_ops.append([Li.dag() * np.sqrt(up_rate_i)])
+                    down_rate_i, up_rate_i = bath_to_rates(self.bath, (freq_idx - freq_i), mode="decay")
+                    down_rate_j, up_rate_j = bath_to_rates(self.bath, (freq_idx - freq_j), mode="decay")
+                    Li = sys._basis[i] * sys._basis[idx - 1].dag()
+                    c_ops.append([Li * np.sqrt(down_rate_i)])
+                    c_ops.append([Li.dag() * np.sqrt(up_rate_i)])
 
-            Lj = sys.basis[j] * sys.basis[idx].dag()
-            c_ops.append([Lj * np.sqrt(down_rate_j)])
-            c_ops.append([Lj.dag() * np.sqrt(up_rate_j)])
-            """
+                    Lj = sys._basis[j] * sys._basis[idx - 1].dag()
+                    c_ops.append([Lj * np.sqrt(down_rate_j)])
+                    c_ops.append([Lj.dag() * np.sqrt(up_rate_j)])
+                    """
 
         return c_ops
 
@@ -138,15 +150,11 @@ class SystemBathCoupling:
         factor-of-two in the argument and is non-standard. Coefficients used
         in `lowering_op` retain their algebraic definitions (sinθ, cosθ), so this
         correction yields physically consistent mixing when J ~ Δ.
-
-        Raises
-        ------
-        ValueError: if called for systems with n_atoms != 2.
         """
         if self.system.n_atoms != 2:
             raise ValueError("theta is only defined for n_atoms == 2")
-        detuning = self.system.frequencies[0] - self.system.frequencies[1]  # Δ
-        return 0.5 * np.arctan2(2 * self.system.coupling, detuning)
+        detuning = self.system._frequencies_fs[0] - self.system._frequencies_fs[1]  # Δ
+        return 0.5 * np.arctan2(2 * self.system._coupling_fs, detuning)
 
     # only for the paper solver
     def gamma_small_ij(self, i: int, j: int) -> float:

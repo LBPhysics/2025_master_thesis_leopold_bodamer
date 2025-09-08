@@ -19,7 +19,7 @@ class SystemLaserCoupling:
 
     def delta_rabi(self, i: int = 0):
         """Calculate the detuning for the i-th transition. [fs⁻¹]"""
-        return self.laser.omega_laser - self.system.frequencies[i]
+        return self.laser.omega_laser - self.system._frequencies_fs[i]
 
     def rabi_gen(self, i: int = 0):
         """Calculate the generalized Rabi frequency for the i-th transition. [fs⁻¹]"""

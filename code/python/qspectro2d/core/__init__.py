@@ -51,7 +51,7 @@ from .simulation import (
     SimulationModuleOQS,
     SimulationConfig,
     matrix_ODE_paper,
-    R_paper,
+    redfield_paper,
 )
 
 # =============================
@@ -81,7 +81,7 @@ __all__ = [
     "split_by_active_regions",
     # Solver functions
     "matrix_ODE_paper",
-    "R_paper",
+    "redfield_paper",
 ]
 
 # =============================

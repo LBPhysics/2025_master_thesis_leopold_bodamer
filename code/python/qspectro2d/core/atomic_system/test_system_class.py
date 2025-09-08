@@ -41,7 +41,7 @@ class TestAtomicSystemInitialization:
         assert system.frequencies_cm == [16000.0, 15640.0]
         assert system.dip_moments == [1.0, 1.2]
         assert system.coupling_cm == 50.0
-        assert system.positions.shape == (2, 3)  # Always has positions
+        assert system._positions.shape == (2, 3)  # Always has positions
         assert hasattr(system, "coupling_matrix_cm")  # New coupling matrix property
 
         print("✓ Two atom initialization successful")
@@ -51,7 +51,7 @@ class TestAtomicSystemInitialization:
         print(f"  - frequencies_cm: {system.frequencies_cm}")
         print(f"  - dip_moments: {system.dip_moments}")
         print(f"  - coupling_cm: {system.coupling_cm}")
-        print(f"  - positions shape: {system.positions.shape}")
+        print(f"  - positions shape: {system._positions.shape}")
         print(f"  - coupling_cm: {system.coupling_cm}")
 
     def test_single_frequency_expansion(self):
@@ -103,16 +103,16 @@ class TestAtomicSystemProperties:
         system = AtomicSystem(n_atoms=1)
 
         assert system.dimension == 2
-        assert len(system.basis) == 2
+        assert len(system._basis) == 2
         # Check basis states are the correct dimensions
-        assert system.basis[0].dims == [[2], [1]]  # ground state
-        assert system.basis[1].dims == [[2], [1]]  # excited state
+        assert system._basis[0].dims == [[2], [1]]  # ground state
+        assert system._basis[1].dims == [[2], [1]]  # excited state
 
         print("✓ Single atom basis generation successful")
-        print(f"  - Basis size: {len(system.basis)}")
+        print(f"  - Basis size: {len(system._basis)}")
         print(f"  - Dimension: {system.dimension}")
-        print(f"  - Ground state dims: {system.basis[0].dims}")
-        print(f"  - Excited state dims: {system.basis[1].dims}")
+        print(f"  - Ground state dims: {system._basis[0].dims}")
+        print(f"  - Excited state dims: {system._basis[1].dims}")
 
     def test_basis_two_atoms(self):
         """Test basis generation for two atoms."""
@@ -121,60 +121,60 @@ class TestAtomicSystemProperties:
         assert (
             system.dimension == 3
         )  # ground + 2 single excitations (max_excitation=1 by default)
-        assert len(system.basis) == 3
+        assert len(system._basis) == 3
 
         # Check basis dimensions - now using computational basis
-        for i, state in enumerate(system.basis):
+        for i, state in enumerate(system._basis):
             assert state.dims == [[3], [1]]  # All states in 3D computational basis
 
         print("✓ Two atom basis generation successful")
-        print(f"  - Basis size: {len(system.basis)}")
+        print(f"  - Basis size: {len(system._basis)}")
         print(f"  - Dimension: {system.dimension}")
-        print(f"  - Basis dims: {[state.dims for state in system.basis]}")
+        print(f"  - Basis dims: {[state.dims for state in system._basis]}")
 
     def test_basis_two_atoms_double_excitation(self):
         """Test basis generation for two atoms with double excitation."""
         system = AtomicSystem(n_atoms=2, max_excitation=2)
 
         assert system.dimension == 4  # ground + 2 singles + 1 double
-        assert len(system.basis) == 4
+        assert len(system._basis) == 4
 
         print("✓ Two atom double excitation basis generation successful")
-        print(f"  - Basis size: {len(system.basis)}")
+        print(f"  - Basis size: {len(system._basis)}")
         print(f"  - Dimension: {system.dimension}")
         print(f"  - max_excitation: {system.max_excitation}")
 
         # Check that all basis states have correct dimensions for computational basis
-        for i, state in enumerate(system.basis):
+        for i, state in enumerate(system._basis):
             assert state.dims == [[3], [1]]
 
         print("✓ Two atom basis generation successful")
-        print(f"  - Basis size: {len(system.basis)}")
+        print(f"  - Basis size: {len(system._basis)}")
         print(f"  - Dimension: {system.dimension}")
-        print(f"  - Basis dims: {[state.dims for state in system.basis]}")
+        print(f"  - Basis dims: {[state.dims for state in system._basis]}")
 
     def test_basis_two_atoms_double_excitation(self):
         """Test basis generation for two atoms with double excitation."""
         system = AtomicSystem(n_atoms=2, max_excitation=2)
 
         assert system.dimension == 4  # ground + 2 single + 1 double excitation
-        assert len(system.basis) == 4
+        assert len(system._basis) == 4
 
         # Check that all basis states have correct dimensions
-        for i, state in enumerate(system.basis):
+        for i, state in enumerate(system._basis):
             assert state.dims == [[4], [1]]
 
         print("✓ Two atom double excitation basis generation successful")
-        print(f"  - Basis size: {len(system.basis)}")
+        print(f"  - Basis size: {len(system._basis)}")
         print(f"  - Dimension: {system.dimension}")
-        print(f"  - Basis dims: {[state.dims for state in system.basis]}")
+        print(f"  - Basis dims: {[state.dims for state in system._basis]}")
 
     def test_frequency_conversion(self):
         """Test frequency conversion from cm^-1 to fs^-1."""
         system = AtomicSystem(n_atoms=1, frequencies_cm=[16000.0])
 
         # Test the new frequencies property (returns array)
-        freq_fs = system.frequencies[0]
+        freq_fs = system._frequencies_fs[0]
         expected_freq_fs = convert_cm_to_fs(16000.0)
 
         assert np.isclose(freq_fs, expected_freq_fs)
@@ -182,7 +182,7 @@ class TestAtomicSystemProperties:
         print("✓ Frequency conversion successful")
         print(f"  - Original: {system.frequencies_cm[0]} cm^-1")
         print(f"  - Converted: {freq_fs:.6f} fs^-1")
-        print(f"  - All frequencies (fs^-1): {system.frequencies}")
+        print(f"  - All frequencies (fs^-1): {system._frequencies_fs}")
 
     def test_hamiltonian_single_atom(self):
         """Test Hamiltonian generation for single atom."""
@@ -272,14 +272,14 @@ class TestAtomicSystemProperties:
         system.update_frequencies_cm(new_freqs)
 
         assert system.frequencies_cm == new_freqs
-        assert len(system.frequencies_cm_history) == 2
-        assert system.frequencies_cm_history[0] == original_freqs
-        assert system.frequencies_cm_history[1] == new_freqs
+        assert len(system._frequencies_cm_history) == 2
+        assert system._frequencies_cm_history[0] == original_freqs
+        assert system._frequencies_cm_history[1] == new_freqs
 
         print("✓ Frequency update successful")
         print(f"  - Original: {original_freqs}")
         print(f"  - Updated: {system.frequencies_cm}")
-        print(f"  - History length: {len(system.frequencies_cm_history)}")
+        print(f"  - History length: {len(system._frequencies_cm_history)}")
 
     def test_update_frequencies_validation(self):
         """Test frequency update validation."""
@@ -404,12 +404,12 @@ class TestAtomicSystemSerialization:
         assert system.coupling_cm == 50.0
 
         # Check that geometry was set up correctly
-        assert system.positions.shape == (6, 3)
+        assert system._positions.shape == (6, 3)
 
         print("✓ Geometry parameters serialization successful")
         print(f"  - n_atoms: {system.n_atoms}, n_chains: {system.n_chains}")
         print(f"  - n_rings: {system.n_rings}")
-        print(f"  - Positions shape: {system.positions.shape}")
+        print(f"  - Positions shape: {system._positions.shape}")
 
 
 class TestAtomicSystemEdgeCases:
@@ -421,10 +421,10 @@ class TestAtomicSystemEdgeCases:
 
         assert system.n_atoms == 3
         assert system.dimension == 4  # Ground + 3 single excitations
-        assert len(system.basis) == 4
+        assert len(system._basis) == 4
 
         # Test that positions are set (cylindrical geometry)
-        assert system.positions.shape == (3, 3)  # 3 atoms, 3D positions
+        assert system._positions.shape == (3, 3)  # 3 atoms, 3D positions
 
         # Test that coupling matrix is computed
         coupling_matrix = system.coupling_matrix_cm
@@ -432,8 +432,8 @@ class TestAtomicSystemEdgeCases:
 
         print("✓ Three atom system initialization successful")
         print(f"  - n_atoms: {system.n_atoms}")
-        print(f"  - Basis size: {len(system.basis)}")
-        print(f"  - Positions shape: {system.positions.shape}")
+        print(f"  - Basis size: {len(system._basis)}")
+        print(f"  - Positions shape: {system._positions.shape}")
         print(f"  - Coupling matrix shape: {coupling_matrix.shape}")
 
     def test_omega_ij_calculation(self):
@@ -459,7 +459,7 @@ class TestAtomicSystemEdgeCases:
         assert system.n_chains == 1
         assert system.n_rings == 4
 
-        positions = system.positions
+        positions = system._positions
         assert positions.shape == (4, 3)
 
         # Check it's actually linear (all x,y = 0, only z varies)
@@ -479,7 +479,7 @@ class TestAtomicSystemEdgeCases:
         assert system.n_chains == 2
         assert system.n_rings == 3
 
-        positions = system.positions
+        positions = system._positions
         assert positions.shape == (6, 3)
 
         # Check that we have atoms at different angular positions (distinct (x,y) ring centers)

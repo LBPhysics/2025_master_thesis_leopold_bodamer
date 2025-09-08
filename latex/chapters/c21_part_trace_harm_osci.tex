@@ -1,20 +1,26 @@
 % !TEX root = ../main.tex
-\chapter{Bath Correlation Functions} % Main chapter title
+\chapter{Bath Correlation Functions and Harmonic Oscillator Environments} % Main chapter title
 
-\label{Chapter_calc_extra_stuff} % Label for referencing this chapter
+\label{Chapter_bath_correlations_harmonic_oscillators} % Label for referencing this chapter
+
+In the previous chapter, we derived the Redfield equation and introduced the environmental correlation functions $C_{ij}(\tau)$ that characterize the system-bath interaction. These correlation functions are central to the Redfield formalism, as they encode all the relevant information about how the environment affects the quantum system dynamics.
+
+To make the Redfield equation practically useful, we need to specify the form of these correlation functions for realistic environmental models. In this chapter, we focus on one of the most important and widely applicable environmental models: the harmonic oscillator bath. This model captures the essential physics of many real environments, from electromagnetic field fluctuations to phonon baths in solid-state systems.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 1
 %----------------------------------------------------------------------------------------
 
-\section{Bath Correlator}
+\section{Bath Correlation Functions: From Theory to Practice}
 \label{sec:bath_correlator}
 
-The general task of this chapter is to calculate the bath correlator, which is defined as:
+The general task of this chapter is to calculate the bath correlation functions that appear in the Redfield equation. These are defined as:
 \begin{equation} \label{eq:bath_correlator}
 	C(\tau) = \langle B(\tau) B(0) \rangle,
 \end{equation}
-where \( B \) is the bath operator, specified later. This correlator measures the operator \( B \) at two different times in the bath.
+where \( B \) represents the bath operators $E_i$ from the interaction Hamiltonian. This correlator measures how the operator \( B \) at two different times is correlated in the thermal bath state.
+
+For the harmonic oscillator bath model, these correlation functions can be calculated exactly, providing a solid foundation for understanding more complex environmental models. The results will show how the bath correlation functions connect to physically observable quantities such as spectral densities and how they determine the system's approach to thermal equilibrium.
 
 \section{Useful Tools}
 
@@ -155,7 +161,7 @@ we obtain:
 \label{subsec:spectral_density}
 
 The bath correlator can be expressed in terms of the spectral density \( J(\omega) \), defined as:
-\begin{equation} \label{eq:spectral_density}
+\begin{equation} \label{eq:bath_spectral_density}
 	J(\omega) = \pi \sum_{n=1}^{\infty} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n).
 \end{equation}
 

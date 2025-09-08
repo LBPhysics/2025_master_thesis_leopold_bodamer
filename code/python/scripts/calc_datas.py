@@ -143,7 +143,7 @@ def run_1d_mode(args):
     )
     print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs")
 
-    # Create base simulation and validate solver once (create_base_sim_oqs resolves CLI > YAML > defaults)
+    # Create base simulation and validate solver once  (resolves CLI > YAML > defaults)
     sim_oqs, time_cut = create_base_sim_oqs(args, cfg=cfg)
 
     # Run single simulation

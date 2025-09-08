@@ -90,16 +90,16 @@ class SimulationModuleOQS:
 
         elif solver == "Paper_BR":
             # TODO somehow contains 2 RWAs for n_atoms == 2.
-            from qspectro2d.core.simulation.redfield import R_paper as _R_paper
+            from qspectro2d.core.simulation.redfield_paper import redfield_paper as _redfield_paper
 
             # This version is computable with mesolve H -> evo_obj; no need for a_ops
-            custom_free = liouvillian(self.H0_diagonalized) + _R_paper(self)
+            custom_free = liouvillian(H0_diagonalized) + _redfield_paper(self)
             self.evo_obj_free = custom_free
             self.evo_obj_int = custom_free + liouvillian(QobjEvo(self.H_int_sl))
 
             """
             # TODO This version can be passed to brmesolve?
-            R_super = _R_paper(self)  # time-independent Redfield tensor (Qobj)
+            R_super = _redfield_paper(self)  # time-independent Redfield tensor (Qobj)
             self.evo_obj_free = H0_diagonalized
             self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
             self.decay_channels = R_super  # Redfield handled separately
@@ -118,28 +118,22 @@ class SimulationModuleOQS:
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
     def H0_diagonalized(self) -> Qobj:
-        """Return diagonal Hamiltonian (optionally shifted by laser frequency under RWA).
-
-        IMPORTANT: We copy eigenvalues to avoid mutating cached arrays.
-        """
+        """Return diagonal Hamiltonian (optionally shifted by laser frequency under RWA)."""
         Es, _ = self.system.eigenstates
-        Es = Es.copy()  # avoid in-place modification of upstream arrays
-
+        H_diag = Qobj(np.diag(Es), dims=self.system.hamiltonian.dims)
         if self.simulation_config.rwa_sl:
             omega_L = self.laser.omega_laser
-
             # Determine excitation number for each eigenstate
             # Based on index: 0 -> 0 excitations, 1..N -> 1, N+1..end -> 2
-            for i in range(len(Es)):
-                n_exc = self.system.excitation_number_from_index(i)
-                Es[i] -= n_exc * HBAR * omega_L
-
-        return Qobj(np.diag(Es), dims=self.system.hamiltonian.dims)
+            H_diag -= HBAR * omega_L * self.system.number_op
+        return H_diag
 
     def H_int_sl(self, t: float) -> Qobj:
-        return H_int_(
-            t, self.system.lowering_op, self.simulation_config.rwa_sl, self.laser
+        lowering_op = self.system.lowering_op
+        H_int = H_int_(
+            t, lowering_op, self.simulation_config.rwa_sl, self.laser
         )
+        return H_int
 
     # --- Observables ---------------------------------------------------------------
     @property

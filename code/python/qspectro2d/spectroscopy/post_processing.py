@@ -218,17 +218,18 @@ def compute_2d_fft_wavenumber(
     t_cohs: np.ndarray,
     data: np.ndarray,
     *,
-    coh_sign: str = "forward",
+    exp_signs: str = "forward",
     shift: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute 2D FFT of spectroscopy data and convert frequency axes to wavenumber units.
 
     This function performs a 2D transform on the input data with selectable coherence-axis sign:
-    - coh_sign = 'forward': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{-i ω_coh coh} E(coh,T,t)
-    - coh_sign = 'inverse': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{+i ω_coh coh} E(coh,T,t)
+    - exp_signs = 'forward': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{-i ω_coh coh} E(coh,T,t)
+    - exp_signs = 'mixed': S2D ~ ∫dt e^{-i ω_det t} × ∫dcoh e^{+i ω_coh coh} E(coh,T,t)
+    - exp_signs = 'inverse': S2D ~ ∫dt e^{+i ω_det t} × ∫dcoh e^{+i ω_coh coh} E(coh,T,t)
 
-    Historically, this code used 'forward' on both axes (np.fft.fft2). Set coh_sign='inverse'
+    Historically, this code used 'forward' on both axes (np.fft.fft2). Set exp_signs='inverse'
     if your theoretical convention expects +i ω_coh coh.
 
     Parameters
@@ -261,14 +262,17 @@ def compute_2d_fft_wavenumber(
     dt_det = t_dets[1] - t_dets[0]  # t step
 
     ### Perform 2D transform according to the chosen convention
-    # Detection axis (t): always forward FFT (exp(-i ω_det t))
-    if coh_sign.lower() == "inverse":
-        # Coherence axis: inverse FFT (exp(+i ω_coh coh))
-        s2d = np.fft.ifft(data, axis=0)
-    else:
-        # Coherence axis: forward FFT (exp(-i ω_coh coh))
+    if exp_signs.lower() == "forward":
         s2d = np.fft.fft(data, axis=0)
-    s2d = np.fft.fft(s2d, axis=1)
+        s2d = np.fft.fft(s2d, axis=1)
+    elif exp_signs.lower() == "mixed":
+        s2d = np.fft.ifft(data, axis=0)
+        s2d = np.fft.fft(s2d, axis=1)
+    elif exp_signs.lower() == "inverse":
+        s2d = np.fft.ifft(data, axis=0)
+        s2d = np.fft.ifft(s2d, axis=1)
+    else:
+        raise ValueError(f"Invalid exp_signs value: '{exp_signs}'. Must be 'forward', 'mixed', or 'inverse'")
 
     ### Generate frequency axes
     freq_dets = np.fft.fftfreq(len(t_dets), d=dt_det)

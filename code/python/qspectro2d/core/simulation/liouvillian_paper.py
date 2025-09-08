@@ -1,8 +1,4 @@
 """Paper-specific time dependent Liouvillian builders.
-
-Extracted from the legacy monolithic `simulation_class.py` after trigger word
-was provided. Functions are kept with their original signatures for backward
-compatibility and simplicity. Only light edits (imports, docstrings) were made.
 """
 
 from __future__ import annotations
@@ -40,7 +36,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     Et = E_pulse(t, pulse_seq)
     Et_conj = np.conj(Et)
     mu = sim_oqs.system.dip_moments[0]  # dipole op looks the same in both bases
-    w0 = sim_oqs.system.frequencies[0]
+    w0 = sim_oqs.system._frequencies_fs[0]
     wL = pulse_seq.omega_laser
 
     deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")
@@ -74,7 +70,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_ge, idx_ee] = +1j / HBAR * Et * mu
     L[idx_ge, idx_ge] = -deph_rate_tot + 1j * (w0 - wL)
 
-    return Qobj(L, dims=[[[2], [2]], [[2], [2]]])
+    return Qobj(L, dims=[[[size], [size]], [[size], [size]]])
 
 
 def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
@@ -208,7 +204,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
 
     L[idx_33, :] = -L[idx_00, :] - L[idx_11, :] - L[idx_22, :]
 
-    return Qobj(L, dims=[[[2, 2], [2, 2]], [[2, 2], [2, 2]]])
+    return Qobj(L, dims=[[[size], [size]], [[size], [size]]])
 
 
 __all__ = [

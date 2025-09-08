@@ -99,8 +99,8 @@ def power_spectrum_func_ohmic(w: float | ArrayLike, **args) -> float | ArrayLike
         sd_derivative = None  # I changed from np.inf to None
     temp = args["temp"]
 
-    Boltzmann = args["Boltzmann"] if "Boltzmann" in args else 1.0
-    hbar = args["hbar"] if "hbar" in args else 1.0
+    # Boltzmann = args["Boltzmann"] if "Boltzmann" in args else 1.0
+    # hbar = args["hbar"] if "hbar" in args else 1.0
 
     # derivative: value of J'(0)
     if temp is None:
