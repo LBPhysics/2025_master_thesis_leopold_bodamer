@@ -151,8 +151,8 @@ def Epsilon_pulse(
     field_total = np.zeros_like(t_array, dtype=complex)
     for pulse in pulse_seq.pulses:
         omega = pulse.pulse_freq_fs
-        phi = pulse.pulse_phase
         E0 = pulse.pulse_amplitude
+        phi = pulse.pulse_phase
         if omega is None or E0 is None or phi is None:
             continue
         single_env = _single_pulse_envelope(t_array, pulse)
