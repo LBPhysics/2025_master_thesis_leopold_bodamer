@@ -20,8 +20,8 @@ from qspectro2d.constants import (
 # === signal processing / phase cycling ===
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 DETECTION_PHASE = 0  # Fixed phase for detection pulse
-SUPPORTED_SIGNAL_TYPES = ["rephasing", "non-rephasing", "absorptive"]
-SIGNAL_TYPE = "absorptive"
+SUPPORTED_SIGNAL_TYPES = ["rephasing", "nonrephasing"]
+SIGNAL_TYPES = ["rephasing"]  # Default signal == photon echo to simulate
 # last pulse is 10% of the first two to ensure probing character
 RELATIVE_E0S = [1.0, 1.0, 0.1]
 
@@ -69,9 +69,9 @@ N_PHASES = 4  # Number of phase cycles for the simulation
 # === BATH SYSTEM DEFAULTS ===
 frequencies = [convert_cm_to_fs(freq_cm) for freq_cm in FREQUENCIES_CM]
 BATH_TYPE = "ohmic"  # TODO at the moment only ohmic baths are supported
-BATH_CUTOFF = 1e2 #* frequencies[0]  # Cutoff frequency in cm⁻¹
-BATH_TEMP = 1e-3 #* frequencies[0] / BOLTZMANN
-BATH_COUPLING = 1e-4# * frequencies[0]
+BATH_CUTOFF = 1e2  # * frequencies[0]  # Cutoff frequency in cm⁻¹
+BATH_TEMP = 1e-3  # * frequencies[0] / BOLTZMANN
+BATH_COUPLING = 1e-4  # * frequencies[0]
 
 
 # === 2D SIMULATION DEFAULTS ===

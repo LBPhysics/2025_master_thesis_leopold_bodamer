@@ -11,6 +11,7 @@ Usage examples (on the cluster after cloning the repo):
   python gen_run_2d_batches.py --n_batches 16
   python gen_run_2d_batches.py --config config.yaml --n_batches 32 --no_submit
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,7 +19,6 @@ from pathlib import Path
 from subprocess import run, CalledProcessError
 
 from project_config.paths import SCRIPTS_DIR
-from qspectro2d.config.loader import load_config
 
 
 def create_batch_script(
@@ -103,20 +103,13 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Load config like in calc_datas.py
-    default_cfg_path = SCRIPTS_DIR / "config.yaml"
-    cfg = (
-        load_config(args.config)
-        if getattr(args, "config", None)
-        else (load_config(default_cfg_path) if default_cfg_path.exists() else load_config())
-    )
-
-    # Resolve n_batches precedence: CLI > YAML > fallback=1
-    n_batches = args.n_batches if args.n_batches is not None else getattr(cfg.window, "n_batches", 1)
+    # Resolve n_batches: CLI > fallback=1 (like in calc_datas.py)
+    n_batches = args.n_batches if args.n_batches is not None else 1
     if n_batches <= 0:
         raise ValueError("n_batches must be a positive integer")
 
     # Determine whether to include --config argument in the job command
+    default_cfg_path = SCRIPTS_DIR / "config.yaml"
     if args.config is not None:
         # User provided a path; pass it through as-is (must be valid on target system)
         use_config_arg = f' --config "{args.config}"'

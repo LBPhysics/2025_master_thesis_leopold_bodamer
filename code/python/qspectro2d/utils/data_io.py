@@ -15,7 +15,7 @@ import pickle
 import os
 import glob
 from pathlib import Path
-from typing import Dict, Optional, List, TYPE_CHECKING
+from typing import Optional, List, TYPE_CHECKING
 
 ### Project-specific imports
 from project_config.paths import DATA_DIR
@@ -29,103 +29,73 @@ from qutip import BosonicEnvironment
 from qspectro2d.utils.file_naming import generate_unique_data_filename
 
 
-# =============================
-# DATA SAVING FUNCTIONS
-# =============================
+# data saving functions
 def save_data_file(
     abs_data_path: Path,
-    data: np.ndarray | tuple[np.ndarray, np.ndarray],
+    datas: List[np.ndarray],
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
+    signal_types: Optional[List[str]] = None,
 ) -> None:
-    """Save spectroscopy data.
+    """Save spectroscopy data(s) with a single np.savez_compressed call.
 
-    Supported inputs:
-        - Single component: np.ndarray (1D or 2D)
-        - Tuple (rephasing, non_rephasing): two np.ndarrays of identical shape
+    Distinctions:
+      - Dimensionality (1D vs 2D) inferred from t_coh is None or not.
+      - Single vs multi-component data inferred from provided `datas` and `signal_types`.
 
     Stored keys:
-        Single: data, t_det, (t_coh), axes_description
-        Tuple : rephasing, non_rephasing, components, t_det, (t_coh), axes_description
-
-    Axis ordering:
-        1D -> ["t_det → axis 0"]
-        2D -> ["t_coh → axis 0", "t_det → axis 1"]
+      - Single (rephasing/nonrephasing): array stored under that key, plus axes
+      - Two components: keys 'rephasing' and 'non_rephasing', plus axes
+      - Also stores 'signal_types' as a numpy array of strings.
     """
     try:
         abs_data_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Determine dimensionality via provided axes
+        # Infer dimensionality
         is_2d = t_coh is not None
-        axes_description = ["t_coh → axis 0", "t_det → axis 1"] if is_2d else ["t_det → axis 0"]
+        axes_description = (
+            ["t_coh → axis 0", "t_det → axis 1"] if is_2d else ["t_det → axis 0"]
+        )
 
-        # =============================
-        # SINGLE COMPONENT
-        # =============================
-        if isinstance(data, np.ndarray):
-            if is_2d:
-                if data.shape != (len(t_coh), len(t_det)):
-                    raise ValueError(
-                        f"2D data must have shape (len(t_coh), len(t_det)) = ({len(t_coh)}, {len(t_det)}), got {data.shape}"
-                    )
-                np.savez_compressed(
-                    abs_data_path,
-                    data=data,
-                    t_det=t_det,
-                    t_coh=t_coh,
-                    axes_description=np.array(axes_description, dtype=object),
-                )
-            else:
-                if data.shape != (len(t_det),):
-                    raise ValueError(
-                        f"1D data must have shape (len(t_det),) = ({len(t_det)},), got {data.shape}"
-                    )
-                np.savez_compressed(
-                    abs_data_path,
-                    data=data,
-                    t_det=t_det,
-                    axes_description=np.array(axes_description, dtype=object),
-                )
-            print(f"✅ Data saved successfully to: {abs_data_path}")
-            return
+        # Default and validate signal_types
+        if not signal_types:
+            signal_types = ["rephasing"] * len(datas)
+        if len(datas) != len(signal_types):
+            raise ValueError(
+                f"len(datas)={len(datas)} must match len(signal_types)={len(signal_types)}"
+            )
 
-        # =============================
-        # TWO-COMPONENT TUPLE (rephasing, non_rephasing)
-        # =============================
-        if isinstance(data, tuple):
-            if len(data) != 2:
-                raise ValueError("Tuple data must have exactly 2 elements (rephasing, non_rephasing)")
-            rephasing, non_rephasing = data
-            if not isinstance(rephasing, np.ndarray) or not isinstance(non_rephasing, np.ndarray):
-                raise TypeError("Both tuple elements must be numpy arrays")
-            if rephasing.shape != non_rephasing.shape:
-                raise ValueError(
-                    f"Tuple component shapes differ: {rephasing.shape} vs {non_rephasing.shape}"
-                )
+        # Base payload
+        payload: dict = {
+            "t_det": t_det,
+            "signal_types": np.asarray(signal_types, dtype=str),
+            "axes_description": np.array(axes_description, dtype=object),
+        }
+        if is_2d:
+            payload["t_coh"] = t_coh
+
+        # Validate and populate component keys
+        for data, signal_type in zip(datas, signal_types):
             if is_2d:
-                if rephasing.shape != (len(t_coh), len(t_det)):
+                if not isinstance(data, np.ndarray) or data.shape != (
+                    len(t_coh),
+                    len(t_det),
+                ):
                     raise ValueError(
-                        f"2D components must have shape (len(t_coh), len(t_det)) = ({len(t_coh)}, {len(t_det)}), got {rephasing.shape}"
+                        f"2D data must have shape (len(t_coh), len(t_det)) = ({len(t_coh)}, {len(t_det)})"
                     )
             else:
-                if rephasing.shape != (len(t_det),):
+                if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
                     raise ValueError(
-                        f"1D components must have shape (len(t_det),) = ({len(t_det)},), got {rephasing.shape}"
+                        f"1D data must have shape (len(t_det),) = ({len(t_det)},)"
                     )
-            payload = {
-                "rephasing": rephasing,
-                "non_rephasing": non_rephasing,
-                "components": np.array(["rephasing", "non_rephasing"], dtype=object),
-                "t_det": t_det,
-                "axes_description": np.array(axes_description, dtype=object),
-            }
-            if is_2d:
-                payload["t_coh"] = t_coh
-            np.savez_compressed(abs_data_path, **payload)
-            print(f"✅ Multi-component data saved to: {abs_data_path}")
-            return
+            key = str(signal_type)
+            if key == "non_rephasing":
+                key = "nonrephasing"
+            payload[key] = data
 
-        raise TypeError("Unsupported data type for save_data_file")
+        # Single write
+        np.savez_compressed(abs_data_path, **payload)
 
     except Exception as e:
         print(f"❌ ERROR: Failed to save data: {e}")
@@ -172,7 +142,7 @@ def save_simulation_data(
     sim_config: "SimulationConfig",
     bath: BosonicEnvironment,
     laser: "LaserPulseSequence",
-    data: np.ndarray,
+    datas: List[np.ndarray],
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
 ) -> Path:
@@ -181,11 +151,11 @@ def save_simulation_data(
     and system parameters and configuration in another file.
 
     Parameters:
-        data (np.ndarray): Simulation results (1D or 2D data).
-    t_det (np.ndarray): Detection time axis.
-    t_coh (Optional[np.ndarray]): Coherence time axis for 2D data.
+        datas (List[np.ndarray]): Simulation results (1D/2D or absorptive tuple).
+        t_det (np.ndarray): Detection time axis.
+        t_coh (Optional[np.ndarray]): Coherence time axis for 2D data.
         system (AtomicSystem): System parameters object.
-    sim_config (SimulationConfig): Simulation configuration object.
+        sim_config (SimulationConfig): Simulation configuration object.
 
     Returns:
         Path]: absolute path to DATA_DIR for the saved numpy data file and info file.
@@ -197,10 +167,10 @@ def save_simulation_data(
     abs_data_path = Path(f"{abs_base_path}_data.npz")  # still legacy suffix pattern
     abs_info_path = Path(f"{abs_base_path}_info.pkl")
 
-    # =============================
     # Save files
-    # =============================
-    save_data_file(abs_data_path, data, t_det, t_coh)
+    sig_types = getattr(sim_config, "signal_types", None) or ["rephasing"]
+
+    save_data_file(abs_data_path, datas, t_det, t_coh, signal_types=sig_types)
     save_info_file(abs_info_path, system, bath, laser, sim_config)
 
     # =============================
@@ -209,9 +179,7 @@ def save_simulation_data(
     return abs_data_path
 
 
-# =============================
-# DATA LOADING FUNCTIONS
-# =============================
+# data loading functions
 def load_data_file(abs_data_path: Path) -> dict:
     """
     Load numpy data file (.npz) from absolute path.
@@ -280,9 +248,9 @@ def load_info_file(abs_info_path: Path) -> dict:
 def load_data_from_abs_path(abs_path: str) -> dict:
     """Load simulation data (new format only).
 
-    Expects the saved file to contain a primary 'data' array (or user must
-    explicitly handle multi-component files outside this helper).
-    No automatic fallback / component selection is performed.
+    Expects the saved file to contain component arrays under
+    keys matching entries in 'signal_types' stored in the file. Also supports
+    legacy key 'non_rephasing'. Returns axes, components, and signal_types list.
     """
     # Determine the base path (without file extensions)
     if abs_path.endswith("_data.npz"):
@@ -299,25 +267,26 @@ def load_data_from_abs_path(abs_path: str) -> dict:
     data_dict = load_data_file(Path(abs_data_path))
     info_dict = load_info_file(Path(abs_info_path))
 
-    # Enforce presence of primary data key
-    if "data" not in data_dict:
-        raise KeyError(
-            "'data' key missing in file. Multi-component files must now be handled explicitly by the caller."
-        )
-
     if "sim_config" not in info_dict:
         raise KeyError("Missing 'sim_config' in info file")
 
-    result = {
-        "data": data_dict["data"],
+    # Base result structure
+    signal_types = data_dict.get("signal_types")
+    result: dict = {
         "axes": {"t_det": data_dict.get("t_det")},
         "system": info_dict.get("system"),
         "bath": info_dict.get("bath"),
         "laser": info_dict.get("laser"),
         "sim_config": info_dict.get("sim_config"),
+        "signal_types": signal_types,
     }
+
+    # Add optional coherence axis
     if "t_coh" in data_dict and data_dict.get("t_coh") is not None:
         result["axes"]["t_coh"] = data_dict["t_coh"]
+
+    for signal_type in signal_types:
+        result[signal_type] = data_dict.get(signal_type)
     return result
 
 

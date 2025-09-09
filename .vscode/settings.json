@@ -84,7 +84,7 @@
     "latex-workshop.formatting.latexindent.path": "C:/texlive/2025/bin/windows/latexindent.exe",
     // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
-        "editor.defaultFormatter": "James-Yu.latex-workshop",
+        "editor.defaultFormatter": "lenagain.latexindent",
         "editor.formatOnSave": true,
         "editor.wordWrap": "bounded",
         "editor.wordWrapColumn": 80
@@ -106,15 +106,16 @@
     // ---- Hiding Build/Temporary Files from the Explorer ----
     // This is crucial for keeping the project view clean for everyone.
     "files.exclude": {
-        "**/.git": true,
-        "**/.svn": true,
-        "**/.hg": true,
-        "**/.DS_Store": true,
-        "**/Thumbs.db": true,
+        "**/__pycache__": true,
         "**/_minted*": true,
+        "**/.DS_Store": true,
+        "**/.git": true,
+        "**/.gitattributes": true,
+        "**/.hg": true,
+        "**/.ipynb_checkpoints": true,
+        "**/.svn": true,
         "**/.texpadtmp": true,
         "**/.venv": true,
-        "**/.vscode": true,
         "**/*-concordance.tex": true,
         "**/*-gnuplottex-*": true,
         "**/*-tags.tex": true,
@@ -144,6 +145,7 @@
         "**/*.cut": true,
         "**/*.dpth": true,
         "**/*.dvi": true,
+        "**/*.egg-info": true,
         "**/*.el": true,
         "**/*.eledsec[1-9]": true,
         "**/*.eledsec[1-9][0-9]": true,
@@ -261,10 +263,8 @@
         "**/pythontex-files-*/": true,
         "**/rubber.cache": true,
         "**/sympy-plots-for-*.tex/": true,
-        "**/TSWLatexianTemp*": true,
-        "**/__pycache__": true,
-        "**/*.egg-info": true,
-        "**/.ipynb_checkpoints": true
+        "**/Thumbs.db": true,
+        "**/TSWLatexianTemp*": true
     },
     "python.testing.unittestArgs": [
         "-v",

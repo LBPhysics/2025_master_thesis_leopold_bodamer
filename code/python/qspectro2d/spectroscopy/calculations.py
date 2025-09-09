@@ -5,7 +5,6 @@
 # =============================
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from copy import deepcopy
-from re import S
 from typing import List, Union, Tuple
 import logging
 import numpy as np
@@ -857,20 +856,19 @@ def parallel_compute_1d_E_with_inhomogenity(
     sim_oqs: SimulationModuleOQS,
     parallel: bool = True,
     **kwargs: dict,
-) -> np.ndarray:
+) -> List[np.ndarray]:
     """
     Compute 1D COMPLEX polarization with frequency loop and phase cycling for IFT processing.
     Parallelizes over all frequency and phase combinations, averages, then performs IFT.
 
     Parameters
-    ----------
     **kwargs : dict
         Additional keyword arguments for compute_1d_polarization.
 
-    Returns
-    -------
-    np.ndarray
-        photon_echo_signal where signal is averaged and IFT-processed.
+    Returns:
+    third order nonlinear Polarization signal into the desired direction k_S:
+    "rephasing" or "nonrephasing":
+        List[np.ndarray]
     """
     # Configure phase cycling
     n_phases = sim_oqs.simulation_config.n_phases
@@ -1015,33 +1013,21 @@ def parallel_compute_1d_E_with_inhomogenity(
 
     logger.debug(f"Results matrix before IFT: {results_matrix_avg}")
     # Final IFT extraction for the specified component
-    signal_type = sim_oqs.simulation_config.signal_type
-    if signal_type == "rephasing":
-        components = [(-1, 1, 1)]
-    elif signal_type == "non-rephasing":
-        components = [(1, -1, 1)]
-    elif signal_type == "absorptive":
-        components = [(-1, 1, 1), (1, -1, 1)]
-    else:
-        raise ValueError(f"Unsupported signal_type: {signal_type}")
-
-    extracted = [
+    signal_types = sim_oqs.simulation_config.signal_types
+    components = []
+    for signal_type in signal_types:
+        if signal_type == "rephasing":
+            components.append((-1, 1, 1))
+        elif signal_type == "nonrephasing":
+            components.append((1, -1, 1))
+    P_kS_s = [
         extract_ift_signal_component(
             results_matrix=results_matrix_avg, phases=phases, component=c
         )
         for c in components
     ]
-    if signal_type == "absorptive":
-        rephasing_sig, nonrephasing_sig = extracted
-        logger.debug(
-            f"Final signals after IFT (absorptive request): rephasing shape={rephasing_sig.shape}, non-rephasing shape={nonrephasing_sig.shape}"
-        )
-        return rephasing_sig, nonrephasing_sig
-    else:
-        photon_echo_signal = extracted[0]
-    logger.debug(f"Final signal after IFT ({signal_type}): {photon_echo_signal}")
 
-    return photon_echo_signal
+    return P_kS_s
 
 
 # ##########################
@@ -1074,7 +1060,7 @@ def extract_ift_signal_component(
 
     Examples
     --------
-    >>> signal = extract_ift_signal_component(results_matrix, phases, [-1, 1, 0])
+    >>> signal = extract_ift_signal_component(results_matrix, phases, [-1, 1, 1])
     >>> print(signal)
     """
     l, m, n = component
@@ -1100,7 +1086,7 @@ def extract_ift_signal_component(
     for phi1_idx, phi_1 in enumerate(phases):
         for phi2_idx, phi_2 in enumerate(phases):
             if results_matrix[phi1_idx, phi2_idx] is not None:
-                phase_factor = np.exp(-1j * (l * phi_1 + m * phi_2 + n * 0.0))
+                phase_factor = np.exp(-1j * (l * phi_1 + m * phi_2 + n * 0.0)) # TODO again put DETECTION_PHASE here
                 signal += results_matrix[phi1_idx, phi2_idx] * phase_factor
 
     # signal /= n_phases * n_phases # TODO to get more prominent signal leave out

@@ -5,11 +5,11 @@ Primary immutable configuration object for simulations.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Tuple
+from typing import List
+from dataclasses import dataclass, asdict, field
 import warnings
 
-from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS  # type: ignore
+from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS, SUPPORTED_SIGNAL_TYPES  # type: ignore
 
 
 @dataclass
@@ -35,7 +35,7 @@ class SimulationConfig:
 
     max_workers: int = 1
     simulation_type: str = "1d"
-    signal_type: str = "rephasing"
+    signal_types: List[str] = field(default_factory=lambda: ["rephasing"])
 
     def __post_init__(self) -> None:  # noqa: D401
         # Validate solver
@@ -65,9 +65,8 @@ class SimulationConfig:
         if self.n_freqs <= 0:
             raise ValueError("n_freqs must be > 0")
 
-        allowed_signals = {"rephasing", "non-rephasing", "absorptive"}
-        if self.signal_type not in allowed_signals:
-            raise ValueError(f"signal_type '{self.signal_type}' not in {sorted(allowed_signals)}")
+        if not set(self.signal_types).issubset(SUPPORTED_SIGNAL_TYPES):
+            raise ValueError(f"signal_types '{self.signal_types}' not in {sorted(SUPPORTED_SIGNAL_TYPES)}")
 
         # Derived total window (consistent with original logic)
         if self.t_coh < self.t_det_max:
@@ -84,6 +83,7 @@ class SimulationConfig:
             "SimulationConfig Summary:\n"
             "-------------------------------\n"
             f"{self.simulation_type} ELECTRONIC SPECTROSCOPY SIMULATION\n"
+            f"Signal Type        : {self.signal_types}\n"
             "Time Parameters:\n"
             f"Coherence Time     : {self.t_coh} fs\n"
             f"Wait Time          : {self.t_wait} fs\n"

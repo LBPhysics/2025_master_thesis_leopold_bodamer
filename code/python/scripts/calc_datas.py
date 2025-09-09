@@ -1,7 +1,7 @@
 """
 1D Electronic Spectroscopy Simulation Script – Flexible Execution Mode
 
-This script runs 1D spectroscopy data for a given set of simulation parameters.
+This script runs 1D spectroscopy datas for a given set of simulation parameters.
 It supports two modes of execution:
 
 # Determine whether to use batch mode or single t_coh mode based on the provided arguments.
@@ -34,10 +34,12 @@ python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 0
 
 import time
 import argparse
+import warnings
 import numpy as np
 from pathlib import Path
 
 from project_config.paths import SCRIPTS_DIR
+
 from qspectro2d.spectroscopy.calculations import (
     parallel_compute_1d_E_with_inhomogenity,
 )
@@ -50,7 +52,6 @@ from qspectro2d.config.create_sim_obj import (
     create_base_sim_oqs,
 )
 from qspectro2d.core.simulation import SimulationModuleOQS
-import warnings
 
 warnings.filterwarnings(
     "ignore", category=RuntimeWarning, message="overflow encountered in exp"
@@ -85,13 +86,14 @@ def run_single_t_coh_with_sim(
         time_cut (float): Time cutoff for solver validation
 
     Returns:
-        Path: absolute path to the saved data directory
+        Path: absolute path to the saved datas directory
     """
     print(f"\n=== Starting t_coh = {t_coh:.2f} fs ===")
 
     # Update t_coh in the simulation config
-    sim_oqs.simulation_config.t_coh = t_coh
-    t_wait = sim_oqs.simulation_config.t_wait
+    sim_config_obj = sim_oqs.simulation_config
+    sim_config_obj.t_coh = t_coh
+    t_wait = sim_config_obj.t_wait
     sim_oqs.laser.update_delays = [t_coh, t_wait]
 
     start_time = time.time()
@@ -99,21 +101,21 @@ def run_single_t_coh_with_sim(
     # Run the simulation
     print("Computing 1D polarization with parallel processing...")
     try:
-        data = parallel_compute_1d_E_with_inhomogenity(
+        datas = parallel_compute_1d_E_with_inhomogenity(
             sim_oqs=sim_oqs,
             time_cut=time_cut,
-        )
+        )  # can also be a tuple (P_k_Rephasing, P_k_NonRephasing)
         print("✅ Parallel computation completed successfully!")
     except Exception as e:
         print(f"❌ ERROR: Simulation failed: {e}")
         raise
 
-    # Save data
-    sim_config_obj = sim_oqs.simulation_config
+    # Save datas
     abs_path = generate_unique_data_filename(sim_oqs.system, sim_config_obj)
     abs_data_path = Path(f"{abs_path}_data.npz")
 
-    save_data_file(abs_data_path, data, sim_oqs.times_det)
+    signal_types = sim_config_obj.signal_types
+    save_data_file(abs_data_path, datas, sim_oqs.times_det, signal_types=signal_types)
 
     if save_info:
         abs_info_path = Path(f"{abs_path}_info.pkl")
@@ -126,7 +128,7 @@ def run_single_t_coh_with_sim(
         )
 
         print(f"{'='*60}")
-        print(f"\n🎯 To plot this data, run:")
+        print(f"\n🎯 To plot this datas, run:")
         print(f'python plot_datas.py --abs_path "{abs_data_path}"')
 
     elapsed_time = time.time() - start_time
@@ -207,7 +209,7 @@ def run_2d_mode(args):
     print(f"Total execution time: {elapsed_time:.2f} seconds")
 
     print(f"\n✅ Batch {batch_idx + 1}/{n_batches} completed!")
-    print(f"\n🎯 To stack this data into 2D, run:")
+    print(f"\n🎯 To stack this datas into 2D, run:")
     print(f'python stack_t_coh_to_2d.py --abs_path "{abs_data_path}"')
 
 

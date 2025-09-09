@@ -14,6 +14,7 @@ Usage:
 
 import sys
 import argparse
+
 from qspectro2d.utils import (
     load_data_from_abs_path,
 )
@@ -42,22 +43,13 @@ def main():
 
     try:
         print(f"📁 Loading specific file: {args.abs_path}")
-        data_and_info_dict = load_data_from_abs_path(abs_path=args.abs_path)
-        ndim = data_and_info_dict["data"].ndim
-        t_det_axis = data_and_info_dict["axes"].get("t_det")
-        if t_det_axis is not None:
-            print(
-                f"✅ Data shape: {data_and_info_dict['data'].shape}, Time range: {t_det_axis[0]:.1f} to {t_det_axis[-1]:.1f} fs"
-            )
-        # Plot
-        if ndim == 1:
-            plot_1d_data(data_and_info_dict, plot_config)
-        elif ndim == 2:
-            plot_2d_data(data_and_info_dict, plot_config)
+        loaded = load_data_from_abs_path(abs_path=args.abs_path)
+        is_2d = "t_coh" in loaded["axes"]
+
+        if is_2d:
+            plot_2d_data(loaded, plot_config)
         else:
-            print(f"❌ Unsupported data dimension: {ndim}")
-            sys.exit(1)
-        print("✅ Plotting completed!")
+            plot_1d_data(loaded, plot_config)
     except Exception as e:
         print(f"❌ Error: {e}")
         sys.exit(1)

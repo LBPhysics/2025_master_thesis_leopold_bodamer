@@ -216,7 +216,7 @@ def load_simulation(
     t_det_max = float(window_cfg.get("t_det_max", dflt.T_DET_MAX))
     n_phases = int(solver_cfg.get("n_phases", dflt.N_PHASES))  # allow override
     ode_solver = str(solver_cfg.get("solver", dflt.ODE_SOLVER))
-    signal_type = str(solver_cfg.get("signal_type", dflt.SIGNAL_TYPE))
+    signal_types = list(solver_cfg.get("signal_types", dflt.SIGNAL_TYPES))
 
     # -----------------
     # VALIDATION (physics-level) BEFORE FINAL ASSEMBLY
@@ -237,7 +237,7 @@ def load_simulation(
             "relative_e0s": relative_e0s,
             "rwa_sl": rwa_sl,
             "carrier_freq_cm": carrier_cm,
-            "signal_type": signal_type,
+            "signal_types": signal_types,
         }
         dflt.validate(params)
 
@@ -251,7 +251,7 @@ def load_simulation(
         t_det_max=t_det_max,
         n_phases=n_phases,
         n_freqs=n_freqs,
-        signal_type=signal_type,
+        signal_types=signal_types,
     )
 
     # -----------------
@@ -321,7 +321,7 @@ def create_base_sim_oqs(
             t_det_max=t_det_max if t_det_max is not None else cfg.t_det_max,
             n_phases=cfg.n_phases,
             n_freqs=cfg.n_freqs,
-            signal_type=cfg.signal_type,
+            signal_types=cfg.signal_types,
         )
         # Re-wrap in fresh SimulationModuleOQS so __post_init__ recalculates evo objects
         sim = SimulationModuleOQS(

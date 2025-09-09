@@ -14,27 +14,27 @@
 In this chapter, we aim to explain the phenomena of long coherences (lifetimes) and the excitation transport of light on a microtubule. The proposed model takes the following approach:
 
 \begin{itemize}
-    \item The microtubule is modeled as a cylindrical structure consisting of nodes. Each node represents an atom, which is modeled as a two-level system. The number of atoms, \( N_{\text{atoms}} \), is determined by the number of chains (\( n_{\text{chains}} \)) and the number of rings (\( n_{\text{rings}} \)), assuming fixed positions for these nodes.
-    \item The system is restricted to a single excitation.
-    \item A time-dependent coupling to an electric field is proposed, which may be either classical or quantum in nature. This coupling is intended to facilitate spectroscopy.
-    \item Two types of Lindblad operators are introduced to model dissipation processes. Specifically:
-          \begin{enumerate}
-              \item Spontaneous decay
-              \item Dephasing
-          \end{enumerate}
+	\item The microtubule is modeled as a cylindrical structure consisting of nodes. Each node represents an atom, which is modeled as a two-level system. The number of atoms, \( N_{\text{atoms}} \), is determined by the number of chains (\( n_{\text{chains}} \)) and the number of rings (\( n_{\text{rings}} \)), assuming fixed positions for these nodes.
+	\item The system is restricted to a single excitation.
+	\item A time-dependent coupling to an electric field is proposed, which may be either classical or quantum in nature. This coupling is intended to facilitate spectroscopy.
+	\item Two types of Lindblad operators are introduced to model dissipation processes. Specifically:
+	      \begin{enumerate}
+		      \item Spontaneous decay
+		      \item Dephasing
+	      \end{enumerate}
 \end{itemize}
 The Lindblad operators introduced to model the spontaneous decay and dephasing processes for each individual atom are defined as follows:
 
 \begin{align}
-    C_{\text{decay}}^{(i)}   & = \sqrt{\gamma_0} \, \sigma_-^{(i)},    \\
-    C_{\text{dephase}}^{(i)} & = \sqrt{\gamma_\phi} \, \sigma_z^{(i)},
+	C_{\text{decay}}^{(i)}   & = \sqrt{\gamma_0} \, \sigma_-^{(i)},    \\
+	C_{\text{dephase}}^{(i)} & = \sqrt{\gamma_\phi} \, \sigma_z^{(i)},
 \end{align}
 
 where:
 \begin{itemize}
-    \item \( C_{\text{decay}}^{(i)} \) describes the spontaneous decay of the \(i\)-th atom, with a rate given by \(\gamma_0\).
-    \item \( C_{\text{dephase}}^{(i)} \) describes the dephasing of the \(i\)-th atom, with a rate given by \(\gamma_\phi\).
-    \item \( \sigma_-^{(i)} \) is the lowering operator for the \(i\)-th atom, and \( \sigma_z^{(i)} \) is the Pauli \( z \)-operator for the \(i\)-th atom.
+	\item \( C_{\text{decay}}^{(i)} \) describes the spontaneous decay of the \(i\)-th atom, with a rate given by \(\gamma_0\).
+	\item \( C_{\text{dephase}}^{(i)} \) describes the dephasing of the \(i\)-th atom, with a rate given by \(\gamma_\phi\).
+	\item \( \sigma_-^{(i)} \) is the lowering operator for the \(i\)-th atom, and \( \sigma_z^{(i)} \) is the Pauli \( z \)-operator for the \(i\)-th atom.
 \end{itemize}
 
 
@@ -72,7 +72,7 @@ where:
 %These tools are essential foundations for describing atom-atom interactions in free space,
 %including dipole-dipole interactions and coupling to a photonic bath.
 %%After this chapter, the reader already knows...
-%The quantum router of \cite{Startingpoint} is presented and summarized in Chapter \ref{Chapter3}.
+%The quantum router of \cite{startingpoint} is presented and summarized in Chapter \ref{Chapter3}.
 %It introduces the concepts of graph theory and explains how quantum evolution on a graph topology can be utilized to achieve directional routing of information.
 %Chapter \ref{Chapter4} will be the core of this thesis, adapting this model to an atomic system.
 %This chapter delves into the challenges of implementing directional routing in a fully connected atomic system and investigates various solutions to control the phase of interactions.
@@ -86,12 +86,12 @@ any experiment, a quantum system is subject to noise and decoherence due to the
 unavoidable interaction with its surroundings. The theory of open quantum systems
 aims at developing a general framework to analyze the dynamical behaviour of systems
 that, as a result of their coupling with environmental degrees of freedom, will no
-longer evolve unitarily. \cite{RivasEtAl2010MarkovianMasterEquations}
+longer evolve unitarily. \cite{rivasetal2010markovianmasterequations}
 \\
-2DES> \todoref{rind ref}%\cite{KrumlandEtAl2023TwodimensionalElectronicSpectroscopy}, 
-\cite{Segarra-MartiEtAl2018AccurateSimulationTwoDimensional}, \cite{SunEtAl2024TwodimensionalSpectroscopyOpen}
+2DES> \todoref{rind ref}%\cite{krumlandetal2023twodimensionalelectronicspectroscopy}, 
+\cite{segarra-martietal2018accuratesimulationtwodimensional}, \cite{sunetal2024twodimensionalspectroscopyopen}
 \\
-NONlinear Optics> \cite{Hamm2005PrinciplesNonlinearOptical}, \cite{Mukamel1995PrinciplesNonlinearOptical}
+NONlinear Optics> \cite{hamm2005principlesnonlinearoptical}, \cite{mukamel1995principlesnonlinearoptical}
 \\
 Spectroscopy investigates the interaction between matter and electromagnetic radiation, offering a means to analyze composition and structure.
 Central to this analysis is the understanding of how molecules respond to specific frequencies of light, revealing information about their energy levels and bonding.
