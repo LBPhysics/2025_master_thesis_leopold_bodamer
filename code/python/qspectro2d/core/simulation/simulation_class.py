@@ -24,9 +24,7 @@ from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qspectro2d.constants import HBAR
 
 
-def H_int_(
-    t: float, lowering_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence
-) -> Qobj:
+def H_int_(t: float, lowering_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qobj:
     """Interaction Hamiltonian (-μ·E) with optional RWA.
 
     Parameters
@@ -48,9 +46,7 @@ def H_int_(
     return -dipole_op * (E_field + np.conj(E_field))
 
 
-def paper_eqs_evo(
-    sim: "SimulationModuleOQS", t: float
-) -> Qobj:  # pragma: no cover simple wrapper
+def paper_eqs_evo(sim: "SimulationModuleOQS", t: float) -> Qobj:  # pragma: no cover simple wrapper
     """Global helper for 'Paper_eqs' solver evolution.
 
     Kept at module scope so partial(paper_eqs_evo, sim) remains pickleable.
@@ -127,12 +123,14 @@ class SimulationModuleOQS:
             omega_L = self.laser._carrier_freq_fs
             # Determine excitation number for each eigenstate
             # Based on index: 0 -> 0 excitations, 1..N -> 1, N+1..end -> 2
-            H_diag -= HBAR * omega_L * self.system.number_op
+            H_diag -= HBAR * omega_L * self.system.number_op  # is the same in both bases
         return H_diag
 
     def H_int_sl(self, t: float) -> Qobj:
         lowering_op = self.system.lowering_op
-        H_int = H_int_(t, lowering_op, self.simulation_config.rwa_sl, self.laser)
+        H_int = H_int_(
+            t, self.system.to_eigenbasis(lowering_op), self.simulation_config.rwa_sl, self.laser
+        )
         return H_int
 
     # --- Observables ---------------------------------------------------------------
@@ -147,7 +145,7 @@ class SimulationModuleOQS:
                 atom_e * atom_g.dag(),  # |e><g|
                 ket2dm(atom_e),  # |e><e|
             ]
-        if self.simulation_config.keep_track == "basis":
+        if self.simulation_config.keep_track == "basis":  # does this even work?
             return [ket2dm(b) for b in self.system._basis]
         # else use the eigenstates
         return [ket2dm(state) for state in self.system.eigenstates[1]]

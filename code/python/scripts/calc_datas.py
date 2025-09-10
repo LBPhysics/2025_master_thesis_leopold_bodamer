@@ -53,9 +53,7 @@ from qspectro2d.config.create_sim_obj import (
 )
 from qspectro2d.core.simulation import SimulationModuleOQS
 
-warnings.filterwarnings(
-    "ignore", category=RuntimeWarning, message="overflow encountered in exp"
-)
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 
 
 def _resolve_config_path(args) -> Path | None:
@@ -147,9 +145,7 @@ def run_1d_mode(args):
     )
 
     # Determine coherence time for printing (already overridden in sim if provided)
-    t_coh_print = (
-        args.t_coh if args.t_coh is not None else sim_oqs.simulation_config.t_coh
-    )
+    t_coh_print = args.t_coh if args.t_coh is not None else sim_oqs.simulation_config.t_coh
     print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs")
 
     # Run single simulation
@@ -184,9 +180,7 @@ def run_2d_mode(args):
     # Split into n_batches
     subarrays = np.array_split(t_coh_vals, n_batches)
     if batch_idx >= len(subarrays):
-        raise ValueError(
-            f"Batch index {batch_idx} exceeds number of n_batches {n_batches}"
-        )
+        raise ValueError(f"Batch index {batch_idx} exceeds number of n_batches {n_batches}")
 
     t_coh_subarray = subarrays[batch_idx]
     print(
