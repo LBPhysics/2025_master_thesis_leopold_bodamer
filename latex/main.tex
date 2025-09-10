@@ -1,13 +1,12 @@
 \documentclass[
-	11pt, english, singlespacing,
-%draft, 				% Uncomment to enable draft mode (no pictures, no links, overfull hboxes indicated)
+11pt, english, draft, % no pictures, links, overfull hboxes indicated
+toctotoc, 		      % add table of contents to the table of contents
+%liststotoc, 	       % add the list of figs/tables/etc to the table of contents
 %nolistspacing, 	% If the document is onehalfspacing or doublespacing, uncomment this to set spacing in lists to single
-	liststotoc, 	% Uncomment to add the list of figures/tables/etc to the table of contents
-	toctotoc, 		% Uncomment to add the main table of contents to the table of contents
-%parskip, 			% Uncomment to add space between paragraphs
-%headsepline, 		% Uncomment to get a line under the header
-%chapterinoneline, 	% Uncomment to place the chapter title next to the number on one line
-%consistentlayout, 	% Uncomment to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
+%parskip, 			% add space between paragraphs
+%headsepline, 		% get a line under the header
+%chapterinoneline, 	% to place the chapter title next to the number on one line
+%consistentlayout, 	% to change the layout of the declaration, abstract and acknowledgements pages to match the default layout
 ]{style_thesis}
 
 %-------------------------------------------------------------------------------
@@ -15,9 +14,9 @@
 %-------------------------------------------------------------------------------
 % actually import stzle with style=customstyle???? -> not needed
 \usepackage[
-    backend=biber,      % You already have this, it's essential
+    backend=biber,
     style=phys,         % The biblatex-phys style for physics journals
-    articletitle=true,  % APS style requires article titles
+    articletitle=true,
     biblabel=brackets,  % Puts numbers in brackets, e.g., [1]
     citestyle=numeric-comp % Compresses citations, e.g., [1, 2, 3] -> [1-3]
 ]{biblatex}%\renewcommand*{\bibfont}{\small} % Optional: Make the bibliography font size smaller
@@ -43,8 +42,8 @@
 %-------------------------------------------------------------------------------
 
 \thesistitle{Master thesis}
-\supervisor{\href{https://ic1.ugr.es/members/dmanzano/home/}{Prof. Dr. Daniel Manzano Diosdado}}
-\examiner{Prof. Dr. Beatriz \textsc{Olmos Sanchez}}
+\supervisor{\href{https://ic1.ugr.es/members/dmanzano/home/}{Prof. Dr. Daniel \textsc{Manzano Diosdado}}}
+\examiner{\href{https://sites.google.com/site/beatrizolmosphysics/}{Prof. Dr. Beatriz \textsc{Olmos Sanchez}}}
 \degree{Master of Science}
 \author{Leopold \textsc{Bodamer}}
 \addresses{Wolfsbergallee 17b, 75177 Pforzheim}
@@ -72,21 +71,9 @@
 %-------------------------------------------------------------------------------
 %	ABSTRACT PAGE
 %-------------------------------------------------------------------------------
-
 \begin{abstract}
 	\addchaptertocentry{\abstractname}
-	This thesis investigates the directional routing of excitations in atomic systems using subradiant states.
-	Building on Bottarelli's quantum router
-	%\cite{startingpoint}
-	, this thesis adapts the model to atomic systems,
-	addressing the challenges of controlling interactions in fully connected systems.
-	Atom light interactions have been heavily studied for atomic lattices
-	%\cite{masson2022, asenjo-garcia2017, needham2019, cech2023, jen2016}
-	.
-	In this thesis three chains, that are connected by an equilateral triangle and an isosceles triangle are studied.
-	By allowing different dipole orientations on each chain, three distinct topologies are considered.
-	The results show that controlling the topology and the initial state enables directional routing,
-	where a topology with equilateral triangle and aligned dipoles emerges as the most practical for stable readout.
+	This thesis investigates the application of two-dimensional photon-echo spectroscopy to model quantum systems, with a focus on open quantum system dynamics. We develop a comprehensive theoretical framework that combines the response-function formalism of nonlinear spectroscopy with master-equation approaches for open quantum systems. Starting from minimal reference models, including a single qubit and a four-level system formed by two coupled qubits, we validate our methods and apply the model to a system of $N$ qubits arranged on a cylindrical geometry, inspired by the structural motifs of microtubules. Our results demonstrate the capability of two-dimensional spectroscopy to probe coherence and energy transfer dynamics in these systems, providing insights into their quantum behavior and interactions with the environment. This work lays the groundwork for future experimental and theoretical studies in the field of quantum biology and quantum information science.
 \end{abstract}
 
 %-------------------------------------------------------------------------------
@@ -102,6 +89,7 @@
 \include{chapters/c21_part_trace_harm_osci}
 \include{chapters/c30_numerical_implementation}
 \include{chapters/c40_spectroscopy}
+\include{chapters/c50_model}
 \include{chapters/todo_example}
 
 %-------------------------------------------------------------------------------

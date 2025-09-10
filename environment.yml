@@ -28,9 +28,8 @@ dependencies:
   - mpmath
   - pytest>=7.0.0
   - pip:
-    # Single local editable install for all packages under code/python
     - -e ./code/python
-    
+    - -e ../plotstyle  # from my Matplotlib LaTeX repo 
     - tqdm                  # Progress bar for loops
   - pre-commit            # Git hooks runner
   - ruff                  # Fast linter and import sorter

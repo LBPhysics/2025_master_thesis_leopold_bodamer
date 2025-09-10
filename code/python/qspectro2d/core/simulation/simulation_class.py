@@ -111,7 +111,8 @@ class SimulationModuleOQS:
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
             self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = QobjEvo(self.H_int_sl)
+            # BR needs the full system Hamiltonian at all times; include H0 + time-dependent interaction
+            self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -136,19 +137,29 @@ class SimulationModuleOQS:
     # --- Observables ---------------------------------------------------------------
     @property
     def observable_ops(self) -> List[Qobj]:
-        if self.system.n_atoms == 1:
-            atom_g = basis(2, 0)
-            atom_e = basis(2, 1)
+        sys = self.system
+        if sys.n_atoms == 1:
+            atom_g = sys._basis[0]  # ground state
+            atom_e = sys._basis[1]  # excited state
             return [
-                ket2dm(atom_g),  # |g><g|
-                atom_g * atom_e.dag(),  # |g><e|
-                atom_e * atom_g.dag(),  # |e><g|
-                ket2dm(atom_e),  # |e><e|
+                sys.to_eigenbasis(ket2dm(atom_g)),  # |g><g|
+                sys.to_eigenbasis(atom_g * atom_e.dag()),  # |g><e|
+                sys.to_eigenbasis(atom_e * atom_g.dag()),  # |e><g|
+                sys.to_eigenbasis(ket2dm(atom_e)),  # |e><e|
             ]
-        if self.simulation_config.keep_track == "basis":  # does this even work?
-            return [ket2dm(b) for b in self.system._basis]
-        # else use the eigenstates
-        return [ket2dm(state) for state in self.system.eigenstates[1]]
+        return [ket2dm(state) for state in sys.eigenstates[1]]
+
+    @property
+    def observable_strs(self) -> List[str]:
+        sys = self.system
+        n = sys.n_atoms
+        dim = sys.dimension
+        strs = []
+        if n == 1:
+            strs.extend(["gg", "ge", "eg", "ee"])
+        else:
+            strs.extend([f"{i}" for i in range(dim)])
+        return strs
 
     # --- Time grids ----------------------------------------------------------------
     @property

@@ -1,6 +1,6 @@
 % !TEX root = ../main.tex
 \chapter{Open Quantum Systems} % Main chapter title
-\label{Chapter:Open_Quantum_Systems} % Label for referencing this chapter
+\label{chapter_open_quantum_systems} % Label for referencing this chapter
 
 %------------------------------------------------------------------------------
 %	SECTION 1: Introduction to Open Quantum Systems
@@ -39,23 +39,15 @@ A variety of theoretical frameworks have been developed to describe the dynamics
 
 \subsubsection{Overview of Main Approaches}
 
-\paragraph{Master Equation Approaches}
-\begin{itemize}
-	\item \textbf{Lindblad Master Equation} (Markovian): Provides a general form for completely positive, trace-preserving (CPTP) dynamics under the Markovian approximation. Widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}.
-	\item \textbf{Redfield Equation} (Markovian, but not always CPTP): Derived from a microscopic Hamiltonian using the Born-Markov approximation. Captures both dissipation and dephasing, but does not guarantee complete positivity~\cite{redfield1965theoryrelaxationprocesses, rivasetal2014quantumnonmarkovianitycharacterization, lietal2018conceptsquantumnonmarkovianity}.
-\end{itemize}
+\paragraph{Stochastic Approaches}
+Stochastic Schrödinger equations and quantum trajectories unravel master equations into individual pure state evolutions, clarifying measurement backaction and quantum jumps~\cite{vogtetal2013stochasticblochredfieldtheory, breuerpetruccione2009theoryopenquantum, carmichael1993opensystemsapproach}.
 
 \paragraph{Non-Markovian Approaches}
-\begin{itemize}
-	\item \textbf{Time-Convolutionless (TCL) and Nakajima-Zwanzig Equations}: Generalized master equations that include memory kernels, allowing for non-Markovian effects~\cite{breuerpetruccione2009theoryopenquantum, rivas2014quantumnonmarkovianityreview}.
-	\item \textbf{Hierarchical Equations of Motion (HEOM)}: Numerically exact approach for strongly coupled and non-Markovian environments, especially in condensed phase systems~\cite{tanimura2020heomreview}.
-	\item \textbf{Path Integral Methods}: The Feynman-Vernon influence functional and related techniques provide a non-perturbative, non-Markovian description of system-bath dynamics~\cite{weiss2012quantumdissipativesystems}.
-\end{itemize}
+Time-convolutionless and Nakajima–Zwanzig master equations introduce memory kernels to describe non-Markovian effects~\cite{breuerpetruccione2009theoryopenquantum, rivasetal2014quantumnonmarkovianitycharacterization}. The hierarchical equations of motion (HEOM) provide a numerically exact framework for strong coupling and non-Markovian, condensed-phase environments like liquids or solids~\cite{tanimura2020numericallyexactapproach}. This is the most computationally expensive method. Path-integral methods based on the Feynman–Vernon influence functional offer a non-perturbative route to non-Markovian dynamics~\cite{weiss2012quantumdissipativesystems}.
 
-\paragraph{Stochastic Approaches}
-\begin{itemize}
-	\item \textbf{Stochastic Schrödinger Equations and Quantum Trajectories}: These methods unravel the master equation into individual realizations, providing insight into measurement backaction and quantum jumps~\cite{breuerpetruccione2009theoryopenquantum, carmichael1993opensystemsbook}.
-\end{itemize}
+\paragraph{Master Equation Approaches}
+The Lindblad master equation (Markovian) gives a general form for completely positive, trace-preserving dynamics under the Markov approximation and is widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}. The Redfield equation (Markovian but not always CPTP) follows from a microscopic Born–Markov derivation, captures dissipation and dephasing, and does not guarantee complete positivity~\cite{redfield1965theoryrelaxationprocesses, rivasetal2014quantumnonmarkovianitycharacterization, lietal2018conceptsquantumnonmarkovianity}.
+\todoidea{explain why we choose the Redfield equation for this thesis ->  it represnets the best compromise between accuracy and computational efficiency for our systems of interest.}
 
 
 \subsection{The Redfield Equation: A Central Tool}

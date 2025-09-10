@@ -1,7 +1,7 @@
 % !TEX root = ../main.tex
 \chapter{Principles of Spectroscopy} % Main chapter title
 
-\label{chap:spectroscopy} % Label for cross-referencing this chapter
+\label{chapter_spectroscopy} % Label for cross-referencing this chapter
 
 %----------------------------------------------------------------------------------------
 %	SECTION 1: INTRODUCTION TO SPECTROSCOPY
@@ -357,12 +357,12 @@ This technique is particularly valuable in experiments where spatial isolation i
 
 \noindent The nonlinear polarization induced by three incident pulses can be expressed as a Fourier series in the pulse phases $\phi_1, \phi_2, \phi_3$, and individual phase-matched components are isolated via an inverse Fourier transform:
 \begin{equation}
-	P_{n_1,n_2,n_3}(t_1,T,t_3) =
+	P_{n_1,n_2,n_3}(t_{\text{coh}},T,t_{\text{det}}) =
 	\frac{1}{(2\pi)^3} \int_{0}^{2\pi} \!\! d\phi_1
 	\int_{0}^{2\pi} \!\! d\phi_2
 	\int_{0}^{2\pi} \!\! d\phi_3 \;
 	e^{-i(n_1\phi_1+n_2\phi_2+n_3\phi_3)}
-	P(\phi_1,\phi_2,\phi_3;t_1,T,t_3).
+	P(\phi_1,\phi_2,\phi_3;t_{\text{coh}},T,t_{\text{det}}).
 	\label{eq:continuous_phase_cycling}
 \end{equation}
 
@@ -377,61 +377,67 @@ yielding the rephasing (R) and nonrephasing (NR) contributions, respectively.
 
 \noindent The emitted field in a given phase-matching direction is proportional to the corresponding polarization:
 \begin{equation}
-	E_{k_s}(t_1,T,t_3) \propto i P_{\vec{k}_S}(t_1,T,t_3).
+	E_{k_s}(t_{\text{coh}},T,t_{\text{det}}) \propto i P_{\vec{k}_S}(t_{\text{coh}},T,t_{\text{det}}).
 	\label{eq:field_polarization_relation}
 \end{equation}
 
 \noindent The nonlinear polarization is measured (or computed) on a discrete three-dimensional grid of controlled carrier-envelope phases for this FWM experiment with three pulses:
 \begin{equation}
-	P(\phi_{1}, \phi_{2}, \phi_{3}; t_1, T, t_3), \qquad
+	P(\phi_{1}, \phi_{2}, \phi_{3}; t_{\text{coh}}, T, t_{\text{det}}), \qquad
 	\phi_{1} = \frac{2\pi m}{M}, \; m=0,\dots,M-1,
 	\label{eq:phase_grid_definition}
 \end{equation}
 with $M$ phase steps per pulse. A discrete triple Fourier transform over the phases yields the phase-resolved polarization components:
 \begin{equation}
-	P_{n_1 n_2 n_3}(t_1, T, t)
+	P_{n_1 n_2 n_3}(t_{\text{coh}}, T, t)
 	=
 	\frac{1}{M^{3}}
 	\sum_{a,b,c=0}^{M-1}
-	P(\phi_{1}, \phi_{2}, \phi_{3}; t_1, T, t_3)\,
+	P(\phi_{1}, \phi_{2}, \phi_{3}; t_{\text{coh}}, T, t_{\text{det}})\,
 	e^{-i ( n_1 \phi_{1} + n_2 \phi_{2} + n_3 \phi_{3} )}.
 	\label{eq:dft_phase_cycling}
 \end{equation}
 
-\noindent The (wavevector) phase-matched rephasing signal direction $\vec{k}_R = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$ (Eq.~\eqref{eq:fwm_phase_matching}) corresponds to selecting the Fourier index triple $(n_1,n_2,n_3)=(-1,+1,+1)$, while the nonrephasing direction $\vec{k}_{NR} = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$ corresponds to $(+1,-1,+1)$ \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. The electric field that is radiated by the sample is proportional to the polarization $ E_{k_s}(t_1, T, t_3) \propto i P_{-1,+1,+1}(t_1, T, t_3) $. This reflects propagation factors and (typically weak) frequency-dependent constants relating polarization to the emitted heterodyne-detected field \cite{mukamel1995principlesnonlinearoptical, greenetal2024vibrationalcoherenceshalfbroadband}.
+\noindent The (wavevector) phase-matched rephasing signal direction $\vec{k}_R = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$ (Eq.~\eqref{eq:fwm_phase_matching}) corresponds to selecting the Fourier index triple $(n_1,n_2,n_3)=(-1,+1,+1)$, while the nonrephasing direction $\vec{k}_{NR} = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$ corresponds to $(+1,-1,+1)$ \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. The electric field that is radiated by the sample is proportional to the polarization
+\begin{equation}
+	E_{k_s}(t_{\text{coh}}, T, t_{\text{det}}) \propto i P_{-1,+1,+1}(t_{\text{coh}}, T, t_{\text{det}}).
+\end{equation}
+This reflects propagation factors and (typically weak) frequency-dependent constants relating polarization to the emitted heterodyne-detected field \cite{mukamel1995principlesnonlinearoptical, greenetal2024vibrationalcoherenceshalfbroadband}.
 
 \paragraph{Time--Frequency Transforms.}
-\noindent After phase selection, the complex time-domain fields $E_{R}(t_1, T, t_3)$ and $E_{NR}(t_1, T, t_3)$ are Fourier transformed over the detection time $t_3$ and the coherence time $t_1$ to construct the two-dimensional spectra (cf. Eq.~\eqref{eq:2des_signal}):
+\noindent After phase selection, the complex time-domain fields $E_{R}(t_{\text{coh}}, T, t_{\text{det}})$ and $E_{NR}(t_{\text{coh}}, T, t_{\text{det}})$ are Fourier transformed over the detection time $t_{\text{det}}$ and the coherence time $t_{\text{coh}}$ to construct the two-dimensional spectra (cf. Eq.~\eqref{eq:2des_signal}):
 \begin{align}
-	S_{R}(\omega_{t_1}, T, \omega_{t_3})
+	S_{R}(\omega_{\text{coh}}, T, \omega_{\text{det}})
 	 & =
-	\int dt_1 \int dt_3 \;
-	e^{+ i \omega_{t_1} t_1} e^{- i \omega_{t_3} t_3}
-	E_{R}(t_1, T, t_3),
+	\int dt_{\text{coh}} \int dt_{\text{det}} \;
+	e^{+ i \omega_{\text{coh}} t_{\text{coh}}} e^{- i \omega_{\text{det}} t_{\text{det}}}
+	E_{R}(t_{\text{coh}}, T, t_{\text{det}}),
 	\label{eq:rephasing_transform} \\
-	S_{NR}(\omega_{t_1}, T, \omega_{t_3})
+	S_{NR}(\omega_{\text{coh}}, T, \omega_{\text{det}})
 	 & =
-	\int dt_1 \int dt_3 \;
-	e^{- i \omega_{t_1} t_1} e^{- i \omega_{t_3} t_3}
-	E_{NR}(t_1, T, t_3),
+	\int dt_{\text{coh}} \int dt_{\text{det}} \;
+	e^{- i \omega_{\text{coh}} t_{\text{coh}}} e^{- i \omega_{\text{det}} t_{\text{det}}}
+	E_{NR}(t_{\text{coh}}, T, t_{\text{det}}),
 	\label{eq:nonrephasing_transform}
 \end{align}
-The opposite sign in the $t_1$-exponent implements the standard convention distinguishing rephasing (photon-echo) and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. In discrete numerical implementations, Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform} are approximated by (shifted) fast Fourier transforms; care must be taken to (i) include the sampling factors, (ii) verify axis centering ($\omega=0$), and (iii) implement the $+i\omega_{t_1} t_1$ kernel for the rephasing branch (e.g. via complex conjugation tricks or inverse transforms) \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
+The opposite sign in the $t_{\text{coh}}$-exponent implements the standard convention distinguishing rephasing (photon-echo) and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. In discrete numerical implementations, Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform} are approximated by (shifted) fast Fourier transforms; care must be taken to (i) include the sampling factors, (ii) verify axis centering ($\omega=0$), and (iii) implement the $+i\omega_{\text{coh}} t_{\text{coh}}$ kernel for the rephasing branch (e.g. via complex conjugation tricks or inverse transforms) \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
 
 \paragraph{Global Phase and Absorptive Combination.}
 \noindent The experimentally measured (or simulated) complex spectra $S_{R}$ and $S_{NR}$ each carry unknown global phases (e.g. local oscillator offset). A relative phase $\varphi_g$ must be determined before constructing the absorptive (purely in-phase) 2D spectrum \cite{mukamel1995principlesnonlinearoptical, jonas2003twodimensionalfemtosecondspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. A common strategy is to optimize $\varphi_g$ so that the projection onto the detection axis reproduces an independently measured linear (or pump--probe) absorption spectrum or minimizes dispersive (derivative-like) features in selected slices:
 \begin{equation}
-	S_{\text{abs}}(\omega_{t_1}, T, \omega_{t_3})
+	S_{\text{abs}}(\omega_{\text{coh}}, T, \omega_{\text{det}})
 	=
 	\Re \left\{
-	S_{R}(\omega_{t_1}, T, \omega_{t_3}) + e^{i \varphi_g} S_{NR}(\omega_{t_1}, T, \omega_{t_3})
+	S_{R}(\omega_{\text{coh}}, T, \omega_{\text{det}}) + e^{i \varphi_g} S_{NR}(\omega_{\text{coh}}, T, \omega_{\text{det}})
 	\right\}.
 	\label{eq:absorptive_spectrum}
 \end{equation}
 When phase referencing is stable (e.g. interferometric phase stabilization), $\varphi_g$ may be close to zero but still requires verification \cite{brixneretal2004phasestabilizedtwodimensionalelectronic, greenetal2024vibrationalcoherenceshalfbroadband}.
+The absorptive spectra is free from broadening refractive contributions \cite{fullerogilvie2015experimentalimplementationstwodimensional}.
+
 
 \paragraph{Normalization and Practical Considerations.}
-\noindent (i) The $M^{-3}$ factor in Eq.~\eqref{eq:dft_phase_cycling} should be retained (or absorbed consistently) for quantitative comparisons. (ii); omission rescales amplitudes and can obscure quantitative lineshape analysis \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. (iii) Frequency axes must be aligned so that $\omega_{t_1}$ for $S_{R}$ and $S_{NR}$ are defined with the same orientation before Eq.~\eqref{eq:absorptive_spectrum} is applied. (iv) Consistent sign conventions are essential; mixing conventions leads to mirrored or dispersive residual features \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
+\noindent (i) The $M^{-3}$ factor in Eq.~\eqref{eq:dft_phase_cycling} should be retained (or absorbed consistently) for quantitative comparisons. (ii); omission rescales amplitudes and can obscure quantitative lineshape analysis \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. (iii) Frequency axes must be aligned so that $\omega_{\text{coh}}$ for $S_{R}$ and $S_{NR}$ are defined with the same orientation before Eq.~\eqref{eq:absorptive_spectrum} is applied. (iv) Consistent sign conventions are essential; mixing conventions leads to mirrored or dispersive residual features \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
 
 \paragraph{Summary.}
 \noindent Phase-cycling Fourier selection (Eqs.~\eqref{eq:continuous_phase_cycling}, \eqref{eq:dft_phase_cycling}) cleanly isolates rephasing and nonrephasing field components (Eqs.~\eqref{eq:rephasing_selection}--\eqref{eq:nonrephasing_selection}) without relying solely on spatial separation. The emitted fields are proportional to the corresponding polarizations (Eq.~\eqref{eq:field_polarization_relation}). Subsequent bidimensional Fourier transforms with pathway-specific phase kernels (Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform}) and careful global phasing yield the absorptive 2D spectrum (Eq.~\eqref{eq:absorptive_spectrum}), which most directly reflects underlying transition energies, homogeneous/inhomogeneous broadening, and coherent couplings \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
@@ -452,14 +458,14 @@ When phase referencing is stable (e.g. interferometric phase stabilization), $\v
 
 \begin{enumerate}
 	\item The first pulse creates a coherent superposition between ground and excited states.
-	\item During a waiting period $t_1$, the coherences evolve at different frequencies due to inhomogeneous broadening, resulting in phase dispersion.
-	\item The second pulse, applied at time $t_1$ after the first, effectively reverses the phase evolution of the coherences.
-	\item At time $2t_1$, the phases realign (rephase), producing a macroscopic polarization that emits an echo signal.
+	\item During a waiting period $t_{\text{coh}}$, the coherences evolve at different frequencies due to inhomogeneous broadening, resulting in phase dispersion.
+	\item The second pulse, applied at time $t_{\text{coh}}$ after the first, effectively reverses the phase evolution of the coherences.
+	\item At time $2t_{\text{coh}}$, the phases realign (rephase), producing a macroscopic polarization that emits an echo signal.
 \end{enumerate}
 
 \noindent The photon echo signal is the time-domain manifestation of that same rephasing process: when the system rephases, the third-order polarization emits a coherent burst of light (the photon echo) in that same phase-matching direction. This coherent emission occurs precisely when the individual molecular coherences realign in phase, creating a macroscopic polarization that radiates the echo signal.
 
-\noindent The echo intensity as a function of the delay time $t_1$ reveals information about the dephasing processes in the system.
+\noindent The echo intensity as a function of the delay time $t_{\text{coh}}$ reveals information about the dephasing processes in the system.
 
 \noindent It is important to emphasize that static inhomogeneity is crucial for the appearance of the photon echo signal. This inhomogeneity arises from variations in the local environment of individual quantum systems within the ensemble, leading to a distribution of transition frequencies. In numerical simulations and theoretical treatments, static inhomogeneity is taken into account by averaging the results over an ensemble of different realizations of the Hamiltonian \cite{cho2009twodimensionalopticalspectroscopy, mukamel1995principlesnonlinearoptical}. Without this inhomogeneous distribution, all systems would evolve identically, and the characteristic echo phenomenon would not occur.
 
@@ -470,10 +476,10 @@ When phase referencing is stable (e.g. interferometric phase stabilization), $\v
 
 \begin{enumerate}
 	\item The first pulse creates coherences.
-	\item After time $t_1$, the second pulse converts these coherences to populations.
+	\item After time $t_{\text{coh}}$, the second pulse converts these coherences to populations.
 	\item During a waiting time $T$, population relaxation and spectral diffusion can occur.
 	\item The third pulse, applied at time $T$ after the second, reconverts populations to coherences.
-	\item At time $t_1$ after the third pulse, the echo signal is emitted.
+	\item At time $t_{\text{coh}}$ after the third pulse, the echo signal is emitted.
 \end{enumerate}
 
 \noindent By scanning the waiting time $T$, this technique allows measurement of population dynamics and spectral diffusion processes.
@@ -483,19 +489,19 @@ When phase referencing is stable (e.g. interferometric phase stabilization), $\v
 
 \noindent Two-dimensional electronic spectroscopy (2DES) represents the state-of-the-art in photon echo techniques \cite{jonas2003twodimensionalfemtosecondspectroscopy, brixneretal2004phasestabilizedtwodimensionalelectronic, schlau-cohenetal2011twodimensionalelectronicspectroscopy}. It correlates excitation and detection frequencies, revealing couplings between different transitions and energy transfer pathways.
 
-\noindent In 2DES, the delay time $t_1$ between the first and second pulses is systematically varied, and the signal field is detected in a phase-resolved manner using spectral interferometry \todoref{find ref}%\cite{lepetit1995, bristow2011}. 
-Fourier transformation with respect to $t_1$ yields the excitation frequency axis ($\omega_{t_1}$), while spectral resolution of the signal provides the detection frequency axis ($\omega_t$).
+\noindent In 2DES, the delay time $t_{\text{coh}}$ between the first and second pulses is systematically varied, and the signal field is detected in a phase-resolved manner using spectral interferometry \todoref{find ref}%\cite{lepetit1995, bristow2011}. 
+Fourier transformation with respect to $t_{\text{coh}}$ yields the excitation frequency axis ($\omega_{\text{coh}}$), while spectral resolution of the signal provides the detection frequency axis ($\omega_t$).
 
-\noindent The resulting 2D spectrum contains peaks along the diagonal ($\omega_{t_1} = \omega_{t_3}$) corresponding to the linear absorption spectrum, while off-diagonal peaks reveal couplings and energy transfer between different states. The evolution of the 2D spectra with waiting time $T$ provides detailed information about energy transfer kinetics, spectral diffusion, and quantum coherence effects.
+\noindent The resulting 2D spectrum contains peaks along the diagonal ($\omega_{\text{coh}} = \omega_{\text{det}}$) corresponding to the linear absorption spectrum, while off-diagonal peaks reveal couplings and energy transfer between different states. The evolution of the 2D spectra with waiting time $T$ provides detailed information about energy transfer kinetics, spectral diffusion, and quantum coherence effects.
 
 \noindent In experimental implementations, 2D spectra are often presented as the absorptive spectrum, which is given by the sum of the rephasing photon echo and nonrephasing spectra \cite{cho2009twodimensionalopticalspectroscopy}. This representation eliminates phase-twist lineshapes and yields purely absorptive features that most directly correlate with the underlying energy level structure and couplings.
 
 \begin{equation}
-	S(\omega_{t_1}, T, \omega_{t_3}) = \iint dt_3\, dt_1\, e^{i\omega_{t_3} t_3} e^{-i\omega_{t_1} t_1} S(t_1, T, t_3)
+	S(\omega_{\text{coh}}, T, \omega_{\text{det}}) = \iint dt_{\text{det}}\, dt_{\text{coh}}\, e^{i\omega_{\text{det}} t_{\text{det}}} e^{-i\omega_{\text{coh}} t_{\text{coh}}} S(t_{\text{coh}}, T, t_{\text{det}})
 	\label{eq:2des_signal}
 \end{equation}
 
-\noindent where $S(t_1, T, t_3)$ is the time-domain signal.
+\noindent where $S(t_{\text{coh}}, T, t_{\text{det}})$ is the time-domain signal.
 
 \subsection{Heterodyne and Homodyne Detection}
 \label{subsec:heterodyne_homodyne}

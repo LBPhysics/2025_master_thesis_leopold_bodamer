@@ -102,9 +102,7 @@ def plot_pulse_envelope(
     return fig, ax
 
 
-def plot_e_pulse(
-    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
-):
+def plot_e_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
     """
     Plot the RWA electric field (envelope only) over time for pulses using LaserPulseSequence.
 
@@ -162,9 +160,7 @@ def plot_e_pulse(
     return fig, ax
 
 
-def plot_epsilon_pulse(
-    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
-):
+def plot_epsilon_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
     """
     Plot the full electric field (with carrier) over time for pulses using LaserPulseSequence.
 
@@ -225,7 +221,7 @@ def plot_1d_el_field(
     axis_det: np.ndarray,
     data: np.ndarray,
     domain: Literal["time", "freq"] = "time",
-    component: Literal["real", "imag", "abs", "phase"] = "real",
+    component: Literal["real", "img", "abs", "phase"] = "real",
     title: str | None = None,
     section: Union[tuple[float, float], None] = None,
     function_symbol: str = "S",
@@ -249,9 +245,7 @@ def plot_1d_el_field(
     # CROP + NORMALIZE
     # =============================
     if section is not None:
-        axis_det, data = crop_nd_data_along_axis(
-            axis_det, data, section=section, axis=0
-        )
+        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
     if normalize:
         max_abs = np.abs(data).max()
         if max_abs == 0:
@@ -289,9 +283,7 @@ def plot_1d_el_field(
     return fig
 
 
-def plot_all_pulse_components(
-    times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)
-):
+def plot_all_pulse_components(times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)):
     """
     Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
 
@@ -361,9 +353,7 @@ def plot_example_evo(
     E_total = np.array([field_func(t, pulse_seq) / E0 for t in times_plot])
 
     # Create plot with appropriate size
-    fig, axes = plt.subplots(
-        len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True
-    )
+    fig, axes = plt.subplots(len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True)
 
     # Plot electric field
     axes[0].plot(
@@ -386,12 +376,11 @@ def plot_example_evo(
     # Plot expectation values
     for idx, data in enumerate(datas):
         ax = axes[idx + 1]
-
-        # Determine observable label
-        if observable_strs and idx < len(observable_strs):
-            observable_str = observable_strs[idx]
-        else:
+        if idx == len(observable_strs):
             observable_str = r"\mu"
+        else:
+            observable_str = observable_strs[idx]
+            print(f"Using observable string: {observable_str}")
 
         # Plot real part
         ax.plot(
@@ -399,7 +388,7 @@ def plot_example_evo(
             np.real(data),
             color=COLORS[0],
             linestyle=LINE_STYLES[0],
-            label=r"$\mathrm{Re}\langle" + " " + observable_str + " " + r"\rangle$",
+            label=r"$\mathrm{Re}\langle " + observable_str + r" \rangle$",
         )
 
         # Plot imaginary part
@@ -408,16 +397,16 @@ def plot_example_evo(
             np.imag(data),
             color=COLORS[1],
             linestyle=LINE_STYLES[1],
-            label=r"$\mathrm{Im}\langle" + " " + observable_str + " " + r"\rangle$",
+            label=r"$\mathrm{Im}\langle " + observable_str + r" \rangle$",
         )
 
-    ax.set_ylabel(r"$\langle" + observable_str + r"\rangle$")
-    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+        ax.set_ylabel(r"$\langle " + observable_str + r" \rangle$")
+        ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
     add_text_box(ax=axes[0], kwargs=kwargs)
 
     # Set x-label only on the bottom subplot
-    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$", "t / fs")
+    axes[-1].set_xlabel(r"$t\,/\,\mathrm{fs}$")
 
     plt.tight_layout()
     simplify_figure_text(fig)
@@ -429,7 +418,7 @@ def plot_1d_el_field(
     axis_det: np.ndarray,
     data: np.ndarray,
     domain: Literal["time", "freq"] = "time",
-    component: Literal["real", "imag", "abs", "phase"] = "real",
+    component: Literal["real", "img", "abs", "phase"] = "real",
     title: str = None,
     section: Union[tuple[float, float], None] = None,
     function_symbol: str = "S",
@@ -442,7 +431,7 @@ def plot_1d_el_field(
         axis_det (np.ndarray): X-axis values (time in fs or frequency in 10^4 cm^-1)
         data (np.ndarray): Complex data array to plot
         domain (Literal["time", "freq"]): Domain of the data - 'time' or 'freq'. Defaults to 'time'.
-        component (Literal["real", "imag", "abs", "phase"]): Component to plot - 'real', 'imag', 'abs', or 'phase'.
+        component (Literal["real", "img", "abs", "phase"]): Component to plot - 'real', 'imag', 'abs', or 'phase'.
                                                            Defaults to 'real'.
         title (str, optional): Custom title for the plot. If None, a default title will be generated.
         function_symbol (str): Symbol to use in plot labels. Defaults to "S".
@@ -455,9 +444,7 @@ def plot_1d_el_field(
 
     if section is not None:
         # Crop the data if a section is specified
-        axis_det, data = crop_nd_data_along_axis(
-            axis_det, data, section=section, axis=0
-        )
+        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
 
     if np.abs(data).max() == 0:
         raise ValueError("Data array is all zeros, cannot normalize.")
@@ -477,7 +464,7 @@ def plot_1d_el_field(
             y_data = np.real(data)
             label = r"$\mathrm{Re}[" + function_symbol + "(t)]$"
             ylabel = r"$\mathrm{Re}[" + function_symbol + "(t)]$"
-        elif component == "imag":
+        elif component == "img":
             y_data = np.imag(data)
             label = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"
             ylabel = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"
@@ -504,7 +491,7 @@ def plot_1d_el_field(
             y_data = np.real(data)
             label = rf"$\mathrm{{Re}}[{function_symbol}(\omega)]$"
             ylabel = rf"$\mathrm{{Re}}[{function_symbol}(\omega)]$"
-        elif component == "imag":
+        elif component == "img":
             y_data = np.imag(data)
             label = rf"$\mathrm{{Im}}[{function_symbol}(\omega)]$"
             ylabel = rf"$\mathrm{{Im}}[{function_symbol}(\omega)]$"
@@ -521,7 +508,7 @@ def plot_1d_el_field(
         raise ValueError(f"Domain {domain} not recognized. Use 'time' or 'freq'.")
 
     # Select color and linestyle
-    color_idx = {"abs": 0, "real": 1, "imag": 2, "phase": 3}.get(component, 0)
+    color_idx = {"abs": 0, "real": 1, "img": 2, "phase": 3}.get(component, 0)
     color = COLORS[color_idx]  # "C0", "C1", etc.
     linestyle = LINE_STYLES[0]  # "solid"
 
@@ -554,7 +541,7 @@ def plot_2d_el_field(
     data: np.ndarray,  # complex 2D array
     t_wait: float = np.inf,
     domain: Literal["time", "freq"] = "time",
-    component: Literal["real", "imag", "abs", "phase"] = "real",
+    component: Literal["real", "img", "abs", "phase"] = "real",
     use_custom_colormap: bool = False,
     section: Union[list[tuple[float, float]], None] = None,
     figsize: Tuple[float, float] = (7.0, 5.6),
@@ -581,11 +568,11 @@ def plot_2d_el_field(
     domain : {"time", "freq"}, default "time"
         Domain of the data. "time" for time-domain plots (fs), "freq" for
         frequency-domain plots (10^4 cm^-1).
-    component : {"real", "imag", "abs", "phase"}, default "real"
+    component : {"real", "img", "abs", "phase"}, default "real"
         Component of complex data to plot. Used for both title and data processing.
     use_custom_colormap : bool, default False
         If True, uses custom red-white-blue colormap centered at zero.
-        Automatically set to True for "real", "imag", and "phase" components.
+        Automatically set to True for "real", "img", and "phase" components.
     section : first tuple crops coh axis (coh_min, coh_max),
               second tuple crops det axis (det_min, det_max) to zoom into specific region.
 
@@ -610,11 +597,7 @@ def plot_2d_el_field(
     # =============================
     # VALIDATE INPUT
     # =============================
-    if (
-        data.ndim != 2
-        or data.shape[0] != len(axis_coh)
-        or data.shape[1] != len(axis_det)
-    ):
+    if data.ndim != 2 or data.shape[0] != len(axis_coh) or data.shape[1] != len(axis_det):
         raise ValueError(
             f"Data shape {data.shape} does not match axis_det ({len(axis_det)}) and axis_coh ({len(axis_coh)}) dimensions."
         )
@@ -635,12 +618,8 @@ def plot_2d_el_field(
     # =============================
     if section is not None:
         # expect list[(coh_min, coh_max),(det_min, det_max)]
-        axis_coh, data = crop_nd_data_along_axis(
-            axis_coh, data, section=section[0], axis=0
-        )
-        axis_det, data = crop_nd_data_along_axis(
-            axis_det, data, section=section[1], axis=1
-        )
+        axis_coh, data = crop_nd_data_along_axis(axis_coh, data, section=section[0], axis=0)
+        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section[1], axis=1)
     if normalize:
         max_abs = np.abs(data).max()
         if max_abs == 0:
@@ -675,7 +654,7 @@ def plot_2d_el_field(
     # =============================
     norm = None
     # For real and imag data, use red-white-blue colormap by default
-    if component in ("real", "imag", "phase"):
+    if component in ("real", "img", "phase"):
         use_custom_colormap = True
     elif component == "abs":
         use_custom_colormap = False
@@ -877,7 +856,7 @@ def _style_for_component(component: str) -> Tuple[str, str]:
     Strategy: distinct color per component; primary solid line style.
     Fallback: first style/color.
     """
-    color_map = {"abs": 0, "real": 1, "imag": 2, "phase": 3}
+    color_map = {"abs": 0, "real": 1, "img": 2, "phase": 3}
     idx = color_map.get(component, 0)
     color = COLORS[idx]
     linestyle = LINE_STYLES[0]
@@ -911,7 +890,7 @@ def _resolve_1d_labels_and_component(
     elif component == "real":
         y_data = np.real(data)
         base = f"\mathrm{{Re}}[{function_symbol}({var_symbol})]"
-    elif component == "imag":
+    elif component == "img":
         y_data = np.imag(data)
         base = f"\mathrm{{Im}}[{function_symbol}({var_symbol})]"
     elif component == "phase":
@@ -927,11 +906,11 @@ def _resolve_1d_labels_and_component(
 
 def _component_2d_data(data: np.ndarray, component: str) -> Tuple[np.ndarray, str]:
     """Return transformed 2D data + base title according to component."""
-    if component not in ("real", "imag", "abs", "phase"):
+    if component not in ("real", "img", "abs", "phase"):
         raise ValueError("Invalid component for 2D plot.")
     if component == "real":
         return np.real(data), r"$\text{2D Real }$"
-    if component == "imag":
+    if component == "img":
         return np.imag(data), r"$\text{2D Imag }$"
     if component == "abs":
         return np.abs(data), r"$\text{2D Abs }$"
@@ -986,11 +965,11 @@ def add_custom_contour_lines(
         x (np.ndarray): X-axis coordinate array
         y (np.ndarray): Y-axis coordinate array
         data (np.ndarray): 2D data array to contour
-        component (str): Data component type ("real", "imag", "phase", "abs")
+        component (str): Data component type ("real", "img", "phase", "abs")
         level_count (int): Number of contour levels in each region (positive/negative)
     """
     ### Add contour lines with different styles for positive and negative values
-    if component in ("real", "imag", "phase"):
+    if component in ("real", "img", "phase"):
         ### Determine contour levels based on the data range
         vmax = max(abs(np.min(data)), abs(np.max(data)))
         vmin = -vmax
@@ -1061,13 +1040,9 @@ def add_text_box(ax, kwargs: dict, position: tuple = (0.98, 0.98), fontsize: int
         text_lines = []
         for key, value in kwargs.items():
             if isinstance(value, float):
-                text_lines.append(
-                    f"{key}: {value:.3g}"
-                )  # Format floats to 3 significant digits
+                text_lines.append(f"{key}: {value:.3g}")  # Format floats to 3 significant digits
             elif isinstance(value, (int, str)):
-                text_lines.append(
-                    f"{key}: {value}"
-                )  # Add integers and strings directly
+                text_lines.append(f"{key}: {value}")  # Add integers and strings directly
             elif isinstance(value, np.ndarray):
                 text_lines.append(
                     f"{key}: array(shape={value.shape})"

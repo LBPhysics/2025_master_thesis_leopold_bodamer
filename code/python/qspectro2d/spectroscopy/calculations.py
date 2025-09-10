@@ -173,6 +173,166 @@ def _check_density_matrix_properties(
     return error_messages, time_cut
 
 
+def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
+    """
+    Validate the quantum solver by running a test evolution and checking density matrix properties.
+
+    This function performs a comprehensive validation of the solver by:
+    1. Running a test evolution with extended time range
+    2. Checking density matrix properties (Hermiticity, trace preservation, positive semidefiniteness)
+    3. Applying RWA phase factors if needed
+    4. Logging detailed diagnostics throughout the process
+
+    Parameters
+    ----------
+    sim_oqs : SimulationModuleOQS
+        Simulation object containing system parameters, laser pulses, and configuration.
+        A deep copy is made internally to avoid modifying the original object.
+
+    Returns
+    -------
+    tuple[Result, float]
+        result : Result
+            QuTiP Result object from the test evolution.
+        time_cut : float
+            Time after which numerical instabilities were detected, or np.inf if all checks passed.
+
+    Notes
+    -----
+    The function uses extended time parameters (2x t_max, 10x dt) to stress-test the solver.
+    It checks for common numerical issues in quantum simulations:
+    - Non-Hermitian density matrices
+    - Negative eigenvalues (non-physical states)
+    - Trace deviation from 1.0
+
+    If RWA (Rotating Wave Approximation) is enabled, phase factors are applied to the states
+    before validation to account for the rotating frame transformation.
+    """
+    logger.info(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
+    copy_sim_oqs = deepcopy(sim_oqs)
+    t_max = 2 * copy_sim_oqs.simulation_config.t_max
+    dt = 10 * copy_sim_oqs.simulation_config.dt
+    t0 = -2 * copy_sim_oqs.laser.pulse_fwhms[0]
+    times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
+    copy_sim_oqs.times_local = times
+
+    # =============================
+    # DETAILED SYSTEM DIAGNOSTICS
+    # =============================
+    logger.info(f"=== SOLVER DIAGNOSTICS ===")
+    logger.info(f"Solver: {copy_sim_oqs.simulation_config.ode_solver}")
+    logger.info(f"Time range: t0={t0:.3f}, t_max={t_max:.3f}, dt={dt:.6f}")
+    logger.info(f"Number of time points: {len(times)}")
+    logger.info(f"RWA enabled: {getattr(copy_sim_oqs.simulation_config, 'rwa_sl', False)}")
+
+    _log_system_diagnostics(copy_sim_oqs)
+
+    # INPUT VALIDATION
+    _validate_simulation_input(copy_sim_oqs)
+
+    ### Check solver tolerances
+    solver_opts = {}  # no global defaults after CONFIG removal
+    logger.info(f"Solver options: {solver_opts}")
+    neg_thr = DEFAULT_SOLVER_THRESHOLDS["negative_eigval_threshold"]
+    tr_tol = DEFAULT_SOLVER_THRESHOLDS["trace_tolerance"]
+    logger.info(f"Negative eigenvalue threshold: {neg_thr}")
+    logger.info(f"Trace tolerance: {tr_tol}")
+
+    result = compute_pulse_evolution(copy_sim_oqs, **{"store_states": True})
+    states = result.states
+
+    # CHECK THE RESULT
+    if not isinstance(result, Result):
+        raise TypeError("Result must be a Result object")
+    if list(result.times) != list(times):
+        raise ValueError("Result times do not match input times")
+    if len(result.states) != len(times):
+        raise ValueError("Number of output states does not match number of time points")
+
+    # CHECK DENSITY MATRIX PROPERTIES
+    # Apply RWA phase factors if needed
+    if getattr(copy_sim_oqs.simulation_config, "rwa_sl", False):
+        n_atoms = copy_sim_oqs.system.n_atoms
+        omega_laser = copy_sim_oqs.laser._carrier_freq_fs
+        logger.info(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser}")
+        states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
+
+    ### Enhanced state checking with more diagnostics
+    logger.info("=== STATE-BY-STATE ANALYSIS ===")
+    error_messages, time_cut = _check_density_matrix_properties(states, times)
+
+    if not error_messages:
+        logger.info("✅ Checks passed. DM remains Hermitian and positive.")
+        logger.info(f"Final state trace: {states[-1].tr():.6f}")
+        logger.info(f"Final state min eigenvalue: {states[-1].eigenenergies().min():.10f}")
+
+    return result, time_cut
+
+
+'''
+def compute_pulse_evolution(
+    sim_oqs: SimulationModuleOQS,
+    solver_defaults: dict | None = None,
+    **solver_options: dict,
+) -> Result:
+    """
+    Compute the evolution of the quantum system for a given pulse sequence.
+
+    This function handles multi-pulse quantum evolution by segmenting the time array
+    based on pulse regions and using appropriate evolution operators for each segment.
+    It supports both interactive (with pulses) and free evolution periods.
+
+    Parameters
+    ----------
+    sim_oqs : SimulationModuleOQS
+        Prepared simulation object containing:
+        - system: AtomicSystem with initial state, dipole operators, etc.
+        - times_local: Time array for evolution
+        - evo_obj_int: Evolution operator for interactive periods
+        - simulation_config: Solver settings and tolerances
+        - decay_channels: List of decay operators for dissipation
+    solver_defaults : dict | None
+        Default solver options (previously CONFIG.solver.solver_options).
+        Common options include 'store_states', 'store_final_state', 'atol', 'rtol'.
+    **solver_options : dict
+        User overrides for solver options (highest precedence).
+        Examples: store_states=True, atol=1e-8, rtol=1e-6
+
+    Returns
+    -------
+    Result
+        QuTiP Result object containing:
+        - states: List of density matrices at each time point (if store_states=True)
+        - times: Array of time points corresponding to states
+        - final_state: Final density matrix (if store_final_state=True)
+    """
+    # CONFIGURE SOLVER OPTIONS
+    options = {}
+    if solver_defaults:
+        options.update(solver_defaults)
+    if solver_options:
+        options.update(solver_options)
+
+    current_state = sim_oqs.system.psi_ini
+    actual_times = sim_oqs.times_local
+    decay_ops_list = sim_oqs.decay_channels
+
+    evo_obj = sim_oqs.evo_obj_int  # Interactive evolution (with pulses)
+
+    # Execute evolution for this time segment
+    result = _execute_single_evolution_segment(
+        sim_oqs.simulation_config.ode_solver,
+        evo_obj,
+        decay_ops_list,
+        current_state,
+        actual_times,
+        options,
+    )
+
+    return result
+'''
+
+
 def compute_pulse_evolution(
     sim_oqs: SimulationModuleOQS,
     solver_defaults: dict | None = None,
@@ -329,12 +489,15 @@ def _execute_single_evolution_segment(
         QuTiP Result object with evolution data for this segment.
     """
     if ode_solver == "BR":
+        # Optional Bloch-Redfield secular cutoff passthrough
+        sec_cutoff = options.get("sec_cutoff", None)
         return brmesolve(
             evo_obj,
             current_state,
             times_,
             a_ops=decay_ops_list,
             options=options,
+            sec_cutoff=sec_cutoff,
         )
     else:
         return mesolve(
@@ -344,102 +507,6 @@ def _execute_single_evolution_segment(
             c_ops=decay_ops_list,
             options=options,
         )
-
-
-def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
-    """
-    Validate the quantum solver by running a test evolution and checking density matrix properties.
-
-    This function performs a comprehensive validation of the solver by:
-    1. Running a test evolution with extended time range
-    2. Checking density matrix properties (Hermiticity, trace preservation, positive semidefiniteness)
-    3. Applying RWA phase factors if needed
-    4. Logging detailed diagnostics throughout the process
-
-    Parameters
-    ----------
-    sim_oqs : SimulationModuleOQS
-        Simulation object containing system parameters, laser pulses, and configuration.
-        A deep copy is made internally to avoid modifying the original object.
-
-    Returns
-    -------
-    tuple[Result, float]
-        result : Result
-            QuTiP Result object from the test evolution.
-        time_cut : float
-            Time after which numerical instabilities were detected, or np.inf if all checks passed.
-
-    Notes
-    -----
-    The function uses extended time parameters (2x t_max, 10x dt) to stress-test the solver.
-    It checks for common numerical issues in quantum simulations:
-    - Non-Hermitian density matrices
-    - Negative eigenvalues (non-physical states)
-    - Trace deviation from 1.0
-
-    If RWA (Rotating Wave Approximation) is enabled, phase factors are applied to the states
-    before validation to account for the rotating frame transformation.
-    """
-    logger.info(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
-    copy_sim_oqs = deepcopy(sim_oqs)
-    t_max = 2 * copy_sim_oqs.simulation_config.t_max
-    dt = 10 * copy_sim_oqs.simulation_config.dt
-    t0 = -2 * copy_sim_oqs.laser.pulse_fwhms[0]
-    times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
-    copy_sim_oqs.times_local = times
-
-    # =============================
-    # DETAILED SYSTEM DIAGNOSTICS
-    # =============================
-    logger.info(f"=== SOLVER DIAGNOSTICS ===")
-    logger.info(f"Solver: {copy_sim_oqs.simulation_config.ode_solver}")
-    logger.info(f"Time range: t0={t0:.3f}, t_max={t_max:.3f}, dt={dt:.6f}")
-    logger.info(f"Number of time points: {len(times)}")
-    logger.info(f"RWA enabled: {getattr(copy_sim_oqs.simulation_config, 'rwa_sl', False)}")
-
-    _log_system_diagnostics(copy_sim_oqs)
-
-    # INPUT VALIDATION
-    _validate_simulation_input(copy_sim_oqs)
-
-    ### Check solver tolerances
-    solver_opts = {}  # no global defaults after CONFIG removal
-    logger.info(f"Solver options: {solver_opts}")
-    neg_thr = DEFAULT_SOLVER_THRESHOLDS["negative_eigval_threshold"]
-    tr_tol = DEFAULT_SOLVER_THRESHOLDS["trace_tolerance"]
-    logger.info(f"Negative eigenvalue threshold: {neg_thr}")
-    logger.info(f"Trace tolerance: {tr_tol}")
-
-    result = compute_pulse_evolution(copy_sim_oqs, **{"store_states": True})
-    states = result.states
-
-    # CHECK THE RESULT
-    if not isinstance(result, Result):
-        raise TypeError("Result must be a Result object")
-    if list(result.times) != list(times):
-        raise ValueError("Result times do not match input times")
-    if len(result.states) != len(times):
-        raise ValueError("Number of output states does not match number of time points")
-
-    # CHECK DENSITY MATRIX PROPERTIES
-    # Apply RWA phase factors if needed
-    if getattr(copy_sim_oqs.simulation_config, "rwa_sl", False):
-        n_atoms = copy_sim_oqs.system.n_atoms
-        omega_laser = copy_sim_oqs.laser._carrier_freq_fs
-        logger.info(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser}")
-        states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
-
-    ### Enhanced state checking with more diagnostics
-    logger.info("=== STATE-BY-STATE ANALYSIS ===")
-    error_messages, time_cut = _check_density_matrix_properties(states, times)
-
-    if not error_messages:
-        logger.info("✅ Checks passed. DM remains Hermitian and positive.")
-        logger.info(f"Final state trace: {states[-1].tr():.6f}")
-        logger.info(f"Final state min eigenvalue: {states[-1].eigenenergies().min():.10f}")
-
-    return result, time_cut
 
 
 def _compute_next_start_point(
@@ -499,6 +566,7 @@ def compute_1d_polarization(
     **kwargs : dict
         Additional keyword arguments:
         - plot_example_evo : bool
+            - Optional dipole_op: bool, False)  # only if this is set true we compute expectation value of the dipole op
             If True, return evolution data for plotting expectation values.
             Returns: (times, expectation_values, sim_oqs)
         - plot_example_polarization : bool
@@ -512,6 +580,7 @@ def compute_1d_polarization(
     -------
     Union[Tuple, np.ndarray]
         - If plot_example_evo=True:
+
             (times, expectation_values, sim_oqs)
             - times: np.ndarray, time points for evolution
             - expectation_values: np.ndarray, expectation values of observables
@@ -536,24 +605,37 @@ def compute_1d_polarization(
     """
 
     if kwargs.get("plot_example_evo", False):
+        dip = kwargs.get("dipole_op", False)
 
+        sys = sim_oqs.system
         data = compute_pulse_evolution(sim_oqs=sim_oqs, store_states=True)
         states = data.states
         times = data.times
-        dipole_op = sim_oqs.system.dipole_op
-        n_atoms = sim_oqs.system.n_atoms
+        n_atoms = sys.n_atoms
         e_ops = sim_oqs.observable_ops
         rwa_sl = sim_oqs.simulation_config.rwa_sl
         omega_laser = sim_oqs.laser._carrier_freq_fs
-        datas = get_expect_vals_with_RWA(
-            states,
-            times,
-            n_atoms=n_atoms,
-            e_ops=e_ops,
-            omega_laser=omega_laser,
-            rwa_sl=rwa_sl,
-            dipole_op=dipole_op,
-        )
+
+        if dip:
+            dipole_op = sys.dipole_op
+            datas = get_expect_vals_with_RWA(
+                states,
+                times,
+                n_atoms=n_atoms,
+                e_ops=e_ops,
+                omega_laser=omega_laser,
+                rwa_sl=rwa_sl,
+                dipole_op=sys.to_eigenbasis(dipole_op),
+            )
+        else:
+            datas = get_expect_vals_with_RWA(
+                states,
+                times,
+                n_atoms=n_atoms,
+                e_ops=e_ops,
+                omega_laser=omega_laser,
+                rwa_sl=rwa_sl,
+            )
         return times, datas, sim_oqs
 
     # =============================
@@ -596,9 +678,10 @@ def _compute_n_pulse_evolution(
 ) -> List[Qobj]:
     """Compute the n-pulse evolution using segmented approach."""
     laser = sim_oqs.laser
+    sys = sim_oqs.system
     peak_times = laser.pulse_peak_times
     fwhms = laser.pulse_fwhms
-    psi_ini = sim_oqs.system.psi_ini
+    psi_ini = sys.psi_ini
     times = sim_oqs.times_local
 
     n_pulses = len(laser.pulses)
@@ -626,7 +709,7 @@ def _compute_n_pulse_evolution(
 
         # Compute evolution for this segment
         current_state = _compute_next_start_point(sim_oqs=sim_oqs)
-        sim_oqs.system.psi_ini = current_state
+        sys.psi_ini = current_state
 
         # Update for next iteration
         prev_pulse_start_idx = next_pulse_start_idx
@@ -661,7 +744,7 @@ def _compute_n_pulse_evolution(
     logger.debug(f"Final states extracted: {len(final_states)}")
 
     sim_oqs.reset_times_local()  # restore original times
-    sim_oqs.system.psi_ini = psi_ini  # restore initial state
+    sys.psi_ini = psi_ini  # restore initial state
 
     return final_states
 
@@ -724,18 +807,29 @@ def _ensure_valid_times(
     np.ndarray
         Valid time array (either original or fallback)
     """
-    # Check if the time segment has no elements
+    # Ensure we return at least two time points when possible to satisfy solvers
     if times_segment.size == 0:
-        # First fallback: try to use a single time point at fallback_idx
-        if fallback_idx < len(full_times):
+        n_full = len(full_times)
+        if n_full == 0:
+            logger.error("full_times is empty; returning empty time segment")
+            return times_segment
+
+        # Prefer [fallback_idx, fallback_idx+1] if available
+        if 0 <= fallback_idx < n_full - 1:
             logger.warning(
-                f"times_segment is empty. Using fallback time at index {fallback_idx}: {full_times[fallback_idx]}"
+                f"times_segment empty. Using fallback times at indices {fallback_idx}:{fallback_idx+2}"
             )
-            return np.array([full_times[fallback_idx]])
+            return full_times[fallback_idx : fallback_idx + 2]
+
+        # If fallback_idx is last index, use the last two points if available
+        if n_full >= 2:
+            logger.warning("times_segment empty. Using last two time points as fallback")
+            return full_times[-2:]
+
+        # Only one time point exists in full_times; return it and let caller guard
         logger.warning(
-            f"times_segment is empty. Using first two time points from full array: {full_times[:2]}"
+            "times_segment empty and only one time in full_times; returning single point"
         )
-        # Second fallback: use first two time points from full array
         return full_times[:1]
 
     # Time segment is valid, return as-is
@@ -763,8 +857,9 @@ def _extract_detection_data(
     )
 
     # Apply RWA phase factors if needed
+    sys = sim_oqs.system
     if sim_oqs.simulation_config.rwa_sl:
-        n_atoms = sim_oqs.system.n_atoms
+        n_atoms = sys.n_atoms
         omega_laser = sim_oqs.laser._carrier_freq_fs
         evolution_data = apply_RWA_phase_factors(
             evolution_data, actual_det_times, n_atoms, omega_laser
@@ -775,7 +870,7 @@ def _extract_detection_data(
             )
 
     # Calculate polarizations
-    dipole_op = sim_oqs.system.dipole_op
+    dipole_op = sys.to_eigenbasis(sys.dipole_op)
     polarizations = {}
     polarizations_full = complex_polarization(dipole_op, evolution_data)
     logger.debug(
@@ -997,13 +1092,16 @@ def parallel_compute_1d_E_with_inhomogenity(
     n_phases = sim_oqs.simulation_config.n_phases
     n_freqs = sim_oqs.simulation_config.n_freqs
     max_workers = sim_oqs.simulation_config.max_workers
-    phases = np.linspace(0, 1, n_phases)  # placeholder simple phase grid
+    from qspectro2d.config.default_simulation_params import PHASE_CYCLING_PHASES
+
+    phases = PHASE_CYCLING_PHASES[:n_phases]
     if n_phases != 4:
         logger.warning(f"Phase cycling with {n_phases} phases may not be optimal for IFT")
 
     # Sample frequency offsets for inhomogeneous broadening
-    delta_cm = sim_oqs.system.delta_cm
-    frequencies_cm = sim_oqs.system.frequencies_cm
+    sys = sim_oqs.system
+    delta_cm = sys.delta_cm
+    frequencies_cm = sys.frequencies_cm
 
     # Each row = one realization, each column = atom index
     # Shape: (n_freqs, n_atoms)
@@ -1011,7 +1109,9 @@ def parallel_compute_1d_E_with_inhomogenity(
         [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in frequencies_cm],
         axis=1,
     )
-    print(f"Using frequency samples ={all_freq_sets}", flush=True)
+    logger.debug(
+        f"Using frequency samples: shape={all_freq_sets.shape}, dtype={all_freq_sets.dtype}"
+    )
 
     # Prepare all jobs: one per (omega_idx, phi1_idx, phi2_idx)
     combinations = []

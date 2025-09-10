@@ -152,7 +152,7 @@ def extend_time_axes(
 
 
 def compute_1d_fft_wavenumber(
-    t_dets: np.ndarray, 
+    t_dets: np.ndarray,
     datas: List[np.ndarray],
     signal_types: List[str] = ["rephasing"],
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -203,7 +203,7 @@ def compute_1d_fft_wavenumber(
     >>> t_dets = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
     >>> data = [np.random.rand(101) + 1j*np.random.rand(101)]  # Single component
     >>> nu_dets, spectrum = compute_1d_fft_wavenumber(t_dets, data, ["rephasing"])
-    
+
     >>> # Absorptive spectrum with both components
     >>> data_re = np.random.rand(101) + 1j*np.random.rand(101)
     >>> data_nr = np.random.rand(101) + 1j*np.random.rand(101)
@@ -219,9 +219,7 @@ def compute_1d_fft_wavenumber(
         if arr.ndim != 1:
             raise ValueError(f"{label} must be 1D (N_t_det,)")
         if arr.shape != (N_t_det,):
-            raise ValueError(
-                f"{label} shape {arr.shape} != ({N_t_det},) from provided t_dets axis"
-            )
+            raise ValueError(f"{label} shape {arr.shape} != ({N_t_det},) from provided t_dets axis")
 
     def _fft1d(arr: np.ndarray) -> np.ndarray:
         """Compute 1D FFT with scaling and shift."""
@@ -292,8 +290,7 @@ def compute_2d_fft_wavenumber(
     Returns
     -------
     (nu_dets, nu_cohs, S)
-        nu_dets : np.ndarray (wavenumber axis, 10^4 cm^-1)
-        nu_cohs : np.ndarray (wavenumber axis, 10^4 cm^-1)
+        nu_dets, nu_cohs : np.ndarray (wavenumber axis, 10^4 cm^-1)
         S       : np.ndarray complex spectrum with shape (N_t_coh, N_t_det)
 
     Notes
@@ -312,16 +309,14 @@ def compute_2d_fft_wavenumber(
         if arr.ndim != 2:
             raise ValueError(f"{label} must be 2D (N_t_coh, N_t_det)")
         if arr.shape != (N_coh, N_det):
-            raise ValueError(
-                f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes"
-            )
+            raise ValueError(f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes")
 
     def _fft2(arr: np.ndarray, signal_type: str) -> np.ndarray:
         tmp_local = np.fft.fft(arr, axis=0)
         tmp_local = np.fft.fft(tmp_local, axis=1)
-        if signal_type == "rephasing":
+        if signal_type == "rephasing":  # flip coh -> +
             spec = np.flip(tmp_local, axis=0)
-        elif signal_type == "nonrephasing":
+        elif signal_type == "nonrephasing":  # flip both -> +
             spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
         else:
             raise ValueError(f"Internal signal_type '{signal_type}' unsupported")

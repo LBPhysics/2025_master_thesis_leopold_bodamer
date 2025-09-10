@@ -4,15 +4,15 @@
 atomic:
   n_atoms: 1
   n_chains: 1
-  frequencies_cm: [16000.0]#, 16000.0]#, 15950.0, 16050.0, 16000.0]#[16360.0, 15640.0]
-  dip_moments: [1.0]#, 1.0]#, 1.0]#, 1.0]#, 1.0, 1.0, 1.0]
+  frequencies_cm: [16360.0]
+  dip_moments: [1.0]
   coupling_cm: 0.0
   delta_cm: 0.0
   max_excitation: 2
   n_freqs: 1
 
 laser:
-  pulse_fwhm_fs: 15.0
+  pulse_fwhm_fs: 5.0
   base_amplitude: 0.5
   envelope_type: cos2
   carrier_freq_cm: 16000.0
@@ -21,15 +21,15 @@ laser:
 bath:
   bath_type: ohmic
   cutoff: 100       # actually in terms of frequency
-  temperature: 0.001    # actually in terms of frequency
-  coupling: 0.0001   # actually in terms of frequency
+  temperature: 0.0001    # actually in terms of frequency
+  coupling: 0.00001   # actually in terms of frequency
 
 solver:
-  solver: BR
+  solver: Paper_eqs
 
 window:
   # parameters that can be adjusted in the cli args of calc_datas.py
-  t_wait: 0.0
+  t_wait: 10.0
   dt: 0.1
   t_det_max: 100.0
   # 2d params

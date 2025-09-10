@@ -9,8 +9,6 @@ from typing import List
 from dataclasses import dataclass, asdict, field
 import warnings
 
-from qspectro2d.config.default_simulation_params import SUPPORTED_SOLVERS, SUPPORTED_SIGNAL_TYPES  # type: ignore
-
 
 @dataclass
 class SimulationConfig:
@@ -20,10 +18,12 @@ class SimulationConfig:
     """
 
     ode_solver: str = "Paper_BR"
-    rwa_sl: bool = True
-    keep_track: str = (
-        "eigenstates"  # or "basis" TODO if basis -> we have to back transform at the end??
+    # Solver and pulse/detection options
+    solver_options: dict[str, float | int] = field(
+        default_factory=lambda: {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
     )
+    relative_e0s: List[float] = field(default_factory=lambda: [1.0, 1.0, 0.1])
+    rwa_sl: bool = True
 
     dt: float = 0.1
     t_coh: float = 0.0
@@ -38,37 +38,15 @@ class SimulationConfig:
     signal_types: List[str] = field(default_factory=lambda: ["rephasing"])
 
     def __post_init__(self) -> None:  # noqa: D401
-        # Validate solver
-        if self.ode_solver not in SUPPORTED_SOLVERS:
-            raise ValueError(
-                f"Invalid ode_solver '{self.ode_solver}'. Supported: {sorted(SUPPORTED_SOLVERS)}"
-            )
-
+        # Enforce RWA for Paper_eqs
         if self.ode_solver == "Paper_eqs" and not self.rwa_sl:
             warnings.warn(
                 "rwa_sl forced True for Paper_eqs solver.",
                 category=UserWarning,
                 stacklevel=2,
             )
-            self.rwa_sl = True
+        self.rwa_sl = True
 
-        if self.dt <= 0:
-            raise ValueError("dt must be > 0")
-        if self.t_coh < 0:
-            raise ValueError("t_coh must be >= 0")
-        if self.t_wait < 0:
-            raise ValueError("t_wait must be >= 0")
-        if self.t_det_max <= 0:
-            raise ValueError("t_det_max must be > 0")
-        if self.n_phases <= 0:
-            raise ValueError("n_phases must be > 0")
-        if self.n_freqs <= 0:
-            raise ValueError("n_freqs must be > 0")
-
-        if not set(self.signal_types).issubset(SUPPORTED_SIGNAL_TYPES):
-            raise ValueError(f"signal_types '{self.signal_types}' not in {sorted(SUPPORTED_SIGNAL_TYPES)}")
-
-        # Derived total window (consistent with original logic)
         if self.t_coh < self.t_det_max:
             self.t_max = self.t_wait + 2 * self.t_det_max
         else:

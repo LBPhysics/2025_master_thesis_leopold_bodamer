@@ -93,9 +93,7 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
         # Let's check all files in directory and filter manually
         try:
             all_files = list(path.iterdir())
-            existing_files = [
-                f for f in all_files if f.is_file() and f.stem == candidate_name
-            ]
+            existing_files = [f for f in all_files if f.is_file() and f.stem == candidate_name]
         except FileNotFoundError:
             # Directory doesn't exist yet
             existing_files = []
@@ -105,9 +103,7 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
             break
 
         # Files exist, try next candidate
-        logger.debug(
-            "Found %d existing files with name: %s", len(existing_files), candidate_name
-        )
+        logger.debug("Found %d existing files with name: %s", len(existing_files), candidate_name)
         candidate_name = f"{base_name}_{counter}"
         counter += 1
 
@@ -197,7 +193,7 @@ def generate_unique_plot_filename(
         system: System parameters object
         info_config: Dictionary containing simulation parameters
         domain: Data domain ("time" or "freq")
-        component: Optional component name ("real", "imag", "abs", "phase")
+        component: Optional component name ("real", "img", "abs", "phase")
 
     Returns:
         str: Standardized base filename for the plot (without extension)
@@ -207,7 +203,7 @@ def generate_unique_plot_filename(
         raise ValueError(f"Invalid domain '{domain}'. Expected 'time' or 'freq'.")
 
     # Validate component if provided
-    if component and component not in {"real", "imag", "abs", "phase"}:
+    if component and component not in {"real", "img", "abs", "phase"}:
         raise ValueError(
             f"Invalid component '{component}'. Expected one of 'real', 'imag', 'abs', 'phase'."
         )

@@ -1,0 +1,81 @@
+% !TEX root = ../main.tex
+\chapter{Model Systems}
+
+\label{chapter_model_systems}
+
+Having developed the two-dimensional spectroscopic formalism and open-system dynamics earlier, we now transition to applying the photon-echo spectroscopy workflow to concrete models. We start from minimal reference systems (a single qubit and a four-level system formed by two coupled qubits) and then generalize to $N$ qubits arranged on a cylindrical geometry, mirroring the architectural motifs of microtubules where each site represents a bonding location in the molecular scaffold \cite{kalraetal2023electronicenergymigration}. Throughout, we connect to standard third-order spectroscopy concepts \cite{mukamel1995principlesnonlinearoptical,jonas2003twodimensionalfemtosecondspectroscopy,cho2009twodimensionalopticalspectroscopy} and use the master-equation tools introduced previously (see Chapter~\ref{chapter_open_quantum_systems}; cf. \cite{breuerpetruccione2009theoryopenquantum,redfield1965theoryrelaxationprocesses}).
+
+%-------------------------------------------------------------------------------
+%	SECTION 1: REFERENCE MODELS
+%-------------------------------------------------------------------------------
+
+\section{Reference Models}
+
+\subsection{Qubit Model}
+Single two-level systems (spin–boson model) are the canonical testbed in open-quantum-system theory; their weak-coupling dynamics under Redfield and Lindblad-type generators are well characterized \cite{redfield1965theoryrelaxationprocesses,breuerpetruccione2009theoryopenquantum,manzano2020shortintroductionlindblad,campaiolietal2024quantummasterequations}, with standard choices of bath spectral densities (e.g., Ohmic or Drude–Lorentz) \cite{ritscheleisfeld2014analyticrepresentationsbath}. As a representative study, polarization-resolved dephasing and relaxation of a qubit coupled to a bosonic bath has been analyzed within Redfield theory in \cite{palmnalbach2019dephasingrelaxationalpolarized}, providing a useful baseline against which to benchmark our spectroscopy workflow.
+
+The qubit system Hamiltonian is given by $H_{\mathrm{S}} = \frac{\omega}{2} \sigma_z$, or equivalently
+\begin{align}
+	H_{\mathrm{S}} & = \omega \ket{e}\bra{e} ,
+	\label{eq:qubit_system}
+\end{align}
+where $\omega$ is the qubit transition frequency, $\sigma_z$ is the Pauli operator in z direction.
+The environment is characterized by a spectral density $J(\omega)$ (cf. \cite{breuerpetruccione2009theoryopenquantum,ritscheleisfeld2014analyticrepresentationsbath}). In the photon-echo context, the system-field interaction in the dipole approximation enters the third-order response, while the reduced dynamics may be propagated with the Redfield or Lindblad-type generators derived in Chapter~\ref{chapter_open_quantum_systems} (see also \cite{campaiolietal2024quantummasterequations,manzano2020shortintroductionlindblad}).
+
+For spectroscopy, we assume a system dipole operator $\hat{\mu}_{\mathrm{S}} = \mu\,\sigma_x$ (oriented relative to the laboratory frame by the polarization geometry), and compute the rephasing and nonrephasing third-order signals using the response-function formalism \cite{mukamel1995principlesnonlinearoptical,jonas2003twodimensionalfemtosecondspectroscopy}.
+
+\todoidea{explain that this simplest two level system only offers limited insights, but is a good test case for the workflow. This is due to the lack of multiple states and pathways, which are essential for capturing the rich dynamics and interactions detectable with 2D spectroscopy.}
+
+\subsection{4-Level System (Two Qubits)}
+
+Extending to two coupled qubits, we obtain a four-level manifold spanned by $\{\ket{gg},\ket{ge},\ket{eg},\ket{ee}\}$. A convenient system Hamiltonian is
+\begin{equation}
+	H_{\mathrm{S}}^{\,(2)} = \sum_{i=1}^{2} \frac{\omega_i}{2}\, \sigma_z^{(i)}
+	\,+ J\,\bigl( \sigma_{+}^{(1)}\sigma_{-}^{(2)} + \sigma_{-}^{(1)}\sigma_{+}^{(2)} \bigr),
+	\label{eq:two_qubit_system}
+\end{equation}
+with coherent exchange coupling $J$. For open dynamics we consider independent local baths,
+\begin{equation}
+	H_{\mathrm{B}}^{\,(2)} = \sum_{i=1}^{2} \sum_{k} \omega_{k,i}\, a_{k,i}^{\dagger} a_{k,i},
+	\quad
+	H_{\mathrm{SB}}^{\,(2)} = \sum_{i=1}^{2} \sum_{k} g_{k,i}\,\bigl( \sigma_{+}^{(i)} a_{k,i} + \sigma_{-}^{(i)} a_{k,i}^{\dagger} \bigr),
+	\label{eq:two_qubit_bath}
+\end{equation}
+though correlated baths can be accommodated as discussed in Chapter~\ref{chapter_open_quantum_systems}. This minimal dimer already exhibits cross-peaks and coherence transfer in photon-echo spectra \cite{pisliakovetal2006twodimensionalopticalthreepulse}, making it a natural benchmark for the workflow.
+
+%-------------------------------------------------------------------------------
+%	SECTION 2: N QUBITS ON CYLINDRICAL GEOMETRY
+%-------------------------------------------------------------------------------
+
+\section{Generalization to \texorpdfstring{$N$}{N} Qubits on Cylindrical Geometry}
+
+Motivated by the protofilament arrangement in microtubules, we place $N$ qubits on a discretized cylindrical surface. The interaction energy of two such sites is given by isotropic dipole couplings of the form \cite{griffiths2013introductionelectrodynamics}
+\begin{equation}
+	J_{ij} \propto \frac{1}{ \lVert \vec{r}_{ij} \rVert^{3} }
+	\left[
+		\vec{\mu}_i \cdot \vec{\mu}_j - 3\,(\vec{\mu}_i \cdot \hat{\vec{r}}_{ij})(\vec{\mu}_j \cdot \hat{\vec{r}}_{ij})
+		\right],
+	\label{eq:dipole_dipole}
+\end{equation}
+where $\vec{\mu}_i$ are transition dipoles and $\vec{r}_{ij}$ the displacement between sites $i$ and $j$ (cf. \cite{lehmberg1970radiationatomsystem,masters2014pathsforstersresonance}).
+
+Let $N_{\theta}$ be the number of sites per ring and $N_{z}$ the number of rings (so $N = N_{\theta} N_{z}$). We index sites by $(m,n)$ with $m\in\{0,\dots,N_{\theta}-1\}$ (azimuthal) and $n\in\{0,\dots,N_{z}-1\}$ (axial). The system Hamiltonian reads
+\begin{align}
+	H_{\mathrm{S}}^{\,(N)} = & \sum_{n=1}^{N} \omega_{n} \ket{n}\bra{n} + \sum_{m<n}^{N} J_{mn} \bigl( \sigma_{+}^{(m)} \sigma_{-}^{(n)} + \mathrm{h.c.} \bigr) \\
+	                         & + \sum_{m<n}^{N} (\omega_{m} + \omega_{n}) \ket{m, n}\bra{m, n}
+	+ \sum_{m n l}^{N} \bigl[ \bigl( J_{ml} \ket{ln}\bra{mn}
+		+ J_{nl} \ket{lm}\bra{mn} \bigr) + \mathrm{h.c.} \bigr]
+	\label{eq:Nqubit_hamiltonian}
+\end{align}
+implementing periodic boundary conditions in the azimuthal direction.
+
+The bath part may be modeled as independent local environments or structured/collective baths,
+\begin{equation}
+	H_{\mathrm{B}}^{\,(N)} = \sum_{m,n} \sum_{k} \omega_{k,(m,n)} a_{k,(m,n)}^{\dagger} a_{k,(m,n)},
+	\quad
+	H_{\mathrm{SB}}^{\,(N)} = \sum_{m,n} \sum_{k} g_{k,(m,n)}\,\bigl( \sigma_{+}^{(m,n)} a_{k,(m,n)} + \mathrm{h.c.} \bigr),
+	\label{eq:Nqubit_bath}
+\end{equation}
+with spectral densities chosen to reflect protein or solvent environments \cite{rodenetal2012accountingintramolecularvibrational,ritscheleisfeld2014analyticrepresentationsbath}.
+
+This geometry captures collective transport pathways and their photon-echo signatures, offering a route to connect microscopic couplings to observed energy migration along microtubules \cite{kalraetal2023electronicenergymigration}. It also allows us to compare rephasing/nonrephasing features and waiting-time dynamics against the reference dimer, thereby isolating geometric versus environmental contributions \cite{mukamel1995principlesnonlinearoptical,segarra-martietal2018accuratesimulationtwodimensional}.

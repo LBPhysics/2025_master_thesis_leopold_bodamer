@@ -1,15 +1,15 @@
 % !TEX root = ../main.tex
 \chapter{Bath Correlation Functions and Harmonic Oscillator Environments} % Main chapter title
 
-\label{Chapter_bath_correlations_harmonic_oscillators} % Label for referencing this chapter
+\label{chapter_bath_correlations_harmonic_oscillators} % Label for referencing this chapter
 
 In the previous chapter, we derived the Redfield equation and introduced the environmental correlation functions $C_{ij}(\tau)$ that characterize the system-bath interaction. These correlation functions are central to the Redfield formalism, as they encode all the relevant information about how the environment affects the quantum system dynamics.
 
 To make the Redfield equation practically useful, we need to specify the form of these correlation functions for realistic environmental models. In this chapter, we focus on one of the most important and widely applicable environmental models: the harmonic oscillator bath. This model captures the essential physics of many real environments, from electromagnetic field fluctuations to phonon baths in solid-state systems.
 
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 %	SECTION 1
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 
 \section{Bath Correlation Functions: From Theory to Practice}
 \label{sec:bath_correlator}
@@ -39,9 +39,9 @@ Differentiating Eq.~\eqref{eq:geometric_series_sum} with respect to \( r \) yiel
 	\sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad \text{for } |r| < 1.
 \end{equation}
 
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 %	SECTION 2
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 
 \subsection{Trace}
 For a bipartite system \( A \otimes B \), the reduced density matrix of system \( A \) is obtained by tracing out system \( B \):
@@ -65,9 +65,9 @@ where the inverse temperature \(\beta\) is defined as:
 	\beta = \frac{1}{k_B T}.
 \end{equation}
 
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 %	SECTION 3
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 
 \section{Harmonic Oscillators}
 A bosonic bath is modeled by an infinitely big set of harmonic oscillators, which we assume to be in thermal equilibrium.
@@ -90,13 +90,10 @@ For a single mode \( k \) harmonic oscillator \( H = \hbar \omega_k b_k^{\dagger
 where \( \omega_k \) is the constant frequency of the mode \( k \).
 The partition function \( Z \) can be calculated by the geometric series:
 
-\begin{equation} \label{eq:partition_function}
-	Z_k \equiv \mathrm{Tr}\left[e^{-\beta H}\right]
-	= \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k (n_k + \frac{1}{2})} | m \rangle
-	= e^{-\beta \hbar \omega_k / 2} \sum_{m=0}^{\infty} \langle m | m \rangle \delta_{km} e^{-\beta \hbar \omega_k n_k} \\
-	%    = e^{-\beta \frac{\hbar \omega_k }{2}} \sum_{k=0}^{\infty} e^{-\beta \hbar \omega_k k} 
-	= \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}. % e^{-\beta \frac{\hbar \omega_k}{2}}
-\end{equation}
+\begin{align} \label{eq:partition_function}
+	Z_k & \equiv \mathrm{Tr}\left[e^{-\beta H}\right] = \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k (n_k + \frac{1}{2})} | m \rangle \\
+	    & = \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
+\end{align}
 Using this, the expectation value of the number operator can be calculated:
 
 \begin{align} \label{eq:expectation_number_operator}
@@ -113,15 +110,15 @@ The partition function for the infinite set then generalizes to a product:
 \begin{equation} \label{eq:generalized_partition_function}
 	Z = \prod_k Z_k = \prod_k \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
 \end{equation}
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 %	SECTION 4
-%----------------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 
 \section{Bath Correlators}
 \label{sec:bath_corr_trans_rates}
 
-Now we turn to calculating the bath correlator.
-The bath operator \( B \) is defined as:
+Now we have enough background to actually calculate the bath correlator.
+In the The bath operator \( B \) is defined as:
 
 \begin{equation} \label{eq:bath_operator}
 	B = \sum_{n=1}^{\infty} c_n x_n,

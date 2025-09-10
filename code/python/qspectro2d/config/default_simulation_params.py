@@ -7,15 +7,11 @@ and reduces code duplication.
 """
 
 import numpy as np
+import warnings
 from qspectro2d.constants import (
     BOLTZMANN,
     convert_cm_to_fs,
 )
-
-
-# =============================
-# fixed constants: don't change!
-# =============================
 
 # === signal processing / phase cycling ===
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
@@ -55,7 +51,9 @@ N_FREQS = 1  # 1 == no inhomogeneous broadening
 
 # === LASER SYSTEM DEFAULTS ===
 PULSE_FWHM = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
-BASE_AMPLITUDE = 0.5  # should be such that only one interaction at a time, here that |excitation|² < 1%
+BASE_AMPLITUDE = (
+    0.5  # should be such that only one interaction at a time, here that |excitation|² < 1%
+)
 ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQUENCIES_CM)  # Carrier frequency of the laser
 RWA_SL = True
@@ -78,6 +76,8 @@ BATH_COUPLING = 1e-4  # * frequencies[0]
 N_BATCHES = 10  # You can increase/decrease this
 T_DET_MAX = 200.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
+T_COH = 0.0  # Coherence time in fs
+T_WAIT = 0.0  # Waiting time in fs
 
 
 # =============================
@@ -100,6 +100,15 @@ def validate(params: dict):
     relative_e0s = params.get("relative_e0s", RELATIVE_E0S)
     rwa_sl = params.get("rwa_sl", RWA_SL)
     carrier_freq_cm = params.get("carrier_freq_cm", CARRIER_FREQ_CM)
+    # Time/grid parameters
+    t_det_max = params.get("t_det_max", T_DET_MAX)
+    dt = params.get("dt", DT)
+    t_coh = params.get("t_coh", T_COH)
+    t_wait = params.get("t_wait", T_WAIT)
+
+    # Sampling and signal types
+    n_freqs = params.get("n_freqs", N_FREQS)
+    signal_types = params.get("signal_types", SIGNAL_TYPES)
 
     # Validate solver
     if ode_solver not in SUPPORTED_SOLVERS:
@@ -109,16 +118,38 @@ def validate(params: dict):
     if bath_type not in SUPPORTED_BATHS:
         raise ValueError(f"BATH_TYPE '{bath_type}' not in {SUPPORTED_BATHS}")
 
-    # Validate atomic system consistency
-    if len(frequencies_cm) != n_atoms:
+    # Improved solver validation
+    if ode_solver not in SUPPORTED_SOLVERS:
         raise ValueError(
-            f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})"
+            f"Invalid ode_solver '{ode_solver}'. Supported: {sorted(SUPPORTED_SOLVERS)}"
         )
 
+    # Basic time parameter checks
+    if dt <= 0:
+        raise ValueError("dt must be > 0")
+    if t_coh < 0:
+        raise ValueError("t_coh must be >= 0")
+    if t_wait < 0:
+        raise ValueError("t_wait must be >= 0")
+    if t_det_max <= 0:
+        raise ValueError("t_det_max must be > 0")
+
+    # Phase/frequency sampling checks
+    if n_phases <= 0:
+        raise ValueError("n_phases must be > 0")
+    if n_freqs <= 0:
+        raise ValueError("n_freqs must be > 0")
+
+    # Signal type validation
+    if not set(signal_types).issubset(SUPPORTED_SIGNAL_TYPES):
+        raise ValueError(f"signal_types '{signal_types}' not in {sorted(SUPPORTED_SIGNAL_TYPES)}")
+
+    # Validate atomic system consistency
+    if len(frequencies_cm) != n_atoms:
+        raise ValueError(f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})")
+
     if len(dip_moments) != n_atoms:
-        raise ValueError(
-            f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})"
-        )
+        raise ValueError(f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})")
 
     # Validate positive values
     if bath_temp <= 0:
@@ -154,9 +185,7 @@ def validate(params: dict):
     if rwa_sl:
         freqs_array = np.array(frequencies_cm)
         max_detuning = np.max(np.abs(freqs_array - carrier_freq_cm))
-        rel_detuning = (
-            max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
-        )
+        rel_detuning = max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
         if rel_detuning > 1e-2:
             print(
                 f"WARNING: RWA probably not valid, since relative detuning: {rel_detuning} is too large",
@@ -166,20 +195,4 @@ def validate(params: dict):
 
 def validate_defaults():
     """Validate that all default values are consistent and sensible."""
-    params = {
-        "solver": ODE_SOLVER,
-        "bath_type": BATH_TYPE,
-        "frequencies_cm": FREQUENCIES_CM,
-        "n_atoms": N_ATOMS,
-        "dip_moments": DIP_MOMENTS,
-        "temperature": BATH_TEMP,
-        "cutoff": BATH_CUTOFF,
-        "coupling": BATH_COUPLING,
-        "n_phases": N_PHASES,
-        "max_excitation": MAX_EXCITATION,
-        "n_chains": N_CHAINS,
-        "relative_e0s": RELATIVE_E0S,
-        "rwa_sl": RWA_SL,
-        "carrier_freq_cm": CARRIER_FREQ_CM,
-    }
-    validate(params)
+    validate()

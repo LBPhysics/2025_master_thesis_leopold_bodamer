@@ -22,9 +22,7 @@ from qspectro2d.visualization import plot_1d_data, plot_2d_data
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Plot 1D or 2D electronic spectroscopy data"
-    )
+    parser = argparse.ArgumentParser(description="Plot 1D or 2D electronic spectroscopy data")
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--abs_path", type=str, help="Specific file path (absolute)")
@@ -36,7 +34,7 @@ def main():
         # "plot_time_domain": True,
         "plot_frequency_domain": True,
         "extend_for": (1, 10),
-        "spectral_components_to_plot": ["abs", "real", "imag"],
+        "spectral_components_to_plot": ["abs", "real", "img"],
         # "section": [(1, 3), (1, 3)],
         "section": [(1.4, 1.8), (1.4, 1.8)],
     }

@@ -3,9 +3,9 @@
 
 \chapter{Chapter Title Here} % Main chapter title
 
-\label{Chaptertest} % For referencing the chapter elsewhere, use \ref{Chapter1} 
+\label{Chaptertest} % For referencing the chapter elsewhere, use \ref{Chapter_Introduction} 
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 % Define some commands to keep the formatting separated from the content 
 \newcommand{\keyword}[1]{\textbf{#1}}
@@ -14,7 +14,7 @@
 \newcommand{\file}[1]{\texttt{\bfseries#1}}
 \newcommand{\option}[1]{\texttt{\itshape#1}}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Welcome and Thank You}
 Welcome to this \LaTeX{} Thesis Template, a beautiful and easy to use template for writing a thesis using the \LaTeX{} typesetting system.
@@ -23,7 +23,7 @@ If you are writing a thesis (or will be in the future) and its subject is techni
 
 \LaTeX{} is easily able to professionally typeset documents that run to hundreds or thousands of pages long. With simple mark-up commands, it automatically sets out the table of contents, margins, page headers and footers and keeps the formatting consistent and beautiful. One of its main strengths is the way it can easily typeset mathematics, even \emph{heavy} mathematics. Even if those equations are the most horribly twisted and most difficult mathematical problems that can only be solved on a super-computer, you can at least count on \LaTeX{} to make them look stunning.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Learning \LaTeX{}}
 
@@ -58,7 +58,7 @@ The \LaTeX{} distribution is available for many systems including Windows, Linux
 
 MacTeX includes a custom dedicated \LaTeX{} editor called TeXShop for writing your `\file{.tex}' files and BibDesk: a program to manage your references and create your bibliography section just as easily as managing songs and creating playlists in iTunes.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Getting Started with this Template}
 
@@ -78,7 +78,7 @@ Steve's \file{ecsthesis.cls} was then taken by Sunil Patel who modified it by cr
 
 Sunil's template was made available through \url{http://www.LaTeXTemplates.com} where it was modified many times based on user requests and questions. Version 2.0 and onwards of this template represents a major modification to Sunil's template and is, in fact, hardly recognisable. The work to make version 2.0 possible was carried out by \href{mailto:vel@latextemplates.com}{Vel} and Johannes Böttcher.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{What this Template Includes}
 
@@ -90,13 +90,13 @@ This template comes as a single zip file that expands out to several files and f
 
 \keyword{Chapters} -- this is the folder where you put the thesis chapters. A thesis usually has about six chapters, though there is no hard rule on this. Each chapter should go in its own separate \file{.tex} file and they can be split as:
 \begin{itemize}
-    \item Chapter 1: Introduction to the thesis topic
-    \item Chapter 2: Background information and theory
-    \item Chapter 3: (Laboratory) experimental setup
-    \item Chapter 4: Details of experiment 1
-    \item Chapter 5: Details of experiment 2
-    \item Chapter 6: Discussion of the experimental results
-    \item Chapter 7: Conclusion and future directions
+	\item Chapter 1: Introduction to the thesis topic
+	\item Chapter 2: Background information and theory
+	\item Chapter 3: (Laboratory) experimental setup
+	\item Chapter 4: Details of experiment 1
+	\item Chapter 5: Details of experiment 2
+	\item Chapter 6: Discussion of the experimental results
+	\item Chapter 7: Conclusion and future directions
 \end{itemize}
 This chapter layout is specialised for the experimental sciences, your discipline may be different.
 
@@ -132,7 +132,7 @@ Files that are \emph{not} included, but are created by \LaTeX{} as auxiliary fil
 
 So from this long list, only the files with the \file{.bib}, \file{.cls} and \file{.tex} extensions are the most important ones. The other auxiliary files can be ignored or deleted as \LaTeX{} and BibTeX will regenerate them.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Filling in Your Information in the \file{main.tex} File}\label{FillingFile}
 
@@ -144,7 +144,7 @@ Fill out the information about yourself, your group and institution. You can als
 
 When you have done this, save the file and recompile \code{main.tex}. All the information you filled in should now be in the PDF, complete with web links. You can now begin your thesis proper!
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{The \code{main.tex} File Explained}
 
@@ -164,11 +164,11 @@ The list of symbols is split into the Roman and Greek alphabets. Whereas the abb
 
 The next page contains a one line dedication. Who will you dedicate your thesis to?
 
-Finally, there is the block where the chapters are included. Uncomment the lines (delete the \code{\%} character) as you write the chapters. Each chapter should be written in its own file and put into the \emph{Chapters} folder and named \file{Chapter1}, \file{Chapter2}, etc\ldots Similarly for the appendices, uncomment the lines as you need them. Each appendix should go into its own file and placed in the \emph{Appendices} folder.
+Finally, there is the block where the chapters are included. Uncomment the lines (delete the \code{\%} character) as you write the chapters. Each chapter should be written in its own file and put into the \emph{Chapters} folder and named \file{Chapter_Introduction}, \file{Chapter2}, etc\ldots Similarly for the appendices, uncomment the lines as you need them. Each appendix should go into its own file and placed in the \emph{Appendices} folder.
 
 After the preamble, chapters and appendices finally comes the bibliography. The bibliography style (called \option{authoryear}) is used for the bibliography and is a fully featured style that will even include links to where the referenced paper can be found online. Do not underestimate how grateful your reader will be to find that a reference to a paper is just a click away. Of course, this relies on you putting the URL information into the BibTeX file in the first place.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Thesis Features and Conventions}\label{ThesisConventions}
 
@@ -192,7 +192,7 @@ Due to the differences in the paper size, the resulting margins may be different
 
 \subsection{References}
 
-The \code{biblatex} package is used to format the bibliography and inserts references such as this one \parencite{Reference1}. The options used in the \file{main.tex} file mean that the in-text citations of references are formatted with the author(s) listed with the date of the publication. Multiple references are separated by semicolons (e.g. \parencite{Reference2, Reference1}) and references with more than three authors only show the first author with \emph{et al.} indicating there are more authors (e.g. \parencite{Reference3}). This is done automatically for you. To see how you use references, have a look at the \file{Chapter1.tex} source file. Many reference managers allow you to simply drag the reference into the document as you type.
+The \code{biblatex} package is used to format the bibliography and inserts references such as this one \parencite{Reference1}. The options used in the \file{main.tex} file mean that the in-text citations of references are formatted with the author(s) listed with the date of the publication. Multiple references are separated by semicolons (e.g. \parencite{Reference2, Reference1}) and references with more than three authors only show the first author with \emph{et al.} indicating there are more authors (e.g. \parencite{Reference3}). This is done automatically for you. To see how you use references, have a look at the \file{Chapter_Introduction.tex} source file. Many reference managers allow you to simply drag the reference into the document as you type.
 
 Scientific references should come \emph{before} the punctuation mark if there is one (such as a comma or period). The same goes for footnotes\footnote{Such as this footnote, here down at the bottom of the page.}. You can change this but the most important thing is to keep the convention consistent throughout the thesis. Footnotes themselves should be full, descriptive sentences (beginning with a capital letter and ending with a full stop). The APA6 states: \enquote{Footnote numbers should be superscripted, [...], following any punctuation mark except a dash.} The Chicago manual of style states: \enquote{A note number should be placed at the end of a sentence or clause. The number follows any punctuation mark except the dash, which it precedes. It follows a closing parenthesis.}
 
@@ -227,22 +227,22 @@ Tables are an important way of displaying your results, below is an example tabl
 }
 
 \begin{table}
-    \caption{The effects of treatments X and Y on the four groups studied.}
-    \label{tab:treatments}
-    \centering
-    \begin{tabular}{l l l}
-        \toprule
-        \tabhead{Groups} & \tabhead{Treatment X} & \tabhead{Treatment Y} \\
-        \midrule
-        1                & 0.2                   & 0.8                   \\
-        2                & 0.17                  & 0.7                   \\
-        3                & 0.24                  & 0.75                  \\
-        4                & 0.68                  & 0.3                   \\
-        \bottomrule                                                      \\
-    \end{tabular}
+	\caption{The effects of treatments X and Y on the four groups studied.}
+	\label{tab:treatments}
+	\centering
+	\begin{tabular}{l l l}
+		\toprule
+		\tabhead{Groups} & \tabhead{Treatment X} & \tabhead{Treatment Y} \\
+		\midrule
+		1                & 0.2                   & 0.8                   \\
+		2                & 0.17                  & 0.7                   \\
+		3                & 0.24                  & 0.75                  \\
+		4                & 0.68                  & 0.3                   \\
+		\bottomrule                                                      \\
+	\end{tabular}
 \end{table}
 
-You can reference tables with \verb|\ref{<label>}| where the label is defined within the table environment. See \file{Chapter1.tex} for an example of the label and citation (e.g. Table~\ref{tab:treatments}).
+You can reference tables with \verb|\ref{<label>}| where the label is defined within the table environment. See \file{Chapter_Introduction.tex} for an example of the label and citation (e.g. Table~\ref{tab:treatments}).
 
 \subsection{Figures}
 
@@ -259,11 +259,11 @@ There will hopefully be many figures in your thesis (that should be placed in th
 Also look in the source file. Putting this code into the source file produces the picture of the electron that you can see in the figure below.
 
 \begin{figure}[th]
-    \centering
-    \includegraphics{Figures/Electron}
-    \decoRule
-    \caption[An Electron]{An electron (artist's impression).}
-    \label{fig:Electron}
+	\centering
+	\includegraphics{Figures/Electron}
+	\decoRule
+	\caption[An Electron]{An electron (artist's impression).}
+	\label{fig:Electron}
 \end{figure}
 
 Sometimes figures don't always appear where you write them in the source. The placement depends on how much space there is on the page for the figure. Sometimes there is not enough room to fit a figure directly where it should go (in relation to the text) and so \LaTeX{} puts it at the top of the next page. Positioning figures is the job of \LaTeX{} and so you should only worry about making them look good!
@@ -293,8 +293,8 @@ E = mc^{2}
 
 This will produce Einstein's famous energy-matter equivalence equation:
 \begin{equation}
-    E = mc^{2}
-    \label{eqn:Einstein}
+	E = mc^{2}
+	\label{eqn:Einstein}
 \end{equation}
 
 All equations you write (which are not in the middle of paragraph text) are automatically given equation numbers by \LaTeX{}. If you don't want a particular equation numbered, use the unnumbered form:
@@ -302,7 +302,7 @@ All equations you write (which are not in the middle of paragraph text) are auto
 \[ a^{2}=4 \]
 \end{verbatim}
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Sectioning and Subsectioning}
 
@@ -310,16 +310,16 @@ You should break your thesis up into nice, bite-sized sections and subsections. 
 
 The Table of Contents should only list the sections to three (3) levels. A \verb|chapter{}| is level zero (0). A \verb|\section{}| is level one (1) and so a \verb|\subsection{}| is level two (2). In your thesis it is likely that you will even use a \verb|subsubsection{}|, which is level three (3). The depth to which the Table of Contents is formatted is set within \file{MastersDoctoralThesis.cls}. If you need this changed, you can do it in \file{main.tex}.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{In Closing}
 
-You have reached the end of this mini-guide. You can now rename or overwrite this pdf file and begin writing your own \file{Chapter1.tex} and the rest of your thesis. The easy work of setting up the structure and framework has been taken care of for you. It's now your job to fill it out!
+You have reached the end of this mini-guide. You can now rename or overwrite this pdf file and begin writing your own \file{Chapter_Introduction.tex} and the rest of your thesis. The easy work of setting up the structure and framework has been taken care of for you. It's now your job to fill it out!
 
 Good luck and have lots of fun!
 
 \begin{flushright}
-    Guide written by ---\\
-    Sunil Patel: \href{http://www.sunilpatel.co.uk}{www.sunilpatel.co.uk}\\
-    Vel: \href{http://www.LaTeXTemplates.com}{LaTeXTemplates.com}
+	Guide written by ---\\
+	Sunil Patel: \href{http://www.sunilpatel.co.uk}{www.sunilpatel.co.uk}\\
+	Vel: \href{http://www.LaTeXTemplates.com}{LaTeXTemplates.com}
 \end{flushright}

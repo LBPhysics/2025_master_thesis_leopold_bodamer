@@ -65,25 +65,12 @@ import numpy as np
 import psutil
 from pathlib import Path
 from typing import Any, Mapping, Optional, TYPE_CHECKING
+from qutip import OhmicEnvironment
+import yaml
 
 if TYPE_CHECKING:
-    from qspectro2d.core.atomic_system.system_class import AtomicSystem
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-    from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
-    from qspectro2d.core.simulation.sim_config import SimulationConfig, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from qspectro2d.core.atomic_system.system_class import AtomicSystem
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
     from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
     from qspectro2d.core.simulation.sim_config import SimulationConfig
-
-try:  # optional dependency
-    import yaml  # type: ignore
-except Exception:  # pragma: no cover
-    yaml = None
-
-from qutip import OhmicEnvironment
 
 from qspectro2d.config import default_simulation_params as dflt
 
@@ -173,18 +160,14 @@ def load_simulation(
     rwa_sl = bool(laser_cfg.get("rwa_sl", dflt.RWA_SL))
 
     pulses_cfg = _get_section(cfg_root, "pulses")
-    if pulses_cfg:
-        delays = list(pulses_cfg.get("delays", []))
-        relative_e0s = list(pulses_cfg.get("relative_e0s", dflt.RELATIVE_E0S))
-        phases = list(pulses_cfg.get("phases", [0.0] * (len(delays) + 1)))
-    else:
-        # synthesize 3-pulse sequence from time window (typical 2D: coherence, wait)
-        window_cfg = _get_section(cfg_root, "window")
-        t_coh = float(window_cfg.get("t_coh", 0.0))
-        t_wait = float(window_cfg.get("t_wait", 0.0))
-        delays = [t_coh, t_wait]  # -> 3 pulses
-        relative_e0s = dflt.RELATIVE_E0S
-        phases = [0.0, 0.0, 0.0]
+    relative_e0s = list(pulses_cfg.get("relative_e0s", dflt.RELATIVE_E0S))
+
+    # synthesize 3-pulse sequence from time window (typical 2D: coherence, wait)
+    window_cfg = _get_section(cfg_root, "window")
+    t_coh = float(window_cfg.get("t_coh", dflt.T_COH))
+    t_wait = float(window_cfg.get("t_wait", dflt.T_WAIT))
+    delays = [t_coh, t_wait]  # -> 3 pulses
+    phases = [0.0, 0.0, 0.0]
 
     laser_sequence = LaserPulseSequence.from_delays(
         delays=delays,
@@ -253,7 +236,6 @@ def load_simulation(
     sim_config = SimulationConfig(
         ode_solver=ode_solver,
         rwa_sl=rwa_sl,
-        keep_track="eigenstates",
         dt=dt,
         t_coh=t_coh,
         t_wait=t_wait,
@@ -323,7 +305,6 @@ def create_base_sim_oqs(
         new_cfg = SimulationConfig(
             ode_solver=solver if solver is not None else cfg.ode_solver,
             rwa_sl=cfg.rwa_sl,
-            keep_track=cfg.keep_track,
             dt=dt if dt is not None else cfg.dt,
             t_coh=t_coh if t_coh is not None else cfg.t_coh,
             t_wait=t_wait if t_wait is not None else cfg.t_wait,

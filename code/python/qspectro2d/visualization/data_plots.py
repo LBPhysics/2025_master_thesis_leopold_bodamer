@@ -28,7 +28,9 @@ from qspectro2d.utils import generate_unique_plot_filename
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 
 from plotstyle import init_style, save_fig
+
 init_style()
+
 
 # Helper to collect paths from save_fig (which may return a single path or a list of paths)
 def _collect_saved_paths(accumulator, saved):
@@ -36,6 +38,7 @@ def _collect_saved_paths(accumulator, saved):
         accumulator.extend(saved)
     else:
         accumulator.append(saved)
+
 
 # =============================
 # PLOTTING FUNCTIONS
@@ -81,9 +84,7 @@ def plot_1d_data(
         if signal_type in loaded_data_and_info:
             datas.append(loaded_data_and_info[signal_type])
 
-    laser_dict = {
-        k: v for k, v in laser.to_dict().items() if k != "pulses"
-    }  # Exclude "pulses" key
+    laser_dict = {k: v for k, v in laser.to_dict().items() if k != "pulses"}  # Exclude "pulses" key
 
     # Combine dictionaries
     dict_combined = {**system.to_dict(), **bath_dict, **laser_dict}
@@ -92,15 +93,13 @@ def plot_1d_data(
     print(f"   Time points: {len(t_det_vals)}")
     print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
 
-    spectral_components_to_plot = plot_config.get(
-        "spectral_components_to_plot", ["imag", "real"]
-    )
+    spectral_components_to_plot = plot_config.get("spectral_components_to_plot", ["img", "real"])
     extend_for = plot_config.get("extend_for", (1, 1))
 
     ### Plot time domain data
     if plot_config.get("plot_time_domain", True):
         print("📊 Plotting time domain data...")
-        time_domain_comps = ["real", "abs", "imag", "phase"]
+        time_domain_comps = ["real", "abs", "img", "phase"]
         list_of_saved_paths = []
         try:
             for component in time_domain_comps:
@@ -210,7 +209,7 @@ def plot_2d_data(
     axes = loaded_data_and_info["axes"]
     t_det_vals = axes.get("t_det")  # detection times
     t_coh_vals = axes["t_coh"]  # coherence times
-    
+
     # Explicitly cast objects for static typing & autocomplete (mirror plot_1d_data)
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
@@ -222,18 +221,14 @@ def plot_2d_data(
     bath_dict = extract_bath_parameters(bath_env, w0)
     laser = cast(LaserPulseSequence, loaded_data_and_info["laser"])
     sim_config = cast(SimulationConfig, loaded_data_and_info["sim_config"])
-    laser_dict = {
-        k: v for k, v in laser.to_dict().items() if k != "pulses"
-    }  # Exclude "pulses" key
+    laser_dict = {k: v for k, v in laser.to_dict().items() if k != "pulses"}  # Exclude "pulses" key
 
     # Combine dictionaries
     dict_combined = {**system.to_dict(), **bath_dict, **laser_dict}
     dict_combined.update(sim_config.to_dict())
 
     # Get configuration values
-    spectral_components_to_plot = plot_config.get(
-        "spectral_components_to_plot", ["abs"]
-    )
+    spectral_components_to_plot = plot_config.get("spectral_components_to_plot", ["abs"])
     extend_for = plot_config.get("extend_for", (1, 1))
     section = plot_config.get("section", None)
 
@@ -250,7 +245,7 @@ def plot_2d_data(
     ### Plot time domain data
     if plot_config.get("plot_time_domain", True):
         print("📊 Plotting 2D time domain data...")
-        time_domain_comps = ["real", "abs", "imag", "phase"]
+        time_domain_comps = ["real", "abs", "img", "phase"]
         list_of_saved_paths = []
         try:
             for component in time_domain_comps:

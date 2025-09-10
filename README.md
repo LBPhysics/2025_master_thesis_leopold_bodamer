@@ -255,7 +255,7 @@ relative_path = run_simulation_with_config(config_2d, "2d")
 ```python
 # Plot configuration
 plot_config = {
-    "spectral_components_to_plot": ["real", "imag", "abs", "phase"],
+    "spectral_components_to_plot": ["real", "img", "abs", "phase"],
     "plot_time_domain": True,
     "extend_for": (1, 3),
     "section": (1.4, 1.8, 1.4, 1.8),
