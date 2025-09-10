@@ -53,6 +53,7 @@ PROJECT_ROOT = find_project_root()
 # Base directories (pure)
 DATA_DIR         = (PROJECT_ROOT / "data").resolve()
 FIGURES_DIR      = (PROJECT_ROOT / "figures").resolve()
+LOGS_DIR         = (PROJECT_ROOT / "logs").resolve()
 
 # Additional useful paths
 PYTHON_CODE_DIR  = PROJECT_ROOT / "code" / "python"
@@ -70,6 +71,7 @@ def ensure_dirs() -> None:
     for path in [
         DATA_DIR,
         FIGURES_DIR,
+    LOGS_DIR,
         FIGURES_PYTHON_DIR,
         FIGURES_TESTS_DIR,
     ]:

@@ -12,43 +12,17 @@ and directory paths for simulation data and plots.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union, Any, Protocol, runtime_checkable, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 
-
-@runtime_checkable
-class AtomicSystemProto(Protocol):  # minimal structural contract for naming
-    n_atoms: int
-    coupling_cm: float | int
-    frequencies_cm: Any
-    delta_cm: Any
-
-
-@runtime_checkable
-class SimulationConfigProto(Protocol):  # minimal structural contract for naming
-    simulation_type: str
-    ode_solver: str
-    rwa_sl: bool
-    t_det_max: float
-    t_wait: float
-    dt: float
-    t_coh: float
-    n_freqs: int
-
-
-if TYPE_CHECKING:  # real imports only for type checkers
-    from qspectro2d.core.atomic_system.system_class import (
-        AtomicSystem as AtomicSystemType,
-    )
-    from qspectro2d.core.simulation import SimulationConfig as SimulationConfigType
-
-    AtomicSystem = AtomicSystemType  # alias for readability
-    SimulationConfig = SimulationConfigType
-else:  # runtime uses Protocols (duck typing)
-    AtomicSystem = AtomicSystemProto  # type: ignore
-    SimulationConfig = SimulationConfigProto  # type: ignore
+if TYPE_CHECKING:
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.simulation.sim_config import SimulationConfig
 
 ### Project-specific imports
 from project_config.paths import DATA_DIR, FIGURES_PYTHON_DIR, ensure_dirs
+from project_config.logging_setup import get_logger
+
+logger = get_logger(__name__)
 
 
 # =============================
@@ -131,8 +105,8 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
             break
 
         # Files exist, try next candidate
-        print(
-            f"🔍 Found {len(existing_files)} existing files with name: {candidate_name}"
+        logger.debug(
+            "Found %d existing files with name: %s", len(existing_files), candidate_name
         )
         candidate_name = f"{base_name}_{counter}"
         counter += 1

@@ -24,13 +24,14 @@ dependencies:
   - joblib>=1.1.0
   - jupyter
   - ipython
-  - black[jupyter]>=22.0.0 # just my preference, also install black for python formatting?
+  - black>=22.0.0  # code formatter (extras not supported in conda specs)
   - mpmath
   - pytest>=7.0.0
   - pip:
-    # Local editable installs for subpackages (ensures imports like 'project_config' work)
-    - -e ./code/python/project_config
-    - -e ./code/python/qspectro2d
-    - -e ./code/python/plotstyle
+    # Single local editable install for all packages under code/python
+    - -e ./code/python
     
     - tqdm                  # Progress bar for loops
+  - pre-commit            # Git hooks runner
+  - ruff                  # Fast linter and import sorter
+  - nbstripout            # Strip outputs from notebooks

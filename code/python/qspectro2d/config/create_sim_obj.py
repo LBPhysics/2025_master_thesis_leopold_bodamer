@@ -64,7 +64,19 @@ import os
 import numpy as np
 import psutil
 from pathlib import Path
-from typing import Any, Mapping, Optional
+from typing import Any, Mapping, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
+    from qspectro2d.core.simulation.sim_config import SimulationConfig, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
+    from qspectro2d.core.simulation.sim_config import SimulationConfig
 
 try:  # optional dependency
     import yaml  # type: ignore
@@ -74,12 +86,8 @@ except Exception:  # pragma: no cover
 from qutip import OhmicEnvironment
 
 from qspectro2d.config import default_simulation_params as dflt
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
-from qspectro2d.core.simulation.sim_config import SimulationConfig
 
-__all__ = ["load_simulation"]
+__all__ = ["load_simulation", "create_base_sim_oqs", "get_max_workers"]
 
 
 # =============================
@@ -104,11 +112,6 @@ def _get_section(cfg: Mapping[str, Any], name: str) -> Mapping[str, Any]:
     return sec if isinstance(sec, Mapping) else {}
 
 
-# =============================
-# MAIN FACTORY
-# =============================
-
-
 def load_simulation(
     path: Optional[str | Path] = None, validate: bool = True
 ) -> SimulationModuleOQS:
@@ -122,6 +125,12 @@ def load_simulation(
     validate: bool
         If True (default) run physics validation via `default_simulation_params.validate`.
     """
+    # Import here to avoid circular import
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
+    from qspectro2d.core.simulation.sim_config import SimulationConfig
+
     # -----------------
     # LOAD / FALLBACK
     # -----------------

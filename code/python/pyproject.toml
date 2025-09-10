@@ -41,3 +41,24 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["qspectro2d", "plotstyle", "project_config"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+lint.select = [
+  "E",  # pycodestyle errors
+  "F",  # pyflakes
+  "I",  # isort (import sorting)
+  "W",  # pycodestyle warnings
+  "B",  # flake8-bugbear
+]
+lint.ignore = [
+  "E203",  # whitespace before ':' (black compatible)
+  "E501",  # line length handled by formatter
+]
+format.quote-style = "double"
+format.indent-style = "space"

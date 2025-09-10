@@ -17,6 +17,9 @@ cd master_thesis
 conda env create -f environment.yml
 conda activate master_env
 
+# Install local packages in editable mode (if not auto-installed)
+pip install -e code/python
+
 # Verify installation
 python -c "import qspectro2d; print('Package installed successfully!')"
 ```
@@ -60,6 +63,20 @@ For VS Code users, the environment should be automatically detected. You can als
 2. Select "Python: Select Interpreter"
 3. Choose the conda environment: `master_env`
 
+## Pre-commit hooks (formatting, linting, notebook cleaning)
+
+Enable once per clone:
+
+```bash
+pre-commit install
+```
+
+Run on all files manually (optional):
+
+```bash
+pre-commit run --all-files
+```
+
 ## Project Structure
 
 ```
@@ -68,8 +85,8 @@ master_thesis/
 ├── notebooks/           # Jupyter notebooks
 ├── latex/               # LaTeX thesis files
 ├── figures/             # Generated figures
-├── environment.yml      # Conda environment specification
-├── requirements.txt     # Pip requirements (backup)
+├── environment.yml      # Conda environment specification (single source of dependencies)
+├── code/python/pyproject.toml  # Packaging config for editable install
 └── README.md           # This file
 ```
 

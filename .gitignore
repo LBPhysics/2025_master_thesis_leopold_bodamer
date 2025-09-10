@@ -43,6 +43,7 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
+code/python/qspectro2d.egg-info/
 .installed.cfg
 *.egg
 MANIFEST

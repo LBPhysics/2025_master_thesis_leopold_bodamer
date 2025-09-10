@@ -19,6 +19,7 @@ from typing import Optional, List, TYPE_CHECKING
 
 ### Project-specific imports
 from project_config.paths import DATA_DIR
+from project_config.logging_setup import get_logger
 
 # Type checking imports to avoid circular imports
 if TYPE_CHECKING:
@@ -27,6 +28,8 @@ if TYPE_CHECKING:
     from qspectro2d.core.simulation import SimulationConfig
 from qutip import BosonicEnvironment
 from qspectro2d.utils.file_naming import generate_unique_data_filename
+
+logger = get_logger(__name__)
 
 
 # data saving functions
@@ -97,8 +100,8 @@ def save_data_file(
         # Single write
         np.savez_compressed(abs_data_path, **payload)
 
-    except Exception as e:
-        print(f"❌ ERROR: Failed to save data: {e}")
+    except Exception:
+        logger.exception("Failed to save data")
         raise
 
 
@@ -131,9 +134,9 @@ def save_info_file(
                 },
                 info_file,
             )
-        print(f"✅ Info saved successfully to: {abs_info_path}")
-    except Exception as e:
-        print(f"❌ ERROR: Failed to save info: {e}")
+        logger.info("Info saved: %s", abs_info_path)
+    except Exception:
+        logger.exception("Failed to save info")
         raise
 
 
@@ -196,10 +199,10 @@ def load_data_file(abs_data_path: Path) -> dict:
         # Enforce required key
         if "t_det" not in data_dict:
             raise KeyError("Missing 't_det' axis in data file (new format requirement)")
-        print(f"✅ Loaded data from: {abs_data_path}")
+        logger.info("Loaded data: %s", abs_data_path)
         return data_dict
-    except Exception as e:
-        print(f"❌ ERROR: Failed to load data from {abs_data_path}: {e}")
+    except Exception:
+        logger.exception("Failed to load data: %s", abs_data_path)
         raise
 
 
@@ -214,34 +217,34 @@ def load_info_file(abs_info_path: Path) -> dict:
         dict: Dictionary containing system parameters and data configuration
     """
     try:
-        print(f"🔍 Loading info from: {abs_info_path}")
+        logger.debug("Loading info: %s", abs_info_path)
 
         # 1. Try to load the file directly if it exists
         if abs_info_path.exists():
             with open(abs_info_path, "rb") as info_file:
                 info = pickle.load(info_file)
-            print(f"✅ Loaded info from: {abs_info_path}")
+            logger.info("Loaded info: %s", abs_info_path)
             return info
 
         # 2. If not found, search for any .pkl file in the same directory
-        print(f"⚠️ File not found. Searching for any .pkl file in the same directory...")
         parent_dir = abs_info_path.parent
+        logger.warning("Info not found, searching for .pkl in %s", parent_dir)
 
         # Find the first .pkl file in the directory
         pkl_files = list(parent_dir.glob("*.pkl"))
 
         if pkl_files:
             alt_path = pkl_files[0]  # Use the first .pkl file found
-            print(f"🔄 Using alternative file: {alt_path}")
+            logger.info("Using alternative info file: %s", alt_path)
             with open(alt_path, "rb") as info_file:
                 info = pickle.load(info_file)
-            print(f"✅ Loaded info from: {alt_path}")
+            logger.info("Loaded info: %s", alt_path)
             return info
         else:
             raise FileNotFoundError(f"No .pkl files found in directory: {parent_dir}")
 
-    except Exception as e:
-        print(f"❌ ERROR: Failed to load info from {abs_info_path}: {e}")
+    except Exception:
+        logger.exception("Failed to load info: %s", abs_info_path)
         raise
 
 
@@ -260,7 +263,7 @@ def load_data_from_abs_path(abs_path: str) -> dict:
     else:
         base_path = abs_path
 
-    print(f"🔍 Loading data from: {base_path}")
+    logger.debug("Loading data bundle: %s", base_path)
     abs_data_path = base_path + "_data.npz"
     abs_info_path = base_path + "_info.pkl"
 
@@ -308,7 +311,7 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 
-    print(f"🔍 Searching for latest data file in: {abs_base_dir}")
+    logger.debug("Searching latest data in: %s", abs_base_dir)
 
     # =============================
     # Find all data files recursively
@@ -330,7 +333,7 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
     abs_path_str = str(abs_path)
     if abs_path_str.endswith("_data.npz"):
         abs_path_str = abs_path_str[:-9]  # Remove suffix
-    print(f"📅 Loading latest file: {abs_path_str}")
+    logger.info("Loading latest file: %s", abs_path_str)
 
     # =============================
     # Load and return the data
@@ -349,17 +352,17 @@ def list_available_data_files(abs_base_dir: Path) -> List[str]:
         List[str]: Sorted list of data/info file paths (strings)
     """
     if not abs_base_dir.is_dir():
-        print(f"⚠️  {abs_base_dir} is not a directory, checking parent directory.")
+        logger.warning("Not a directory, using parent: %s", abs_base_dir)
         abs_base_dir = abs_base_dir.parent
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 
-    print(f"📋 Listing data files in: {abs_base_dir}")
+    logger.debug("Listing data files in: %s", abs_base_dir)
 
     # =============================
     # Find all data files recursively
     # =============================
-    print(f"📋 Listing data files in: {abs_base_dir}")
+    logger.debug("Listing data files in: %s", abs_base_dir)
 
     # =============================
     # Find all data and info files recursively
@@ -375,15 +378,15 @@ def list_available_data_files(abs_base_dir: Path) -> List[str]:
     all_files.sort()
 
     if not all_files:
-        print(f"⚠️  No data or info files found in {abs_base_dir}")
+        logger.warning("No data or info files found: %s", abs_base_dir)
         return []
 
     # =============================
     # Print summary
     # =============================
-    print(f"📊 Found {len(all_files)} files:")
+    logger.info("Found %d files in %s", len(all_files), abs_base_dir)
     for file_path in all_files:
-        print(f"   📄 {file_path}")
+        logger.debug("file: %s", file_path)
 
     return all_files
 
@@ -401,7 +404,7 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 
-    print(f"📋 Listing data files in: {abs_base_dir}")
+    logger.debug("Listing data files in: %s", abs_base_dir)
 
     # =============================
     # Find data files in current directory only (non-recursive)
@@ -409,7 +412,7 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
     data_files = list(abs_base_dir.glob("*_data.npz"))
 
     if not data_files:
-        print(f"⚠️  No data files found in {abs_base_dir}")
+        logger.warning("No data files found: %s", abs_base_dir)
         return []
 
     # =============================
@@ -430,9 +433,9 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
     # Sort paths for consistent output
     abs_paths.sort()
 
-    print(f"📊 Found {len(abs_paths)} data files in directory")
+    logger.info("Found %d data files in %s", len(abs_paths), abs_base_dir)
     for path in abs_paths:
-        print(f"   📄 {path}")
+        logger.debug("file: %s", path)
 
     return abs_paths
 
@@ -441,61 +444,59 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
 # TEST CODE (when run directly)
 # =============================
 if __name__ == "__main__":
-    print("🧪 Testing qspectro2d.utils.data_io module...")
-    print("=" * 50)
+    logger.info("Testing qspectro2d.utils.data_io module...")
+    logger.info("%s", "=" * 50)
 
     # Test 1: List available data files
-    print("\n📋 Test 1: Listing available data files...")
+    logger.info("Test 1: Listing available data files...")
     try:
         # Try to list files in common directories
         test_dirs = ["1d_spectroscopy", "2d_spectroscopy", "bath_correlator", "tests"]
 
         for test_dir in test_dirs:
             try:
-                print(f"\n🔍 Checking directory: {test_dir}")
+                logger.info("Checking directory: %s", test_dir)
                 file_info = list_available_data_files(Path(test_dir))
                 if file_info:
-                    print(f"   Found {len(file_info)} files")
+                    logger.info("Found %d files", len(file_info))
                 else:
-                    print(f"   No files found in {test_dir}")
+                    logger.info("No files found in %s", test_dir)
             except FileNotFoundError:
-                print(f"   Directory {test_dir} does not exist")
+                logger.info("Directory does not exist: %s", test_dir)
             except Exception as e:
-                print(f"   Error accessing {test_dir}: {e}")
+                logger.exception("Error accessing %s", test_dir)
 
     except Exception as e:
         print(f"❌ Error in test 1: {e}")
 
     # Test 2: Try to load latest data from a directory
-    print("\n📅 Test 2: Loading latest data...")
+    logger.info("Test 2: Loading latest data...")
     try:
         # Try common directories
         for test_dir in ["1d_spectroscopy", "2d_spectroscopy", "tests"]:
             try:
-                print(f"\n🔍 Attempting to load latest from: {test_dir}")
+                logger.info("Attempting to load latest from: %s", test_dir)
                 data = load_latest_data_from_directory(Path(test_dir))
-                print(f"   ✅ Successfully loaded data with keys: {list(data.keys())}")
+                logger.info("Loaded data keys: %s", list(data.keys()))
 
                 # Print some basic info about the loaded data
                 if "data" in data and data["data"] is not None:
-                    print(f"   📊 Data shape: {data['data'].shape}")
+                    logger.info("Data shape: %s", data["data"].shape)
                 if "axes" in data and data["axes"]:
-                    print(f"   📏 Axes: {list(data['axes'].keys())}")
+                    logger.info("Axes: %s", list(data["axes"].keys()))
                 if "system" in data and data["system"]:
-                    print(
-                        f"   ⚙️  System: n_atoms={getattr(data['system'], 'n_atoms', 'Unknown')}"
-                    )
+                    logger.info("System n_atoms: %s", getattr(data["system"], "n_atoms", "Unknown"))
 
                 # Only test the first successful load to avoid too much output
                 break
 
             except FileNotFoundError:
-                print(f"   No data files found in {test_dir}")
+                logger.info("No data files found in %s", test_dir)
             except Exception as e:
-                print(f"   Error loading from {test_dir}: {e}")
+                logger.exception("Error loading from %s", test_dir)
 
-    except Exception as e:
-        print(f"❌ Error in test 2: {e}")
+    except Exception:
+        logger.exception("Error in test 2")
 
     # Test 4: Show DATA_DIR information
     print(f"\n📁 Test 4: DATA_DIR information...")

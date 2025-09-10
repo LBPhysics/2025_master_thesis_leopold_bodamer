@@ -26,7 +26,7 @@ class SimulationConfig:
     )
 
     dt: float = 0.1
-    t_coh: float = 100.0
+    t_coh: float = 0.0
     t_wait: float = 0.0
     t_det_max: float = 100.0
 

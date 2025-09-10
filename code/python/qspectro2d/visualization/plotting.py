@@ -1,11 +1,13 @@
 from matplotlib.colors import TwoSlopeNorm
 import numpy as np
-from qspectro2d.core.laser_system.laser_fcts import *
-from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 import matplotlib.pyplot as plt
 from typing import Literal, Union, Tuple
+
 from plotstyle import init_style, COLORS, LINE_STYLES
 from plotstyle.style import simplify_figure_text
+
+from qspectro2d.core.laser_system.laser_fcts import *
+from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
 init_style()
 

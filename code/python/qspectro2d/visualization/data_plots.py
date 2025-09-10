@@ -10,8 +10,9 @@ spectroscopy data with standardized formatting and output.
 # =============================
 import matplotlib.pyplot as plt
 import gc
-from typing import cast, TYPE_CHECKING
+from typing import cast
 import numpy as np
+from qutip import BosonicEnvironment
 
 ### Project-specific imports
 from qspectro2d.visualization.plotting import (
@@ -24,11 +25,10 @@ from qspectro2d.spectroscopy.post_processing import (
     compute_2d_fft_wavenumber,
 )
 from qspectro2d.utils import generate_unique_plot_filename
-from plotstyle import init_style, save_fig
-
-init_style()
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 
+from plotstyle import init_style, save_fig
+init_style()
 
 # Helper to collect paths from save_fig (which may return a single path or a list of paths)
 def _collect_saved_paths(accumulator, saved):
@@ -36,15 +36,6 @@ def _collect_saved_paths(accumulator, saved):
         accumulator.extend(saved)
     else:
         accumulator.append(saved)
-
-
-if TYPE_CHECKING:
-    # Imported only for static type checking / IDE autocomplete
-    from qspectro2d.core.atomic_system.system_class import AtomicSystem
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-    from qspectro2d.core.simulation import SimulationConfig
-    from qutip import BosonicEnvironment
-
 
 # =============================
 # PLOTTING FUNCTIONS
@@ -70,14 +61,18 @@ def plot_1d_data(
         return
 
     # Explicitly cast for static typing & IDE autocomplete
-    system = cast("AtomicSystem", loaded_data_and_info["system"])
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.simulation import SimulationConfig
+
+    system = cast(AtomicSystem, loaded_data_and_info["system"])
     w0 = system._frequencies_fs[0]
-    bath_env = cast("BosonicEnvironment", loaded_data_and_info["bath"])
+    bath_env = cast(BosonicEnvironment, loaded_data_and_info["bath"])
     bath_dict = extract_bath_parameters(bath_env, w0)
 
-    laser = cast("LaserPulseSequence", loaded_data_and_info["laser"])
+    laser = cast(LaserPulseSequence, loaded_data_and_info["laser"])
     # Require new key 'sim_config'
-    sim_config = cast("SimulationConfig", loaded_data_and_info["sim_config"])
+    sim_config = cast(SimulationConfig, loaded_data_and_info["sim_config"])
     signal_types = sim_config.signal_types
 
     # Collect data arrays according to requested signals
@@ -217,12 +212,16 @@ def plot_2d_data(
     t_coh_vals = axes["t_coh"]  # coherence times
     
     # Explicitly cast objects for static typing & autocomplete (mirror plot_1d_data)
-    system = cast("AtomicSystem", loaded_data_and_info["system"])
+    from qspectro2d.core.atomic_system.system_class import AtomicSystem
+    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.simulation import SimulationConfig
+
+    system = cast(AtomicSystem, loaded_data_and_info["system"])
     w0 = system._frequencies_fs[0]
-    bath_env = cast("BosonicEnvironment", loaded_data_and_info["bath"])
+    bath_env = cast(BosonicEnvironment, loaded_data_and_info["bath"])
     bath_dict = extract_bath_parameters(bath_env, w0)
-    laser = cast("LaserPulseSequence", loaded_data_and_info["laser"])
-    sim_config = cast("SimulationConfig", loaded_data_and_info["sim_config"])
+    laser = cast(LaserPulseSequence, loaded_data_and_info["laser"])
+    sim_config = cast(SimulationConfig, loaded_data_and_info["sim_config"])
     laser_dict = {
         k: v for k, v in laser.to_dict().items() if k != "pulses"
     }  # Exclude "pulses" key

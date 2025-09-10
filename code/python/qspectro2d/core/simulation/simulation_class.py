@@ -34,7 +34,7 @@ def H_int_(
     t : float
         Time.
     lowering_op : Qobj
-        System lowering operator.
+        System lowering operator in eigenbasis!.
     rwa_sl : bool
         Apply rotating wave approximation.
     laser : LaserPulseSequence
@@ -148,7 +148,7 @@ class SimulationModuleOQS:
                 ket2dm(atom_e),  # |e><e|
             ]
         if self.simulation_config.keep_track == "basis":
-            return [ket2dm(b) for b in self.system.basis]
+            return [ket2dm(b) for b in self.system._basis]
         # else use the eigenstates
         return [ket2dm(state) for state in self.system.eigenstates[1]]
 
