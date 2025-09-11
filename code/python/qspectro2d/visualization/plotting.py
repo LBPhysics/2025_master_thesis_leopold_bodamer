@@ -12,7 +12,7 @@ from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 init_style()
 
 
-def plot_pulse_envelope(
+def plot_pulse_envelopes(
     times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
     """
@@ -27,7 +27,7 @@ def plot_pulse_envelope(
         tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the combined envelope over time
-    envelope = pulse_envelope(times, pulse_seq)
+    envelope = pulse_envelopes(times, pulse_seq)
 
     # Create figure and axis if not provided
     fig = None
@@ -47,7 +47,7 @@ def plot_pulse_envelope(
     # Plot individual envelopes and annotations
     for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
         t_peak = pulse.pulse_peak_time  # Now interpreted as peak time
-        Delta_width = pulse.pulse_fwhm
+        Delta_width = pulse.pulse_fwhm_fs
 
         # Compute individual pulse envelope using new logic
         individual_envelope = [
@@ -102,7 +102,7 @@ def plot_pulse_envelope(
     return fig, ax
 
 
-def plot_e_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
+def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
     """
     Plot the RWA electric field (envelope only) over time for pulses using LaserPulseSequence.
 
@@ -115,7 +115,7 @@ def plot_e_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show
         tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the RWA electric field over time
-    E_field = np.array([E_pulse(t, pulse_seq) for t in times])
+    E_field = np.array([e_pulses(t, pulse_seq) for t in times])
 
     # Create figure and axis if not provided
     fig = None
@@ -160,7 +160,9 @@ def plot_e_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show
     return fig, ax
 
 
-def plot_epsilon_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
+def plot_epsilon_pulses(
+    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
+):
     """
     Plot the full electric field (with carrier) over time for pulses using LaserPulseSequence.
 
@@ -173,7 +175,7 @@ def plot_epsilon_pulse(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None
         tuple: (fig, ax) - Figure and axes objects with the plot.
     """
     # Calculate the full electric field over time
-    Epsilon_field = np.array([Epsilon_pulse(t, pulse_seq) for t in times])
+    Epsilon_field = np.array([epsilon_pulses(t, pulse_seq) for t in times])
     fig = None
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -231,9 +233,9 @@ def plot_1d_el_field(
 ) -> plt.Figure:
     """Plot 1D complex data (time or frequency domain).
 
-    # =============================
+
     # CONTRACT
-    # =============================
+
     Inputs: axis_det (1d), complex data (same length), domain selector, component selector
     Output: matplotlib Figure object
     Normalization: optional (default True) to max absolute amplitude
@@ -241,9 +243,8 @@ def plot_1d_el_field(
     """
     fig = plt.figure(figsize=figsize)
 
-    # =============================
     # CROP + NORMALIZE
-    # =============================
+
     if section is not None:
         axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
     if normalize:
@@ -252,9 +253,8 @@ def plot_1d_el_field(
             raise ValueError("Data array is all zeros, cannot normalize.")
         data = data / max_abs
 
-    # =============================
     # COMPONENT HANDLING
-    # =============================
+
     y_data, label, ylabel, x_label, final_title = _resolve_1d_labels_and_component(
         data=data,
         domain=domain,
@@ -263,14 +263,12 @@ def plot_1d_el_field(
         provided_title=title,
     )
 
-    # =============================
     # STYLE
-    # =============================
+
     color, linestyle = _style_for_component(component)
 
-    # =============================
     # PLOT
-    # =============================
+
     plt.plot(axis_det, y_data, label=label, color=color, linestyle=linestyle)
     plt.xlabel(x_label)
     plt.ylabel(ylabel)
@@ -299,13 +297,13 @@ def plot_all_pulse_components(times: np.ndarray, pulse_seq: LaserPulseSequence, 
     fig, axes = plt.subplots(3, 1, figsize=figsize)
 
     # Plot pulse envelope
-    plot_pulse_envelope(times, pulse_seq, ax=axes[0])
+    plot_pulse_envelopes(times, pulse_seq, ax=axes[0])
 
     # Plot RWA electric field
-    plot_e_pulse(times, pulse_seq, ax=axes[1])
+    plot_e_pulses(times, pulse_seq, ax=axes[1])
 
     # Plot full electric field
-    plot_epsilon_pulse(times, pulse_seq, ax=axes[2])
+    plot_epsilon_pulses(times, pulse_seq, ax=axes[2])
 
     # Add overall title
     fig.suptitle(
@@ -344,9 +342,9 @@ def plot_example_evo(
     """
     # Choose field function based on RWA setting
     if rwa_sl:
-        field_func = E_pulse
+        field_func = e_pulses
     else:
-        field_func = Epsilon_pulse
+        field_func = epsilon_pulses
 
     # Calculate total electric field
     E0 = pulse_seq.E0
@@ -594,9 +592,9 @@ def plot_2d_el_field(
     >>> data = np.random.complex128((25, 50))
     >>> plot_2d_el_field(x, y, data, domain="time", component="real")
     """
-    # =============================
+
     # VALIDATE INPUT
-    # =============================
+
     if data.ndim != 2 or data.shape[0] != len(axis_coh) or data.shape[1] != len(axis_det):
         raise ValueError(
             f"Data shape {data.shape} does not match axis_det ({len(axis_det)}) and axis_coh ({len(axis_coh)}) dimensions."
@@ -613,9 +611,9 @@ def plot_2d_el_field(
     axis_det = np.real(axis_det)
     axis_coh = np.real(axis_coh)
     data = np.asarray(data, dtype=np.complex128)
-    # =============================
+
     # SECTION CROPPING
-    # =============================
+
     if section is not None:
         # expect list[(coh_min, coh_max),(det_min, det_max)]
         axis_coh, data = crop_nd_data_along_axis(axis_coh, data, section=section[0], axis=0)
@@ -626,9 +624,8 @@ def plot_2d_el_field(
             raise ValueError("Data array is all zeros, cannot normalize.")
         data = data / max_abs
 
-    # =============================
     # ENSURE MONOTONIC AXES ORIENTATIONS MATCH DATA
-    # =============================
+
     # imshow with an extent assumes the first element of each axis maps to the
     # lower-left corner (when origin='lower'). If axes are descending, flip data
     # along that axis and sort the axis to be ascending so diagonal features
@@ -640,18 +637,16 @@ def plot_2d_el_field(
         axis_coh = axis_coh[::-1]
         data = data[::-1, :]
 
-    # =============================
     # SET PLOT LABELS AND COLORMAP
-    # =============================
+
     data, title_base = _component_2d_data(data=data, component=component)
     colormap, x_title, y_title, domain_suffix = _domain_2d_labels(domain=domain)
     title = title_base + domain_suffix
     if t_wait != np.inf:
         title += rf"$\ (T = {t_wait:.2f}\,\text{{fs}})$"
 
-    # =============================
     # CUSTOM COLORMAP FOR ZERO-CENTERED DATA
-    # =============================
+
     norm = None
     # For real and imag data, use red-white-blue colormap by default
     if component in ("real", "img", "phase"):
@@ -677,9 +672,8 @@ def plot_2d_el_field(
 
     cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
 
-    # =============================
     # GENERATE FIGURE
-    # =============================
+
     fig, ax = plt.subplots(figsize=figsize)
     # Create the pcolormesh plot for the 2D data
     im_plot = ax.imshow(
@@ -792,9 +786,9 @@ def plot_example_polarization(
     return fig
 
 
-# =============================
 # HELPER FUNCTIONS
-# =============================
+
+
 def crop_nd_data_along_axis(
     coord_array: np.ndarray,
     nd_data: np.ndarray,
@@ -847,9 +841,9 @@ def crop_nd_data_along_axis(
     return cropped_coords, cropped_data
 
 
-# =============================
 # NEW INTERNAL HELPERS (1D/2D LABEL + COMPONENT LOGIC)
-# =============================
+
+
 def _style_for_component(component: str) -> Tuple[str, str]:
     """Return (color, linestyle) for a given 1D component.
 
@@ -936,9 +930,9 @@ def _domain_2d_labels(domain: str) -> Tuple[str, str, str, str]:
     )
 
 
-# =============================
 # AXIS LABEL HELPERS (central definitions)
-# =============================
+
+
 def _axis_label_time_det() -> str:
     return r"$t_{\text{det}}$ [fs]"
 

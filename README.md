@@ -202,7 +202,7 @@ plot_from_relative_path(relative_path, config, simulation_type="2d")
         "timestamp": ..., 
         "simulation_type": "1d" | "2d",
         "n_phases": ...,
-        "n_freqs": ...,
+        "n_inhomogen": ...,
         ...
     }
 }

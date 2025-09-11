@@ -27,24 +27,21 @@ def test_basic_functionality():
             t_det_max=100.0,
             t_wait=5.0,
             dt=0.1,
-            n_freqs=1,
+            n_inhomogen=1,
         )
 
         # Mock the helper functions to see what they're called with
-        with patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir), patch(
-            "qspectro2d.utils.file_naming.generate_base_sub_dir"
-        ) as mock_subdir, patch(
-            "qspectro2d.utils.file_naming._generate_base_filename"
-        ) as mock_base, patch(
-            "qspectro2d.utils.file_naming._generate_unique_filename"
-        ) as mock_unique:
+        with (
+            patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir),
+            patch("qspectro2d.utils.file_naming.generate_base_sub_dir") as mock_subdir,
+            patch("qspectro2d.utils.file_naming._generate_base_filename") as mock_base,
+            patch("qspectro2d.utils.file_naming._generate_unique_filename") as mock_unique,
+        ):
 
             # Set up return values
             mock_subdir.return_value = Path("1d_spectroscopy/N1/ME/RWA")
             mock_base.return_value = "sim_t10.5_ME_RWA"
-            mock_unique.return_value = str(
-                temp_dir / "1d_spectroscopy/N1/ME/RWA/sim_t10.5_ME_RWA"
-            )
+            mock_unique.return_value = str(temp_dir / "1d_spectroscopy/N1/ME/RWA/sim_t10.5_ME_RWA")
 
             # Call the function
             result = generate_unique_data_filename(mock_system, sim_cfg)
@@ -104,7 +101,7 @@ def test_with_different_configs():
                     t_det_max=200.0,
                     t_wait=10.0,
                     dt=0.05,
-                    n_freqs=5,
+                    n_inhomogen=5,
                 ),
             },
             {
@@ -116,7 +113,7 @@ def test_with_different_configs():
                     t_det_max=150.0,
                     t_wait=7.5,
                     dt=0.2,
-                    n_freqs=1,
+                    n_inhomogen=1,
                 ),
             },
         ]
@@ -124,13 +121,12 @@ def test_with_different_configs():
         for test_case in configs:
             print(f"\n=== TESTING: {test_case['name']} ===")
 
-            with patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir), patch(
-                "qspectro2d.utils.file_naming.generate_base_sub_dir"
-            ) as mock_subdir, patch(
-                "qspectro2d.utils.file_naming._generate_base_filename"
-            ) as mock_base, patch(
-                "qspectro2d.utils.file_naming._generate_unique_filename"
-            ) as mock_unique:
+            with (
+                patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir),
+                patch("qspectro2d.utils.file_naming.generate_base_sub_dir") as mock_subdir,
+                patch("qspectro2d.utils.file_naming._generate_base_filename") as mock_base,
+                patch("qspectro2d.utils.file_naming._generate_unique_filename") as mock_unique,
+            ):
 
                 # Set up return values based on config
                 cfg = test_case["config"]
@@ -138,9 +134,7 @@ def test_with_different_configs():
                 solver = cfg.ode_solver
                 rwa = "RWA" if cfg.rwa_sl else "noRWA"
 
-                mock_subdir.return_value = Path(
-                    f"{sim_type}_spectroscopy/N2/{solver}/{rwa}"
-                )
+                mock_subdir.return_value = Path(f"{sim_type}_spectroscopy/N2/{solver}/{rwa}")
                 mock_base.return_value = f"sim_{sim_type}_{solver}_{rwa}"
                 mock_unique.return_value = str(
                     temp_dir
@@ -181,9 +175,10 @@ def test_error_scenarios():
 
         # Test error in generate_base_sub_dir
         print(f"\n=== TESTING ERROR IN generate_base_sub_dir ===")
-        with patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir), patch(
-            "qspectro2d.utils.file_naming.generate_base_sub_dir"
-        ) as mock_subdir:
+        with (
+            patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir),
+            patch("qspectro2d.utils.file_naming.generate_base_sub_dir") as mock_subdir,
+        ):
 
             mock_subdir.side_effect = ValueError("Subdirectory generation failed")
 
@@ -196,11 +191,11 @@ def test_error_scenarios():
 
         # Test error in _generate_base_filename
         print(f"\n=== TESTING ERROR IN _generate_base_filename ===")
-        with patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir), patch(
-            "qspectro2d.utils.file_naming.generate_base_sub_dir"
-        ) as mock_subdir, patch(
-            "qspectro2d.utils.file_naming._generate_base_filename"
-        ) as mock_base:
+        with (
+            patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir),
+            patch("qspectro2d.utils.file_naming.generate_base_sub_dir") as mock_subdir,
+            patch("qspectro2d.utils.file_naming._generate_base_filename") as mock_base,
+        ):
 
             mock_subdir.return_value = Path("test_subdir")
             mock_base.side_effect = RuntimeError("Base filename generation failed")
@@ -237,13 +232,12 @@ def test_directory_creation_details():
         # Create nested directory structure
         nested_path = "deep/nested/directory/structure"
 
-        with patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir), patch(
-            "qspectro2d.utils.file_naming.generate_base_sub_dir"
-        ) as mock_subdir, patch(
-            "qspectro2d.utils.file_naming._generate_base_filename"
-        ) as mock_base, patch(
-            "qspectro2d.utils.file_naming._generate_unique_filename"
-        ) as mock_unique:
+        with (
+            patch("qspectro2d.utils.file_naming.DATA_DIR", temp_dir),
+            patch("qspectro2d.utils.file_naming.generate_base_sub_dir") as mock_subdir,
+            patch("qspectro2d.utils.file_naming._generate_base_filename") as mock_base,
+            patch("qspectro2d.utils.file_naming._generate_unique_filename") as mock_unique,
+        ):
 
             mock_subdir.return_value = Path(nested_path)
             mock_base.return_value = "test_filename"

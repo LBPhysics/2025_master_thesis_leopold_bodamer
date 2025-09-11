@@ -13,9 +13,8 @@ Each bath type provides both spectral density and power spectrum functions
 that are compatible with scalar and array inputs for efficient computation.
 """
 
-# =============================
 # BATH FUNCTIONS
-# =============================
+
 from .bath_fcts import (
     # Drude-Lorentz bath functions
     spectral_density_func_drude_lorentz,
@@ -30,9 +29,9 @@ from .bath_fcts import (
     extract_bath_parameters,
 )
 
-# =============================
+
 # PUBLIC API
-# =============================
+
 __all__ = [
     # Drude-Lorentz bath
     "spectral_density_func_drude_lorentz",
@@ -47,9 +46,9 @@ __all__ = [
     "extract_bath_parameters",
 ]
 
-# =============================
+
 # VERSION INFO
-# =============================
+
 __version__ = "1.0.0"
 __author__ = "Leopold"
 __email__ = ""

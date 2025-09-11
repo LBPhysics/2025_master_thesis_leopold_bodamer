@@ -7,9 +7,9 @@ including standardized file formats and directory management.
 
 from __future__ import annotations
 
-# =============================
+
 # IMPORTS
-# =============================
+
 import numpy as np
 import pickle
 import os
@@ -56,9 +56,7 @@ def save_data_file(
 
         # Infer dimensionality
         is_2d = t_coh is not None
-        axes_description = (
-            ["t_coh → axis 0", "t_det → axis 1"] if is_2d else ["t_det → axis 0"]
-        )
+        axes_description = ["t_coh → axis 0", "t_det → axis 1"] if is_2d else ["t_det → axis 0"]
 
         # Default and validate signal_types
         if not signal_types:
@@ -89,9 +87,7 @@ def save_data_file(
                     )
             else:
                 if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
-                    raise ValueError(
-                        f"1D data must have shape (len(t_det),) = ({len(t_det)},)"
-                    )
+                    raise ValueError(f"1D data must have shape (len(t_det),) = ({len(t_det)},)")
             key = str(signal_type)
             if key == "non_rephasing":
                 key = "nonrephasing"
@@ -163,9 +159,9 @@ def save_simulation_data(
     Returns:
         Path]: absolute path to DATA_DIR for the saved numpy data file and info file.
     """
-    # =============================
+
     # Generate unique filenames
-    # =============================
+
     abs_base_path = generate_unique_data_filename(system, sim_config)
     abs_data_path = Path(f"{abs_base_path}_data.npz")  # still legacy suffix pattern
     abs_info_path = Path(f"{abs_base_path}_info.pkl")
@@ -176,9 +172,8 @@ def save_simulation_data(
     save_data_file(abs_data_path, datas, t_det, t_coh, signal_types=sig_types)
     save_info_file(abs_info_path, system, bath, laser, sim_config)
 
-    # =============================
     # Return absolute path to DATA_DIR
-    # =============================
+
     return abs_data_path
 
 
@@ -303,7 +298,7 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
     Returns:
         dict: The loaded data dictionary from the most recent file
     """
-    # =============================
+
     # validate path
 
     if not abs_base_dir.is_dir():
@@ -313,18 +308,16 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
 
     logger.debug("Searching latest data in: %s", abs_base_dir)
 
-    # =============================
     # Find all data files recursively
-    # =============================
+
     data_pattern = str(abs_base_dir / "**" / "*_data.npz")
     data_files = glob.glob(data_pattern, recursive=True)
 
     if not data_files:
         raise FileNotFoundError(f"No data files found in {abs_base_dir}")
 
-    # =============================
     # Find the most recent file
-    # =============================
+
     latest_file = max(data_files, key=os.path.getmtime)
     latest_path = Path(latest_file)
 
@@ -335,9 +328,8 @@ def load_latest_data_from_directory(abs_base_dir: str) -> dict:
         abs_path_str = abs_path_str[:-9]  # Remove suffix
     logger.info("Loading latest file: %s", abs_path_str)
 
-    # =============================
     # Load and return the data
-    # =============================
+
     return load_data_from_abs_path(abs_path_str)
 
 
@@ -359,14 +351,12 @@ def list_available_data_files(abs_base_dir: Path) -> List[str]:
 
     logger.debug("Listing data files in: %s", abs_base_dir)
 
-    # =============================
     # Find all data files recursively
-    # =============================
+
     logger.debug("Listing data files in: %s", abs_base_dir)
 
-    # =============================
     # Find all data and info files recursively
-    # =============================
+
     data_pattern = str(abs_base_dir / "**" / "*_data.npz")
     info_pattern = str(abs_base_dir / "**" / "*_info.pkl")
 
@@ -381,9 +371,8 @@ def list_available_data_files(abs_base_dir: Path) -> List[str]:
         logger.warning("No data or info files found: %s", abs_base_dir)
         return []
 
-    # =============================
     # Print summary
-    # =============================
+
     logger.info("Found %d files in %s", len(all_files), abs_base_dir)
     for file_path in all_files:
         logger.debug("file: %s", file_path)
@@ -406,16 +395,14 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
 
     logger.debug("Listing data files in: %s", abs_base_dir)
 
-    # =============================
     # Find data files in current directory only (non-recursive)
-    # =============================
+
     data_files = list(abs_base_dir.glob("*_data.npz"))
 
     if not data_files:
         logger.warning("No data files found: %s", abs_base_dir)
         return []
 
-    # =============================
     # remove suffix
     abs_paths = []
 
@@ -429,7 +416,6 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
 
         abs_paths.append(abs_path_str)
 
-    # =============================
     # Sort paths for consistent output
     abs_paths.sort()
 
@@ -440,9 +426,8 @@ def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
     return abs_paths
 
 
-# =============================
 # TEST CODE (when run directly)
-# =============================
+
 if __name__ == "__main__":
     logger.info("Testing qspectro2d.utils.data_io module...")
     logger.info("%s", "=" * 50)
@@ -505,9 +490,7 @@ if __name__ == "__main__":
         print(f"   Exists: {DATA_DIR.exists()}")
         if DATA_DIR.exists():
             subdirs = [d for d in DATA_DIR.iterdir() if d.is_dir()]
-            print(
-                f"   Subdirectories: {[d.name for d in subdirs[:10]]}"
-            )  # Show first 10
+            print(f"   Subdirectories: {[d.name for d in subdirs[:10]]}")  # Show first 10
             if len(subdirs) > 10:
                 print(f"   ... and {len(subdirs) - 10} more")
     except Exception as e:

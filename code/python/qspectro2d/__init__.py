@@ -23,17 +23,17 @@ __author__ = "Leopold"
 __email__ = ""
 
 
-# =============================
 # LAZY CORE IMPORTS (avoid circular import during package init)
-# =============================
+
+
 def __getattr__(name):  # PEP 562 lazy attribute loading
     # Core exports
     if name in {
         "AtomicSystem",
         "LaserPulse",
         "LaserPulseSequence",
-        "E_pulse",
-        "pulse_envelope",
+        "e_pulses",
+        "pulse_envelopes",
         "matrix_ODE_paper",
     }:
         from . import core as _core
@@ -64,7 +64,7 @@ def __getattr__(name):  # PEP 562 lazy attribute loading
     if name in {
         "plot_1d_data",
         "plot_2d_data",
-        "plot_pulse_envelope",
+        "plot_pulse_envelopes",
         "plot_all_pulse_components",
     }:
         from . import visualization as _viz
@@ -95,22 +95,22 @@ def __getattr__(name):  # PEP 562 lazy attribute loading
 
 # Spectroscopy functions are provided via lazy loader above to avoid cycles at import time.
 
-# =============================
+
 # VISUALIZATION
-# =============================
+
 try:
     from .visualization import (
         plot_1d_data,
         plot_2d_data,
-        plot_pulse_envelope,
+        plot_pulse_envelopes,
         plot_all_pulse_components,
     )
 except ImportError as e:
     print(f"Warning: Could not import visualization module: {e}")
 
-# =============================
+
 # DATA MANAGEMENT
-# =============================
+
 try:
     from .utils import (
         save_simulation_data,
@@ -120,9 +120,9 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import data module: {e}")
 
-# =============================
+
 # CONFIGURATION
-# =============================
+
 try:
     from .config import (
         DATA_DIR,
@@ -131,17 +131,17 @@ try:
 except ImportError as e:
     print(f"Warning: Could not import config module: {e}")
 
-# =============================
+
 # PUBLIC API - MOST COMMONLY USED
-# =============================
+
 __all__ = [
     # Core classes - most important for users
     "AtomicSystem",
     "LaserPulse",
     "LaserPulseSequence",
     # Essential functions
-    "E_pulse",
-    "pulse_envelope",
+    "e_pulses",
+    "pulse_envelopes",
     "matrix_ODE_paper",
     # Bath functions
     "power_spectrum_func_paper",
@@ -155,7 +155,7 @@ __all__ = [
     # Visualization
     "plot_1d_data",
     "plot_2d_data",
-    "plot_pulse_envelope",
+    "plot_pulse_envelopes",
     "plot_all_pulse_components",
     # Data management
     "save_simulation_data",
@@ -167,9 +167,9 @@ __all__ = [
 ]
 
 
-# =============================
 # PACKAGE INFORMATION
-# =============================
+
+
 def get_package_info():
     """
     Display package information and available modules.

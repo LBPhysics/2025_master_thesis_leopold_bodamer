@@ -5,18 +5,16 @@ from qspectro2d.utils import (
     load_info_file,
 )
 from pathlib import Path
+import argparse
 import numpy as np
 import sys
+
 if TYPE_CHECKING:
     # Imported only for static type checking / IDE autocomplete
     from qspectro2d.core.simulation import SimulationConfig
 
-def main():
-    # =============================
-    # Set base directory as a parameter
-    # =============================
-    import argparse
 
+def main():
     parser = argparse.ArgumentParser(description="Stack 1D data into 2D along t_coh.")
     parser.add_argument(
         "--abs_path",
@@ -49,7 +47,7 @@ def main():
             abs_data_path = Path(path)
             data_npz = np.load(abs_data_path, mmap_mode="r")
             signal_types = data_npz["signal_types"]
-            datas : list[np.ndarray] = []
+            datas: list[np.ndarray] = []
             for sig_type in signal_types:
                 if sig_type in data_npz.files:
                     datas.append(data_npz[sig_type])
@@ -85,7 +83,9 @@ def main():
     num_signal_types = len(signal_types)
 
     # Create a list of stacked arrays, one for each signal type
-    stacked_data = [np.empty((num_t_coh, *shape_single), dtype=dtype) for _ in range(num_signal_types)]
+    stacked_data = [
+        np.empty((num_t_coh, *shape_single), dtype=dtype) for _ in range(num_signal_types)
+    ]
     t_coh_vals = np.empty(num_t_coh)
 
     for i, (t_coh, datas) in enumerate(results):
@@ -100,7 +100,7 @@ def main():
     system = loaded_info_data["system"]
     bath = loaded_info_data.get("bath") or loaded_info_data.get("bath_params")
     laser = loaded_info_data["laser"]
-    sim_config = cast("SimulationConfig", loaded_info_data.get("sim_config"))
+    sim_config: SimulationConfig = loaded_info_data.get("sim_config")
 
     # Get time axis (assumes same for all)
     t_det_vals = data_npz["t_det"]  # new required key

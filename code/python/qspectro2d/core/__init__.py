@@ -12,14 +12,13 @@ The core module is designed to handle both single-atom and two-atom systems
 with various bath models and pulse configurations.
 """
 
-# =============================
 # SYSTEM PARAMETERS
-# =============================
+
 from .atomic_system import AtomicSystem
 
-# =============================
+
 # BATH SYSTEMS
-# =============================
+
 from .bath_system import (
     spectral_density_func_drude_lorentz,
     spectral_density_func_ohmic,
@@ -29,24 +28,23 @@ from .bath_system import (
     power_spectrum_func_paper,
 )
 
-# =============================
+
 # PULSE DEFINITIONS AND SEQUENCES
-# =============================
+
 from .laser_system import (
     LaserPulse,
     LaserPulseSequence,
     identify_non_zero_pulse_regions,
     split_by_active_regions,
     # PULSE FIELD FUNCTIONS
-    pulse_envelope,
-    E_pulse,
-    Epsilon_pulse,
+    pulse_envelopes,
+    e_pulses,
+    epsilon_pulses,
 )
 
 
-# =============================
 # WHOLE MODULE CLASS AND specific Paper SOLVER FUNCTIONS
-# =============================
+
 from .simulation import (
     SimulationModuleOQS,
     SimulationConfig,
@@ -54,9 +52,9 @@ from .simulation import (
     redfield_paper,
 )
 
-# =============================
+
 # PUBLIC API
-# =============================
+
 __all__ = [
     # System configuration
     "AtomicSystem",
@@ -74,9 +72,9 @@ __all__ = [
     "SimulationModuleOQS",
     "SimulationConfig",
     # LaserPulse field functions
-    "pulse_envelope",
-    "E_pulse",
-    "Epsilon_pulse",
+    "pulse_envelopes",
+    "e_pulses",
+    "epsilon_pulses",
     "identify_non_zero_pulse_regions",
     "split_by_active_regions",
     # Solver functions
@@ -84,9 +82,9 @@ __all__ = [
     "redfield_paper",
 ]
 
-# =============================
+
 # VERSION INFO
-# =============================
+
 __version__ = "1.0.0"
 __author__ = "Leopold Bodamer"
 __email__ = ""

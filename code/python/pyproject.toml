@@ -22,7 +22,6 @@ requires-python = ">=3.8"
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
-  "License :: Other/Proprietary License",
   "Intended Audience :: Science/Research",
   "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -40,7 +39,7 @@ dependencies = [
 "Repository" = "https://github.com/LBPhysics/2025_master_thesis_leopold_bodamer"
 
 [tool.setuptools]
-packages = ["qspectro2d", "plotstyle", "project_config"]
+packages = ["qspectro2d", "project_config"]
 
 [tool.black]
 line-length = 100

@@ -11,9 +11,7 @@ for various types of bosonic baths, including Drude-Lorentz and ohmic baths.
 """
 
 
-def spectral_density_func_drude_lorentz(
-    w: float | ArrayLike, **args
-) -> float | ArrayLike:
+def spectral_density_func_drude_lorentz(w: float | ArrayLike, **args) -> float | ArrayLike:
     """
     Spectral density function for a Drude-Lorentz bath.
     Compatible with scalar and array inputs.
@@ -32,9 +30,7 @@ def spectral_density_func_drude_lorentz(
     return result
 
 
-def power_spectrum_func_drude_lorentz(
-    w: float | ArrayLike, **args
-) -> float | ArrayLike:
+def power_spectrum_func_drude_lorentz(w: float | ArrayLike, **args) -> float | ArrayLike:
     """
     power spectrum function in the frequency domain for an drude lorentzian bath.
     Handles both positive and negative frequencies, compatible with arrays.
@@ -52,11 +48,7 @@ def power_spectrum_func_drude_lorentz(
     w_th = Boltzmann * temp / hbar  # Thermal energy in frequency units
     coth_term = 1 / np.tanh(w_safe / (2 * w_th))
 
-    result = (
-        np.sign(w)
-        * spectral_density_func_drude_lorentz(np.abs(w), **args)
-        * (coth_term + 1)
-    )
+    result = np.sign(w) * spectral_density_func_drude_lorentz(np.abs(w), **args) * (coth_term + 1)
 
     # Return scalar if input was scalar
     if np.isscalar(w_input):
@@ -78,9 +70,7 @@ def spectral_density_func_ohmic(w: float | ArrayLike, **args) -> float | ArrayLi
 
     positive_mask = w > 0
     w_mask = w[positive_mask]
-    result[positive_mask] = (
-        alpha * w_mask**s / (wc ** (s - 1)) * np.exp(-np.abs(w_mask) / wc)
-    )
+    result[positive_mask] = alpha * w_mask**s / (wc ** (s - 1)) * np.exp(-np.abs(w_mask) / wc)
 
     return result.item() if w.ndim == 0 else result
 
@@ -130,9 +120,9 @@ def power_spectrum_func_ohmic(w: float | ArrayLike, **args) -> float | ArrayLike
     return S.item() if w.ndim == 0 else S
 
 
-# =============================
 # BATH FUNCTIONS as defined in the paper
-# =============================
+
+
 def spectral_density_func_paper(w: float | ArrayLike, **args) -> float | ArrayLike:
     """
     Spectral density function for a bath as given in the paper.

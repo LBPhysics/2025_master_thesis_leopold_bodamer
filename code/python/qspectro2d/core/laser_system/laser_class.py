@@ -1,6 +1,5 @@
-# =============================
 # Pulse and LaserPulseSequence classes for structured pulse handling
-# =============================
+
 from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple, Optional, Union
 
@@ -26,7 +25,7 @@ class LaserPulse:
     pulse_index: int
     pulse_peak_time: float  # [fs]
     pulse_phase: float  # [rad]
-    pulse_fwhm: float  # [fs]
+    pulse_fwhm_fs: float  # [fs]
     pulse_amplitude: float
     pulse_freq_cm: float  # user supplied central frequency [cm^-1]
     envelope_type: str = "cos2"
@@ -35,37 +34,33 @@ class LaserPulse:
     _pulse_freq_fs: float = field(init=False, repr=False)
 
     def __post_init__(self):
-        # =============================
+
         # VALIDATION
-        # =============================
-        if self.pulse_fwhm <= 0:
+
+        if self.pulse_fwhm_fs <= 0:
             raise ValueError("Pulse FWHM must be positive")
         if not np.isfinite(self.pulse_amplitude):
             raise ValueError("Pulse amplitude must be finite")
         if self.pulse_freq_cm <= 0:
             raise ValueError("Pulse frequency (cm^-1) must be positive.")
 
-        # =============================
         # UNIT CONVERSION (single source of truth)
-        # =============================
+
         self._pulse_freq_fs = float(convert_cm_to_fs(self.pulse_freq_cm))
 
-        # =============================
         # PRECOMPUTE ENVELOPE SUPPORT
-        # =============================
+
         if self.envelope_type == "gaussian":
             # Use extended active window (≈1% cutoff) defined by active_time_range (± n_fwhm * FWHM)
-            self._t_start, self._t_end = (
-                self.active_time_range
-            )  # uses default n_fwhm (1.094)
-            self._sigma = self.pulse_fwhm / (2 * np.sqrt(2 * np.log(2)))
+            self._t_start, self._t_end = self.active_time_range  # uses default n_fwhm (1.094)
+            self._sigma = self.pulse_fwhm_fs / (2 * np.sqrt(2 * np.log(2)))
             # Baseline value chosen at EXTENDED window edge (edge_span), not at FWHM, so
             # envelope retains smooth tails between ±FWHM and ±edge_span.
             edge_span = self._t_end - self.pulse_peak_time
             self._boundary_val = np.exp(-(edge_span**2) / (2 * self._sigma**2))
         else:
-            self._t_start = self.pulse_peak_time - self.pulse_fwhm
-            self._t_end = self.pulse_peak_time + self.pulse_fwhm
+            self._t_start = self.pulse_peak_time - self.pulse_fwhm_fs
+            self._t_end = self.pulse_peak_time + self.pulse_fwhm_fs
             self._sigma = None
             self._boundary_val = None
 
@@ -84,7 +79,7 @@ class LaserPulse:
     @property
     def active_time_range(self, n_fwhm: float = 1.094) -> Tuple[float, float]:
         """Return (t_min, t_max) where gaussian envelope ≳1% (n_fwhm=1.094)."""
-        duration = n_fwhm * self.pulse_fwhm
+        duration = n_fwhm * self.pulse_fwhm_fs
         return (self.pulse_peak_time - duration, self.pulse_peak_time + duration)
 
     def summary_line(self) -> str:
@@ -92,7 +87,7 @@ class LaserPulse:
             f"Pulse {self.pulse_index:>2}: "
             f"t = {self.pulse_peak_time:6.2f} fs | "
             f"E₀ = {self.pulse_amplitude:.3e} | "
-            f"FWHM = {self.pulse_fwhm:4.1f} fs | "
+            f"FWHM = {self.pulse_fwhm_fs:4.1f} fs | "
             f"ω = {self.pulse_freq_cm:8.2f} cm^-1 | "
             f"ϕ = {self.pulse_phase:6.3f} rad | "
             f"type = {self.envelope_type:<7}"
@@ -103,7 +98,7 @@ class LaserPulse:
             "pulse_index": self.pulse_index,
             "pulse_peak_time": self.pulse_peak_time,
             "pulse_phase": self.pulse_phase,
-            "pulse_fwhm": self.pulse_fwhm,
+            "pulse_fwhm_fs": self.pulse_fwhm_fs,
             "pulse_amplitude": self.pulse_amplitude,
             "pulse_freq_cm": self.pulse_freq_cm,
             "envelope_type": self.envelope_type,
@@ -148,7 +143,7 @@ class LaserPulseSequence:
 
     @property
     def pulse_fwhms(self) -> List[float]:
-        return [p.pulse_fwhm for p in self.pulses]
+        return [p.pulse_fwhm_fs for p in self.pulses]
 
     @property
     def pulse_freqs_cm(self) -> List[float]:
@@ -184,7 +179,7 @@ class LaserPulseSequence:
             pulse_peak_time=t,
             pulse_phase=phi,
             pulse_freq_cm=freq_cm,
-            pulse_fwhm=fwhm,
+            pulse_fwhm_fs=fwhm,
             pulse_amplitude=amp,
             envelope_type=env,
         )
@@ -193,7 +188,7 @@ class LaserPulseSequence:
     def from_delays(
         delays: List[float],
         base_amplitude: float = 1,
-        pulse_fwhm: float = 15.0,
+        pulse_fwhm_fs: float = 15.0,
         carrier_freq_cm: float = 16000.0,
         envelope_type: str = "gaussian",
         relative_E0s: Optional[List[float]] = None,
@@ -216,7 +211,7 @@ class LaserPulseSequence:
                 i,
                 peak_times[i],
                 phases[i],
-                pulse_fwhm,
+                pulse_fwhm_fs,
                 carrier_freq_cm,
                 base_amplitude * relative_E0s[i],
                 envelope_type,
@@ -232,7 +227,7 @@ class LaserPulseSequence:
         pulse_phases: Union[float, List[float]],
         pulse_amplitudes: Union[float, List[float]],
         pulse_fwhms: Union[float, List[float]],
-        pulse_freqs: Union[float, List[float]],  # cm^-1 interface preserved
+        pulse_freqs_cm: Union[float, List[float]],  # cm^-1 interface preserved
         envelope_types: Union[str, List[str]],
         pulse_indices: Optional[List[int]] = None,
     ) -> "LaserPulseSequence":
@@ -253,7 +248,7 @@ class LaserPulseSequence:
         pulse_phases = expand(pulse_phases, "pulse_phases")
         amps = expand(pulse_amplitudes, "pulse_amplitudes")
         fwhms = expand(pulse_fwhms, "pulse_fwhms")
-        freqs_cm = expand(pulse_freqs, "pulse_freqs (cm^-1)")
+        freqs_cm = expand(pulse_freqs_cm, "pulse_freqs_cm (cm^-1)")
         envs = expand(envelope_types, "envelope_types")
 
         if pulse_indices is None:
@@ -405,7 +400,7 @@ class LaserPulseSequence:
 
 # How to recreate a LaserPulseSequence and serialize it to JSON
 """
-seq = LaserPulseSequence.from_delays(delays=[100.0, 200.0], pulse_fwhm=10.0)
+seq = LaserPulseSequence.from_delays(delays=[100.0, 200.0], pulse_fwhm_fs=10.0)
 json_data = seq.to_json()
 print("Serialized LaserPulseSequence:\n", json_data)
 
@@ -414,9 +409,7 @@ reconstructed.summary()
 """
 
 
-def identify_non_zero_pulse_regions(
-    times: np.ndarray, pulse_seq: LaserPulseSequence
-) -> np.ndarray:
+def identify_non_zero_pulse_regions(times: np.ndarray, pulse_seq: LaserPulseSequence) -> np.ndarray:
     """
     Identify regions where the pulse envelope is non-zero across an array of time values.
 
@@ -448,9 +441,7 @@ def identify_non_zero_pulse_regions(
     return active_regions
 
 
-def split_by_active_regions(
-    times: np.ndarray, active_regions: np.ndarray
-) -> List[np.ndarray]:
+def split_by_active_regions(times: np.ndarray, active_regions: np.ndarray) -> List[np.ndarray]:
     """
     Split the time array into segments based on active regions.
 

@@ -12,9 +12,8 @@ Main components:
 - simulation: High-level simulation runners and utilities
 """
 
-# =============================
 # CORE CALCULATION FUNCTIONS
-# =============================
+
 from .calculations import (
     compute_pulse_evolution,
     compute_1d_polarization,
@@ -24,26 +23,26 @@ from .calculations import (
 )
 from .polarization import complex_polarization
 
-# =============================
+
 # INHOMOGENEOUS BROADENING
-# =============================
+
 from .inhomogenity import (
     normalized_gauss,
     sample_from_gaussian,
 )
 
-# =============================
+
 # POST-PROCESSING FUNCTIONS
-# =============================
+
 from .post_processing import (
     extend_time_axes,
     compute_1d_fft_wavenumber,
     compute_2d_fft_wavenumber,
 )
 
-# =============================
+
 # SIMULATION FUNCTIONS
-# =============================
+
 from qspectro2d.utils import (
     apply_RWA_phase_factors,
     get_expect_vals_with_RWA,

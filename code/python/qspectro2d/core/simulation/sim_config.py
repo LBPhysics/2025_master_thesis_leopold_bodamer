@@ -31,7 +31,7 @@ class SimulationConfig:
     t_det_max: float = 100.0
 
     n_phases: int = 4
-    n_freqs: int = 1
+    n_inhomogen: int = 1
 
     max_workers: int = 1
     simulation_type: str = "1d"
@@ -47,14 +47,11 @@ class SimulationConfig:
             )
         self.rwa_sl = True
 
-        if self.t_coh < self.t_det_max:
-            self.t_max = self.t_wait + 2 * self.t_det_max
-        else:
-            self.t_max = self.t_coh + self.t_wait + self.t_det_max
+        self.t_max = self.t_wait + 2 * self.t_det_max
 
     @property
     def combinations(self) -> int:
-        return self.n_phases * self.n_phases * self.n_freqs
+        return self.n_phases * self.n_phases * self.n_inhomogen
 
     def summary(self) -> str:
         return (
@@ -73,7 +70,7 @@ class SimulationConfig:
             f"Use rwa_sl         : {self.rwa_sl}\n\n"
             "-------------------------------\n"
             f"Phase Cycles       : {self.n_phases}\n"
-            f"Inhom. Points      : {self.n_freqs}\n"
+            f"Inhom. Points      : {self.n_inhomogen}\n"
             f"Total Combinations : {self.combinations}\n"
             f"Max Workers        : {self.max_workers}\n"
             "-------------------------------\n"

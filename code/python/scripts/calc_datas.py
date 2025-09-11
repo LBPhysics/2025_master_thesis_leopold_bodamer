@@ -16,20 +16,13 @@ It supports two modes of execution:
 
     --n_batches <total>: Total number of n_batches (default: 1)
     --batch_idx <index>: Batch index for the current job (0 to n_batches-1, default: 0)
-    --t_det_max <fs>   : Maximum detection time (default: 600.0 fs)
-    --t_wait <fs>      : Waiting time between pump and probe pulses (default: 0.0 fs)
-    --t_coh <value>    : Coherence time between 2 pump pulses (default: 0.0 fs)
-    --dt <fs>          : Spacing between t_coh and t_det values (default: 10.0 fs)
 
 This script is designed for both local development and HPC batch execution.
 Results are saved automatically using the qspectro2d I/O framework.
 
-# testing
-python calc_datas.py --t_coh 10.0 --t_wait 25.0 --dt 2.0
-python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 20
-# full simulations
-python calc_datas.py --t_coh 300.0 --t_det_max 1000.0 --dt 0.1
-python calc_datas.py --simulation_type 2d --t_det_max 100.0 --t_coh 300.0 --dt 0.1
+# usage
+python calc_datas.py --simulation_type 1d
+python calc_datas.py --simulation_type 2d
 """
 
 import time
@@ -56,18 +49,6 @@ from qspectro2d.core.simulation import SimulationModuleOQS
 warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 
 
-def _resolve_config_path(args) -> Path | None:
-    """Resolve optional config path from CLI or default scripts directory.
-
-    Precedence: CLI --config > scripts/config.yaml (if exists) > None (defaults)
-    """
-    if getattr(args, "config", None):
-        p = Path(args.config).expanduser()
-        return p if p.exists() else None
-    candidate = SCRIPTS_DIR / "config.yaml"
-    return candidate if candidate.exists() else None
-
-
 def run_single_t_coh_with_sim(
     sim_oqs: SimulationModuleOQS,
     t_coh: float,
@@ -88,15 +69,25 @@ def run_single_t_coh_with_sim(
     """
     print(f"\n=== Starting t_coh = {t_coh:.2f} fs ===")
 
-    # Update t_coh in the simulation config
+    # Update coherence time and recompute derived timing + pulse delays
     sim_config_obj = sim_oqs.simulation_config
     sim_config_obj.t_coh = t_coh
     t_wait = sim_config_obj.t_wait
-    sim_oqs.laser.update_delays = [t_coh, t_wait]
+    t_det_max = sim_config_obj.t_det_max
 
-    start_time = time.time()
+    # Recompute t_max (SimulationConfig does this only in __post_init__)
+    sim_config_obj.t_max = t_wait + 2 * t_det_max
+
+    # Clear cached global / local time arrays so they rebuild with new t_max
+    if hasattr(sim_oqs, "_times_global"):
+        delattr(sim_oqs, "_times_global")
+    sim_oqs.reset_times_local()
+
+    # update pulse delays
+    sim_oqs.laser.update_delays([t_coh, t_wait])  # Note hard to extend to n pulses
 
     # Run the simulation
+    start_time = time.time()
     print("Computing 1D polarization with parallel processing...")
     try:
         datas = parallel_compute_1d_E_with_inhomogenity(
@@ -137,40 +128,25 @@ def run_single_t_coh_with_sim(
 
 def run_1d_mode(args):
     """Run single 1D simulation for a specific coherence time."""
-    config_path = _resolve_config_path(args)
+    config_path = args.config
 
     # Build base simulation (applies CLI overrides inside)
-    sim_oqs, time_cut = create_base_sim_oqs(
-        args, config_path=str(config_path) if config_path else None
-    )
+    sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
 
-    # Determine coherence time for printing (already overridden in sim if provided)
-    t_coh_print = args.t_coh if args.t_coh is not None else sim_oqs.simulation_config.t_coh
-    print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs")
+    t_coh_print = sim_oqs.simulation_config.t_coh
+    print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs (from config)")
 
-    # Run single simulation
-    abs_data_path = run_single_t_coh_with_sim(
-        sim_oqs, t_coh_print, save_info=True, time_cut=time_cut
-    )
+    run_single_t_coh_with_sim(sim_oqs, t_coh_print, save_info=True, time_cut=time_cut)
 
 
 def run_2d_mode(args):
     """Run 2D mode with batch processing for multiple coherence times."""
-    config_path = _resolve_config_path(args)
+    config_path = args.config
+    n_batches = args.n_batches
+    batch_idx = args.batch_idx
 
     # Build base simulation (applies CLI overrides inside)
-    sim_oqs, time_cut = create_base_sim_oqs(
-        args, config_path=str(config_path) if config_path else None
-    )
-
-    # Resolve batching with precedence: CLI > defaults (no YAML fields now)
-    n_batches = args.n_batches if args.n_batches is not None else 1
-    batch_idx = args.batch_idx if args.batch_idx is not None else 0
-
-    if n_batches <= 0:
-        raise ValueError("Number of n_batches must be positive")
-    if batch_idx < 0:
-        raise ValueError("Batch index must be non-negative")
+    sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
 
     print(f"🎯 Running 2D mode - batch {batch_idx + 1}/{n_batches}")
 
@@ -192,7 +168,7 @@ def run_2d_mode(args):
     for i, t_coh in enumerate(t_coh_subarray):
         print(f"\n--- Progress: {i+1}/{len(t_coh_subarray)} ---")
         # Save info only for first run
-        save_info = t_coh == 0
+        save_info = i == 0
         abs_data_path = run_single_t_coh_with_sim(
             sim_oqs,
             t_coh,
@@ -226,9 +202,6 @@ Examples:
         """,
     )
 
-    # =============================
-    # SIMULATION TYPE ARGUMENT
-    # =============================
     parser.add_argument(
         "--simulation_type",
         type=str,
@@ -237,82 +210,39 @@ Examples:
         help="Type of simulation: '1d' for single t_coh, '2d' for batch processing (default: 1d)",
     )
 
-    # =============================
-    # CONFIGURATION FILE (optional)
-    # =============================
     parser.add_argument(
         "--config",
         type=str,
-        default=None,
+        default=SCRIPTS_DIR / "config.yaml",
         help=(
             "Path to configuration file (YAML/TOML/JSON). If omitted, config.yaml next to this script is used if present; otherwise built-in defaults are used."
         ),
     )
 
-    # =============================
-    # BATCH PROCESSING ARGUMENTS
-    # =============================
     parser.add_argument(
         "--batch_idx",
         type=int,
-        default=None,  # None => take from YAML/defaults
+        default=0,
         help="Batch index for the current job (0 to n_batches-1)",
     )
     parser.add_argument(
         "--n_batches",
         type=int,
-        default=None,  # None => take from YAML/defaults
-        help="Total number of n_batches",
+        default=1,
+        help="Total number of n_batches >= 1 (only for 2D mode)",
     )
-
-    # =============================
-    # TIME PARAMETERS
-    # =============================
-    parser.add_argument(
-        "--t_det_max",
-        type=float,
-        default=None,  # None => take from YAML/defaults
-        help="Maximum detection time (fs).",
-    )
-    parser.add_argument(
-        "--t_wait",
-        type=float,
-        default=None,  # None => take from YAML/defaults
-        help="Waiting time between pump and probe pulses (fs)",
-    )
-    parser.add_argument(
-        "--t_coh",
-        type=float,
-        default=None,  # None => take from YAML/defaults (0.0 in 2D mode)
-        help="Coherence time between 2 pump pulses (fs)",
-    )
-    parser.add_argument(
-        "--dt",
-        type=float,
-        default=None,  # None => take from YAML/defaults
-        help="Spacing between t_coh and t_det values (fs).",
-    )
-
     args = parser.parse_args()
 
-    # =============================
     # ARGUMENT VALIDATION
-    # =============================
+
     if args.simulation_type == "2d":
         if args.n_batches is not None and args.n_batches <= 0:
             raise ValueError("Number of n_batches must be positive for 2D mode")
         if args.batch_idx is not None and args.batch_idx < 0:
             raise ValueError("Batch index must be non-negative")
-        if args.t_coh is None:
-            args.t_coh = 0.0  # default for 2D mode
-    if args.dt is not None and args.dt <= 0:
-        raise ValueError("Time step dt must be positive")
-    if args.t_det_max is not None and args.t_det_max <= 0:
-        raise ValueError("Detection time t_det_max must be positive")
 
-    # =============================
     # EXECUTION LOGIC
-    # =============================
+
     print("=" * 80)
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
     print(f"Simulation type: {args.simulation_type}")

@@ -18,7 +18,7 @@ from qutip import BosonicEnvironment
 from .sim_config import SimulationConfig
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-from qspectro2d.core.laser_system.laser_fcts import E_pulse, Epsilon_pulse
+from qspectro2d.core.laser_system.laser_fcts import e_pulses, epsilon_pulses
 from qspectro2d.core.system_bath_class import SystemBathCoupling
 from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qspectro2d.constants import HBAR
@@ -39,10 +39,10 @@ def H_int_(t: float, lowering_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence)
         Pulse sequence.
     """
     if rwa_sl:
-        E_field_RWA = E_pulse(t, laser)
+        E_field_RWA = e_pulses(t, laser)
         return -(lowering_op.dag() * E_field_RWA + lowering_op * np.conj(E_field_RWA))
     dipole_op = lowering_op + lowering_op.dag()
-    E_field = Epsilon_pulse(t, laser)
+    E_field = epsilon_pulses(t, laser)
     return -dipole_op * (E_field + np.conj(E_field))
 
 

@@ -2,9 +2,8 @@ import numpy as np
 from typing import Union, List, overload
 from qutip import Qobj, expect
 
-# =============================
+
 # ROTATING WAVE APPROXIMATION FUNCTIONS
-# =============================
 
 
 @overload
@@ -12,9 +11,7 @@ def apply_RWA_phase_factors(
     states: List[Qobj], times: np.ndarray, n_atoms: int, omega_laser: float
 ) -> List[Qobj]: ...
 @overload
-def apply_RWA_phase_factors(
-    rho: Qobj, t: float, n_atoms: int, omega_laser: float
-) -> Qobj: ...
+def apply_RWA_phase_factors(rho: Qobj, t: float, n_atoms: int, omega_laser: float) -> Qobj: ...
 
 
 def apply_RWA_phase_factors(
@@ -43,9 +40,7 @@ def apply_RWA_phase_factors(
             for rho, t in zip(states_or_rho, times_or_t)
         ]
     else:
-        raise TypeError(
-            "Invalid input. Expected either (Qobj, float) or (List[Qobj], np.ndarray)."
-        )
+        raise TypeError("Invalid input. Expected either (Qobj, float) or (List[Qobj], np.ndarray).")
 
 
 def _apply_single_rwa(rho: Qobj, t: float, n_atoms: int, omega: float) -> Qobj:

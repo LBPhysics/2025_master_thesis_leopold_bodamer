@@ -25,9 +25,9 @@ def normalized_gauss(x_vals: np.ndarray, fwhm: float, mu: float = 0.0) -> np.nda
         ∫σ(x_vals - mu) dE = 1
     for all fwhm.
     """
-    # =============================
+
     # Compute normalized Gaussian
-    # =============================
+
     sigma_val = fwhm / (2 * np.sqrt(2 * np.log(2)))  # standard deviation from fwhm
     norm = 1.0 / (sigma_val * np.sqrt(2 * np.pi))  # normalization factor
     exponent = -0.5 * ((x_vals - mu) / sigma_val) ** 2  # Gaussian exponent
@@ -57,25 +57,23 @@ def sample_from_gaussian(
     np.ndarray
         Array of sampled energy values.
     """
-    # =============================
+
     # Special case: fwhm = 0 (no inhomogeneity)
-    # =============================
+
     if fwhm == 0 or np.isclose(fwhm, 0):
         # Return an array of just mu since this represents a fwhm function at mu
         return np.array([mu])
 
-    # =============================
     # Define the sampling range and maximum
-    # =============================
+
     E_min = mu - max_detuning * fwhm
     E_max = mu + max_detuning * fwhm
     E_vals = np.linspace(E_min, E_max, 10000)
     sigma_vals = normalized_gauss(E_vals, fwhm, mu)
     sigma_max = np.max(sigma_vals)
 
-    # =============================
     # Rejection sampling
-    # =============================
+
     samples = []
     while len(samples) < n_samples:
         E_try = np.random.uniform(E_min, E_max)

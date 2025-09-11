@@ -17,9 +17,9 @@ Target:
 - power_spectrum_func_ohmic(w0) ≈ 1/300 ≈ 0.00333
 """
 
-# =============================
+
 # OPTIMIZATION PARAMETERS
-# =============================
+
 
 ### Target values
 target_at_zero = 1 / 10000  # Target value at w=0
@@ -82,9 +82,7 @@ def objective_function(params):
         return 1e10
 
 
-def optimize_bath_parameters(
-    initial_guess=None, method="L-BFGS-B", use_multiple_starts=True
-):
+def optimize_bath_parameters(initial_guess=None, method="L-BFGS-B", use_multiple_starts=True):
     """
     Optimize bath parameters to achieve target power spectrum values.
     Uses multiple random starting points to explore the wide parameter space.
@@ -123,9 +121,7 @@ def optimize_bath_parameters(
     if use_multiple_starts and initial_guess is None:
         # Generate multiple random starting points across log space
         n_starts = 20
-        print(
-            f"\nUsing {n_starts} random starting points to explore parameter space..."
-        )
+        print(f"\nUsing {n_starts} random starting points to explore parameter space...")
 
         # Generate logarithmically distributed starting points
         temp_starts = np.logspace(-8, 2, n_starts // 4)  # 1e-8 to 100
@@ -185,9 +181,7 @@ def optimize_bath_parameters(
     print(f"{'='*60}")
     print(f"Best error: {best_error:.2e}")
     print(f"Success: {best_result.success}")
-    print(
-        f"Final parameters: temp={best_result.x[0]:.2e}, alpha={best_result.x[1]:.2e}"
-    )
+    print(f"Final parameters: temp={best_result.x[0]:.2e}, alpha={best_result.x[1]:.2e}")
 
     return best_result
 
@@ -354,9 +348,7 @@ def plot_power_spectrum(temp_opt, alpha_opt, w_range=None):
 
 if __name__ == "__main__":
 
-    # =============================
     # MAIN OPTIMIZATION
-    # =============================
 
     ### Run optimization
     result = optimize_bath_parameters()

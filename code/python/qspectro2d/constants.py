@@ -17,9 +17,9 @@ __all__ = [
     "convert_fs_to_cm",
 ]
 
-# =============================
+
 # FUNDAMENTAL CONSTANTS (natural units inside project)
-# =============================
+
 HBAR: float = 1.0  # Reduced Planck constant
 BOLTZMANN: float = 1.0  # Boltzmann constant
 

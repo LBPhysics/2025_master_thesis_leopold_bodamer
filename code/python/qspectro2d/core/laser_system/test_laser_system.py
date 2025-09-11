@@ -25,7 +25,7 @@ class TestLaserPulse:
             pulse_index=0,
             pulse_peak_time=100.0,
             pulse_phase=0.0,
-            pulse_fwhm=10.0,
+            pulse_fwhm_fs=10.0,
             pulse_amplitude=0.05,
             pulse_freq=16000.0,  # Will be converted to rad/fs
             envelope_type="gaussian",
@@ -34,7 +34,7 @@ class TestLaserPulse:
         assert pulse.pulse_index == 0
         assert pulse.pulse_peak_time == 100.0
         assert pulse.pulse_phase == 0.0
-        assert pulse.pulse_fwhm == 10.0
+        assert pulse.pulse_fwhm_fs == 10.0
         assert pulse.pulse_amplitude == 0.05
         assert pulse.envelope_type == "gaussian"
         assert pulse._freq_converted == True
@@ -44,7 +44,7 @@ class TestLaserPulse:
         print(f"  - Index: {pulse.pulse_index}")
         print(f"  - Peak time: {pulse.pulse_peak_time} fs")
         print(f"  - Phase: {pulse.pulse_phase} rad")
-        print(f"  - FWHM: {pulse.pulse_fwhm} fs")
+        print(f"  - FWHM: {pulse.pulse_fwhm_fs} fs")
         print(f"  - Amplitude: {pulse.pulse_amplitude}")
         print(f"  - Frequency: {pulse.pulse_freq:.6f} rad/fs")
         print(f"  - Envelope: {pulse.envelope_type}")
@@ -56,7 +56,7 @@ class TestLaserPulse:
             pulse_index=0,
             pulse_peak_time=0.0,
             pulse_phase=0.0,
-            pulse_fwhm=10.0,
+            pulse_fwhm_fs=10.0,
             pulse_amplitude=1.0,
             pulse_freq=freq_cm,
             envelope_type="gaussian",
@@ -77,7 +77,7 @@ class TestLaserPulse:
             pulse_index=0,
             pulse_peak_time=100.0,
             pulse_phase=0.0,
-            pulse_fwhm=10.0,
+            pulse_fwhm_fs=10.0,
             pulse_amplitude=0.05,
             pulse_freq=16000.0,
             envelope_type="gaussian",
@@ -92,7 +92,7 @@ class TestLaserPulse:
 
         print("✓ LaserPulse active time range calculation successful")
         print(f"  - Peak time: {pulse.pulse_peak_time} fs")
-        print(f"  - FWHM: {pulse.pulse_fwhm} fs")
+        print(f"  - FWHM: {pulse.pulse_fwhm_fs} fs")
         print(f"  - Active range: [{start:.2f}, {end:.2f}] fs")
         print(f"  - Duration: {end - start:.2f} fs")
 
@@ -104,7 +104,7 @@ class TestLaserPulse:
                 pulse_index=0,
                 pulse_peak_time=0.0,
                 pulse_phase=0.0,
-                pulse_fwhm=-5.0,  # Invalid
+                pulse_fwhm_fs=-5.0,  # Invalid
                 pulse_amplitude=1.0,
                 pulse_freq=16000.0,
             )
@@ -115,7 +115,7 @@ class TestLaserPulse:
                 pulse_index=0,
                 pulse_peak_time=0.0,
                 pulse_phase=0.0,
-                pulse_fwhm=10.0,
+                pulse_fwhm_fs=10.0,
                 pulse_amplitude=np.inf,  # Invalid
                 pulse_freq=16000.0,
             )
@@ -126,7 +126,7 @@ class TestLaserPulse:
                 pulse_index=0,
                 pulse_peak_time=0.0,
                 pulse_phase=0.0,
-                pulse_fwhm=10.0,
+                pulse_fwhm_fs=10.0,
                 pulse_amplitude=1.0,
                 pulse_freq=-16000.0,  # Invalid
             )
@@ -139,7 +139,7 @@ class TestLaserPulse:
             pulse_index=1,
             pulse_peak_time=123.45,
             pulse_phase=1.57,
-            pulse_fwhm=12.5,
+            pulse_fwhm_fs=12.5,
             pulse_amplitude=0.025,
             pulse_freq=16000.0,
             envelope_type="cos2",
@@ -164,7 +164,7 @@ class TestLaserPulse:
             pulse_index=2,
             pulse_peak_time=50.0,
             pulse_phase=0.5,
-            pulse_fwhm=8.0,
+            pulse_fwhm_fs=8.0,
             pulse_amplitude=0.1,
             pulse_freq=15800.0,
             envelope_type="gaussian",
@@ -180,7 +180,7 @@ class TestLaserPulse:
         assert reconstructed_pulse.pulse_index == original_pulse.pulse_index
         assert reconstructed_pulse.pulse_peak_time == original_pulse.pulse_peak_time
         assert reconstructed_pulse.pulse_phase == original_pulse.pulse_phase
-        assert reconstructed_pulse.pulse_fwhm == original_pulse.pulse_fwhm
+        assert reconstructed_pulse.pulse_fwhm_fs == original_pulse.pulse_fwhm_fs
         assert reconstructed_pulse.pulse_amplitude == original_pulse.pulse_amplitude
         assert np.isclose(reconstructed_pulse.pulse_freq, original_pulse.pulse_freq)
         assert reconstructed_pulse.envelope_type == original_pulse.envelope_type
@@ -215,7 +215,7 @@ class TestLaserPulseSequence:
             pulse_index=0,
             pulse_peak_time=50.0,
             pulse_phase=0.0,
-            pulse_fwhm=10.0,
+            pulse_fwhm_fs=10.0,
             pulse_amplitude=0.1,
             pulse_freq=16000.0,
             envelope_type="gaussian",
@@ -225,7 +225,7 @@ class TestLaserPulseSequence:
             pulse_index=1,
             pulse_peak_time=100.0,
             pulse_phase=1.57,
-            pulse_fwhm=12.0,
+            pulse_fwhm_fs=12.0,
             pulse_amplitude=0.05,
             pulse_freq=16000.0,
             envelope_type="cos2",
@@ -252,7 +252,7 @@ class TestLaserPulseSequence:
         seq = LaserPulseSequence.from_delays(
             delays=delays,
             base_amplitude=0.05,
-            pulse_fwhm=10.0,
+            pulse_fwhm_fs=10.0,
             carrier_freq_cm=15800.0,
             relative_E0s=[1.0, 0.5, 0.1],
             phases=[0.0, 0.5, 1.0],
@@ -365,9 +365,7 @@ class TestLaserPulseSequence:
 
     def test_active_pulses_at_time(self):
         """Test getting active pulses at a specific time."""
-        seq = LaserPulseSequence.from_delays(
-            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm=10.0
-        )
+        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
 
         # Test at pulse peak time
         active_at_100 = seq.get_active_pulses_at_time(100.0)
@@ -384,9 +382,7 @@ class TestLaserPulseSequence:
 
     def test_total_amplitude_at_time(self):
         """Test total amplitude calculation at a specific time."""
-        seq = LaserPulseSequence.from_delays(
-            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm=10.0
-        )
+        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
 
         # Test at pulse peak time
         total_amp_at_100 = seq.get_total_amplitude_at_time(100.0)
@@ -405,7 +401,7 @@ class TestLaserPulseSequence:
         original_seq = LaserPulseSequence.from_delays(
             [200.0, 300.0],
             base_amplitude=0.05,
-            pulse_fwhm=10.0,
+            pulse_fwhm_fs=10.0,
             carrier_freq_cm=15800.0,
             relative_E0s=[1.0, 0.5, 0.1],
             phases=[0.0, 0.5, 1.0],
@@ -420,12 +416,8 @@ class TestLaserPulseSequence:
 
         # Compare essential attributes
         assert len(reconstructed_seq) == len(original_seq)
-        assert np.allclose(
-            reconstructed_seq.pulse_peak_times, original_seq.pulse_peak_times
-        )
-        assert np.allclose(
-            reconstructed_seq.pulse_amplitudes, original_seq.pulse_amplitudes
-        )
+        assert np.allclose(reconstructed_seq.pulse_peak_times, original_seq.pulse_peak_times)
+        assert np.allclose(reconstructed_seq.pulse_amplitudes, original_seq.pulse_amplitudes)
         assert np.allclose(reconstructed_seq.pulse_fwhms, original_seq.pulse_fwhms)
         assert np.allclose(reconstructed_seq.pulse_freqs, original_seq.pulse_freqs)
         assert np.allclose(reconstructed_seq.pulse_phases, original_seq.pulse_phases)
@@ -443,9 +435,7 @@ class TestLaserUtilityFunctions:
 
     def test_identify_non_zero_pulse_regions(self):
         """Test identification of non-zero pulse regions."""
-        seq = LaserPulseSequence.from_delays(
-            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm=10.0
-        )
+        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
 
         times = np.linspace(0, 300, 301)
         active_regions = identify_non_zero_pulse_regions(times, seq)
@@ -467,9 +457,7 @@ class TestLaserUtilityFunctions:
 
     def test_split_by_active_regions(self):
         """Test splitting time array by active regions."""
-        seq = LaserPulseSequence.from_delays(
-            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm=10.0
-        )
+        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
 
         times = np.linspace(0, 300, 301)
         active_regions = identify_non_zero_pulse_regions(times, seq)
@@ -494,7 +482,7 @@ class TestLaserUtilityFunctions:
         seq = LaserPulseSequence.from_delays(
             [50.0, 100.0, 200.0],
             base_amplitude=1.0,
-            pulse_fwhm=8.0,
+            pulse_fwhm_fs=8.0,
             envelope_type="gaussian",
         )
 
@@ -516,9 +504,7 @@ class TestLaserUtilityFunctions:
                 if pulse_time >= segment[0] and pulse_time <= segment[-1]:
                     found_in_segment = True
                     break
-            assert (
-                found_in_segment
-            ), f"Pulse time {pulse_time} not found in any active segment"
+            assert found_in_segment, f"Pulse time {pulse_time} not found in any active segment"
 
         print("✓ Combined utility workflow successful")
         print(f"  - Pulse times: {seq.pulse_peak_times}")

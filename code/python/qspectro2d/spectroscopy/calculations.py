@@ -37,15 +37,6 @@ from project_config.logging_setup import get_logger
 logger = get_logger(__name__, level=30)  # 30 = logging.WARNING
 
 # TODO put into config module defaults_params.py
-DEFAULT_SOLVER_THRESHOLDS = {
-    "negative_eigval_threshold": -1e-3,
-    "trace_tolerance": 1e-6,
-}
-
-
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
 
 
 def _validate_simulation_input(sim_oqs: SimulationModuleOQS) -> None:
@@ -103,8 +94,10 @@ def _check_density_matrix_properties(
     """
     error_messages = []
     time_cut = np.inf
-    neg_thr = DEFAULT_SOLVER_THRESHOLDS["negative_eigval_threshold"]
-    tr_tol = DEFAULT_SOLVER_THRESHOLDS["trace_tolerance"]
+    from qspectro2d.config.default_simulation_params import (
+        NEGATIVE_EIGVAL_THRESHOLD,
+        TRACE_TOLERANCE,
+    )
 
     check_interval = max(1, len(states) // 10)  # Check every 10% of states
 
@@ -127,7 +120,7 @@ def _check_density_matrix_properties(
         eigvals = state.eigenenergies()
         min_eigval = eigvals.min()
 
-        if not np.all(eigvals >= neg_thr):
+        if not np.all(eigvals >= NEGATIVE_EIGVAL_THRESHOLD):
             error_messages.append(
                 f"Density matrix is not positive semidefinite after t = {time}: "
                 f"The lowest eigenvalue is {min_eigval}"
@@ -135,7 +128,7 @@ def _check_density_matrix_properties(
             logger.error(f"NEGATIVE EIGENVALUE DETECTED:")
             logger.error(f"  Time: {time:.6f}")
             logger.error(f"  Min eigenvalue: {min_eigval:.12f}")
-            logger.error(f"  Threshold: {neg_thr}")
+            logger.error(f"  Threshold: {NEGATIVE_EIGVAL_THRESHOLD}")
             logger.error(f"  All eigenvalues: {eigvals[:5]}...")
             logger.error(f"  State trace: {state.tr():.10f}")
             logger.error(f"  State index: {index}/{len(states)}")
@@ -150,7 +143,7 @@ def _check_density_matrix_properties(
 
         # Check trace preservation
         trace_val = state.tr()
-        if not np.isclose(trace_val, 1.0, atol=tr_tol):
+        if not np.isclose(trace_val, 1.0, atol=TRACE_TOLERANCE):
             error_messages.append(
                 f"Density matrix is not trace-preserving after t = {time}: "
                 f"The trace is {trace_val}"
@@ -159,7 +152,7 @@ def _check_density_matrix_properties(
             logger.error(f"  Time: {time:.6f}")
             logger.error(f"  Trace: {trace_val:.10f}")
             logger.error(f"  Deviation from 1: {abs(trace_val - 1.0):.10f}")
-            logger.error(f"  Tolerance: {tr_tol}")
+            logger.error(f"  Tolerance: {TRACE_TOLERANCE}")
 
             time_cut = min(time_cut, time)
 
@@ -216,9 +209,8 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
     copy_sim_oqs.times_local = times
 
-    # =============================
     # DETAILED SYSTEM DIAGNOSTICS
-    # =============================
+
     logger.info(f"=== SOLVER DIAGNOSTICS ===")
     logger.info(f"Solver: {copy_sim_oqs.simulation_config.ode_solver}")
     logger.info(f"Time range: t0={t0:.3f}, t_max={t_max:.3f}, dt={dt:.6f}")
@@ -229,14 +221,6 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
 
     # INPUT VALIDATION
     _validate_simulation_input(copy_sim_oqs)
-
-    ### Check solver tolerances
-    solver_opts = {}  # no global defaults after CONFIG removal
-    logger.info(f"Solver options: {solver_opts}")
-    neg_thr = DEFAULT_SOLVER_THRESHOLDS["negative_eigval_threshold"]
-    tr_tol = DEFAULT_SOLVER_THRESHOLDS["trace_tolerance"]
-    logger.info(f"Negative eigenvalue threshold: {neg_thr}")
-    logger.info(f"Trace tolerance: {tr_tol}")
 
     result = compute_pulse_evolution(copy_sim_oqs, **{"store_states": True})
     states = result.states
@@ -269,58 +253,18 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     return result, time_cut
 
 
-'''
-def compute_pulse_evolution(
-    sim_oqs: SimulationModuleOQS,
-    solver_defaults: dict | None = None,
-    **solver_options: dict,
-) -> Result:
+def _compute_total_evolution(sim_oqs: SimulationModuleOQS, options: dict) -> Result:
+    """Compute evolution over the full time grid without segmentation.
+
+    Uses the interactive evolution object ``evo_obj_int`` for the complete
+    ``times_local`` array. Appropriate when segmentation by pulse activity
+    is unnecessary (e.g., single broad pulse, debugging, or benchmarking).
     """
-    Compute the evolution of the quantum system for a given pulse sequence.
-
-    This function handles multi-pulse quantum evolution by segmenting the time array
-    based on pulse regions and using appropriate evolution operators for each segment.
-    It supports both interactive (with pulses) and free evolution periods.
-
-    Parameters
-    ----------
-    sim_oqs : SimulationModuleOQS
-        Prepared simulation object containing:
-        - system: AtomicSystem with initial state, dipole operators, etc.
-        - times_local: Time array for evolution
-        - evo_obj_int: Evolution operator for interactive periods
-        - simulation_config: Solver settings and tolerances
-        - decay_channels: List of decay operators for dissipation
-    solver_defaults : dict | None
-        Default solver options (previously CONFIG.solver.solver_options).
-        Common options include 'store_states', 'store_final_state', 'atol', 'rtol'.
-    **solver_options : dict
-        User overrides for solver options (highest precedence).
-        Examples: store_states=True, atol=1e-8, rtol=1e-6
-
-    Returns
-    -------
-    Result
-        QuTiP Result object containing:
-        - states: List of density matrices at each time point (if store_states=True)
-        - times: Array of time points corresponding to states
-        - final_state: Final density matrix (if store_final_state=True)
-    """
-    # CONFIGURE SOLVER OPTIONS
-    options = {}
-    if solver_defaults:
-        options.update(solver_defaults)
-    if solver_options:
-        options.update(solver_options)
-
     current_state = sim_oqs.system.psi_ini
     actual_times = sim_oqs.times_local
     decay_ops_list = sim_oqs.decay_channels
-
-    evo_obj = sim_oqs.evo_obj_int  # Interactive evolution (with pulses)
-
-    # Execute evolution for this time segment
-    result = _execute_single_evolution_segment(
+    evo_obj = sim_oqs.evo_obj_int
+    return _execute_single_evolution_segment(
         sim_oqs.simulation_config.ode_solver,
         evo_obj,
         decay_ops_list,
@@ -329,13 +273,10 @@ def compute_pulse_evolution(
         options,
     )
 
-    return result
-'''
-
 
 def compute_pulse_evolution(
     sim_oqs: SimulationModuleOQS,
-    solver_defaults: dict | None = None,
+    segmentation: bool = True,
     **solver_options: dict,
 ) -> Result:
     """
@@ -356,12 +297,15 @@ def compute_pulse_evolution(
         - evo_obj_free: Evolution operator for free evolution periods
         - simulation_config: Solver settings and tolerances
         - decay_channels: List of decay operators for dissipation
-    solver_defaults : dict | None
-        Default solver options (previously CONFIG.solver.solver_options).
-        Common options include 'store_states', 'store_final_state', 'atol', 'rtol'.
     **solver_options : dict
         User overrides for solver options (highest precedence).
         Examples: store_states=True, atol=1e-8, rtol=1e-6
+
+    Parameters
+    ----------
+    segmentation : bool, default True
+        If True, perform region-based segmented evolution (interactive vs free).
+        If False, evolve once over the entire ``times_local`` using ``evo_obj_int``.
 
     Returns
     -------
@@ -382,44 +326,42 @@ def compute_pulse_evolution(
     The evolution is computed using either mesolve (master equation) or brmesolve
     (Bloch-Redfield master equation) depending on the ode_solver setting.
     """
-    # CONFIGURE SOLVER OPTIONS
-    options = {}
-    if solver_defaults:
-        options.update(solver_defaults)
+    from qspectro2d.config.default_simulation_params import SOLVER_OPTIONS
+
+    options: dict = SOLVER_OPTIONS
     if solver_options:
         options.update(solver_options)
 
-    # INITIALIZE EVOLUTION VARIABLES
-    all_states, all_times = [], []
+    # Fast path: no segmentation requested
+    if not segmentation:
+        return _compute_total_evolution(sim_oqs, options)
+
+    # --- Segmented evolution path ---
+    all_states: list = []
+    all_times: list = []
 
     current_state = sim_oqs.system.psi_ini
     actual_times = sim_oqs.times_local
     pulse_seq = sim_oqs.laser
     decay_ops_list = sim_oqs.decay_channels
 
-    # SEGMENT TIME ARRAY BY PULSE REGIONS
-    # Identify time regions where pulses are active vs. free evolution
+    # Determine active regions and split
     pulse_regions = identify_non_zero_pulse_regions(actual_times, pulse_seq)
     split_times = split_by_active_regions(actual_times, pulse_regions)
 
-    # EVOLVE THROUGH EACH TIME SEGMENT
     for i, curr_times in enumerate(split_times):
-        # Extend curr_times by one point if not the last segment to ensure continuity
+        # Ensure continuity by appending the first point of the next segment (except last)
         if i < len(split_times) - 1:
             next_times = split_times[i + 1]
             if len(next_times) > 0:
                 curr_times = np.append(curr_times, next_times[0])
 
-        # Determine which evolution operator to use based on pulse activity
+        # Decide on interactive vs free evo object
         start_idx = np.abs(actual_times - curr_times[0]).argmin()
         has_pulse = pulse_regions[start_idx]
-        if has_pulse:
-            evo_obj = sim_oqs.evo_obj_int  # Interactive evolution (with pulses)
-        else:
-            evo_obj = sim_oqs.evo_obj_free  # Free evolution (no pulses)
+        evo_obj = sim_oqs.evo_obj_int if has_pulse else sim_oqs.evo_obj_free
 
-        # Execute evolution for this time segment
-        result = _execute_single_evolution_segment(
+        segment_result = _execute_single_evolution_segment(
             sim_oqs.simulation_config.ode_solver,
             evo_obj,
             decay_ops_list,
@@ -428,28 +370,27 @@ def compute_pulse_evolution(
             options,
         )
 
-        # Store results
-        if hasattr(result, "states") and result.states:
+        # Collect states
+        if hasattr(segment_result, "states") and segment_result.states:
             if i < len(split_times) - 1:
-                all_states.extend(result.states[:-1])
-                all_times.extend(result.times[:-1])
+                all_states.extend(segment_result.states[:-1])
+                all_times.extend(segment_result.times[:-1])
             else:
-                all_states.extend(result.states)
-                all_times.extend(result.times)
-            current_state = result.states[-1]
-        elif hasattr(result, "final_state"):
-            current_state = result.final_state
+                all_states.extend(segment_result.states)
+                all_times.extend(segment_result.times)
+            current_state = segment_result.states[-1]
+        elif hasattr(segment_result, "final_state"):
+            current_state = segment_result.final_state
         else:
             raise RuntimeError(
                 "Solver must return either 'states' or 'final_state'. "
                 "Check solver options: use 'store_states' or 'store_final_state'."
             )
 
-    # Create combined result object
-    result.states = all_states if all_states else []
-    result.times = np.array(all_times) if all_times else []
-
-    return result
+    # Build consolidated Result (reuse last segment_result object for metadata safety)
+    segment_result.states = all_states if all_states else []
+    segment_result.times = np.array(all_times) if all_times else []
+    return segment_result
 
 
 def _execute_single_evolution_segment(
@@ -532,9 +473,8 @@ def _compute_next_start_point(
 
     """
 
-    # =============================
     # EVOLUTION COMPUTATION
-    # =============================
+
     evolution_options = {
         "store_final_state": True,
         "store_states": False,  # Only need final state for efficiency
@@ -638,19 +578,16 @@ def compute_1d_polarization(
             )
         return times, datas, sim_oqs
 
-    # =============================
     # COMPUTE EVOLUTION STATES
-    # =============================
+
     evolution_data = _compute_n_pulse_evolution(sim_oqs)
 
-    # =============================
     # COMPUTE LINEAR SIGNALS
-    # =============================
+
     linear_signals = _compute_n_linear_signals(sim_oqs)
 
-    # =============================
     # EXTRACT AND PROCESS DETECTION DATA
-    # =============================
+
     time_cut_val = kwargs.get("time_cut", np.inf)
     # Ensure time_cut is a proper float, not a Qobj
     if hasattr(time_cut_val, "full"):  # Check if it's a Qobj
@@ -699,6 +636,9 @@ def _compute_n_pulse_evolution(
         next_pulse_start_time = peak_times[pulse_idx] - fwhms[pulse_idx]
         next_pulse_start_idx = np.abs(times - next_pulse_start_time).argmin()
         times_segment = times[prev_pulse_start_idx : next_pulse_start_idx + 1]
+        logger.info(
+            f"current pulses at {peak_times[pulse_idx - 1]} fs (idx {prev_pulse_start_idx}) and next at {peak_times[pulse_idx]} fs (idx {next_pulse_start_idx})"
+        )
         times_segment = _ensure_valid_times(times_segment, times, prev_pulse_start_idx)
         logger.info(
             f"  Segment {pulse_idx}: {len(times_segment)} points from {times_segment[0]:.2f} to {times_segment[-1]:.2f} fs"
@@ -1037,60 +977,34 @@ def _process_single_1d_combination(
         return None
 
 
-def parallel_compute_1d_E_with_inhomogenity(
+def compute_results_matrix_avg_1d(
     sim_oqs: SimulationModuleOQS,
     parallel: bool = True,
     **kwargs: dict,
-) -> List[np.ndarray]:
-    """
-    Compute 1D nonlinear polarization signals with inhomogeneous broadening and phase cycling.
+) -> np.ndarray:
+    """Compute the phase-resolved polarization matrix averaged over inhomogeneous realizations.
 
-    This function performs parallel computation of 1D spectroscopy signals by sampling
-    frequency distributions for inhomogeneous broadening and applying phase cycling
-    for signal isolation. It uses inverse Fourier transform (IFT) to extract specific
-    signal components (rephasing/nonrephasing).
+    This performs all expensive solver calls (optionally in parallel) and returns a
+    3D array: results_matrix_avg[phi1_idx, phi2_idx, t] representing the averaged
+    nonlinear polarization (still containing all phase information).
 
     Parameters
     ----------
     sim_oqs : SimulationModuleOQS
-        Simulation configuration containing system parameters, laser pulses,
-        and configuration settings (n_phases, n_freqs, max_workers, etc.)
+        Fully configured simulation object.
     parallel : bool, default=True
-        Whether to use parallel processing with ProcessPoolExecutor.
-        If False, computations are done serially.
+        Use process based parallelism for the (freq, phi1, phi2) combinations.
     **kwargs : dict
-        Additional arguments passed to compute_1d_polarization.
+        Forwarded to compute_1d_polarization.
 
     Returns
     -------
-    List[np.ndarray]
-        List of nonlinear polarization signals for each signal type:
-        - [0]: Rephasing signal component P_{k_S}^{(-1,1)}(t)
-        - [1]: Nonrephasing signal component P_{k_S}^{(1,-1)}(t)
-
-    Notes
-    -----
-    The function implements the following workflow:
-
-    1. **Phase Cycling Setup**: Creates phase combinations for signal isolation
-    2. **Inhomogeneous Broadening**: Samples frequency distributions from Gaussian
-       distributions around each atomic transition frequency
-    3. **Parallel Processing**: Computes polarization for each (frequency, phase1, phase2)
-       combination using ProcessPoolExecutor
-    4. **Signal Extraction**: Applies inverse Fourier transform with appropriate
-       phase coefficients to isolate rephasing and nonrephasing signals
-
-    The inhomogeneous broadening is modeled by sampling n_freqs realizations
-    of frequency offsets for each atom, creating a distribution around the
-    mean transition frequencies.
-
-    Phase cycling coefficients:
-    - Rephasing: (-1, 1, 1) - extracts signals with phase evolution (-φ₁ + φ₂)
-    - Nonrephasing: (1, -1, 1) - extracts signals with phase evolution (φ₁ - φ₂)
+    np.ndarray
+        Averaged results matrix of shape (n_phases, n_phases, n_times_det) with dtype complex64.
     """
-    # Configure phase cycling
+    # Phase cycling configuration
     n_phases = sim_oqs.simulation_config.n_phases
-    n_freqs = sim_oqs.simulation_config.n_freqs
+    n_inhomogen = sim_oqs.simulation_config.n_inhomogen
     max_workers = sim_oqs.simulation_config.max_workers
     from qspectro2d.config.default_simulation_params import PHASE_CYCLING_PHASES
 
@@ -1098,34 +1012,33 @@ def parallel_compute_1d_E_with_inhomogenity(
     if n_phases != 4:
         logger.warning(f"Phase cycling with {n_phases} phases may not be optimal for IFT")
 
-    # Sample frequency offsets for inhomogeneous broadening
+    # Inhomogeneous broadening samples
     sys = sim_oqs.system
     delta_cm = sys.delta_cm
     frequencies_cm = sys.frequencies_cm
 
     # Each row = one realization, each column = atom index
-    # Shape: (n_freqs, n_atoms)
+    # Shape: (n_inhomogen, n_atoms)
     all_freq_sets = np.stack(
-        [sample_from_gaussian(n_freqs, delta_cm, freq) for freq in frequencies_cm],
-        axis=1,
+        [sample_from_gaussian(n_inhomogen, delta_cm, freq) for freq in frequencies_cm], axis=1
     )
     logger.debug(
         f"Using frequency samples: shape={all_freq_sets.shape}, dtype={all_freq_sets.dtype}"
     )
 
-    # Prepare all jobs: one per (omega_idx, phi1_idx, phi2_idx)
-    combinations = []
-    for omega_idx in range(n_freqs):
+    # Prepare jobs
+    combinations: list[tuple[int, int, int, np.ndarray, float, float]] = []
+    for omega_idx in range(n_inhomogen):
         new_freqs = all_freq_sets[omega_idx]
         for phi1_idx, phi1 in enumerate(phases):
             for phi2_idx, phi2 in enumerate(phases):
                 combinations.append((omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2))
 
     data_length = len(sim_oqs.times_det)
-    results_array = np.empty((n_freqs, n_phases, n_phases, data_length), dtype=np.complex64)
+    results_array = np.empty((n_inhomogen, n_phases, n_phases, data_length), dtype=np.complex64)
 
     if not parallel:
-        for omega_idx in range(n_freqs):
+        for omega_idx in range(n_inhomogen):
             new_freqs = all_freq_sets[omega_idx]
             for phi1_idx, phi1 in enumerate(phases):
                 for phi2_idx, phi2 in enumerate(phases):
@@ -1137,7 +1050,6 @@ def parallel_compute_1d_E_with_inhomogenity(
                             phi2=phi2,
                             **kwargs,
                         )
-
                         if data is None or not isinstance(data, np.ndarray):
                             data = np.full(data_length, np.nan, dtype=np.complex64)
                         elif data.shape != (data_length,):
@@ -1149,9 +1061,7 @@ def parallel_compute_1d_E_with_inhomogenity(
                                 data = padded_data
                             else:
                                 data = data.flatten()[:data_length]
-
                         results_array[omega_idx, phi1_idx, phi2_idx, :] = data
-
                     except Exception as exc:
                         logger.error(
                             f"Serial combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}"
@@ -1169,14 +1079,7 @@ def parallel_compute_1d_E_with_inhomogenity(
                     phi2=phi2,
                     **kwargs,
                 ): (omega_idx, phi1_idx, phi2_idx)
-                for (
-                    omega_idx,
-                    phi1_idx,
-                    phi2_idx,
-                    new_freqs,
-                    phi1,
-                    phi2,
-                ) in combinations
+                for (omega_idx, phi1_idx, phi2_idx, new_freqs, phi1, phi2) in combinations
             }
 
             for future in as_completed(futures):
@@ -1223,24 +1126,87 @@ def parallel_compute_1d_E_with_inhomogenity(
                     logger.error(f"Combination ({omega_idx},{phi1_idx},{phi2_idx}) failed: {exc}")
                     results_array[omega_idx, phi1_idx, phi2_idx, :] = np.nan
 
-    # Average over frequencies to get 2D result array before IFT or phase-average
     results_matrix_avg = np.mean(results_array, axis=0)
+    logger.debug(f"results_matrix_avg shape={results_matrix_avg.shape}")
+    return results_matrix_avg
 
-    logger.debug(f"Results matrix before IFT: {results_matrix_avg}")
-    # Final IFT extraction for the specified component
+
+def extract_signal_components_1d(
+    results_matrix_avg: np.ndarray, sim_oqs: SimulationModuleOQS
+) -> dict[str, np.ndarray]:
+    """Extract phase-cycled signal components from the averaged results matrix.
+
+    Parameters
+    ----------
+    results_matrix_avg : np.ndarray
+        Array of shape (n_phases, n_phases, n_times) from compute_results_matrix_avg_1d.
+    sim_oqs : SimulationModuleOQS
+        Simulation object (used for signal_types and phase list).
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        Mapping from signal type (e.g. 'rephasing') to extracted polarization P_kS(t).
+    """
+    from qspectro2d.config.default_simulation_params import PHASE_CYCLING_PHASES, COMPONENT_MAP
+
+    n_phases = sim_oqs.simulation_config.n_phases
+    phases = PHASE_CYCLING_PHASES[:n_phases]
     signal_types = sim_oqs.simulation_config.signal_types
-    components = []
-    for signal_type in signal_types:
-        if signal_type == "rephasing":
-            components.append((-1, 1, 1))
-        elif signal_type == "nonrephasing":
-            components.append((1, -1, 1))
-    P_kS_s = [
-        extract_ift_signal_component(results_matrix=results_matrix_avg, phases=phases, component=c)
-        for c in components
-    ]
 
-    return P_kS_s
+    extracted: dict[str, np.ndarray] = {}
+    for sig in signal_types:
+        comp = COMPONENT_MAP.get(sig)
+        if comp is None:
+            logger.warning(f"Unknown signal type '{sig}' – skipping")
+            continue
+        extracted[sig] = extract_ift_signal_component(
+            results_matrix=results_matrix_avg, phases=phases, component=comp
+        )
+    return extracted
+
+
+def compute_detected_fields_from_polarization(
+    polarization_components: dict[str, np.ndarray],
+) -> dict[str, np.ndarray]:
+    """Convert polarization components P_kS(t) to detected electric fields E_kS(t).
+
+    Uses simple proportionality E_kS = i * P_kS (overall scaling factors can be
+    applied externally if needed).
+
+    Parameters
+    ----------
+    polarization_components : dict[str, np.ndarray]
+        Mapping from signal type to polarization arrays.
+
+    Returns
+    -------
+    dict[str, np.ndarray]
+        Same keys with complex field arrays.
+    """
+    return {k: 1j * v for k, v in polarization_components.items()}
+
+
+def parallel_compute_1d_E_with_inhomogenity(
+    sim_oqs: SimulationModuleOQS,
+    parallel: bool = True,
+    **kwargs: dict,
+) -> List[np.ndarray]:
+    """Backward-compatible wrapper returning polarization components list.
+
+    This preserves the original public API while internally using the new
+    modular functions:
+      1. compute_results_matrix_avg_1d
+      2. extract_signal_components_1d
+
+    Returns list in the order of sim_oqs.simulation_config.signal_types.
+    """
+    results_matrix_avg = compute_results_matrix_avg_1d(sim_oqs=sim_oqs, parallel=parallel, **kwargs)
+    components_dict = extract_signal_components_1d(results_matrix_avg, sim_oqs)
+    ordered = [
+        components_dict[s] for s in sim_oqs.simulation_config.signal_types if s in components_dict
+    ]
+    return ordered
 
 
 # Helper functions for IFT processing

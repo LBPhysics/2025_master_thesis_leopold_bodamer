@@ -1,6 +1,5 @@
-# =============================
 # DEFINE THE SYSTEM PARAMETERS CLASS
-# =============================
+
 import numpy as np
 import json
 import math

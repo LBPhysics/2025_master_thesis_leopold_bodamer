@@ -6,9 +6,9 @@ for spectroscopy data.
 """
 
 from .plotting import (
-    plot_pulse_envelope,
-    plot_e_pulse,
-    plot_epsilon_pulse,
+    plot_pulse_envelopes,
+    plot_e_pulses,
+    plot_epsilon_pulses,
     plot_all_pulse_components,
     plot_example_evo,
     plot_1d_el_field,
@@ -17,16 +17,15 @@ from .plotting import (
     crop_nd_data_along_axis,
     add_custom_contour_lines,
 )
-from .data_plots import (
-    plot_1d_data,
-    plot_2d_data,
+from .plotting_functions import (
+    plot_data,
 )
 
 __all__ = [
     # plotting.py
-    "plot_pulse_envelope",
-    "plot_e_pulse",
-    "plot_epsilon_pulse",
+    "plot_pulse_envelopes",
+    "plot_e_pulses",
+    "plot_epsilon_pulses",
     "plot_all_pulse_components",
     "plot_example_evo",
     "plot_1d_el_field",
@@ -34,7 +33,6 @@ __all__ = [
     "plot_example_polarization",
     "crop_nd_data_along_axis",
     "add_custom_contour_lines",
-    # data_plots.py
-    "plot_1d_data",
-    "plot_2d_data",
+    # plotting_functions.py
+    "plot_data",
 ]

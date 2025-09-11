@@ -12,50 +12,7 @@ Usage:
     from qspectro2d.config.create_sim_obj import load_simulation
     sim = load_simulation("scripts/config.yaml")  # or None for defaults
 
-YAML Schema (minimal example):
-    atomic:
-      n_atoms: 2
-      frequencies_cm: [15900.0, 16000.0]
-      dip_moments: [1.0, 1.0]
-      coupling_cm: 0.0
-      delta_cm: 0.0
-      max_excitation: 2
-      n_freqs: 1
-    laser:
-      pulse_fwhm_fs: 5.0
-      base_amplitude: 0.5
-      envelope_type: gaussian
-      carrier_freq_cm: 16000.0
-      rwa_sl: true
-    bath:
-      bath_type: ohmic   # currently informational only
-      temperature: 0.001
-      cutoff: 100.0
-      coupling: 0.0001
-    solver:
-      solver: BR
-    window:
-      dt: 0.1
-      t_coh: 100.0
-      t_wait: 0.0
-      t_det_max: 200.0
-
-Optional pulse control:
-    pulses:
-      # Delays BETWEEN pulses (n delays => n+1 pulses)
-      delays: [t12, t23]
-      relative_e0s: [1.0, 1.0, 0.1]
-      phases: [0.0, 0.0, 0.0]
-
-If pulses section omitted, a 3‑pulse sequence is synthesized using:
-    delays = [window.t_coh, window.t_wait]
-    relative_e0s = [1.0, 1.0, 0.1]
-    phases = [0.0, 0.0, 0.0]
-
-Notes:
-    - This bypasses the hierarchical dataclass layer in `models.py`.
-    - Keeps validation light; relies on existing class constructors raising errors.
-    - Extra / unknown keys are ignored.
+YAML Schema (example of all options):
 """
 
 from __future__ import annotations
@@ -64,22 +21,17 @@ import os
 import numpy as np
 import psutil
 from pathlib import Path
-from typing import Any, Mapping, Optional, TYPE_CHECKING
+from typing import Any, Mapping, Optional
 from qutip import OhmicEnvironment
 import yaml
 
-if TYPE_CHECKING:
-    from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
-    from qspectro2d.core.simulation.sim_config import SimulationConfig
-
+from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
 from qspectro2d.config import default_simulation_params as dflt
 
 __all__ = ["load_simulation", "create_base_sim_oqs", "get_max_workers"]
 
 
-# =============================
 # HELPERS
-# =============================
 
 
 def _read_yaml(path: Path) -> Mapping[str, Any]:
@@ -100,9 +52,17 @@ def _get_section(cfg: Mapping[str, Any], name: str) -> Mapping[str, Any]:
 
 
 def load_simulation(
-    path: Optional[str | Path] = None, validate: bool = True
+    path: Optional[str | Path] = None,
+    validate: bool = True,
 ) -> SimulationModuleOQS:
     """Create a `SimulationModuleOQS` directly from a YAML file or defaults.
+
+    Overrides (if provided) take precedence over YAML/defaults and are applied
+    BEFORE constructing the laser sequence & simulation config so that all
+    derived internal time arrays are consistent. This avoids the need to
+    rebuild the `SimulationModuleOQS` later and prevents mismatches (e.g.
+    insufficient evolution states) when large coherence delays were first
+    baked in and then changed afterwards.
 
     Parameters
     ----------
@@ -111,6 +71,8 @@ def load_simulation(
         `default_simulation_params` are used.
     validate: bool
         If True (default) run physics validation via `default_simulation_params.validate`.
+    t_coh_override, t_wait_override, t_det_max_override, dt_override, ode_solver_override:
+        Optional scalar overrides for timing / solver settings.
     """
     # Import here to avoid circular import
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
@@ -118,17 +80,10 @@ def load_simulation(
     from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
     from qspectro2d.core.simulation.sim_config import SimulationConfig
 
-    # -----------------
     # LOAD / FALLBACK
-    # -----------------
-    if path is None:
-        cfg_root: Mapping[str, Any] = {}
-    else:
-        cfg_root = _read_yaml(Path(path))
+    cfg_root = _read_yaml(Path(path))
 
-    # -----------------
     # ATOMIC SYSTEM
-    # -----------------
     atomic_cfg = _get_section(cfg_root, "atomic")
     n_atoms = int(atomic_cfg.get("n_atoms", dflt.N_ATOMS))
     n_chains = int(atomic_cfg.get("n_chains", dflt.N_CHAINS))
@@ -137,7 +92,7 @@ def load_simulation(
     coupling_cm = float(atomic_cfg.get("coupling_cm", dflt.COUPLING_CM))
     delta_cm = float(atomic_cfg.get("delta_cm", dflt.DELTA_CM))
     max_excitation = int(atomic_cfg.get("max_excitation", dflt.MAX_EXCITATION))
-    n_freqs = int(atomic_cfg.get("n_freqs", dflt.N_FREQS))
+    n_inhomogen = int(atomic_cfg.get("n_inhomogen", dflt.N_INHOMOGEN))
 
     atomic_system = AtomicSystem(
         n_atoms=n_atoms,
@@ -153,7 +108,7 @@ def load_simulation(
     # LASER / PULSES
     # -----------------
     laser_cfg = _get_section(cfg_root, "laser")
-    pulse_fwhm = float(laser_cfg.get("pulse_fwhm_fs", dflt.PULSE_FWHM))
+    pulse_fwhm_fs = float(laser_cfg.get("pulse_fwhm_fs", dflt.PULSE_FWHM_FS))
     base_amp = float(laser_cfg.get("base_amplitude", dflt.BASE_AMPLITUDE))
     envelope = str(laser_cfg.get("envelope_type", dflt.ENVELOPE_TYPE))
     carrier_cm = float(laser_cfg.get("carrier_freq_cm", dflt.CARRIER_FREQ_CM))
@@ -166,13 +121,17 @@ def load_simulation(
     window_cfg = _get_section(cfg_root, "window")
     t_coh = float(window_cfg.get("t_coh", dflt.T_COH))
     t_wait = float(window_cfg.get("t_wait", dflt.T_WAIT))
+    dt = float(window_cfg.get("dt", dflt.DT))
+    t_det_max = float(window_cfg.get("t_det_max", dflt.T_DET_MAX))
+
+    # Apply early overrides (timing relevant for pulse delays)
     delays = [t_coh, t_wait]  # -> 3 pulses
     phases = [0.0, 0.0, 0.0]
 
     laser_sequence = LaserPulseSequence.from_delays(
         delays=delays,
         base_amplitude=base_amp,
-        pulse_fwhm=pulse_fwhm,
+        pulse_fwhm_fs=pulse_fwhm_fs,
         carrier_freq_cm=carrier_cm,
         envelope_type=envelope,
         relative_E0s=relative_e0s,
@@ -196,19 +155,12 @@ def load_simulation(
         s=1.0,
         tag=bath_type,
     )
-    # -----------------
     # SIMULATION CONFIG (flat)
-    # -----------------
-    window_cfg = _get_section(cfg_root, "window")
     solver_cfg = _get_section(cfg_root, "solver")
-
-    dt = float(window_cfg.get("dt", dflt.DT))
-    t_coh = float(window_cfg.get("t_coh", 0.0))
-    t_wait = float(window_cfg.get("t_wait", 0.0))
-    t_det_max = float(window_cfg.get("t_det_max", dflt.T_DET_MAX))
     n_phases = int(solver_cfg.get("n_phases", dflt.N_PHASES))  # allow override
     ode_solver = str(solver_cfg.get("solver", dflt.ODE_SOLVER))
     signal_types = list(solver_cfg.get("signal_types", dflt.SIGNAL_TYPES))
+    simulation_type = str(solver_cfg.get("simulation_type", dflt.SIMULATION_TYPE))
 
     # -----------------
     # VALIDATION (physics-level) BEFORE FINAL ASSEMBLY
@@ -230,6 +182,20 @@ def load_simulation(
             "rwa_sl": rwa_sl,
             "carrier_freq_cm": carrier_cm,
             "signal_types": signal_types,
+            "t_det_max": t_det_max,
+            "dt": dt,
+            "t_coh": t_coh,
+            "t_wait": t_wait,
+            "n_inhomogen": n_inhomogen,
+            # Newly added for extended validation
+            "pulse_fwhm_fs": pulse_fwhm_fs,
+            "base_amplitude": base_amp,
+            "envelope_type": envelope,
+            "coupling_cm": coupling_cm,
+            "delta_cm": delta_cm,
+            "solver_options": dflt.SOLVER_OPTIONS,  # TODO add those to the sim_config class
+            "simulation_type": simulation_type,  # factory defaults (could expose later)
+            "max_workers": get_max_workers(),
         }
         dflt.validate(params)
 
@@ -241,7 +207,7 @@ def load_simulation(
         t_wait=t_wait,
         t_det_max=t_det_max,
         n_phases=n_phases,
-        n_freqs=n_freqs,
+        n_inhomogen=n_inhomogen,
         signal_types=signal_types,
     )
 
@@ -259,68 +225,23 @@ def load_simulation(
 
 
 def create_base_sim_oqs(
-    args,
-    config_path: str | None = None,
+    config_path: Path | None = None,
 ) -> tuple[SimulationModuleOQS, float]:
     """Create base simulation instance and perform solver validation once.
 
     Parameters:
-        args: Parsed command line arguments (may contain overrides)
         config_path: Optional path to YAML config (None -> defaults)
 
     Returns:
         tuple: (SimulationModuleOQS instance, time_cut from solver validation)
     """
-    # -----------------
-    # LOAD BASE SIMULATION (validated physics params inside loader)
-    # -----------------
-    sim = load_simulation(config_path, validate=True)
+    # Gather overrides from args once and pass into loader (done earlier now)
+    sim = load_simulation(
+        config_path,
+        validate=True,
+    )
 
-    print("🔧 Base simulation created from config.")
-
-    # -----------------
-    # APPLY CLI OVERRIDES (times / dt / solver) IF PROVIDED
-    # -----------------
-    cfg = sim.simulation_config
-    override = False
-
-    t_coh = getattr(args, "t_coh", None)
-    t_wait = getattr(args, "t_wait", None)
-    t_det_max = getattr(args, "t_det_max", None)
-    dt = getattr(args, "dt", None)
-    solver = getattr(args, "ode_solver", None)
-
-    if t_coh is not None:
-        override = True
-    if t_wait is not None:
-        override = True
-    if t_det_max is not None:
-        override = True
-    if dt is not None:
-        override = True
-    if solver is not None:
-        override = True
-
-    if override:
-        new_cfg = SimulationConfig(
-            ode_solver=solver if solver is not None else cfg.ode_solver,
-            rwa_sl=cfg.rwa_sl,
-            dt=dt if dt is not None else cfg.dt,
-            t_coh=t_coh if t_coh is not None else cfg.t_coh,
-            t_wait=t_wait if t_wait is not None else cfg.t_wait,
-            t_det_max=t_det_max if t_det_max is not None else cfg.t_det_max,
-            n_phases=cfg.n_phases,
-            n_freqs=cfg.n_freqs,
-            signal_types=cfg.signal_types,
-        )
-        # Re-wrap in fresh SimulationModuleOQS so __post_init__ recalculates evo objects
-        sim = SimulationModuleOQS(
-            simulation_config=new_cfg,
-            system=sim.system,
-            laser=sim.laser,
-            bath=sim.bath,
-        )
-        print("⚙️  Applied CLI overrides to simulation configuration.")
+    print("🔧 Base simulation created from config (overrides applied early).")
 
     # -----------------
     # SOLVER VALIDATION

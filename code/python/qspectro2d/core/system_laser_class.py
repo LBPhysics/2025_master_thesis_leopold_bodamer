@@ -78,7 +78,7 @@ if __name__ == "__main__":
     seq = LaserPulseSequence.from_delays(
         delays=[100.0, 300.0],
         base_amplitude=0.05,
-        pulse_fwhm=10.0,
+        pulse_fwhm_fs=10.0,
         carrier_freq_cm=15800.0,
         relative_E0s=[1.0, 1.0, 0.1],
         phases=[0.0, 0.5, 1.0],

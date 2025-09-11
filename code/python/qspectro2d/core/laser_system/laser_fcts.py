@@ -1,11 +1,19 @@
+from __future__ import annotations
 from typing import Union, TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+    from qspectro2d.core.laser_system.laser_class import LaserPulse, LaserPulseSequence
 
 
-def _single_pulse_envelope(t_array: np.ndarray, pulse) -> np.ndarray:
+__all__ = [
+    "pulse_envelopes",
+    "e_pulses",
+    "epsilon_pulses",
+]
+
+
+def _single_pulse_envelope(t_array: np.ndarray, pulse: "LaserPulse") -> np.ndarray:
     """Compute envelope contribution of a single pulse for provided time array.
 
     Parameters
@@ -21,7 +29,7 @@ def _single_pulse_envelope(t_array: np.ndarray, pulse) -> np.ndarray:
         Envelope values for this single pulse over t_array.
     """
     t_peak = pulse.pulse_peak_time
-    fwhm = pulse.pulse_fwhm
+    fwhm = pulse.pulse_fwhm_fs
     env = pulse.envelope_type
 
     out = np.zeros_like(t_array, dtype=float)
@@ -46,7 +54,7 @@ def _single_pulse_envelope(t_array: np.ndarray, pulse) -> np.ndarray:
     return out
 
 
-def pulse_envelope(
+def pulse_envelopes(
     t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[float, np.ndarray]:
     """
@@ -84,7 +92,7 @@ def pulse_envelope(
     return envelope_total
 
 
-def E_pulse(
+def e_pulses(
     t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[complex, np.ndarray]:
     """
@@ -123,7 +131,7 @@ def E_pulse(
     return field_total
 
 
-def Epsilon_pulse(
+def epsilon_pulses(
     t: Union[float, np.ndarray], pulse_seq: "LaserPulseSequence"
 ) -> Union[complex, np.ndarray]:
     """
@@ -156,7 +164,7 @@ def Epsilon_pulse(
         if omega is None or E0 is None or phi is None:
             continue
         single_env = _single_pulse_envelope(t_array, pulse)
-        carrier = np.exp(-1j * (omega * t_array + phi))
+        carrier = np.exp(-1j * (-omega * t_array + phi))
         field_total += E0 * single_env * carrier
 
     if is_scalar:

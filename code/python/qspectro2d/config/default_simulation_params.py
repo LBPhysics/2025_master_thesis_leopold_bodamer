@@ -18,13 +18,16 @@ PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 DETECTION_PHASE = 0  # Fixed phase for detection pulse
 SUPPORTED_SIGNAL_TYPES = ["rephasing", "nonrephasing"]
 SIGNAL_TYPES = ["rephasing"]  # Default signal == photon echo to simulate
+COMPONENT_MAP: dict[str, tuple[int, int, int]] = {
+    "rephasing": (-1, 1, 1),
+    "nonrephasing": (1, -1, 1),
+}  # represents the (k1, k2, k3) phase factors for each signal type
 # last pulse is 10% of the first two to ensure probing character
 RELATIVE_E0S = [1.0, 1.0, 0.1]
 
 
-# =============================
 # solver defaults  # very rough estimate, not optimized
-# =============================
+
 SOLVER_OPTIONS = {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
 
 # Validation thresholds for physics checks
@@ -36,24 +39,25 @@ TRACE_TOLERANCE = 1e-6
 # supported solvers and bath models
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
 SUPPORTED_BATHS = ["ohmic"]  # , "dl"
+SUPPORTED_ENVELOPES = ["gaussian", "cos2"]
+SUPPORTED_SIMULATION_TYPES = ["1d", "2d"]
 
 
 # === ATOMIC SYSTEM DEFAULTS ===
-N_ATOMS = 2
+N_ATOMS = 1
 N_CHAINS = 1  # defaults to linear chain (single chain layout)
-FREQUENCIES_CM = [15900.0, 16000.0]  # Number of frequency components in the system
-DIP_MOMENTS = [1.0, 1.0]  # Dipole moments for each atom
+FREQUENCIES_CM = [16000.0]  # Number of frequency components in the system
+DIP_MOMENTS = [1.0]  # Dipole moments for each atom
 COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
-MAX_EXCITATION = 2  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
-N_FREQS = 1  # 1 == no inhomogeneous broadening
+MAX_EXCITATION = 1  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
+N_INHOMOGEN = 1  # 1 == no inhomogeneous broadening
 
 
 # === LASER SYSTEM DEFAULTS ===
-PULSE_FWHM = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
-BASE_AMPLITUDE = (
-    0.5  # should be such that only one interaction at a time, here that |excitation|² < 1%
-)
+# TODO add N_PULSES -> 3 -< check that RELATIVE_E0S, phases has correct length (N_PULSES, N_PULSES-1)
+PULSE_FWHM_FS = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
+BASE_AMPLITUDE = 0.01  # -> such that for 1 atom the |exe| < 1 %
 ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQUENCIES_CM)  # Carrier frequency of the laser
 RWA_SL = True
@@ -62,7 +66,12 @@ RWA_SL = True
 # === SIMULATION DEFAULTS ===
 ODE_SOLVER = "BR"  # ODE solver to use
 N_PHASES = 4  # Number of phase cycles for the simulation
-
+SIMULATION_TYPE = "1d"
+SOLVER_OPTIONS = {
+    "nsteps": 200000,
+    "atol": 1e-6,
+    "rtol": 1e-4,
+}  # TODO can i also include redfield options here?
 
 # === BATH SYSTEM DEFAULTS ===
 frequencies = [convert_cm_to_fs(freq_cm) for freq_cm in FREQUENCIES_CM]
@@ -73,16 +82,14 @@ BATH_COUPLING = 1e-4  # * frequencies[0]
 
 
 # === 2D SIMULATION DEFAULTS ===
-N_BATCHES = 10  # You can increase/decrease this
 T_DET_MAX = 200.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
+# -> very good resolution
 T_COH = 0.0  # Coherence time in fs
 T_WAIT = 0.0  # Waiting time in fs
 
 
-# =============================
 # VALIDATION AND SANITY CHECKS
-# =============================
 def validate(params: dict):
     """Validate that a parameter dictionary is consistent and sensible."""
     # Extract parameters with defaults fallback
@@ -100,6 +107,15 @@ def validate(params: dict):
     relative_e0s = params.get("relative_e0s", RELATIVE_E0S)
     rwa_sl = params.get("rwa_sl", RWA_SL)
     carrier_freq_cm = params.get("carrier_freq_cm", CARRIER_FREQ_CM)
+    # Newly exposed / previously unvalidated
+    pulse_fwhm_fs = params.get("pulse_fwhm_fs", PULSE_FWHM_FS)
+    base_amplitude = params.get("base_amplitude", BASE_AMPLITUDE)
+    envelope_type = params.get("envelope_type", ENVELOPE_TYPE)
+    coupling_cm = params.get("coupling_cm", COUPLING_CM)
+    delta_cm = params.get("delta_cm", DELTA_CM)
+    solver_options = params.get("solver_options", SOLVER_OPTIONS)
+    simulation_type = params.get("simulation_type", SIMULATION_TYPE)
+    max_workers = params.get("max_workers", 1)
     # Time/grid parameters
     t_det_max = params.get("t_det_max", T_DET_MAX)
     dt = params.get("dt", DT)
@@ -107,7 +123,7 @@ def validate(params: dict):
     t_wait = params.get("t_wait", T_WAIT)
 
     # Sampling and signal types
-    n_freqs = params.get("n_freqs", N_FREQS)
+    n_inhomogen = params.get("n_inhomogen", N_INHOMOGEN)
     signal_types = params.get("signal_types", SIGNAL_TYPES)
 
     # Validate solver
@@ -134,11 +150,29 @@ def validate(params: dict):
     if t_det_max <= 0:
         raise ValueError("t_det_max must be > 0")
 
+    # Pulse / laser checks
+    if pulse_fwhm_fs <= 0:
+        raise ValueError("pulse_fwhm_fs must be > 0")
+    if base_amplitude <= 0:
+        raise ValueError("base_amplitude must be > 0")
+    if envelope_type not in SUPPORTED_ENVELOPES:
+        raise ValueError(f"envelope_type '{envelope_type}' not in {SUPPORTED_ENVELOPES}")
+
+    # Atomic coupling / broadening checks
+    if coupling_cm < 0:
+        raise ValueError("coupling_cm must be >= 0")
+    if delta_cm < 0:
+        raise ValueError("delta_cm must be >= 0")
+
+    # Dip moments positivity
+    if any(dm <= 0 for dm in dip_moments):
+        raise ValueError("All dip_moments must be > 0")
+
     # Phase/frequency sampling checks
     if n_phases <= 0:
         raise ValueError("n_phases must be > 0")
-    if n_freqs <= 0:
-        raise ValueError("n_freqs must be > 0")
+    if n_inhomogen <= 0:
+        raise ValueError("n_inhomogen must be > 0")
 
     # Signal type validation
     if not set(signal_types).issubset(SUPPORTED_SIGNAL_TYPES):
@@ -180,7 +214,35 @@ def validate(params: dict):
 
     # Validate relative amplitudes
     if len(relative_e0s) != 3:
-        raise ValueError("RELATIVE_E0S must have exactly 3 elements")
+        raise ValueError("RELATIVE_E0S must have exactly 3 elements (3-pulse assumption)")
+    if any(a <= 0 for a in relative_e0s):
+        raise ValueError("All RELATIVE_E0S entries must be > 0")
+    # Optional heuristic: last should be probe (smaller or equal)
+    if not (relative_e0s[2] <= relative_e0s[0] and relative_e0s[2] <= relative_e0s[1]):
+        warnings.warn(
+            "RELATIVE_E0S third entry not smaller/equal to first two (probe heuristic)",
+            stacklevel=2,
+        )
+
+    # Solver options sanity
+    if isinstance(solver_options, dict):
+        atol = solver_options.get("atol")
+        rtol = solver_options.get("rtol")
+        nsteps = solver_options.get("nsteps")
+        if atol is not None and atol <= 0:
+            raise ValueError("solver_options.atol must be > 0")
+        if rtol is not None and rtol <= 0:
+            raise ValueError("solver_options.rtol must be > 0")
+        if nsteps is not None and nsteps <= 0:
+            raise ValueError("solver_options.nsteps must be > 0")
+    else:
+        raise TypeError("solver_options must be a dict")
+
+    # Simulation type / workers
+    if simulation_type not in SUPPORTED_SIMULATION_TYPES:
+        raise ValueError(f"simulation_type '{simulation_type}' not in {SUPPORTED_SIMULATION_TYPES}")
+    if max_workers <= 0:
+        raise ValueError("max_workers must be >= 1")
 
     if rwa_sl:
         freqs_array = np.array(frequencies_cm)
@@ -195,4 +257,4 @@ def validate(params: dict):
 
 def validate_defaults():
     """Validate that all default values are consistent and sensible."""
-    validate()
+    validate({})

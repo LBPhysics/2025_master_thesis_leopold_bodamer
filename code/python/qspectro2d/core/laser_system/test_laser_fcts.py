@@ -2,9 +2,9 @@
 
 Covers:
 - _single_pulse_envelope (cos2 & gaussian)
-- pulse_envelope (scalar vs vector, multi-pulse combination)
-- E_pulse (phase handling)
-- Epsilon_pulse (carrier inclusion)
+- pulse_envelopes (scalar vs vector, multi-pulse combination)
+- e_pulses (phase handling)
+- epsilon_pulses (carrier inclusion)
 """
 
 import numpy as np
@@ -13,15 +13,13 @@ import pytest
 from qspectro2d.core.laser_system.laser_class import LaserPulse, LaserPulseSequence
 from qspectro2d.core.laser_system import laser_fcts
 from qspectro2d.core.laser_system.laser_fcts import (
-    pulse_envelope,
-    E_pulse,
-    Epsilon_pulse,
+    pulse_envelopes,
+    e_pulses,
+    epsilon_pulses,
 )
 
 
-# =============================
 # Helpers
-# =============================
 
 
 def _make_pulse(
@@ -37,16 +35,14 @@ def _make_pulse(
         pulse_index=index,
         pulse_peak_time=peak,
         pulse_phase=phase,
-        pulse_fwhm=fwhm,
+        pulse_fwhm_fs=fwhm,
         pulse_amplitude=amp,
         pulse_freq_cm=freq_cm,
         envelope_type=env,
     )
 
 
-# =============================
 # _single_pulse_envelope
-# =============================
 
 
 def test_single_pulse_envelope_cos2_peak_and_edges():
@@ -101,9 +97,7 @@ def test_single_pulse_envelope_gaussian_peak_and_baseline():
     assert env_vals[edge_plus_idx] == pytest.approx(0.0, abs=1e-6)
 
 
-# =============================
-# pulse_envelope
-# =============================
+# pulse_envelopes
 
 
 def test_pulse_envelope_scalar_vs_array():
@@ -111,10 +105,10 @@ def test_pulse_envelope_scalar_vs_array():
     seq = LaserPulseSequence([pulse])
     t_arr = np.linspace(-15, 15, 121)
 
-    env_arr = pulse_envelope(t_arr, seq)
+    env_arr = pulse_envelopes(t_arr, seq)
     # Compare each scalar call to array result
     for i, t in enumerate(t_arr):
-        env_scalar = pulse_envelope(float(t), seq)
+        env_scalar = pulse_envelopes(float(t), seq)
         assert env_scalar == pytest.approx(env_arr[i])
 
 
@@ -124,16 +118,14 @@ def test_pulse_envelope_multiple_pulses_is_additive():
     seq = LaserPulseSequence([p1, p2])
     t = np.array([0.0, 30.0])
 
-    env_vals = pulse_envelope(t, seq)
+    env_vals = pulse_envelopes(t, seq)
     assert env_vals.shape == (2,)
     # At each peak only its own pulse contributes
     assert env_vals[0] == pytest.approx(1.0, abs=1e-12)
     assert env_vals[1] == pytest.approx(1.0, abs=1e-12)
 
 
-# =============================
-# E_pulse & Epsilon_pulse
-# =============================
+# e_pulses & epsilon_pulses
 
 
 def test_E_pulse_phase_factor():
@@ -142,7 +134,7 @@ def test_E_pulse_phase_factor():
     pulse = _make_pulse(0, 10.0, 5.0, E0, 16000.0, phi, "cos2")
     seq = LaserPulseSequence([pulse])
 
-    val = E_pulse(10.0, seq)  # peak
+    val = e_pulses(10.0, seq)  # peak
     # envelope at peak = 1 → should equal E0 * exp(-i phi)
     expected = E0 * np.exp(-1j * phi)
     assert val == pytest.approx(expected)
@@ -156,7 +148,7 @@ def test_Epsilon_pulse_includes_carrier():
     seq = LaserPulseSequence([pulse])
 
     t_val = peak
-    val = Epsilon_pulse(t_val, seq)
+    val = epsilon_pulses(t_val, seq)
 
     # Manual expectation: E0 * envelope(peak)=E0 * exp(-i*(omega t + phi))
     omega = pulse.pulse_freq_fs
@@ -169,8 +161,8 @@ def test_E_pulse_vectorization_matches_loop():
     seq = LaserPulseSequence([pulse])
     t_arr = np.linspace(-10, 10, 51)
 
-    vec_vals = E_pulse(t_arr, seq)
-    loop_vals = np.array([E_pulse(float(t), seq) for t in t_arr])
+    vec_vals = e_pulses(t_arr, seq)
+    loop_vals = np.array([e_pulses(float(t), seq) for t in t_arr])
     assert np.allclose(vec_vals, loop_vals)
 
 
@@ -179,14 +171,12 @@ def test_Epsilon_pulse_vectorization_matches_loop():
     seq = LaserPulseSequence([pulse])
     t_arr = np.linspace(-10, 10, 41)
 
-    vec_vals = Epsilon_pulse(t_arr, seq)
-    loop_vals = np.array([Epsilon_pulse(float(t), seq) for t in t_arr])
+    vec_vals = epsilon_pulses(t_arr, seq)
+    loop_vals = np.array([epsilon_pulses(float(t), seq) for t in t_arr])
     assert np.allclose(vec_vals, loop_vals)
 
 
-# =============================
 # Error handling
-# =============================
 
 
 def test_pulse_envelope_type_validation():
@@ -194,12 +184,10 @@ def test_pulse_envelope_type_validation():
     bad_pulse = _make_pulse(0, 0.0, 5.0, 1.0, 16000.0, 0.0, "triangle")
     seq = LaserPulseSequence([bad_pulse])
     with pytest.raises(ValueError, match="Unknown envelope_type"):
-        pulse_envelope(0.0, seq)
+        pulse_envelopes(0.0, seq)
 
 
-# =============================
 # Visualization Helper (optional interactive diagnostic)
-# =============================
 
 
 def _maybe_show():  # pragma: no cover
@@ -217,9 +205,9 @@ def visualize_pulse_envelopes_and_fields():  # pragma: no cover
     """
     import matplotlib.pyplot as plt
     from qspectro2d.core.laser_system.laser_fcts import (
-        pulse_envelope as _pulse_env,
-        E_pulse as _E_pulse,
-        Epsilon_pulse as _Eps_pulse,
+        pulse_envelopes as _pulse_env,
+        e_pulses as _E_pulse,
+        epsilon_pulses as _Eps_pulse,
     )
 
     peak_t = 0.0
