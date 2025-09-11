@@ -47,7 +47,7 @@ Time-convolutionless and Nakajima–Zwanzig master equations introduce memory ke
 
 \paragraph{Master Equation Approaches}
 The Lindblad master equation (Markovian) gives a general form for completely positive, trace-preserving dynamics under the Markov approximation and is widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}. The Redfield equation (Markovian but not always CPTP) follows from a microscopic Born–Markov derivation, captures dissipation and dephasing, and does not guarantee complete positivity~\cite{redfield1965theoryrelaxationprocesses, rivasetal2014quantumnonmarkovianitycharacterization, lietal2018conceptsquantumnonmarkovianity}.
-\todoidea{explain why we choose the Redfield equation for this thesis ->  it represnets the best compromise between accuracy and computational efficiency for our systems of interest.}
+\todoidea{explain why we choose the Redfield equation for this thesis ->  it represents the best compromise between accuracy and computational efficiency for our systems of interest.}
 
 
 \subsection{The Redfield Equation: A Central Tool}
@@ -136,11 +136,11 @@ The exact equation of motion for $\rho(t)$ involves the full many-body dynamics 
 
 The following requirements must be fulfilled by the final derived Redfield equation:
 
-\begin{itemize}
+\begin{enumerate}
 	\item The equation should be linear in the system density matrix $\dot{\rho}_S(t) = F(\rho_S(t))$ (reduced equation of motion).
 	\item The equation should be Markovian, meaning that the evolution of the system density matrix at time $t$ only depends on the state of the system at time $t$ and not on its past history.
 	\item The equation should be trace-preserving, meaning that $\mathrm{Tr}[\rho_S(t)] = \mathrm{Tr}[\rho_S(0)]$ for all times $t$.
-\end{itemize}
+\end{enumerate}
 
 Unlike the Lindblad equation, the Redfield equation does not guarantee the complete positivity of the density matrix, which is a requirement for a physical state. Care must be taken when determining when the Redfield equation is useful. The equation will be valid in the weak coupling limit, meaning that the coupling strength in the interaction Hamiltonian fulfills $\alpha \ll 1$.
 
@@ -228,79 +228,41 @@ This is the Redfield master equation, describing the reduced dynamics of the sys
 \section{Environmental Correlation Functions and Spectral Properties}
 \label{sec:environmental_correlation_functions}
 
-Having derived the Redfield equation, we now turn our attention to one of its most crucial ingredients: the characterization of the environmental properties through correlation functions and spectral densities. These quantities encode all the relevant information about how the environment affects the system dynamics and are essential for any practical application of the Redfield formalism.
+Having derived the Redfield equation, we now focus on a crucial ingredient: the characterization of the environment through its correlation functions and spectral densities, which encode how environmental fluctuations drive relaxation and dephasing~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}. These objects translate the abstract operator structure in Eq.~\eqref{eq:Redfield_Equation_Final} into calculable quantities and connect the microscopic bath model to experimentally accessible spectra.
 
-The transition from the abstract mathematical framework of the Redfield equation to concrete, calculable expressions requires a detailed understanding of the bath correlation functions. These functions not only determine the strength and time scales of the system-environment interaction but also reveal the fundamental connection between quantum and classical descriptions of environmental noise.
-
-In the following sections, we will explore how environmental correlation functions arise naturally in the Redfield framework, examine their physical interpretation, and discuss their relationship to experimentally accessible quantities such as power spectra and spectral densities. This analysis will provide the foundation for understanding how different types of environments—from thermal baths to structured reservoirs—influence quantum system dynamics.
+The bath correlation functions determine both the strength and characteristic time scales of the system--environment interaction and bridge quantum and classical noise descriptions. In what follows we show how they arise, state their properties, introduce their Fourier (spectral) representation, and explain how emission and absorption processes are simultaneously encoded.
 
 \subsection{Bath Correlation Functions}
+\label{subsec:bath_correlation_functions}
 
-The environmental correlation functions that appear in the Redfield equation are defined as:
+The environmental correlation functions entering Eq.~\eqref{eq:Redfield_Equation_Final} are defined (cf. Eq.~\eqref{eq:Environment_Correlation_Function}) by $C_{ij}(\tau) = \mathrm{Tr}_E[\hat{E}_i(\tau) \hat{E}_j(0) \hat{\rho}_E(0)] = \langle \hat{E}_i(\tau) \hat{E}_j(0) \rangle_E$, where $\hat{\rho}_E(0)$ is usually a thermal state. For a stationary (equilibrium) bath, $C_{ij}(\tau)$ depends only on the time difference $\tau$; Hermiticity implies $C_{ij}^*(\tau)=C_{ji}(-\tau)$; and the function typically decays on the bath correlation time $\tau_B$, a prerequisite for the Markov approximation when $\tau_B$ is much shorter than the relevant system evolution time scales.
 
+\subsection{Spectral Density and Fourier Representation}
+\label{subsec:spectral_density_representation}
+
+The frequency-resolved environmental structure is obtained via the two-sided Fourier transform
 \begin{equation}
-	C_{ij}(\tau) = \langle E_i(\tau) E_j(0) \rangle_E,
-	\label{eq:bath_correlator_general}
+S_{ij}(\omega) = \int_{-\infty}^{\infty} d\tau \, e^{-i\omega \tau} C_{ij}(\tau),
+\label{eq:spectral_density}
 \end{equation}
-
-where $E_i(\tau)$ represents the environment operators in the interaction picture, and $\langle \cdot \rangle_E$ denotes the expectation value with respect to the environmental state.
+with inverse relation
+\begin{equation}
+C_{ij}(\tau) = \frac{1}{2\pi} \int_{-\infty}^{\infty} d\omega \, e^{i\omega \tau} S_{ij}(\omega).
+\label{eq:inverse_spectral_density}
+\end{equation}
+For a thermal bath, the Kubo--Martin--Schwinger (KMS) condition imposes the detailed-balance symmetry
+\begin{equation}
+S_{ij}(-\omega) = e^{-\hbar\omega/(k_{\mathrm{B}} T)} S_{ji}(\omega),
+\label{eq:kms_spectral_relation}
+\end{equation}
+which ensures that upward and downward transition rates obey Boltzmann ratios.
 
 \subsection{Physical Interpretation: Emission and Absorption Processes}
+\label{subsec:physical_emission_absorption}
 
-A fundamental question when applying the Redfield formalism concerns whether both emission and absorption processes are correctly included in the theoretical description. This is particularly important when studying spectroscopic phenomena, where the competition between these processes determines the observed signals and the approach to thermal equilibrium.
-
-The answer is \textbf{yes}: both spontaneous and stimulated emission, as well as thermal and induced absorption, are naturally included through the proper choice of the spectral function $S(\omega)$ that characterizes the system-environment interaction, provided this function satisfies the Kubo-Martin-Schwinger (KMS) condition for detailed balance.
-
-The KMS condition requires that the spectral function satisfies:
-
+Emission and absorption are both automatically included because $S_{ij}(\omega)$ contains positive- and negative-frequency components related by Eq.~\eqref{eq:kms_spectral_relation}. Positive frequencies ($\omega>0$) describe system energy loss (emission), while negative frequencies ($\omega<0$) describe system energy gain (absorption). Detailed balance follows immediately: the ratio of absorption to emission contributions at frequency $\omega>0$ is $e^{-\hbar \omega/(k_{\mathrm{B}}T)}$. For a single bosonic bath with scalar spectral density $J(\omega)$ (defined for $\omega>0$) one often writes the symmetrized spectrum
 \begin{equation}
-	S(-\omega) = e^{-\hbar\omega/(k_B T)} S(\omega),
-	\label{eq:kms_condition}
+S(\omega) = 2\pi J(|\omega|) \begin{cases} n_{\text{th}}(\omega)+1, & \omega>0, \\ n_{\text{th}}(|\omega|), & \omega<0, \end{cases}
+\label{eq:bose_symmetric_spectrum}
 \end{equation}
-
-where $T$ is the temperature of the thermal environment. This condition ensures:
-
-\begin{itemize}
-	\item \textbf{Emission processes}: Transitions with $\omega > 0$ correspond to energy transfer from system to environment
-	\item \textbf{Absorption processes}: Transitions with $\omega < 0$ correspond to energy transfer from environment to system
-	\item \textbf{Detailed balance}: The ratio of forward and reverse transition rates follows the Boltzmann distribution
-\end{itemize}
-
-%------------------------------------------------------------------------------
-%	SECTION 3: Environmental Correlation Functions and Spectral Properties  
-%------------------------------------------------------------------------------
-
-\section{Environmental Correlation Functions and Spectral Properties}
-\label{sec:environmental_correlation_functions}
-
-Having derived the Redfield equation, we now turn our attention to one of its most crucial ingredients: the characterization of the environmental properties through correlation functions and spectral densities. These quantities encode all the relevant information about how the environment affects the system dynamics and are essential for any practical application of the Redfield formalism.
-
-The transition from the abstract mathematical framework of the Redfield equation to concrete, calculable expressions requires a detailed understanding of the bath correlation functions. These functions not only determine the strength and time scales of the system-environment interaction but also reveal the fundamental connection between quantum and classical descriptions of environmental noise.
-
-In what follows, we will explore how environmental correlation functions arise naturally in the Redfield framework, examine their physical interpretation, and discuss their relationship to experimentally accessible quantities such as power spectra and spectral densities. This analysis provides the foundation for understanding how different types of environments—from thermal baths to structured reservoirs—influence quantum system dynamics.
-
-\subsection{Definition and Properties of Bath Correlation Functions}
-
-The environmental correlation functions that appear in the Redfield equation, as defined in Eq.~\eqref{eq:Environment_Correlation_Function}, capture the temporal correlations in the environmental fluctuations:
-
-\begin{equation}
-	C_{ij}(\tau) = \mathrm{Tr}_E[\hat{E}_i(\tau) \hat{E}_j(0) \hat{\rho}_E(0)].
-	\label{eq:bath_correlator_detailed}
-\end{equation}
-
-These correlation functions possess several important properties:
-
-\begin{itemize}
-	\item \textbf{Stationarity}: For environments in thermal equilibrium, $C_{ij}(\tau)$ depends only on the time difference $\tau$, not on the absolute time
-	\item \textbf{Hermiticity}: $C_{ij}^*(\tau) = C_{ji}(-\tau)$ due to the Hermitian nature of the environment operators
-	\item \textbf{Decay behavior}: The correlation functions typically decay on time scales characteristic of the environmental dynamics
-\end{itemize}
-
-The spectral density, obtained through Fourier transform of the correlation function, provides complementary information about the frequency content of the environmental fluctuations:
-
-\begin{equation}
-	S_{ij}(\omega) = \int_{-\infty}^{\infty} d\tau \, e^{i\omega\tau} C_{ij}(\tau).
-	\label{eq:spectral_density}
-\end{equation}
-
-This spectral density directly enters the Redfield rates and determines the frequency-dependent coupling between system and environment.
+with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\hbar\omega/(k_{\mathrm{B}}T)}-1\big)^{-1}$, explicitly exhibiting stimulated plus spontaneous emission $(n_{\text{th}}+1)$ versus absorption $(n_{\text{th}})$~\cite{weiss2012quantumdissipativesystems}. This formulation makes clear how both processes and their thermal weighting emerge from a single function.
