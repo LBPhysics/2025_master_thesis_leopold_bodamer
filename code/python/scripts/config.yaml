@@ -11,14 +11,15 @@ atomic:
   # frequencies_cm: [15640.0, 16360.0]
   # dip_moments: [1.0, 1.0]
   # if additionally coupling_cm == 300 -> do
-  # frequencies_cm: [15800.0, 16 200.0]
+  # frequencies_cm: [15800.0, 16200.0]
   # dip_moments: [-0.23, 1.0]
 
-  n_atoms: 1
-  frequencies_cm: [16000.0]
-  dip_moments: [1.0]
+  n_atoms: 2
+  coupling_cm: 300.0
+  frequencies_cm: [15800.0, 16200.0]
+  dip_moments: [-0.23, 1.0]
   n_chains: 1
-  delta_cm: 0.0
+  max_excitation: 2
 
 laser:
   pulse_fwhm_fs: 5.0
@@ -33,13 +34,12 @@ bath:
   coupling: 0.01   # actually in terms of frequency
 
 config:
-  solver: Paper_eqs
-  n_phases: 4
+  solver: BR
 
 
 window:
   # parameters that can be adjusted in the cli args of calc_datas.py
-  t_det_max: 40.0
+  t_det_max: 10.0
   t_wait: 0.0
   t_coh: 30.0
   dt: 1

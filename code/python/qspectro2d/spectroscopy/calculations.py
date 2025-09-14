@@ -949,8 +949,7 @@ def extract_P_lmn_1d(
     return extracted
 
 
-# TODO use this function
-def compute_fields_from_polarization(
+def compute_e_from_p(
     polarization_components: dict[str, np.ndarray],
 ) -> dict[str, np.ndarray]:
     """Convert polarization components P_kS(t) to detected electric fields E_kS(t).
@@ -976,21 +975,24 @@ def parallel_compute_1d_E_with_inhomogenity(
     parallel: bool = True,
     **kwargs: dict,
 ) -> List[np.ndarray]:
-    """Backward-compatible wrapper returning polarization components list.
+    """Compute electric field components E_kS(t) with inhomogeneous averaging.
 
-    This preserves the original public API while internally using the new
-    modular functions:
-      1. compute_1d_pol_matrix_phases
-      2. extract_P_lmn_1d
+    Internally:
+      1. compute_1d_pol_matrix_phases -> phase-resolved polarization matrix
+      2. extract_P_lmn_1d -> polarization components P_kS(t) per signal type
+      3. compute_e_from_p -> convert to electric fields E_kS(t) = i P_kS(t)
 
     Returns list in the order of sim_oqs.simulation_config.signal_types.
     """
     Pol_matrix_phases = compute_1d_pol_matrix_phases(sim_oqs=sim_oqs, parallel=parallel, **kwargs)
     components_dict = extract_P_lmn_1d(Pol_matrix_phases, sim_oqs)
-    ordered = [
-        components_dict[s] for s in sim_oqs.simulation_config.signal_types if s in components_dict
+    e_components_dict = compute_e_from_p(components_dict)
+    ordered_E = [
+        e_components_dict[s]
+        for s in sim_oqs.simulation_config.signal_types
+        if s in e_components_dict
     ]
-    return ordered
+    return ordered_E
 
 
 # Helper functions for IFT processing

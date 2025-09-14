@@ -338,7 +338,9 @@ class AtomicSystem:
 
         self._positions = positions
 
-    def _compute_isotropic_couplings(self, power: float = 3.0) -> np.ndarray:
+    def _compute_isotropic_couplings(
+        self, power: float = 3.0
+    ) -> np.ndarray:  # TODO extend to vectorized dipoles
         """Compute isotropic J_ij = coupling * μ_i * μ_j / r^power."""
         N = self.n_atoms
         pos = self._positions

@@ -164,9 +164,7 @@ def validate(params: dict) -> None:
     if delta_cm < 0:
         raise ValueError("delta_cm must be >= 0")
 
-    # Dip moments positivity
-    if any(dm <= 0 for dm in dip_moments):
-        raise ValueError("All dip_moments must be > 0")
+    # TODO deleted dipole posititvity
 
     # Phase/frequency sampling checks
     if n_phases <= 0:
