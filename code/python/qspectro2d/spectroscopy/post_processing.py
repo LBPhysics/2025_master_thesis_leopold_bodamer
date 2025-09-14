@@ -318,6 +318,8 @@ def compute_2d_fft_wavenumber(
             spec = np.flip(tmp_local, axis=0)
         elif signal_type == "nonrephasing":  # flip both -> +
             spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
+        elif signal_type == "average":  # no change
+            spec = tmp_local
         else:
             raise ValueError(f"Internal signal_type '{signal_type}' unsupported")
         return spec * (dt_coh * dt_det)
@@ -332,9 +334,7 @@ def compute_2d_fft_wavenumber(
         S_list.append(_fft2(data, sig))
 
     uniq = set(signal_types)
-    if uniq == {"rephasing"}:
-        S_out = S_list[0]
-    elif uniq == {"nonrephasing"}:
+    if uniq == {"rephasing"} or uniq == {"average"} or uniq == {"nonrephasing"}:
         S_out = S_list[0]
     elif uniq == {"rephasing", "nonrephasing"}:
         # Find first occurrence of each component

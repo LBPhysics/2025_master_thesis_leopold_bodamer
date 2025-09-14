@@ -1,8 +1,6 @@
 % !TEX root = ../main.tex
-\chapter{Principles of Spectroscopy} % Main chapter title
-
-\label{chapter_spectroscopy} % Label for cross-referencing this chapter
-
+\chapter{Principles of Spectroscopy}
+\label{chapter_spectroscopy}
 %-------------------------------------------------------------------------------
 %	SECTION 1: INTRODUCTION TO SPECTROSCOPY
 %-------------------------------------------------------------------------------
@@ -467,6 +465,8 @@ The absorptive spectra is free from broadening refractive contributions \cite{fu
 \noindent In 2DES, the delay time $t_{\text{coh}}$ between the first and second pulses is systematically varied, and the signal field is detected in a phase-resolved manner using spectral interferometry \todoref{find ref}%\cite{lepetit1995, bristow2011}. 
 Fourier transformation with respect to $t_{\text{coh}}$ yields the excitation frequency axis ($\omega_{\text{coh}}$), while spectral resolution of the signal provides the detection frequency axis ($\omega_t$).
 
+\noindent Recall that a complete 2D spectrum is built from repeated three-pulse sequences while the coherence time $\tau$ is scanned. The rephasing photon-echo signal arises after a finite rephasing time $t$ for sequences in which pulse 1 precedes pulse 2 ($\tau>0$) and is recorded in the phase-matched direction $-\vec{k}_1 + \vec{k}_2 + \vec{k}_3$. As discussed in Subsec.~\ref{subsec:rephasing_nonrephasing}, the ground–excited coherences during $\tau$ and $t$ accumulate opposite phases in the rephasing branch. When the ordering of pulses 1 and 2 is reversed ($\tau<0$), these phase factors add rather than cancel, yielding a nonrephasing free-induction–decay signal that emerges immediately following pulse 3; this contribution provides information complementary to the rephasing branch \cite{ginsbergetal2009twodimensionalelectronicspectroscopy}.
+
 \noindent The resulting 2D spectrum contains peaks along the diagonal ($\omega_{\text{coh}} = \omega_{\text{det}}$) corresponding to the linear absorption spectrum, while off-diagonal peaks reveal couplings and energy transfer between different states. The evolution of the 2D spectra with waiting time $T$ provides detailed information about energy transfer kinetics, spectral diffusion, and quantum coherence effects.
 
 \noindent In experimental implementations, 2D spectra are often presented as the absorptive spectrum, which is given by the sum of the rephasing photon echo and nonrephasing spectra \cite{cho2009twodimensionalopticalspectroscopy}. This representation eliminates phase-twist lineshapes and yields purely absorptive features that most directly correlate with the underlying energy level structure and couplings.
@@ -592,13 +592,13 @@ In this method, a short pump pulse excites the sample, and a subsequent probe pu
 %    \label{fig:transient_absorption_pathways}
 %\end{figure}
 
-\noindent Figure \ref{fig:transient_absorption_pathways} illustrates these three primary contributions to transient absorption signals.
+\noindent Figure \todoref{include and ref the figure} illustrates these three primary contributions to transient absorption signals.
 
 \noindent Analysis of these features as a function of time delay provides information about excited-state lifetimes, energy transfer processes, and photochemical reaction pathways. The ability to separate and identify these contributions is crucial for understanding the dynamics of complex molecular systems \todoref{find ref}%\cite{berera2009, megerle2009}.
 
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 %	SECTION 6: MULTIDIMENSIONAL SPECTROSCOPY APPLICATIONS
-%----------------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
 
 \section{Multidimensional Spectroscopy in Structural Biology and Chemistry}
 \label{sec:multidimensional_applications}
@@ -656,7 +656,7 @@ In this method, a short pump pulse excites the sample, and a subsequent probe pu
 
 \noindent Spectroscopy continues to evolve as a cornerstone analytical technique in physical sciences \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy}. From the basic principles of light-matter interaction to advanced nonlinear methods, spectroscopic approaches provide unique insights into the structure, dynamics, and function of complex systems across multiple time and length scales.
 
-\noindent Recent developments in laser technology, detection methods, and theoretical frameworks have expanded the frontiers of spectroscopy \cite{jonas2003twodimensionalfemtosecondspectroscopy}\todoref{find ref}%, Shim2009}.
+\noindent Recent developments in laser technology, detection methods, and theoretical frameworks have expanded the frontiers of spectroscopy \cite{jonas2003twodimensionalfemtosecondspectroscopy} \todoref{find ref}%, Shim2009}.
 Attosecond spectroscopy now probes electron dynamics on their natural time scale, while quantum light sources open new possibilities for quantum-enhanced measurements.
 
 \noindent The integration of spectroscopic methods with imaging techniques, such as super-resolution microscopy and spectroscopic tomography, bridges the gap between molecular-level information and macroscopic observations \cite{brixneretal2004phasestabilizedtwodimensionalelectronic}.

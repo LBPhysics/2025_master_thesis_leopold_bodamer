@@ -16,9 +16,9 @@ from qspectro2d.constants import (
 # === signal processing / phase cycling ===
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 DETECTION_PHASE = 0  # Fixed phase for detection pulse
-SUPPORTED_SIGNAL_TYPES = ["rephasing", "nonrephasing"]
 SIGNAL_TYPES = ["rephasing"]  # Default signal == photon echo to simulate
 COMPONENT_MAP: dict[str, tuple[int, int, int]] = {
+    "average": (0, 0, 0),  # special case for averaging all phases
     "rephasing": (-1, 1, 1),
     "nonrephasing": (1, -1, 1),
 }  # represents the (k1, k2, k3) phase factors for each signal type
@@ -37,7 +37,7 @@ TRACE_TOLERANCE = 1e-6
 # physical constants imported from qspectro2d.constants
 
 # supported solvers and bath models
-SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs", "Paper_BR"]
+SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs"]
 SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 SUPPORTED_ENVELOPES = ["gaussian", "cos2"]
 SUPPORTED_SIMULATION_TYPES = ["1d", "2d"]
@@ -74,7 +74,7 @@ SOLVER_OPTIONS = {
 }  # TODO can i also include redfield options here?
 
 # === BATH SYSTEM DEFAULTS ===
-frequencies = [convert_cm_to_fs(freq_cm) for freq_cm in FREQUENCIES_CM]
+# frequencies = [convert_cm_to_fs(freq_cm) for freq_cm in FREQUENCIES_CM]
 BATH_TYPE = "ohmic"  # TODO at the moment only ohmic baths are supported
 BATH_CUTOFF = 1e2  # * frequencies[0]  # Cutoff frequency in cm⁻¹
 BATH_TEMP = 1e-3  # * frequencies[0] / BOLTZMANN
@@ -90,7 +90,7 @@ T_WAIT = 0.0  # Waiting time in fs
 
 
 # VALIDATION AND SANITY CHECKS
-def validate(params: dict):
+def validate(params: dict) -> None:
     """Validate that a parameter dictionary is consistent and sensible."""
     # Extract parameters with defaults fallback
     ode_solver = params.get("solver", ODE_SOLVER)
@@ -173,10 +173,6 @@ def validate(params: dict):
         raise ValueError("n_phases must be > 0")
     if n_inhomogen <= 0:
         raise ValueError("n_inhomogen must be > 0")
-
-    # Signal type validation
-    if not set(signal_types).issubset(SUPPORTED_SIGNAL_TYPES):
-        raise ValueError(f"signal_types '{signal_types}' not in {sorted(SUPPORTED_SIGNAL_TYPES)}")
 
     # Validate atomic system consistency
     if len(frequencies_cm) != n_atoms:

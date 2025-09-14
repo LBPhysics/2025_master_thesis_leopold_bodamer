@@ -9,8 +9,6 @@ from qutip import (
     Qobj,
     QobjEvo,
     ket2dm,
-    liouvillian,
-    basis,
 )
 from typing import List
 from qutip import BosonicEnvironment
@@ -77,31 +75,12 @@ class SimulationModuleOQS:
         solver = self.simulation_config.ode_solver
         H0_diagonalized = self.H0_diagonalized
 
-        # if solver != "Paper_eqs" or "Paper_BR" or "BR" or "ME": -> case already covered with warning
+        # if solver != "Paper_eqs" or "BR" or "ME": -> case already covered with warning
         if solver == "Paper_eqs":
             # Use a module-level wrapper + functools.partial to keep object pickleable under Windows spawn.
             self.evo_obj_free = partial(paper_eqs_evo, self)
             self.evo_obj_int = self.evo_obj_free
             self.decay_channels = []
-
-        elif solver == "Paper_BR":
-            # TODO somehow contains 2 RWAs for n_atoms == 2.
-            from qspectro2d.core.simulation.redfield_paper import (
-                redfield_paper as _redfield_paper,
-            )
-
-            # This version is computable with mesolve H -> evo_obj; no need for a_ops
-            custom_free = liouvillian(H0_diagonalized) + _redfield_paper(self)
-            self.evo_obj_free = custom_free
-            self.evo_obj_int = custom_free + liouvillian(QobjEvo(self.H_int_sl))
-
-            """
-            # TODO This version can be passed to brmesolve?
-            R_super = _redfield_paper(self)  # time-independent Redfield tensor (Qobj)
-            self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
-            self.decay_channels = R_super  # Redfield handled separately
-            """
 
         elif solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
@@ -138,16 +117,29 @@ class SimulationModuleOQS:
     @property
     def observable_ops(self) -> List[Qobj]:
         sys = self.system
-        if sys.n_atoms == 1:
-            atom_g = sys._basis[0]  # ground state
-            atom_e = sys._basis[1]  # excited state
-            return [
-                sys.to_eigenbasis(ket2dm(atom_g)),  # |g><g|
-                sys.to_eigenbasis(atom_g * atom_e.dag()),  # |g><e|
-                sys.to_eigenbasis(atom_e * atom_g.dag()),  # |e><g|
-                sys.to_eigenbasis(ket2dm(atom_e)),  # |e><e|
-            ]
-        return [ket2dm(state) for state in sys.eigenstates[1]]
+        n = sys.n_atoms
+
+        eigenstates = sys.eigenstates[1]
+        ops = [ket2dm(state) for state in eigenstates]  # populations
+
+        # Add coherences: |g><e|, |g><f|, |e><f|
+        dim = sys.dimension
+        if dim > 1:
+            # |g><e| for all  for e (1, ..., n_atoms)
+            ops.append(sum(eigenstates[0] * eigenstates[e].dag() for e in range(1, dim)))
+        if dim > n + 1:
+            # |g><f| for f (n_atoms+1, ..., dim)
+            ops.append(sum(eigenstates[0] * eigenstates[f].dag() for f in range(n + 1, dim)))
+            # |e><f| for e (1, ..., n_atoms) and f (n_atoms+1, ..., dim)
+            ops.append(
+                sum(
+                    eigenstates[e] * eigenstates[f].dag()
+                    for e in range(1, n + 1)
+                    for f in range(n + 1, dim)
+                )
+            )
+
+        return ops
 
     @property
     def observable_strs(self) -> List[str]:
@@ -155,10 +147,14 @@ class SimulationModuleOQS:
         n = sys.n_atoms
         dim = sys.dimension
         strs = []
-        if n == 1:
-            strs.extend(["gg", "ge", "eg", "ee"])
-        else:
-            strs.extend([f"{i}" for i in range(dim)])
+        # Populations
+        strs.extend([f"pop_{i}" for i in range(dim)])
+        # Coherences
+        if dim > 1:
+            strs.append(r"\text{coh}_{\text{ge}}")
+        if dim > n + 1:
+            strs.append(r"\text{coh}_{\text{gf}}")
+            strs.append(r"\text{coh}_{\text{ef}}")
         return strs
 
     # --- Time grids ----------------------------------------------------------------

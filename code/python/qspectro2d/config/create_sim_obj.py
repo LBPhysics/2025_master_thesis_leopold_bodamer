@@ -92,7 +92,6 @@ def load_simulation(
     coupling_cm = float(atomic_cfg.get("coupling_cm", dflt.COUPLING_CM))
     delta_cm = float(atomic_cfg.get("delta_cm", dflt.DELTA_CM))
     max_excitation = int(atomic_cfg.get("max_excitation", dflt.MAX_EXCITATION))
-    n_inhomogen = int(atomic_cfg.get("n_inhomogen", dflt.N_INHOMOGEN))
 
     atomic_system = AtomicSystem(
         n_atoms=n_atoms,
@@ -104,9 +103,7 @@ def load_simulation(
         max_excitation=max_excitation,
     )
 
-    # -----------------
     # LASER / PULSES
-    # -----------------
     laser_cfg = _get_section(cfg_root, "laser")
     pulse_fwhm_fs = float(laser_cfg.get("pulse_fwhm_fs", dflt.PULSE_FWHM_FS))
     base_amp = float(laser_cfg.get("base_amplitude", dflt.BASE_AMPLITUDE))
@@ -117,7 +114,7 @@ def load_simulation(
     pulses_cfg = _get_section(cfg_root, "pulses")
     relative_e0s = list(pulses_cfg.get("relative_e0s", dflt.RELATIVE_E0S))
 
-    # synthesize 3-pulse sequence from time window (typical 2D: coherence, wait)
+    # synthesize 3-pulse sequence from time window
     window_cfg = _get_section(cfg_root, "window")
     t_coh = float(window_cfg.get("t_coh", dflt.T_COH))
     t_wait = float(window_cfg.get("t_wait", dflt.T_WAIT))
@@ -138,9 +135,7 @@ def load_simulation(
         phases=phases,
     )
 
-    # -----------------
-    # BATH (qutip BosonicEnvironment stub + tag extras)
-    # -----------------
+    # BATH (qutip BosonicEnvironment)
     bath_cfg = _get_section(cfg_root, "bath")
     temperature = float(bath_cfg.get("temperature", dflt.BATH_TEMP))
     cutoff = float(bath_cfg.get("cutoff", dflt.BATH_CUTOFF))
@@ -150,17 +145,20 @@ def load_simulation(
     # TODO extend to BsosonicEnvironment
     bath_env = OhmicEnvironment(
         T=temperature,
-        alpha=coupling / cutoff,  # NOTE this is now exactly the paper implementation
+        alpha=coupling,  # / cutoff,  # TODO make this is exactly the paper implementation
         wc=cutoff,
         s=1.0,
         tag=bath_type,
     )
-    # SIMULATION CONFIG (flat)
-    solver_cfg = _get_section(cfg_root, "solver")
-    n_phases = int(solver_cfg.get("n_phases", dflt.N_PHASES))  # allow override
-    ode_solver = str(solver_cfg.get("solver", dflt.ODE_SOLVER))
-    signal_types = list(solver_cfg.get("signal_types", dflt.SIGNAL_TYPES))
-    simulation_type = str(solver_cfg.get("simulation_type", dflt.SIMULATION_TYPE))
+
+    # simulation config
+    config_cfg = _get_section(cfg_root, "config")
+    n_phases = int(config_cfg.get("n_phases", dflt.N_PHASES))
+    ode_solver = str(config_cfg.get("solver", dflt.ODE_SOLVER))
+    signal_types = list(config_cfg.get("signal_types", dflt.SIGNAL_TYPES))
+    simulation_type = str(config_cfg.get("simulation_type", dflt.SIMULATION_TYPE))
+    n_inhomogen = int(atomic_cfg.get("n_inhomogen", dflt.N_INHOMOGEN))
+    max_workers = get_max_workers()
 
     # -----------------
     # VALIDATION (physics-level) BEFORE FINAL ASSEMBLY
@@ -195,7 +193,7 @@ def load_simulation(
             "delta_cm": delta_cm,
             "solver_options": dflt.SOLVER_OPTIONS,  # TODO add those to the sim_config class
             "simulation_type": simulation_type,  # factory defaults (could expose later)
-            "max_workers": get_max_workers(),
+            "max_workers": max_workers,
         }
         dflt.validate(params)
 
@@ -209,6 +207,8 @@ def load_simulation(
         n_phases=n_phases,
         n_inhomogen=n_inhomogen,
         signal_types=signal_types,
+        simulation_type=simulation_type,
+        max_workers=max_workers,
     )
 
     # -----------------
@@ -250,7 +250,7 @@ def create_base_sim_oqs(
     t_max = sim.simulation_config.t_max
     print("🔍 Validating solver...")
     try:
-        from qspectro2d.spectroscopy.calculations import check_the_solver
+        from qspectro2d.spectroscopy.solver_check import check_the_solver
 
         _, time_cut = check_the_solver(sim)
         print("#" * 60)

@@ -18,17 +18,17 @@ def complex_polarization(
     Accepts a single Qobj (ket or density matrix) or list of Qobj.
     """
     if isinstance(state, Qobj):
-        return _single_qobj_polarization(dipole_op, state)
+        return _single_qobj__complex_pol(dipole_op, state)
     if isinstance(state, list):
         if len(state) == 0:
             return np.array([], dtype=np.complex64)
         return np.array(
-            [_single_qobj_polarization(dipole_op, s) for s in state], dtype=np.complex64
+            [_single_qobj__complex_pol(dipole_op, s) for s in state], dtype=np.complex64
         )
     raise TypeError(f"State must be Qobj or list[Qobj], got {type(state)}")
 
 
-def _single_qobj_polarization(dipole_op: Qobj, state: Qobj) -> complex:
+def _single_qobj__complex_pol(dipole_op: Qobj, state: Qobj) -> complex:
     """
     Calculate polarization for a single quantum state or density matrix.
 
@@ -49,16 +49,17 @@ def _single_qobj_polarization(dipole_op: Qobj, state: Qobj) -> complex:
     TypeError
         If state is not a ket or density matrix.
     """
-    if not (state.isket or state.isoper):
-        raise TypeError("State must be a ket or density matrix")
-    if state.isket:
-        state = ket2dm(state)
-    pol = 0j
-    for i in range(dipole_op.shape[0]):
-        for j in range(i):
-            if i != j and abs(dipole_op[i, j]) != 0:
-                pol += dipole_op[i, j] * state[j, i]
-    return pol
+    rho = ket2dm(state) if state.isket else state
+    N = dipole_op.shape[0]
+    x = 0j
+    # diagonal half
+    for i in range(N):
+        x += 0.5 * dipole_op[i, i] * rho[i, i]
+    # off-diagonal i<j
+    for i in range(N):
+        for j in range(i + 1, N):
+            x += dipole_op[i, j] * rho[j, i]
+    return complex(x)
 
 
 __all__ = ["complex_polarization"]

@@ -15,9 +15,9 @@ dependencies:
   - pip
   
   # Conda packages (when available, prefer conda over pip)
-  - numpy>=1.20.0
+  - numpy>=1.20.0,<3.0.0  # Compatible with matplotlib 3.10+
   - scipy>=1.7.0
-  - matplotlib>=3.5.0
+  - matplotlib>=3.10.0    # Required for NumPy 2.x compatibility
   - qutip>=5.2.0
   - psutil>=5.8.0
   # - pickle-mixin>=1.0.2 TODO uncomment on windows, not available on Linux

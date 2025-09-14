@@ -352,6 +352,7 @@ def extract_bath_parameters(bath, w0=None) -> dict:
     # Base parameters available in all BosonicEnvironment instances
     params = {
         "T": getattr(bath, "T", None),  # Temperature
+        "temp": getattr(bath, "T", None),
         "tag": getattr(bath, "tag", None),  # Tag/identifier
         "S(0)": getattr(bath, "power_spectrum", lambda x: None)(0),
     }
@@ -363,6 +364,7 @@ def extract_bath_parameters(bath, w0=None) -> dict:
             {
                 "lam": getattr(bath, "lam", None),  # Coupling strength
                 "gamma": getattr(bath, "gamma", None),  # Cutoff frequency
+                "cutoff": getattr(bath, "gamma", None),
                 "Nk": getattr(bath, "Nk", None),  # Number of Pade exponents
             }
         )
@@ -371,6 +373,7 @@ def extract_bath_parameters(bath, w0=None) -> dict:
             {
                 "alpha": getattr(bath, "alpha", None),  # Coupling strength
                 "wc": getattr(bath, "wc", None),  # Cutoff parameter
+                "cutoff": getattr(bath, "wc", None),
                 "s": getattr(bath, "s", None),  # Power of omega
             }
         )

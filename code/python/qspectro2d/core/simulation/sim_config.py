@@ -17,7 +17,7 @@ class SimulationConfig:
     Focused immutable configuration object; no legacy compatibility paths.
     """
 
-    ode_solver: str = "Paper_BR"
+    ode_solver: str = "ME"
     # Solver and pulse/detection options
     solver_options: dict[str, float | int] = field(
         default_factory=lambda: {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
@@ -45,7 +45,7 @@ class SimulationConfig:
                 category=UserWarning,
                 stacklevel=2,
             )
-        self.rwa_sl = True
+            self.rwa_sl = True
 
         self.t_max = self.t_wait + 2 * self.t_det_max
 

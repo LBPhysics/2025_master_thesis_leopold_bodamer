@@ -15,14 +15,14 @@ Main components:
 # CORE CALCULATION FUNCTIONS
 
 from .calculations import (
-    compute_pulse_evolution,
+    compute_seq_evolution,
     compute_1d_polarization,
-    check_the_solver,
     parallel_compute_1d_E_with_inhomogenity,
     extract_ift_signal_component,
 )
 from .polarization import complex_polarization
 
+from .solver_check import check_the_solver
 
 # INHOMOGENEOUS BROADENING
 
@@ -52,7 +52,7 @@ from qspectro2d.utils import (
 __all__ = [
     # Core calculations
     "complex_polarization",
-    "compute_pulse_evolution",
+    "compute_seq_evolution",
     "compute_1d_polarization",
     "check_the_solver",
     "parallel_compute_1d_E_with_inhomogenity",

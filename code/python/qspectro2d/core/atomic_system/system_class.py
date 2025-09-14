@@ -102,6 +102,7 @@ class AtomicSystem:
     # === CORE PARAMETERS ===
     @cached_property
     def dimension(self):
+        """Dimension of the Hilbert space (ground + single + double excitations)."""
         N = self.n_atoms
         exc = self.max_excitation
         if exc == 1:

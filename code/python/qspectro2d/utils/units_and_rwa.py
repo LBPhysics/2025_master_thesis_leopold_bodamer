@@ -1,75 +1,73 @@
 import numpy as np
-from typing import Union, List, overload
+from typing import Union, List, Sequence
 from qutip import Qobj, expect
 
 
 # ROTATING WAVE APPROXIMATION FUNCTIONS
-
-
-@overload
 def apply_RWA_phase_factors(
-    states: List[Qobj], times: np.ndarray, n_atoms: int, omega_laser: float
-) -> List[Qobj]: ...
-@overload
-def apply_RWA_phase_factors(rho: Qobj, t: float, n_atoms: int, omega_laser: float) -> Qobj: ...
-
-
-def apply_RWA_phase_factors(
-    states_or_rho: Union[List[Qobj], Qobj],
-    times_or_t: Union[np.ndarray, float],
+    states_or_rho: Union[List[Qobj], Qobj, Sequence[Qobj], np.ndarray],
+    times_or_t: Union[np.ndarray, Sequence[float], float],
     n_atoms: int,
     omega_laser: float,
 ) -> Union[List[Qobj], Qobj]:
-    """
-    Apply RWA phase factors to states.
+    # Single-state path
+    if isinstance(states_or_rho, Qobj) and isinstance(times_or_t, (float, int, np.floating)):
+        return _apply_single_rwa(states_or_rho, float(times_or_t), n_atoms, omega_laser)
 
-    Parameters:
-        states_or_rho: Either a list of density matrices or a single density matrix
-        times_or_t: Either an array of times or a single time value
-        n_atoms: Number of atoms in the system
-        omega_laser: Laser frequency
+    # Sequence path: accept list/tuple/ndarray of states and times
+    if isinstance(states_or_rho, (list, tuple, np.ndarray)) and isinstance(
+        times_or_t, (np.ndarray, list, tuple)
+    ):
+        # Normalize states to a Python list of Qobj
+        states_list = (
+            list(states_or_rho)
+            if not isinstance(states_or_rho, np.ndarray)
+            else list(states_or_rho.ravel())
+        )
 
-    Returns:
-        Either a list of modified density matrices or a single modified density matrix
-    """
-    if isinstance(states_or_rho, Qobj) and isinstance(times_or_t, (float, int)):
-        return _apply_single_rwa(states_or_rho, times_or_t, n_atoms, omega_laser)
-    elif isinstance(states_or_rho, list) and isinstance(times_or_t, np.ndarray):
+        # Validate all states are Qobj
+        if not all(isinstance(s, Qobj) for s in states_list):
+            raise TypeError("All states must be Qobj instances.")
+
+        # Normalize times to 1D numpy array of floats
+        times_arr = np.asarray(times_or_t, dtype=float).reshape(-1)
+
+        if len(states_list) != times_arr.shape[0]:
+            raise ValueError(
+                f"Length mismatch: {len(states_list)} states vs {times_arr.shape[0]} times"
+            )
+
         return [
             _apply_single_rwa(rho, t, n_atoms, omega_laser)
-            for rho, t in zip(states_or_rho, times_or_t)
+            for rho, t in zip(states_list, times_arr)
         ]
-    else:
-        raise TypeError("Invalid input. Expected either (Qobj, float) or (List[Qobj], np.ndarray).")
+
+    raise TypeError("Invalid input. Expected (Qobj, float) or (Sequence[Qobj], array-like times).")
 
 
 def _apply_single_rwa(rho: Qobj, t: float, n_atoms: int, omega: float) -> Qobj:
     """
     Apply RWA phase factors for arbitrary n_atoms (supports up to 2 excitations).
-
-    Each density matrix element rho_ij picks up a phase factor
-    exp(-i * omega * t * (n_i - n_j)), where n_i is excitation number of basis state i.
+    Phase: exp(-i * ω * t * (n_i - n_j)). Assumes ω in 1/fs and t in fs (dimensionless product).
     """
-    from qspectro2d.constants import HBAR
-
     rho_array = rho.full()
     dim = rho_array.shape[0]
 
-    # Build excitation number list
-    excitation_numbers = [0] * dim
-    for i in range(1, n_atoms + 1):
-        excitation_numbers[i] = 1
-    for i in range(n_atoms + 1, dim):
-        excitation_numbers[i] = 2
+    # Build excitation number vector n for basis ordering [0-ex, 1-ex (n_atoms states), 2-ex (rest)]
+    n = np.zeros(dim, dtype=int)
+    # 1-ex manifold: indices [1 .. min(n_atoms, dim-1)]
+    one_ex_end = min(n_atoms, dim - 1)
+    if one_ex_end >= 1:
+        n[1 : one_ex_end + 1] = 1
+    # 2-ex manifold: indices [n_atoms+1 .. dim-1], only if there is room
+    two_ex_start = n_atoms + 1
+    if dim > two_ex_start:
+        n[two_ex_start:] = 2
 
-    # Apply phase factors
-    for i in range(dim):
-        n_i = excitation_numbers[i]
-        for j in range(dim):
-            n_j = excitation_numbers[j]
-            delta_n = n_i - n_j
-            if delta_n != 0:
-                rho_array[i, j] *= np.exp(-1j * delta_n * HBAR * omega * t)
+    # Vectorized phase application
+    delta_n = n[:, None] - n[None, :]
+    phase = np.exp(-1j * delta_n * omega * t)
+    rho_array = rho_array * phase
 
     return Qobj(rho_array, dims=rho.dims)
 

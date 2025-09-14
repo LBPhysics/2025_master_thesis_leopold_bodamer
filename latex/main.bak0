@@ -35,7 +35,7 @@
 %----------------------------------------------------------------------------------------
 
 % Define trace operator
-\newcommand{\Tr}{\mathrm{Tr}}
+\newcommand{\mathrm{Tr}}{\mathrm{Tr}}
 \usepackage{braket}
 
 \usepackage[autostyle=true]{csquotes}

@@ -59,10 +59,9 @@ def sample_from_gaussian(
     """
 
     # Special case: fwhm = 0 (no inhomogeneity)
-
     if fwhm == 0 or np.isclose(fwhm, 0):
-        # Return an array of just mu since this represents a fwhm function at mu
-        return np.array([mu])
+        # Return n_samples copies of mu since this represents a delta function at mu
+        return np.full(n_samples, mu)
 
     # Define the sampling range and maximum
 

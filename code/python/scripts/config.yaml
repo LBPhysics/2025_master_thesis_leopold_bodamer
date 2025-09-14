@@ -2,38 +2,44 @@
 # Place in the scripts directory next to calc_datas.py
 
 atomic:
+  # TODO
+  # if n_atoms = 1 -> put
+  # frequencies_cm: [16000.0]
+  # dip_moments: [1.0]
+
+  # if n_atoms = 2 and coupling_cm = 0 -> put these
+  # frequencies_cm: [15640.0, 16360.0]
+  # dip_moments: [1.0, 1.0]
+  # if additionally coupling_cm == 300 -> do
+  # frequencies_cm: [15800.0, 16 200.0]
+  # dip_moments: [-0.23, 1.0]
+
   n_atoms: 1
-  n_chains: 1
-  #frequencies_cm: [15640.0, 16360.0]
-  #dip_moments: [1.0, 1.0]
   frequencies_cm: [16000.0]
   dip_moments: [1.0]
-  coupling_cm: 0.0
+  n_chains: 1
   delta_cm: 0.0
-  max_excitation: 2
-  n_inhomogen: 1
 
 laser:
   pulse_fwhm_fs: 5.0
   envelope_type: gaussian
   carrier_freq_cm: 16000.0
-  rwa_sl: true
+  rwa_sl: false
 
 bath:
   bath_type: ohmic
   cutoff: 100       # actually in terms of frequency
-  temperature: 0.0001    # actually in terms of frequency
-  coupling: 0.00001   # actually in terms of frequency
+  temperature: 1e-6    # actually in terms of frequency
+  coupling: 0.01   # actually in terms of frequency
 
-solver:
-  solver: ME
+config:
+  solver: Paper_eqs
+  n_phases: 4
+
 
 window:
   # parameters that can be adjusted in the cli args of calc_datas.py
-  t_wait: 10.0
-  dt: 0.2
-  t_det_max: 30.0
-  # 2d params
-  t_coh: 20.0
-
-   
+  t_det_max: 40.0
+  t_wait: 0.0
+  t_coh: 30.0
+  dt: 1

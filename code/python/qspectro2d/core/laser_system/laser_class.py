@@ -49,7 +49,14 @@ class LaserPulse:
         self._pulse_freq_fs = float(convert_cm_to_fs(self.pulse_freq_cm))
 
         # PRECOMPUTE ENVELOPE SUPPORT
+        self._recompute_envelope_support()
 
+    def _recompute_envelope_support(self) -> None:
+        """Recompute cached envelope window and Gaussian parameters.
+
+        Must be called whenever attributes affecting timing change, e.g.,
+        `pulse_peak_time`, `pulse_fwhm_fs`, or `envelope_type`.
+        """
         if self.envelope_type == "gaussian":
             # Use extended active window (≈1% cutoff) defined by active_time_range (± n_fwhm * FWHM)
             self._t_start, self._t_end = self.active_time_range  # uses default n_fwhm (1.094)
@@ -57,7 +64,7 @@ class LaserPulse:
             # Baseline value chosen at EXTENDED window edge (edge_span), not at FWHM, so
             # envelope retains smooth tails between ±FWHM and ±edge_span.
             edge_span = self._t_end - self.pulse_peak_time
-            self._boundary_val = np.exp(-(edge_span**2) / (2 * self._sigma**2))
+            self._boundary_val = float(np.exp(-(edge_span**2) / (2 * self._sigma**2)))
         else:
             self._t_start = self.pulse_peak_time - self.pulse_fwhm_fs
             self._t_end = self.pulse_peak_time + self.pulse_fwhm_fs
@@ -357,9 +364,12 @@ class LaserPulseSequence:
 
         peak_times = np.insert(np.cumsum(delays), 0, 0.0)
 
-        # Update each pulse's peak time
+        # Update each pulse's peak time and recompute envelope-derived caches
         for pulse, new_peak in zip(self.pulses, peak_times):
             pulse.pulse_peak_time = new_peak
+            # Keep envelope support in sync with new peak time
+            if hasattr(pulse, "_recompute_envelope_support"):
+                pulse._recompute_envelope_support()
 
     # --- Convenience ---
     def __len__(self):

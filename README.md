@@ -224,7 +224,7 @@ plot_from_relative_path(relative_path, config, simulation_type="2d")
 #### Plotting Functions
 - `plot_from_relative_path()` - Feed-forward compatible plotting with simulation_type parameter
 - `plot_from_filepath()` - Direct file plotting with simulation_type parameter
-- `_plot_1d_data()` / `_plot_2d_data()` - Standardized data structure aware
+- `_plot_data()` / `_plot_data()` - Standardized data structure aware
 
 ## 🔗 Usage Examples
 

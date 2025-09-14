@@ -10,6 +10,11 @@ from qspectro2d.core.laser_system.laser_fcts import e_pulses
 from qspectro2d.config import HBAR
 
 
+__all__ = [
+    "matrix_ODE_paper",
+]
+
+
 def matrix_ODE_paper(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     """Dispatcher returning the time dependent Liouvillian L(t).
 
@@ -37,11 +42,18 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     mu = sim_oqs.system.dip_moments[0]  # dipole op looks the same in both bases
     w0 = sim_oqs.system._frequencies_fs[0]
     wL = pulse_seq._carrier_freq_fs
-
-    deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")
-    down_rate, up_rate = bath_to_rates(sim_oqs.bath, w0, mode="decay")
+    """
+    #deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")
+    #down_rate, up_rate = bath_to_rates(sim_oqs.bath, w0, mode="decay")
+    # Dephasing rate (assumed identical structure for all single excitations)
     deph_rate_tot = deph_rate_pure + 0.5 * (down_rate + up_rate)
+    """
 
+    # Dephasing rate (assumed identical structure for all single excitations)
+    deph_rate = 1 / 100
+    down_rate = 1 / 300
+    up_rate = 0.0
+    deph_rate_tot = deph_rate + 0.5 * (down_rate + up_rate)
     size = 2
     idx_gg = stacked_index(size, 0, 0)
     idx_ge = stacked_index(size, 0, 1)
@@ -101,7 +113,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L = np.zeros((size * size, size * size), dtype=complex)
 
     # 1) One-excitation coherences
-    term = -1j * (sim_oqs.system.omega_ij(1, 0) - omega_laser) - sim_oqs.sb_coupling.Gamma_big_ij(
+    term = -1j * (sim_oqs.system.omega_ij(1, 0) - omega_laser) - sim_oqs.sb_coupling.paper_Gamma_ij(
         1, 0
     )
     L[idx_10, idx_10] = term
@@ -115,7 +127,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_01, idx_21] = np.conj(L[idx_10, idx_12])
     L[idx_01, idx_03] = np.conj(L[idx_10, idx_30])
 
-    term = -1j * (sim_oqs.system.omega_ij(2, 0) - omega_laser) - sim_oqs.sb_coupling.Gamma_big_ij(
+    term = -1j * (sim_oqs.system.omega_ij(2, 0) - omega_laser) - sim_oqs.sb_coupling.paper_Gamma_ij(
         2, 0
     )
     L[idx_20, idx_20] = term
@@ -132,7 +144,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     # 2) Double-excited coherences
     term = -1j * (
         sim_oqs.system.omega_ij(3, 0) - 2 * omega_laser
-    ) - sim_oqs.sb_coupling.Gamma_big_ij(3, 0)
+    ) - sim_oqs.sb_coupling.paper_Gamma_ij(3, 0)
     L[idx_30, idx_30] = term
     L[idx_30, idx_10] = 1j * Et * sim_oqs.system.dipole_op[3, 1]
     L[idx_30, idx_20] = 1j * Et * sim_oqs.system.dipole_op[3, 2]
@@ -145,7 +157,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_03, idx_23] = np.conj(L[idx_30, idx_32])
 
     # 3) Cross-coherences
-    term = -1j * sim_oqs.system.omega_ij(1, 2) - sim_oqs.sb_coupling.Gamma_big_ij(1, 2)
+    term = -1j * sim_oqs.system.omega_ij(1, 2) - sim_oqs.sb_coupling.paper_Gamma_ij(1, 2)
     L[idx_12, idx_12] = term
     L[idx_12, idx_02] = 1j * Et * sim_oqs.system.dipole_op[1, 0]
     L[idx_12, idx_13] = -1j * Et * sim_oqs.system.dipole_op[3, 2]
@@ -157,7 +169,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_21, idx_23] = np.conj(L[idx_12, idx_32])
     L[idx_21, idx_01] = np.conj(L[idx_12, idx_10])
 
-    term = -1j * (sim_oqs.system.omega_ij(3, 1) - omega_laser) - sim_oqs.sb_coupling.Gamma_big_ij(
+    term = -1j * (sim_oqs.system.omega_ij(3, 1) - omega_laser) - sim_oqs.sb_coupling.paper_Gamma_ij(
         3, 1
     )
     L[idx_31, idx_31] = term
@@ -169,7 +181,7 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_13, idx_12] = np.conj(L[idx_31, idx_21])
     L[idx_13, idx_03] = np.conj(L[idx_31, idx_30])
 
-    term = -1j * (sim_oqs.system.omega_ij(3, 2) - omega_laser) - sim_oqs.sb_coupling.Gamma_big_ij(
+    term = -1j * (sim_oqs.system.omega_ij(3, 2) - omega_laser) - sim_oqs.sb_coupling.paper_Gamma_ij(
         3, 2
     )
     L[idx_32, idx_32] = term
@@ -187,15 +199,15 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_00, idx_10] = 1j * Et_conj * sim_oqs.system.dipole_op[1, 0]
     L[idx_00, idx_20] = 1j * Et_conj * sim_oqs.system.dipole_op[2, 0]
 
-    L[idx_11, idx_11] = -sim_oqs.sb_coupling.Gamma_big_ij(1, 1)
-    L[idx_11, idx_22] = sim_oqs.sb_coupling.gamma_small_ij(1, 2)
+    L[idx_11, idx_11] = -sim_oqs.sb_coupling.paper_Gamma_ij(1, 1)
+    L[idx_11, idx_22] = sim_oqs.sb_coupling.paper_gamma_ij(1, 2)
     L[idx_11, idx_01] = 1j * Et * sim_oqs.system.dipole_op[1, 0]
     L[idx_11, idx_13] = -1j * Et * sim_oqs.system.dipole_op[3, 1]
     L[idx_11, idx_31] = 1j * Et_conj * sim_oqs.system.dipole_op[3, 1]
     L[idx_11, idx_10] = -1j * Et_conj * sim_oqs.system.dipole_op[1, 0]
 
-    L[idx_22, idx_22] = -sim_oqs.sb_coupling.Gamma_big_ij(2, 2)
-    L[idx_22, idx_11] = sim_oqs.sb_coupling.gamma_small_ij(2, 1)
+    L[idx_22, idx_22] = -sim_oqs.sb_coupling.paper_Gamma_ij(2, 2)
+    L[idx_22, idx_11] = sim_oqs.sb_coupling.paper_gamma_ij(2, 1)
     L[idx_22, idx_02] = 1j * Et * sim_oqs.system.dipole_op[2, 0]
     L[idx_22, idx_23] = -1j * Et * sim_oqs.system.dipole_op[3, 2]
     L[idx_22, idx_32] = 1j * Et_conj * sim_oqs.system.dipole_op[3, 2]
@@ -204,8 +216,3 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_33, :] = -L[idx_00, :] - L[idx_11, :] - L[idx_22, :]
 
     return Qobj(L, dims=[[[size], [size]], [[size], [size]]])
-
-
-__all__ = [
-    "matrix_ODE_paper",
-]

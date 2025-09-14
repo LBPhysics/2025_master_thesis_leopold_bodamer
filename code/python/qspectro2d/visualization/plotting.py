@@ -6,7 +6,12 @@ from typing import Literal, Union, Tuple
 from plotstyle import init_style, COLORS, LINE_STYLES
 from plotstyle.style import simplify_figure_text
 
-from qspectro2d.core.laser_system.laser_fcts import *
+from qspectro2d.core.laser_system.laser_fcts import (
+    pulse_envelopes,
+    _single_pulse_envelope,
+    e_pulses,
+    epsilon_pulses,
+)
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 
 init_style()
@@ -16,7 +21,7 @@ def plot_pulse_envelopes(
     times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
     """
-    Plot the combined pulse envelope over time for up to three pulses using LaserPulseSequence.
+    Plot the combined pulse envelope over time for N pulses using LaserPulseSequence.
 
     Parameters:
         times (np.ndarray): Array of time values.
@@ -30,9 +35,12 @@ def plot_pulse_envelopes(
     envelope = pulse_envelopes(times, pulse_seq)
 
     # Create figure and axis if not provided
-    fig = None
+    created_fig = False
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 6))  # Plot combined envelope
+        fig, ax = plt.subplots()  # Plot combined envelope
+        created_fig = True
+    else:
+        fig = ax.figure
     ax.plot(
         times,
         envelope,
@@ -40,46 +48,38 @@ def plot_pulse_envelopes(
         linestyle=LINE_STYLES[0],
         alpha=0.8,
         color=COLORS[0],
-    )  # Styles for up to three pulses
-    linestyles = LINE_STYLES[1:4]
-    colors = [COLORS[i] for i in [1, 2, 3]]
+    )  # Styles for individual pulses will cycle
+    n_styles = len(LINE_STYLES)
+    n_colors = len(COLORS)
 
-    # Plot individual envelopes and annotations
-    for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
-        t_peak = pulse.pulse_peak_time  # Now interpreted as peak time
+    # Plot individual envelopes and annotations (support any number of pulses)
+    for idx, pulse in enumerate(pulse_seq.pulses):
+
+        # get the individual envelope from the pulse_envelopes function
+        individual_envelope = _single_pulse_envelope(times, pulse)
+        t_peak = pulse.pulse_peak_time
         Delta_width = pulse.pulse_fwhm_fs
-
-        # Compute individual pulse envelope using new logic
-        individual_envelope = [
-            (
-                np.cos(np.pi * (t - t_peak) / (2 * Delta_width)) ** 2
-                if t_peak - Delta_width <= t <= t_peak + Delta_width
-                else 0.0
-            )
-            for t in times
-        ]
-
         ax.plot(
             times,
             individual_envelope,
             label=rf"$\text{{Pulse {idx + 1}}}$",
-            linestyle=linestyles[idx % len(linestyles)],
+            linestyle=LINE_STYLES[(idx + 1) % n_styles],  # avoid reusing 0 used above
             alpha=0.6,
-            color=colors[idx % len(colors)],
+            color=COLORS[(idx + 1) % n_colors],
         )  # Annotate pulse key points
         ax.axvline(
             t_peak - Delta_width,
             linestyle=LINE_STYLES[3],
             label=rf"$t_{{peak, {idx + 1}}} - \Delta_{{{idx + 1}}}$",
             alpha=0.4,
-            color=colors[idx % len(colors)],
+            color=COLORS[(idx + 1) % n_colors],
         )
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[0],
             label=rf"$t_{{peak, {idx + 1}}}$",
             alpha=0.8,
-            color=colors[idx % len(colors)],
+            color=COLORS[(idx + 1) % n_colors],
             linewidth=2,
         )
         ax.axvline(
@@ -87,7 +87,7 @@ def plot_pulse_envelopes(
             linestyle=LINE_STYLES[3],
             label=rf"$t_{{peak, {idx + 1}}} + \Delta_{{{idx + 1}}}$",
             alpha=0.4,
-            color=colors[idx % len(colors)],
+            color=COLORS[(idx + 1) % n_colors],
         )
 
     # Final plot labeling
@@ -97,14 +97,15 @@ def plot_pulse_envelopes(
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
-    plt.close(fig)
+    if created_fig:
+        plt.close(fig)
     simplify_figure_text(fig)
     return fig, ax
 
 
 def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
     """
-    Plot the RWA electric field (envelope only) over time for pulses using LaserPulseSequence.
+    Plot the RWA electric field (envelope only) over time for N pulses using LaserPulseSequence.
 
     Parameters:
         times (np.ndarray): Array of time values.
@@ -118,9 +119,12 @@ def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, sho
     E_field = np.array([e_pulses(t, pulse_seq) for t in times])
 
     # Create figure and axis if not provided
-    fig = None
+    created_fig = False
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))  # Plot real and imaginary parts
+        created_fig = True
+    else:
+        fig = ax.figure
     ax.plot(
         times,
         np.real(E_field),
@@ -136,17 +140,17 @@ def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, sho
         color=COLORS[1],
     )
 
-    # Styles for up to three pulses
-    colors = [COLORS[i] for i in [2, 3, 4]]
+    # Styles for any number of pulses (cycle through colors)
+    n_colors = len(COLORS)
 
-    # Plot pulse peak times
-    for idx, pulse in enumerate(pulse_seq.pulses[:3]):  # Up to 3 pulses
+    # Plot pulse peak times for all pulses
+    for idx, pulse in enumerate(pulse_seq.pulses):
         t_peak = pulse.pulse_peak_time
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[3],  # "dotted"
             label=rf"$t_{{peak, {idx + 1}}}$",
-            color=colors[idx % len(colors)],
+            color=COLORS[(idx + 2) % n_colors],  # offset to avoid field line colors
         )
 
     # Final plot labeling
@@ -155,7 +159,8 @@ def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, sho
     ax.set_title(r"RWA Electric Field Components")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.close(fig)
+    if created_fig:
+        plt.close(fig)
     simplify_figure_text(fig)
     return fig, ax
 
@@ -164,7 +169,7 @@ def plot_epsilon_pulses(
     times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
     """
-    Plot the full electric field (with carrier) over time for pulses using LaserPulseSequence.
+    Plot the full electric field (with carrier) over time for N pulses using LaserPulseSequence.
 
     Parameters:
         times (np.ndarray): Array of time values.
@@ -176,9 +181,12 @@ def plot_epsilon_pulses(
     """
     # Calculate the full electric field over time
     Epsilon_field = np.array([epsilon_pulses(t, pulse_seq) for t in times])
-    fig = None
+    created_fig = False
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
+        created_fig = True
+    else:
+        fig = ax.figure
     ax.plot(
         times,
         np.real(Epsilon_field),
@@ -200,85 +208,24 @@ def plot_epsilon_pulses(
         linestyle=LINE_STYLES[2],
         color=COLORS[5],
     )
-    colors = [COLORS[i] for i in [0, 1, 2]]
-    for idx, pulse in enumerate(pulse_seq.pulses[:3]):
+    n_colors = len(COLORS)
+    for idx, pulse in enumerate(pulse_seq.pulses):
         t_peak = pulse.pulse_peak_time
         ax.axvline(
             t_peak,
             linestyle=LINE_STYLES[3],
             label=rf"$t_{{peak, {idx + 1}}}$",
-            color=colors[idx % len(colors)],
+            color=COLORS[idx % n_colors],
         )
     ax.set_xlabel(r"Time $t$")
     ax.set_ylabel(r"Electric Field (Full)")
     ax.set_title(r"Full Electric Field with Carrier")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.close(fig)
+    if created_fig:
+        plt.close(fig)
     simplify_figure_text(fig)
     return fig, ax
-
-
-def plot_1d_el_field(
-    axis_det: np.ndarray,
-    data: np.ndarray,
-    domain: Literal["time", "freq"] = "time",
-    component: Literal["real", "img", "abs", "phase"] = "real",
-    title: str | None = None,
-    section: Union[tuple[float, float], None] = None,
-    function_symbol: str = "S",
-    figsize: Tuple[float, float] = (6.5, 4.0),
-    normalize: bool = True,
-    **kwargs: dict,
-) -> plt.Figure:
-    """Plot 1D complex data (time or frequency domain).
-
-
-    # CONTRACT
-
-    Inputs: axis_det (1d), complex data (same length), domain selector, component selector
-    Output: matplotlib Figure object
-    Normalization: optional (default True) to max absolute amplitude
-    Cropping: optional via section=(min,max)
-    """
-    fig = plt.figure(figsize=figsize)
-
-    # CROP + NORMALIZE
-
-    if section is not None:
-        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
-    if normalize:
-        max_abs = np.abs(data).max()
-        if max_abs == 0:
-            raise ValueError("Data array is all zeros, cannot normalize.")
-        data = data / max_abs
-
-    # COMPONENT HANDLING
-
-    y_data, label, ylabel, x_label, final_title = _resolve_1d_labels_and_component(
-        data=data,
-        domain=domain,
-        component=component,
-        function_symbol=function_symbol,
-        provided_title=title,
-    )
-
-    # STYLE
-
-    color, linestyle = _style_for_component(component)
-
-    # PLOT
-
-    plt.plot(axis_det, y_data, label=label, color=color, linestyle=linestyle)
-    plt.xlabel(x_label)
-    plt.ylabel(ylabel)
-    plt.title(final_title)
-    plt.legend()
-    add_text_box(ax=plt.gca(), kwargs=kwargs)
-    plt.tight_layout()
-    simplify_figure_text(fig)
-    plt.close(fig)
-    return fig
 
 
 def plot_all_pulse_components(times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)):
@@ -321,8 +268,8 @@ def plot_example_evo(
     times_plot: np.ndarray,
     datas: list,
     pulse_seq: LaserPulseSequence,
+    observable_strs: list[str],
     rwa_sl: bool = False,
-    observable_strs: list[str] = [],
     **kwargs: dict,
 ):
     """
@@ -340,7 +287,6 @@ def plot_example_evo(
     Returns:
         matplotlib.figure.Figure: The figure object.
     """
-    # Choose field function based on RWA setting
     if rwa_sl:
         field_func = e_pulses
     else:
@@ -375,10 +321,17 @@ def plot_example_evo(
     for idx, data in enumerate(datas):
         ax = axes[idx + 1]
         if idx == len(observable_strs):
-            observable_str = r"\mu"
+            observable_str = r"\text{Pol}"
+            # also Plot imaginary part, because the polarization is complex
+            ax.plot(
+                times_plot,
+                np.imag(data),
+                color=COLORS[1],
+                linestyle=LINE_STYLES[1],
+                label=r"$\mathrm{Im}" + observable_str + r" \rangle$",
+            )
         else:
             observable_str = observable_strs[idx]
-            print(f"Using observable string: {observable_str}")
 
         # Plot real part
         ax.plot(
@@ -387,15 +340,6 @@ def plot_example_evo(
             color=COLORS[0],
             linestyle=LINE_STYLES[0],
             label=r"$\mathrm{Re}\langle " + observable_str + r" \rangle$",
-        )
-
-        # Plot imaginary part
-        ax.plot(
-            times_plot,
-            np.imag(data),
-            color=COLORS[1],
-            linestyle=LINE_STYLES[1],
-            label=r"$\mathrm{Im}\langle " + observable_str + r" \rangle$",
         )
 
         ax.set_ylabel(r"$\langle " + observable_str + r" \rangle$")
@@ -412,121 +356,143 @@ def plot_example_evo(
     return fig
 
 
-def plot_1d_el_field(
-    axis_det: np.ndarray,
-    data: np.ndarray,
-    domain: Literal["time", "freq"] = "time",
-    component: Literal["real", "img", "abs", "phase"] = "real",
-    title: str = None,
-    section: Union[tuple[float, float], None] = None,
-    function_symbol: str = "S",
-    **kwargs: dict,
-) -> plt.Figure:
+def plot_example_polarization(
+    times: np.ndarray,
+    P_full: np.ndarray,
+    P_only0: np.ndarray,
+    P_only1: np.ndarray,
+    P_only2: np.ndarray,
+    title: str = "Example Polarization Components",
+    **kwargs,
+):
     """
-    Plot 1D electric field data in either time or frequency domain with specified component.
+    Plot the full and individual polarization components as a function of time.
 
     Parameters:
-        axis_det (np.ndarray): X-axis values (time in fs or frequency in 10^4 cm^-1)
-        data (np.ndarray): Complex data array to plot
-        domain (Literal["time", "freq"]): Domain of the data - 'time' or 'freq'. Defaults to 'time'.
-        component (Literal["real", "img", "abs", "phase"]): Component to plot - 'real', 'imag', 'abs', or 'phase'.
-                                                           Defaults to 'real'.
-        title (str, optional): Custom title for the plot. If None, a default title will be generated.
-        function_symbol (str): Symbol to use in plot labels. Defaults to "S".
+        times (np.ndarray): Time axis (e.g., detection times).
+        P_full (np.ndarray): Full polarization (complex).
+        P_only0 (np.ndarray): Polarization from only the first pulse.
+        P_only1 (np.ndarray): Polarization from only the second pulse.
+        P_only2 (np.ndarray): Polarization from only the third pulse.
+        title (str): Plot title.
         **kwargs: Additional keyword arguments for annotation.
 
     Returns:
         matplotlib.figure.Figure: The figure object.
     """
-    fig = plt.figure()
+    fig, ax1 = plt.subplots()
 
-    if section is not None:
-        # Crop the data if a section is specified
-        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
-
-    if np.abs(data).max() == 0:
-        raise ValueError("Data array is all zeros, cannot normalize.")
-    data = data / np.abs(data).max()  # normalize
-
-    # Set domain-specific variables
-    if domain == "time":
-        x_label = r"$t \, [\text{fs}]$"
-        if title is None:
-            title = f"{function_symbol} in Time Domain"
-
-        if component == "abs":
-            y_data = np.abs(data)
-            label = "|" + function_symbol + "(t)|"
-            ylabel = "|" + function_symbol + "(t)|"
-        elif component == "real":
-            y_data = np.real(data)
-            label = r"$\mathrm{Re}[" + function_symbol + "(t)]$"
-            ylabel = r"$\mathrm{Re}[" + function_symbol + "(t)]$"
-        elif component == "img":
-            y_data = np.imag(data)
-            label = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"
-            ylabel = rf"$\mathrm{{Im}}[{function_symbol}(t)]$"
-        elif component == "phase":
-            y_data = np.angle(data)
-            label = rf"$\mathrm{{Arg}}[{function_symbol}(t)]$"
-            ylabel = rf"$\mathrm{{Arg}}[{function_symbol}(t)]$ [rad]"
-        else:
-            # Default to real part if invalid component is provided
-            y_data = np.real(data)
-            label = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
-            ylabel = rf"$\mathrm{{Re}}[{function_symbol}(t)]$"
-
-    elif domain == "freq":
-        x_label = r"$\omega$ [$10^4$ cm$^{-1}$]"
-        if title is None:
-            title = f"{function_symbol} in Frequency Domain"
-
-        if component == "abs":
-            y_data = np.abs(data)
-            label = rf"$|{function_symbol}(\omega)|$"
-            ylabel = rf"$|{function_symbol}(\omega)|$"
-        elif component == "real":
-            y_data = np.real(data)
-            label = rf"$\mathrm{{Re}}[{function_symbol}(\omega)]$"
-            ylabel = rf"$\mathrm{{Re}}[{function_symbol}(\omega)]$"
-        elif component == "img":
-            y_data = np.imag(data)
-            label = rf"$\mathrm{{Im}}[{function_symbol}(\omega)]$"
-            ylabel = rf"$\mathrm{{Im}}[{function_symbol}(\omega)]$"
-        elif component == "phase":
-            y_data = np.angle(data)
-            label = rf"$\mathrm{{Arg}}[{function_symbol}(\omega)]$"
-            ylabel = rf"$\mathrm{{Arg}}[{function_symbol}(\omega)]$ [rad]"
-        else:
-            # Default to absolute value for frequency domain if invalid component
-            y_data = np.abs(data)
-            label = rf"$|{function_symbol}(\omega)|$"
-            ylabel = rf"$|{function_symbol}(\omega)|$"
-    else:
-        raise ValueError(f"Domain {domain} not recognized. Use 'time' or 'freq'.")
-
-    # Select color and linestyle
-    color_idx = {"abs": 0, "real": 1, "img": 2, "phase": 3}.get(component, 0)
-    color = COLORS[color_idx]  # "C0", "C1", etc.
-    linestyle = LINE_STYLES[0]  # "solid"
-
-    # Create the plot
-    plt.plot(
-        axis_det,
-        y_data,
-        label=label,
-        color=color,
-        linestyle=linestyle,
+    # Plot main components on primary y-axis
+    P_3 = P_full - P_only0 - P_only1 - P_only2
+    ax1.plot(
+        times,
+        np.abs(P_full),
+        label=r"$full$",
+        color=COLORS[0],
+        linestyle=LINE_STYLES[0],
     )
+    ax1.plot(
+        times,
+        np.abs(P_only0),
+        label=r"$0$",
+        color=COLORS[1],
+        linestyle=LINE_STYLES[1],
+    )
+    ax1.plot(
+        times,
+        np.abs(P_only1),
+        label=r"$1$",
+        color=COLORS[2],
+        linestyle=LINE_STYLES[2],
+    )
+    ax1.plot(
+        times,
+        np.abs(P_only2),
+        label=r"$2$",
+        color=COLORS[3],
+        linestyle=LINE_STYLES[3],
+    )
+    ax1.set_xlabel(r"$t_{\mathrm{det}}$ [fs]")
+    ax1.set_ylabel(r"$|P_i(t)|$", color=COLORS[0])
+    ax1.tick_params(axis="y", labelcolor=COLORS[0])
 
-    plt.xlabel(x_label)
-    plt.ylabel(ylabel)
-    plt.title(title)
-    plt.legend()
+    # Create secondary y-axis for P^3
+    ax2 = ax1.twinx()
+    ax2.plot(
+        times,
+        np.abs(P_3),
+        color=COLORS[4],
+        linestyle=LINE_STYLES[4],
+    )
+    ax2.set_ylabel(r"$|P^{3}(t)|$", color=COLORS[4])
+    ax2.tick_params(axis="y", labelcolor=COLORS[4])
+
+    # Combine legends from both axes
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc="center left", bbox_to_anchor=(1, 0.5))
+
+    ax1.set_title(title)
 
     # Add additional parameters as a text box if provided
-    add_text_box(ax=plt.gca(), kwargs=kwargs)
+    add_text_box(ax=ax1, kwargs=kwargs)
 
+    plt.tight_layout()
+    simplify_figure_text(fig)
+    plt.close(fig)
+    return fig
+
+
+def plot_1d_el_field(
+    axis_det: np.ndarray,
+    data: np.ndarray,
+    domain: Literal["time", "freq"] = "time",
+    component: Literal["real", "img", "abs", "phase"] = "real",
+    title: str | None = None,
+    section: Union[tuple[float, float], None] = None,
+    function_symbol: str = "S",
+    figsize: Tuple[float, float] = (6.5, 4.0),
+    normalize: bool = True,
+    **kwargs: dict,
+) -> plt.Figure:
+    """Plot 1D complex data (time or frequency domain).
+
+    Inputs: axis_det (1d), complex data (same length), domain selector, component selector
+    Output: matplotlib Figure object
+    Normalization: optional (default True) to max absolute amplitude
+    Cropping: optional via section=(min,max)
+    """
+    fig = plt.figure(figsize=figsize)
+
+    # CROP + NORMALIZE
+
+    if section is not None:
+        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
+    if normalize:
+        max_abs = np.abs(data).max()
+        if max_abs == 0:
+            raise ValueError("Data array is all zeros, cannot normalize.")
+        data = data / max_abs
+
+    # COMPONENT HANDLING
+    y_data, label, ylabel, x_label, final_title = _resolve_1d_labels_and_component(
+        data=data,
+        domain=domain,
+        component=component,
+        function_symbol=function_symbol,
+        provided_title=title,
+    )
+
+    # STYLE
+    color, linestyle = _style_for_component(component)
+
+    # PLOT
+    plt.plot(axis_det, y_data, label=label, color=color, linestyle=linestyle)
+    plt.xlabel(x_label)
+    plt.ylabel(ylabel)
+    plt.title(final_title)
+    plt.legend()
+    add_text_box(ax=plt.gca(), kwargs=kwargs)
     plt.tight_layout()
     simplify_figure_text(fig)
     plt.close(fig)
@@ -600,12 +566,12 @@ def plot_2d_el_field(
             f"Data shape {data.shape} does not match axis_det ({len(axis_det)}) and axis_coh ({len(axis_coh)}) dimensions."
         )
 
-    # Check for empty arrays
-    if axis_det.size == 0 or axis_coh.size == 0 or data.size == 0:
-        print(
-            f"❌ Warning: Empty arrays detected in plot_2d_el_field. axis_det.shape={axis_det.shape}, axis_coh.shape={axis_coh.shape}, data.shape={data.shape}"
+    import warnings
+
+    if len(axis_det) == 0 or len(axis_coh) == 0 or data.size == 0:
+        warnings.warn(
+            f"Empty arrays in plot_2d_el_field: axis_det={axis_det.shape}, axis_coh={axis_coh.shape}, data={data.shape}"
         )
-        return None
 
     # Convert axes to real (robust against minor numerical complex drift)
     axis_det = np.real(axis_det)
@@ -712,83 +678,7 @@ def plot_2d_el_field(
     return fig
 
 
-def plot_example_polarization(
-    times: np.ndarray,
-    P_full: np.ndarray,
-    P_only0: np.ndarray,
-    P_only1: np.ndarray,
-    P_only2: np.ndarray,
-    title: str = "Example Polarization Components",
-    **kwargs,
-):
-    """
-    Plot the full and individual polarization components as a function of time.
-
-    Parameters:
-        times (np.ndarray): Time axis (e.g., detection times).
-        P_full (np.ndarray): Full polarization (complex).
-        P_only0 (np.ndarray): Polarization from only the first pulse.
-        P_only1 (np.ndarray): Polarization from only the second pulse.
-        P_only2 (np.ndarray): Polarization from only the third pulse.
-        title (str): Plot title.
-        **kwargs: Additional keyword arguments for annotation.
-
-    Returns:
-        matplotlib.figure.Figure: The figure object.
-    """
-    fig = plt.figure(figsize=(10, 6))  # get rid of this fixed figsize
-    plt.plot(
-        times,
-        np.abs(P_full),
-        label=r"$|P_{\mathrm{full}}(t)|$",
-        color=COLORS[0],
-        linestyle=LINE_STYLES[0],
-    )
-    plt.plot(
-        times,
-        np.abs(P_only0),
-        label=r"$|P_0(t)|$",
-        color=COLORS[1],
-        linestyle=LINE_STYLES[1],
-    )
-    plt.plot(
-        times,
-        np.abs(P_only1),
-        label=r"$|P_1(t)|$",
-        color=COLORS[2],
-        linestyle=LINE_STYLES[2],
-    )
-    plt.plot(
-        times,
-        np.abs(P_only2),
-        label=r"$|P_2(t)|$",
-        color=COLORS[3],
-        linestyle=LINE_STYLES[3],
-    )
-    plt.plot(
-        times,
-        np.abs(P_full - P_only0 - P_only1 - P_only2),
-        label=r"$|P^{3}(t)|$",
-        color=COLORS[4],  # "C4"
-        linestyle=LINE_STYLES[0],  # "solid"
-    )
-    plt.xlabel(r"$t_{\mathrm{det}}$ [fs]")
-    plt.ylabel(r"$|P(t)|$")
-    plt.title(title)
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-
-    # Add additional parameters as a text box if provided
-    add_text_box(ax=plt.gca(), kwargs=kwargs)
-
-    plt.tight_layout()
-    simplify_figure_text(fig)
-    plt.close(fig)
-    return fig
-
-
 # HELPER FUNCTIONS
-
-
 def crop_nd_data_along_axis(
     coord_array: np.ndarray,
     nd_data: np.ndarray,
@@ -842,8 +732,6 @@ def crop_nd_data_along_axis(
 
 
 # NEW INTERNAL HELPERS (1D/2D LABEL + COMPONENT LOGIC)
-
-
 def _style_for_component(component: str) -> Tuple[str, str]:
     """Return (color, linestyle) for a given 1D component.
 
@@ -918,35 +806,16 @@ def _domain_2d_labels(domain: str) -> Tuple[str, str, str, str]:
     if domain == "time":
         return (
             "viridis",
-            _axis_label_time_det(),
-            _axis_label_time_coh(),
+            r"$t_{\text{det}}$ [fs]",
+            r"$t_{\text{coh}}$ [fs]",
             r"$\text{Time domain signal}$",
         )
     return (
         "plasma",
-        _axis_label_freq_det(),
-        _axis_label_freq_coh(),
+        r"$\omega_{\text{det}}$ [$10^4$ cm$^{-1}$]",
+        r"$\omega_{\text{coh}}$ [$10^4$ cm$^{-1}$]",
         r"$\text{Spectrum}$",
     )
-
-
-# AXIS LABEL HELPERS (central definitions)
-
-
-def _axis_label_time_det() -> str:
-    return r"$t_{\text{det}}$ [fs]"
-
-
-def _axis_label_time_coh() -> str:
-    return r"$t_{\text{coh}}$ [fs]"
-
-
-def _axis_label_freq_det() -> str:
-    return r"$\omega_{\text{det}}$ [$10^4$ cm$^{-1}$]"
-
-
-def _axis_label_freq_coh() -> str:
-    return r"$\omega_{\text{coh}}$ [$10^4$ cm$^{-1}$]"
 
 
 def add_custom_contour_lines(
@@ -1020,28 +889,46 @@ def add_custom_contour_lines(
         )
 
 
-def add_text_box(ax, kwargs: dict, position: tuple = (0.98, 0.98), fontsize: int = 11):
+def add_text_box(
+    ax,
+    kwargs: dict,
+    position: tuple = (0.98, 0.98),
+    fontsize: int = 11,
+    coords: Literal["axes", "figure"] = "axes",
+):
     """
-    Add a text box with additional parameters to a plot.
+    Add a text box with additional parameters without affecting subplot layout.
 
     Parameters:
-        ax (matplotlib.axes.Axes): Axes object to add the text box to.
+        ax (matplotlib.axes.Axes): Axes object (also used to access the parent Figure).
         kwargs (dict): Dictionary of parameters to display in the text box.
-        position (tuple): Position of the text box in axis coordinates (default: top-right).
+        position (tuple): Position of the text box in the chosen coordinate system.
+                          For ``coords='axes'`` this is in axis coordinates (default top-right).
+                          For ``coords='figure'`` this is in figure coordinates.
         fontsize (int): Font size for the text box (default: 11).
+        coords (Literal["axes","figure"]): Coordinate system to place the text in.
+            - "axes": anchored to the given Axes (default; backwards compatible)
+            - "figure": anchored to the whole Figure (fully independent of Axes)
+
+    Notes:
+        - The created text artist is marked ``in_layout=False`` so that ``tight_layout``
+          or ``constrained_layout`` ignore it and do not shrink other subplots.
+        - ``clip_on=False`` is used so the text can extend beyond the Axes box if desired.
     """
     if kwargs:
         text_lines = []
         for key, value in kwargs.items():
             if isinstance(value, float):
-                text_lines.append(f"{key}: {value:.3g}")  # Format floats to 3 significant digits
+                # Format floats to 3 significant digits
+                text_lines.append(f"{key}: {value:.3g}")
             elif isinstance(value, (int, str)):
-                text_lines.append(f"{key}: {value}")  # Add integers and strings directly
+                # Add integers and strings directly
+                text_lines.append(f"{key}: {value}")
             elif isinstance(value, np.ndarray):
-                text_lines.append(
-                    f"{key}: array(shape={value.shape})"
-                )  # Show shape for numpy arrays
+                # Show shape for numpy arrays
+                text_lines.append(f"{key}: array(shape={value.shape})")
             else:
+                # TODO insert this into my plotstyle package
                 # Convert other types to string and escape LaTeX special characters
                 safe_str = (
                     str(value)
@@ -1053,13 +940,36 @@ def add_text_box(ax, kwargs: dict, position: tuple = (0.98, 0.98), fontsize: int
                 text_lines.append(f"{key}: {safe_str}")
 
         info_text = "\n".join(text_lines)
-        ax.text(
-            position[0],
-            position[1],
-            info_text,
-            transform=ax.transAxes,
-            fontsize=fontsize,
-            verticalalignment="top",
-            horizontalalignment="right",
-            bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
-        )
+
+        # Create the text artist either in axes or figure coordinates
+        if coords == "figure":
+            fig = ax.figure
+            artist = fig.text(
+                position[0],
+                position[1],
+                info_text,
+                transform=fig.transFigure,
+                fontsize=fontsize,
+                va="top",
+                ha="right",
+                bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
+            )
+        else:
+            artist = ax.text(
+                position[0],
+                position[1],
+                info_text,
+                transform=ax.transAxes,
+                fontsize=fontsize,
+                verticalalignment="top",
+                horizontalalignment="right",
+                bbox=dict(boxstyle="round,pad=0.3", alpha=0.05, edgecolor="black"),
+                clip_on=False,  # allow text to extend beyond axes region
+            )
+
+        # Ensure layout engines ignore this artist so it doesn't shrink subplots
+        try:
+            artist.set_in_layout(False)
+        except Exception:
+            # Older Matplotlib versions may not have in_layout on Text; ignore gracefully
+            pass
