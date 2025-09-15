@@ -85,13 +85,13 @@ class SimulationModuleOQS:
         elif solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
             self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
+            self.evo_obj_int = QobjEvo(self.H_total)
 
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
             self.evo_obj_free = H0_diagonalized
             # BR needs the full system Hamiltonian at all times; include H0 + time-dependent interaction
-            self.evo_obj_int = H0_diagonalized + QobjEvo(self.H_int_sl)
+            self.evo_obj_int = QobjEvo(self.H_total)
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -112,6 +112,13 @@ class SimulationModuleOQS:
             t, self.system.to_eigenbasis(lowering_op), self.simulation_config.rwa_sl, self.laser
         )
         return H_int
+
+    @property
+    def H_total(self, t: float) -> Qobj:
+        """Return total (time-independent) Hamiltonian H0 + H_int at t=0."""
+        return self.H0_diagonalized + self.H_int_sl(t)
+
+    # TODO also add time dependent eigenenergies / states? and also all the other operators?
 
     # --- Observables ---------------------------------------------------------------
     @property

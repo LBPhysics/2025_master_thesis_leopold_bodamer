@@ -1,12 +1,7 @@
 """
 Generate and (optionally) submit a SLURM job for stacking 1D data to 2D and plotting.
 
-This script first stacks the 1D data files in the directory of the provided abs_path
-into a 2D dataset using stack_1dto2d.py, then generates a SLURM job to plot the result.
-
-Usage examples:
-  python gen_run_plotting.py --abs_path "/path/to/t_coh_50.0_data.npz"
-  python gen_run_plotting.py --abs_path "/path/to/t_coh_50.0_data.npz" --no_submit
+If a 2D file (contains t_coh axis) already exists in the directory, stacking is skipped.
 """
 
 from __future__ import annotations
@@ -20,13 +15,58 @@ from subprocess import run, CalledProcessError
 from project_config.paths import SCRIPTS_DIR
 
 
-def run_stacking_script(abs_path: str) -> str:
-    """Run stack_1dto2d.py and extract the resulting abs_path for plotting."""
-    # Get the directory containing the 1D data files
-    data_dir = str(Path(abs_path).parent)
+def map_1d_dir_to_2d_dir(data_dir: Path) -> Path:
+    """Given a 1D data directory path under .../1d_spectroscopy/... map to matching 2d directory.
 
-    # Run the stacking script
-    cmd = ["python", "../../stack_1dto2d.py", "--abs_path", data_dir]
+    Example:
+      /.../data/1d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
+      -> /.../data/2d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
+    If pattern not found, returns original path.
+    """
+    parts = list(data_dir.parts)
+    try:
+        idx = parts.index("1d_spectroscopy")
+        parts[idx] = "2d_spectroscopy"
+        return Path(*parts)
+    except ValueError:
+        return data_dir
+
+
+def detect_existing_2d(data_dir: Path) -> str | None:
+    """Return abs_path base (without suffix) of first detected 2D file in mapped 2D directory.
+
+    A 2D file is identified by presence of 't_det' and 't_coh' axes inside *_data.npz.
+    We look in the 2d_spectroscopy mirror of the provided 1D directory.
+    """
+    target_dir = map_1d_dir_to_2d_dir(data_dir)
+    if not target_dir.exists():
+        return None
+    for f in sorted(target_dir.glob("*_data.npz")):
+        try:
+            with np.load(f, mmap_mode="r") as npz:  # type: ignore
+                if "t_coh" in npz.files:
+                    return str(
+                        f
+                    )  # return full path incl _data.npz (plot script accepts base or with suffix)
+        except Exception:
+            continue
+    return None
+
+
+def run_stacking_script(abs_path: str, skip_if_exists: bool = True) -> str:
+    """Run stack_1dto2d.py unless 2D already present. Return plotting abs_path base.
+
+    If existing 2D found and skip_if_exists=True, returns its base path directly.
+    """
+    data_dir = Path(abs_path).parent
+
+    if skip_if_exists:
+        existing = detect_existing_2d(data_dir)
+        if existing:
+            print(f"✅ Existing 2D stacked file detected: {existing} (skipping stacking)")
+            return existing[:-9] if existing.endswith("_data.npz") else existing
+
+    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(data_dir), "--skip_if_exists"]
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=SCRIPTS_DIR)
 
     if result.returncode != 0:
@@ -91,13 +131,13 @@ def execute_slurm_script(job_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate and optionally submit a SLURM job for stacking 1D data to 2D and plotting."
+        description="Generate and optionally submit a SLURM job for stacking 1D data to 2D and plotting. Skips stacking if 2D already exists."
     )
     parser.add_argument(
         "--abs_path",
         type=str,
         required=True,
-        help="Absolute path to one of the 1D data files (e.g., t_coh_50.0_data.npz). The script will stack all 1D files in that directory into 2D.",
+        help="Absolute path to one of the 1D data files (e.g., t_coh_50.0_data.npz).",
     )
     parser.add_argument(
         "--no_submit",
@@ -106,10 +146,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("🔄 Running stacking script to combine 1D data into 2D...")
+    print("🔄 Preparing 2D dataset (stacking if needed)...")
     try:
         plotting_abs_path = run_stacking_script(args.abs_path)
-        print(f"✅ Stacking completed. Plotting path: {plotting_abs_path}")
+        print(f"✅ Dataset ready. Plot path base: {plotting_abs_path}")
     except RuntimeError as e:
         print(f"❌ Stacking failed: {e}")
         return
@@ -142,4 +182,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    import numpy as np  # Local import to avoid unused import if script only generates
+
     main()

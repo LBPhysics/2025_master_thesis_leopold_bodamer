@@ -22,13 +22,54 @@ def main():
         default="1d_spectroscopy",
         help="Base directory containing 1D data files (absolute path)",
     )
+    parser.add_argument(
+        "--skip_if_exists",
+        action="store_true",
+        help="Skip stacking if a 2D file already exists.",
+    )
     args = parser.parse_args()
     abs_path = args.abs_path
 
     print("\n🔍 Scanning available files:")
     print(f"   Base directory: {abs_path}")
-    ### Filter to only include _data.npz files
-    abs_paths = list_available_data_files(Path(abs_path))
+    base_dir = Path(abs_path)
+
+    # Optional early-exit: detect already stacked 2D file in corresponding 2d_spectroscopy tree
+    if args.skip_if_exists:
+        # Map 1d -> 2d directory and check there first
+        parts = list(base_dir.parts)
+        if "1d_spectroscopy" in parts:
+            idx = parts.index("1d_spectroscopy")
+            parts[idx] = "2d_spectroscopy"
+            mapped_2d_dir = Path(*parts)
+            if mapped_2d_dir.exists():
+                candidate_files = sorted(mapped_2d_dir.glob("*_data.npz"))
+                for f in candidate_files:
+                    try:
+                        with np.load(f, mmap_mode="r") as npz:
+                            if "t_coh" in npz.files:
+                                print(
+                                    f"✅ Detected existing stacked 2D file in mapped dir: {f}\nSkipping stacking."
+                                )
+                                print(
+                                    f"🎯 To plot run: python plot_datas.py --abs_path '{str(f)[:-9]}'"
+                                )
+                                return
+                    except Exception:
+                        continue
+        # Local directory check (backward compatible)
+        for f in sorted(base_dir.glob("*_data.npz")):
+            try:
+                with np.load(f, mmap_mode="r") as npz:
+                    if "t_coh" in npz.files:
+                        print(f"✅ Detected existing stacked 2D file: {f}\nSkipping stacking.")
+                        print(f"🎯 To plot run: python plot_datas.py --abs_path '{str(f)[:-9]}'")
+                        return
+            except Exception:
+                continue
+
+    # Filter to only include _data.npz files
+    abs_paths = list_available_data_files(base_dir)
     data_files = [path for path in abs_paths if path.endswith("_data.npz")]
     abs_data_paths = list(set(data_files))
 
@@ -46,12 +87,19 @@ def main():
         try:
             abs_data_path = Path(path)
             data_npz = np.load(abs_data_path, mmap_mode="r")
+            # If any file already has t_coh axis, treat as already stacked and abort stacking logic
+            if args.skip_if_exists and "t_coh" in data_npz.files:
+                print(f"✅ Found already stacked 2D file: {abs_data_path}. Aborting stacking.")
+                print(
+                    f'🎯 To plot this data, run:\npython plot_datas.py --abs_path "{str(abs_data_path)[:-9]}"'
+                )
+                return
             signal_types = data_npz["signal_types"]
             datas: list[np.ndarray] = []
             for sig_type in signal_types:
                 if sig_type in data_npz.files:
                     datas.append(data_npz[sig_type])
-            ### Extract t_coh value from filename (remove _data.npz first)
+            # Extract t_coh value from filename (remove _data.npz first)
             path_without_suffix = str(path).replace("_data.npz", "")
             t_coh_str = path_without_suffix.split("t_coh_")[1]
             t_coh_val = t_coh_str.split("_")[0]
@@ -117,6 +165,7 @@ def main():
         t_det=t_det_vals,
         t_coh=t_coh_vals,
     )
+    print("✅ Stacking completed.")
     print(f"\n🎯 To plot this data, run:")
     print(f'python plot_datas.py --abs_path "{abs_path}"')
 

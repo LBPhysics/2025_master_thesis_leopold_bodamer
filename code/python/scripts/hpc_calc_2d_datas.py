@@ -42,7 +42,6 @@ def create_batch_script(
 #SBATCH --chdir={job_dir}
 #SBATCH --output=logs/batch_{batch_idx}.out
 #SBATCH --error=logs/batch_{batch_idx}.err
-#SBATCH --partition=GPGPU
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=1G
 #SBATCH --time=0-02:00:00

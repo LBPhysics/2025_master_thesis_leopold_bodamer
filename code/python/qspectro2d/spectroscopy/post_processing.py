@@ -314,6 +314,9 @@ def compute_2d_fft_wavenumber(
     def _fft2(arr: np.ndarray, signal_type: str) -> np.ndarray:
         tmp_local = np.fft.fft(arr, axis=0)
         tmp_local = np.fft.fft(tmp_local, axis=1)
+        # TODO for now just fix this
+        spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
+        """
         if signal_type == "rephasing":  # flip coh -> +
             spec = np.flip(tmp_local, axis=0)
         elif signal_type == "nonrephasing":  # flip both -> +
@@ -322,6 +325,7 @@ def compute_2d_fft_wavenumber(
             spec = tmp_local
         else:
             raise ValueError(f"Internal signal_type '{signal_type}' unsupported")
+        """
         return spec * (dt_coh * dt_det)
 
     if not datas:
