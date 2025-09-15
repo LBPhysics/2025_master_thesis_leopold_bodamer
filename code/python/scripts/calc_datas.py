@@ -10,10 +10,6 @@ It supports two modes of execution:
         -> "2d" Run the simulation for a range of coherence times, splitted into n_batches
 
 # other arguments:
-    --config <path>: Path to the configuration file (default: scripts/config.yaml)
-                     COVERS all the simulation parameters / nothing else needed,
-                     however with the next couple of parameters, these defaults can be overridden:
-
     --n_batches <total>: Total number of n_batches (default: 1)
     --batch_idx <index>: Batch index for the current job (0 to n_batches-1, default: 0)
 
@@ -128,7 +124,7 @@ def run_single_t_coh_with_sim(
 
 def run_1d_mode(args):
     """Run single 1D simulation for a specific coherence time."""
-    config_path = args.config
+    config_path = SCRIPTS_DIR / "config.yaml"
 
     # Build base simulation (applies CLI overrides inside)
     sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
@@ -141,7 +137,7 @@ def run_1d_mode(args):
 
 def run_2d_mode(args):
     """Run 2D mode with batch processing for multiple coherence times."""
-    config_path = args.config
+    config_path = SCRIPTS_DIR / "config.yaml"
     n_batches = args.n_batches
     batch_idx = args.batch_idx
 
@@ -180,7 +176,7 @@ def run_2d_mode(args):
 
     print(f"\n✅ Batch {batch_idx + 1}/{n_batches} completed!")
     print(f"\n🎯 To stack this datas into 2D, run:")
-    print(f'python stack_t_coh_to_2d.py --abs_path "{abs_data_path}"')
+    print(f'python stack_1dto2d.py --abs_path "{abs_data_path.parent}"')
 
 
 def main():
@@ -193,12 +189,10 @@ def main():
         epilog="""cd 
 Examples:
   # Run single 1D simulation
-  python calc_data.py --simulation_type 1d --t_coh 50.0  # uses scripts_dir/config.yaml if present
-  python calc_data.py --simulation_type 1d --t_coh 50.0 --config path/to/config.yaml
+  python calc_data.py --simulation_type 1d
 
   # Run 2D batch mode
-  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10  # uses scripts_dir/config.yaml if present
-  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10 --config path/to/config.yaml
+  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10
         """,
     )
 
@@ -208,15 +202,6 @@ Examples:
         default="1d",
         choices=["1d", "2d"],
         help="Type of simulation: '1d' for single t_coh, '2d' for batch processing (default: 1d)",
-    )
-
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=SCRIPTS_DIR / "config.yaml",
-        help=(
-            "Path to configuration file (YAML/TOML/JSON). If omitted, config.yaml next to this script is used if present; otherwise built-in defaults are used."
-        ),
     )
 
     parser.add_argument(

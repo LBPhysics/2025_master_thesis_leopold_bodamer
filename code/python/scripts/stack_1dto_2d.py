@@ -104,12 +104,6 @@ def main():
 
     # Get time axis (assumes same for all)
     t_det_vals = data_npz["t_det"]  # new required key
-    if t_det_vals[0] != t_coh_vals[0] or t_det_vals[-1] != t_coh_vals[-1]:
-        print(
-            "❌ Inconsistent time axes between t_coh and t_det. "
-            "Ensure all files have the same time range."
-        )
-        sys.exit(1)
     sim_config.simulation_type = "2d"
     sim_config.t_coh = 0.0  # indicates varied
 

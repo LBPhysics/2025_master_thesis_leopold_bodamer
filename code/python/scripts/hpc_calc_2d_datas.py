@@ -1,15 +1,11 @@
 """
 Generate and (optionally) submit SLURM jobs for 2D spectroscopy batches.
-
-This script mirrors calc_datas.py's config handling: it will use a provided
---config, otherwise scripts/config.yaml if present, otherwise library defaults.
-
 Only the batch window arguments differ per job (batch_idx and n_batches).
-All other parameters are resolved inside calc_datas.py via the config loader.
+All other parameters are resolved inside calc_datas.py via the config in SCRIPTS_DIR.
 
 Usage examples (on the cluster after cloning the repo):
   python gen_run_2d_batches.py --n_batches 16
-  python gen_run_2d_batches.py --config config.yaml --n_batches 32 --no_submit
+  python gen_run_2d_batches.py --n_batches 32 --no_submit
 """
 
 from __future__ import annotations
@@ -25,13 +21,22 @@ def create_batch_script(
     batch_idx: int,
     total_batches: int,
     job_dir: Path,
-    use_config_arg: str,
 ) -> Path:
     """Create one SLURM script that runs a single batch via calc_datas.py.
 
     The script changes only the time-window related arguments per batch
-    (batch_idx and n_batches). All other parameters are kept in config.
+    (batch_idx and n_batches).
     """
+    # Determine mail type based on batch index
+    mail_type = "NONE"
+    if batch_idx == 0:
+        mail_type = "FAIL"
+    if batch_idx == total_batches - 1:
+        if mail_type == "FAIL":
+            mail_type = "END,FAIL"
+        else:
+            mail_type = "END"
+
     content = f"""#!/bin/bash
 #SBATCH --job-name=qs2d_b{batch_idx}
 #SBATCH --chdir={job_dir}
@@ -39,10 +44,10 @@ def create_batch_script(
 #SBATCH --error=logs/batch_{batch_idx}.err
 #SBATCH --partition=GPGPU
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=5G
-#SBATCH --time=0-06:00:00
-#SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de
+#SBATCH --mem=1G
+#SBATCH --time=0-02:00:00
+#SBATCH --mail-type={mail_type}
+#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de # TODO CHANGE THE MAIL HERE
 
 # Load conda (adjust to your cluster if needed)
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
@@ -53,7 +58,7 @@ fi
 conda activate master_env || true
 
 # Execute calc_datas.py from scripts/ (two levels up from job_dir)
-python ../../calc_datas.py --simulation_type 2d --batch_idx {batch_idx} --n_batches {total_batches}{use_config_arg}
+python ../../calc_datas.py --simulation_type 2d --batch_idx {batch_idx} --n_batches {total_batches}
 """
     path = job_dir = Path(job_dir) / f"batch_{batch_idx}.slurm"
     # Write with Unix line endings so SLURM doesn't complain on Linux clusters
@@ -78,23 +83,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=(
             "Generate and optionally submit SLURM jobs for 2D spectroscopy batches.\n"
-            "Only batch_idx/n_batches are varied per job; other parameters come from config."
+            "Only batch_idx/n_batches are varied per job; other parameters come from config in SCRIPTS_DIR."
         )
-    )
-    parser.add_argument(
-        "--config",
-        type=str,
-        default=None,
-        help=(
-            "Path to configuration file (YAML/TOML/JSON). If omitted, scripts/config.yaml is used if present; "
-            "otherwise library defaults are used."
-        ),
     )
     parser.add_argument(
         "--n_batches",
         type=int,
-        default=None,  # None => take from YAML/defaults
-        help="Total number of batches (default from config).",
+        default=10,
+        help="Total number of batches (default 10).",
     )
     parser.add_argument(
         "--no_submit",
@@ -107,18 +103,6 @@ def main() -> None:
     n_batches = args.n_batches if args.n_batches is not None else 1
     if n_batches <= 0:
         raise ValueError("n_batches must be a positive integer")
-
-    # Determine whether to include --config argument in the job command
-    default_cfg_path = SCRIPTS_DIR / "config.yaml"
-    if args.config is not None:
-        # User provided a path; pass it through as-is (must be valid on target system)
-        use_config_arg = f' --config "{args.config}"'
-    elif default_cfg_path.exists():
-        # Use absolute path so it works from job_dir
-        use_config_arg = f' --config "{default_cfg_path}"'
-    else:
-        # No config argument; calc_datas.py will rely on library defaults
-        use_config_arg = ""
 
     # Create a unique job directory under scripts/batch_jobs
     base_name = f"2d_{n_batches}b"
@@ -138,7 +122,6 @@ def main() -> None:
             batch_idx=bidx,
             total_batches=n_batches,
             job_dir=job_dir,
-            use_config_arg=use_config_arg,
         )
 
     print(f"Generated {n_batches} scripts in: {job_dir}")
