@@ -189,10 +189,10 @@ def main():
         epilog="""cd 
 Examples:
   # Run single 1D simulation
-  python calc_data.py --simulation_type 1d
+  python calc_datas.py --simulation_type 1d
 
   # Run 2D batch mode
-  python calc_data.py --simulation_type 2d --batch_idx 0 --n_batches 10
+  python calc_datas.py --simulation_type 2d --batch_idx 0 --n_batches 10
         """,
     )
 
