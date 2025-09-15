@@ -199,48 +199,6 @@ Probing the electronic structure and looking at excited state dynamics will be m
 
 \noindent These third-order processes form the basis for many nonlinear spectroscopic techniques, including pump-probe spectroscopy, transient grating, and various multidimensional spectroscopies.
 
-\todoidea{move this to the model chapter}
-\subsection{Four-Level System Model for Third-Order Spectroscopy}
-\label{subsec:four_level_model}
-
-\noindent While two-level systems suffice for linear spectroscopy and basic nonlinear responses, additional states must be included to account for processes such as excited-state absorption. A commonly used minimal pedagogical model is a four-level system (ground, two single-excited, and one double-excited state), which allows all major third-order Liouville pathways to be represented\cite{cho2009twodimensionalopticalspectroscopy, abramaviciusetal2009coherentmultidimensionaloptical}.
-
-\noindent In a four-level system, the energy states include:
-
-\begin{itemize}
-	\item $|g\rangle$: Ground state
-	\item $|e_1\rangle$ and $|e_2\rangle$: First excited states (single excitons)
-	\item $|f\rangle$: Doubly excited state (two excitons)
-\end{itemize}
-
-\noindent This configuration allows modeling of all possible Liouville pathways that contribute to the third-order response function \cite{mukamel1995principlesnonlinearoptical}. The inclusion of multiple excited states and a doubly excited state is essential for describing phenomena such as ground-state bleaching, stimulated emission, and excited-state absorption—the three primary components of signals observed in techniques like transient absorption and 2D electronic spectroscopy.
-
-\noindent The third-order polarization $P^{(3)}$ in such a system can be expressed as a sum of different pathways:
-
-\begin{equation}
-	P^{(3)} = P^{(3)}_{GSB} + P^{(3)}_{SE} + P^{(3)}_{ESA} + \ldots
-	\label{eq:third_order_contributions}
-\end{equation}
-
-\noindent where GSB, SE, and ESA represent ground-state bleaching, stimulated emission, and excited-state absorption, respectively. The line-broadening function formalism within this four-level model enables detailed analysis of spectral lineshapes and system-bath interactions \cite{cho2009twodimensionalopticalspectroscopy, abramaviciusetal2009coherentmultidimensionaloptical}.
-
-\noindent While two-level systems are pedagogically valuable and simplify certain calculations, the four-level model captures the richness of nonlinear spectroscopic signals and serves as the foundation for interpreting complex experiments such as multidimensional spectroscopy.
-
-\subsection{Optical Bloch Equations}
-\label{subsec:optical_bloch}
-
-\noindent The interaction of light with matter in nonlinear spectroscopy is often described using the density matrix formalism and the optical Bloch equations \cite{tanimuramukamel1993twodimensionalfemtosecondvibrational}. For a simple two-level system, the density matrix elements $\rho_{ij}$ evolve according to:
-
-\begin{align}
-	\frac{d\rho_{11}}{dt} & = -i\frac{\mu_{12}E(t)}{\hbar}(\rho_{21} - \rho_{12}) - \Gamma_1 \rho_{11} \label{eq:bloch_population}                        \\
-	\frac{d\rho_{12}}{dt} & = -i\omega_{12}\rho_{12} - i\frac{\mu_{12}E(t)}{\hbar}(\rho_{22} - \rho_{11}) - \Gamma_2 \rho_{12} \label{eq:bloch_coherence}
-\end{align}
-
-\noindent where $\omega_{12}$ is the transition frequency, $\mu_{12}$ is the transition dipole moment, $E(t)$ is the electric field, and $\Gamma_1$ and $\Gamma_2$ are the population relaxation and decoherence rates, respectively. These equations can be extended to describe more complex systems and higher-order nonlinear responses.
-
-%----------------------------------------------------------------------------------------
-%	SECTION 3: WAVEVECTOR PHASE-MATCHING
-%----------------------------------------------------------------------------------------
 
 \section{Wavevector Phase-Matching Conditions}
 \label{sec:phase_matching}
@@ -600,66 +558,68 @@ In this method, a short pump pulse excites the sample, and a subsequent probe pu
 %	SECTION 6: MULTIDIMENSIONAL SPECTROSCOPY APPLICATIONS
 %-------------------------------------------------------------------------------
 
-\section{Multidimensional Spectroscopy in Structural Biology and Chemistry}
-\label{sec:multidimensional_applications}
+\iffalse
+	\section{Multidimensional Spectroscopy in Structural Biology and Chemistry}
+	\label{sec:multidimensional_applications}
 
-\subsection{Time- and Structure-Resolution Challenges}
-\label{subsec:time_structure_challenges}
+	\subsection{Time- and Structure-Resolution Challenges}
+	\label{subsec:time_structure_challenges}
 
-\noindent Scientific questions encompassing both the structure and dynamics of molecular systems present significant experimental challenges \cite{hammzanni2011conceptsmethods2d}. Consider fundamental processes such as protein folding, solvent fluctuations, or electron transfer reactions. In each case, researchers seek to understand the reaction pathway, which requires time-resolving the molecular structure. However, the relevant time scales can span an enormous range—from femtoseconds to hours—depending on the specific system under investigation.
+	\noindent Scientific questions encompassing both the structure and dynamics of molecular systems present significant experimental challenges \cite{hammzanni2011conceptsmethods2d}. Consider fundamental processes such as protein folding, solvent fluctuations, or electron transfer reactions. In each case, researchers seek to understand the reaction pathway, which requires time-resolving the molecular structure. However, the relevant time scales can span an enormous range—from femtoseconds to hours—depending on the specific system under investigation.
 
-\noindent Traditional spectroscopic methods face inherent limitations in simultaneously achieving high temporal and structural resolution. When dynamics occur on slow time scales, nuclear magnetic resonance (NMR) spectroscopy can provide exquisite structural information with atomic-level detail. Conversely, for fast processes, fluorescence or absorption spectroscopy can probe dynamics with exceptional temporal resolution, but with a corresponding trade-off in structural specificity \cite{hammzanni2011conceptsmethods2d}. Between these extremes lies an experimental gap in both time- and structure-resolution capabilities.
+	\noindent Traditional spectroscopic methods face inherent limitations in simultaneously achieving high temporal and structural resolution. When dynamics occur on slow time scales, nuclear magnetic resonance (NMR) spectroscopy can provide exquisite structural information with atomic-level detail. Conversely, for fast processes, fluorescence or absorption spectroscopy can probe dynamics with exceptional temporal resolution, but with a corresponding trade-off in structural specificity \cite{hammzanni2011conceptsmethods2d}. Between these extremes lies an experimental gap in both time- and structure-resolution capabilities.
 
-\noindent This gap becomes even more pronounced when studying dynamics in confined environments such as biological membranes, where many standard structural techniques become difficult or impossible to apply. The challenge is particularly acute for intermediate time scales (picoseconds to microseconds) and for systems where both structural changes and dynamic processes are coupled.
+	\noindent This gap becomes even more pronounced when studying dynamics in confined environments such as biological membranes, where many standard structural techniques become difficult or impossible to apply. The challenge is particularly acute for intermediate time scales (picoseconds to microseconds) and for systems where both structural changes and dynamic processes are coupled.
 
-\subsection{2D IR Spectroscopy: Bridging the Gap}
-\label{subsec:2dir_bridging_gap}
+	\subsection{2D IR Spectroscopy: Bridging the Gap}
+	\label{subsec:2dir_bridging_gap}
 
-\noindent Two-dimensional infrared (2D IR) spectroscopy has emerged as a powerful technique to address these limitations, providing bond-specific structural resolution across all relevant time scales \cite{hammzanni2011conceptsmethods2d}. This technique offers several unique advantages:
+	\noindent Two-dimensional infrared (2D IR) spectroscopy has emerged as a powerful technique to address these limitations, providing bond-specific structural resolution across all relevant time scales \cite{hammzanni2011conceptsmethods2d}. This technique offers several unique advantages:
 
-\begin{itemize}
-	\item \textbf{Temporal versatility:} 2D IR spectroscopy possesses the fast time resolution necessary to follow electron transfer and solvent dynamics on femtosecond time scales, while also being applicable in "snapshot" mode to study kinetics extending to arbitrarily long time scales.
+	\begin{itemize}
+		\item \textbf{Temporal versatility:} 2D IR spectroscopy possesses the fast time resolution necessary to follow electron transfer and solvent dynamics on femtosecond time scales, while also being applicable in "snapshot" mode to study kinetics extending to arbitrarily long time scales.
 
-	\item \textbf{Sample flexibility:} The technique can be applied to diverse sample types, including dilute solutions, solid-state systems, and membrane-bound proteins, making it particularly valuable for biological applications.
+		\item \textbf{Sample flexibility:} The technique can be applied to diverse sample types, including dilute solutions, solid-state systems, and membrane-bound proteins, making it particularly valuable for biological applications.
 
-	\item \textbf{Structural sensitivity:} The method derives its structural information from couplings between vibrational modes that give rise to characteristic infrared bands and cross-peaks. These cross-peaks provide direct information about molecular connectivity and conformational changes.
+		\item \textbf{Structural sensitivity:} The method derives its structural information from couplings between vibrational modes that give rise to characteristic infrared bands and cross-peaks. These cross-peaks provide direct information about molecular connectivity and conformational changes.
 
-	\item \textbf{Environmental probes:} Molecular structures can be probed through hydrogen bonding patterns and electric field effects that generate dynamic 2D lineshapes, providing insights into local environments and intermolecular interactions.
-\end{itemize}
+		\item \textbf{Environmental probes:} Molecular structures can be probed through hydrogen bonding patterns and electric field effects that generate dynamic 2D lineshapes, providing insights into local environments and intermolecular interactions.
+	\end{itemize}
 
-\noindent The structural sensitivity of 2D IR spectroscopy stems from the fact that vibrational frequencies are exquisitely sensitive to local molecular environment, hydrogen bonding, and electrostatic interactions. Cross-peaks in 2D IR spectra arise from vibrational coupling and provide direct information about spatial proximity and connectivity between different molecular groups \cite{hammzanni2011conceptsmethods2d}.
+	\noindent The structural sensitivity of 2D IR spectroscopy stems from the fact that vibrational frequencies are exquisitely sensitive to local molecular environment, hydrogen bonding, and electrostatic interactions. Cross-peaks in 2D IR spectra arise from vibrational coupling and provide direct information about spatial proximity and connectivity between different molecular groups \cite{hammzanni2011conceptsmethods2d}.
 
-\subsection{Computational Integration and Future Directions}
-\label{subsec:computational_integration}
+	\subsection{Computational Integration and Future Directions}
+	\label{subsec:computational_integration}
 
-\noindent A particularly powerful aspect of 2D IR spectroscopy is that the spectra can be quantitively computed from molecular dynamics simulations, providing a direct comparison between experimental observations and all-atom theoretical models \cite{hammzanni2011conceptsmethods2d}. This computational-experimental synergy enables:
+	\noindent A particularly powerful aspect of 2D IR spectroscopy is that the spectra can be quantitively computed from molecular dynamics simulations, providing a direct comparison between experimental observations and all-atom theoretical models \cite{hammzanni2011conceptsmethods2d}. This computational-experimental synergy enables:
 
-\begin{itemize}
-	\item Validation of molecular dynamics force fields and simulation protocols
-	\item Assignment of spectral features to specific molecular structures and conformations
-	\item Prediction of spectroscopic signatures for proposed molecular mechanisms
-	\item Development of structure-spectrum relationships for complex systems
-\end{itemize}
+	\begin{itemize}
+		\item Validation of molecular dynamics force fields and simulation protocols
+		\item Assignment of spectral features to specific molecular structures and conformations
+		\item Prediction of spectroscopic signatures for proposed molecular mechanisms
+		\item Development of structure-spectrum relationships for complex systems
+	\end{itemize}
 
-\noindent While 2D IR spectroscopy can be used qualitatively as an analytical tool, a deeper understanding of nonlinear optics, vibrational potentials, and lineshape theory enables much more sophisticated interpretation of 2D spectra and expands the range of possible applications \cite{hammzanni2011conceptsmethods2d}.
+	\noindent While 2D IR spectroscopy can be used qualitatively as an analytical tool, a deeper understanding of nonlinear optics, vibrational potentials, and lineshape theory enables much more sophisticated interpretation of 2D spectra and expands the range of possible applications \cite{hammzanni2011conceptsmethods2d}.
 
-\noindent The principles and methods developed for 2D IR spectroscopy also extend to 2D visible spectroscopy, which probes electronic transitions and has found particular application in studying photosynthetic light-harvesting complexes and other photobiological systems. Looking toward the future, pulse sequences for three-dimensional (and higher-dimensional) spectroscopy are being developed, promising even greater structural and dynamical information content \cite{hammzanni2011conceptsmethods2d}.
+	\noindent The principles and methods developed for 2D IR spectroscopy also extend to 2D visible spectroscopy, which probes electronic transitions and has found particular application in studying photosynthetic light-harvesting complexes and other photobiological systems. Looking toward the future, pulse sequences for three-dimensional (and higher-dimensional) spectroscopy are being developed, promising even greater structural and dynamical information content \cite{hammzanni2011conceptsmethods2d}.
 
-\noindent The integration of multidimensional spectroscopic techniques with advanced computational methods represents a paradigm shift in how complex molecular systems can be studied, offering unprecedented insights into the relationship between molecular structure, dynamics, and function.
+	\noindent The integration of multidimensional spectroscopic techniques with advanced computational methods represents a paradigm shift in how complex molecular systems can be studied, offering unprecedented insights into the relationship between molecular structure, dynamics, and function.
 
-%----------------------------------------------------------------------------------------
-%	CONCLUSION
-%----------------------------------------------------------------------------------------
+	%----------------------------------------------------------------------------------------
+	%	CONCLUSION
+	%----------------------------------------------------------------------------------------
 
-\section{Summary and Outlook}
-\label{sec:summary}
+	\section{Summary and Outlook}
+	\label{sec:summary}
 
-\noindent Spectroscopy continues to evolve as a cornerstone analytical technique in physical sciences \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy}. From the basic principles of light-matter interaction to advanced nonlinear methods, spectroscopic approaches provide unique insights into the structure, dynamics, and function of complex systems across multiple time and length scales.
+	\noindent Spectroscopy continues to evolve as a cornerstone analytical technique in physical sciences \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy}. From the basic principles of light-matter interaction to advanced nonlinear methods, spectroscopic approaches provide unique insights into the structure, dynamics, and function of complex systems across multiple time and length scales.
 
-\noindent Recent developments in laser technology, detection methods, and theoretical frameworks have expanded the frontiers of spectroscopy \cite{jonas2003twodimensionalfemtosecondspectroscopy} \todoref{find ref}%, Shim2009}.
-Attosecond spectroscopy now probes electron dynamics on their natural time scale, while quantum light sources open new possibilities for quantum-enhanced measurements.
+	\noindent Recent developments in laser technology, detection methods, and theoretical frameworks have expanded the frontiers of spectroscopy \cite{jonas2003twodimensionalfemtosecondspectroscopy} \todoref{find ref}%, Shim2009}.
+	Attosecond spectroscopy now probes electron dynamics on their natural time scale, while quantum light sources open new possibilities for quantum-enhanced measurements.
 
-\noindent The integration of spectroscopic methods with imaging techniques, such as super-resolution microscopy and spectroscopic tomography, bridges the gap between molecular-level information and macroscopic observations \cite{brixneretal2004phasestabilizedtwodimensionalelectronic}.
-Meanwhile, the application of artificial intelligence and machine learning approaches to spectral data analysis promises to reveal subtle patterns and correlations that might otherwise remain hidden.
+	\noindent The integration of spectroscopic methods with imaging techniques, such as super-resolution microscopy and spectroscopic tomography, bridges the gap between molecular-level information and macroscopic observations \cite{brixneretal2004phasestabilizedtwodimensionalelectronic}.
+	Meanwhile, the application of artificial intelligence and machine learning approaches to spectral data analysis promises to reveal subtle patterns and correlations that might otherwise remain hidden.
 
-\noindent As our understanding of light-matter interactions deepens and experimental capabilities advance, spectroscopy will continue to provide critical insights across chemistry, physics, biology, and materials science, contributing to technological innovations and fundamental scientific discoveries.
+	\noindent As our understanding of light-matter interactions deepens and experimental capabilities advance, spectroscopy will continue to provide critical insights across chemistry, physics, biology, and materials science, contributing to technological innovations and fundamental scientific discoveries.
+\fi

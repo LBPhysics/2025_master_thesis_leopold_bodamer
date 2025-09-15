@@ -26,6 +26,34 @@ For spectroscopy, we assume a system dipole operator $\hat{\mu}_{\mathrm{S}} = \
 
 \todoidea{explain that this simplest two level system only offers limited insights, but is a good test case for the workflow. This is due to the lack of multiple states and pathways, which are essential for capturing the rich dynamics and interactions detectable with 2D spectroscopy.}
 
+\todoidea{move this to the model chapter}
+\subsection{Four-Level System Model for Third-Order Spectroscopy}
+\label{subsec:four_level_model}
+
+\noindent While two-level systems suffice for linear spectroscopy and basic nonlinear responses, additional states must be included to account for processes such as excited-state absorption. A commonly used minimal pedagogical model is a four-level system (ground, two single-excited, and one double-excited state), which allows all major third-order Liouville pathways to be represented\cite{cho2009twodimensionalopticalspectroscopy, abramaviciusetal2009coherentmultidimensionaloptical}.
+
+\noindent In a four-level system, the energy states include:
+
+\begin{itemize}
+	\item $|g\rangle$: Ground state
+	\item $|e_1\rangle$ and $|e_2\rangle$: First excited states (single excitons)
+	\item $|f\rangle$: Doubly excited state (two excitons)
+\end{itemize}
+
+\noindent This configuration allows modeling of all possible Liouville pathways that contribute to the third-order response function \cite{mukamel1995principlesnonlinearoptical}. The inclusion of multiple excited states and a doubly excited state is essential for describing phenomena such as ground-state bleaching, stimulated emission, and excited-state absorption—the three primary components of signals observed in techniques like transient absorption and 2D electronic spectroscopy.
+
+\noindent The third-order polarization $P^{(3)}$ in such a system can be expressed as a sum of different pathways:
+
+\begin{equation}
+	P^{(3)} = P^{(3)}_{GSB} + P^{(3)}_{SE} + P^{(3)}_{ESA} + \ldots
+	\label{eq:third_order_contributions}
+\end{equation}
+
+\noindent where GSB, SE, and ESA represent ground-state bleaching, stimulated emission, and excited-state absorption, respectively. The line-broadening function formalism within this four-level model enables detailed analysis of spectral lineshapes and system-bath interactions \cite{cho2009twodimensionalopticalspectroscopy, abramaviciusetal2009coherentmultidimensionaloptical}.
+
+\noindent While two-level systems are pedagogically valuable and simplify certain calculations, the four-level model captures the richness of nonlinear spectroscopic signals and serves as the foundation for interpreting complex experiments such as multidimensional spectroscopy.
+
+
 \subsection{4-Level System (Two Qubits)}
 
 Extending to two coupled qubits, we obtain a four-level manifold spanned by $\{\ket{gg},\ket{ge},\ket{eg},\ket{ee}\}$. A convenient system Hamiltonian is

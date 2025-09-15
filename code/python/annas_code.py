@@ -1,129 +1,114 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Dec  5 16:26:00 2024
+# short figure for Anna
+# - Defines trajectories for magnetron, modified cyclotron, and axial motions
+# - Uses unique colors/linestyles and LaTeX labels
 
-@author: FAST-TRAPSENSOR
-"""
-
-import math
+from pathlib import Path
+from typing import Tuple
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import odeint
-from scipy.fft import fft, fftfreq
-import time
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
+
+from plotstyle import init_style, set_size, save_fig, COLORS
+
+init_style(quiet=True)
+
+# Use interactive Matplotlib in Jupyter (with safe fallback)
+from IPython import get_ipython
+
+get_ipython().run_line_magic("matplotlib", "widget")
+
+import matplotlib
+
+print(f"Matplotlib backend: {matplotlib.get_backend()}")
+
+# Parameters (units are arbitrary schematic)
+r_minus = 1.0  # magnetron radius
+r_plus = 0.35  # modified cyclotron radius
+z_amp = 0.60  # axial amplitude
+omega_m = 2 * np.pi * 50.0  # magnetron angular freq
+omega_p = 2 * np.pi * 1008.0  # modified cyclotron angular freq
+omega_z = 2 * np.pi * 80.0  # axial angular freq
+
+# Base curves for schematic
+phi = np.linspace(0, 2 * np.pi, 4000)
+# Magnetron circle in xy-plane
+x_mag = r_minus * np.cos(phi)
+y_mag = r_minus * np.sin(phi)
+z_mag = np.zeros_like(phi)
+# Modified cyclotron circle in xy-plane
+x_circ = r_plus * np.cos(phi)
+y_circ = -r_plus * np.sin(phi)  # opposite sense for visual contrast
+z_circ = np.zeros_like(phi)
+# Axial oscillation on z-axis
+x_axial = np.zeros_like(phi)
+y_axial = np.zeros_like(phi)
+z_axial = z_amp * np.cos(phi)
 
 
-def axial_crystal_real(y, t, omega_0, mu, d, kappa):
-    zs, auxzs, zt, auxzt = y
-    dydt = [
-        auxzs,
-        omega_0**2
-        * (
-            -zs
-            + kappa / (kappa + 1) * d
-            + (kappa / (kappa + 1)) * d**3 * (zs - zt - d) / np.abs((zt - zs + d) ** 3)
-        ),
-        auxzt,
-        omega_0**2
-        * kappa
-        / mu
-        * (
-            -zt
-            - 1 / (kappa + 1) * d
-            + 1 / (kappa + 1) * d**3 * (zt - zs + d) / np.abs((zt - zs + d) ** 3)
-        ),
-    ]
-    return dydt
+# Combined short trajectory segment (front side)
+def traj(
+    t: np.ndarray, phi_minus: float = 0.0, phi_plus: float = 0.0, phi_z: float = 0.0
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    x = r_minus * np.cos(omega_m * t + phi_minus) + r_plus * np.cos(omega_p * t + phi_plus)
+    y = r_minus * np.sin(omega_m * t + phi_minus) - r_plus * np.sin(omega_p * t + phi_plus)
+    z = z_amp * np.cos(omega_z * t + phi_z)
+    return x, y, z
 
 
-def calculate_frequency(ms, mt, qs, qt, freq, zs0, mode, t, res, label):
+t_single = np.linspace(0.0, 0.05, 5000)
 
-    ref = time.time()
+# Figure setup using thesis sizing (square figure)
+fig = plt.figure()
+fig.set_size_inches(*set_size(fraction=0.62, height_ratio=1.0))
+ax = fig.add_subplot(111, projection="3d")
 
-    # Universal constants
-    q = 1.602176634e-19
-    epsilon_0 = 8.8541878188e-12
-    uma_to_kg = 1.66053906892e-27
+# Frame axes
+L = 1.7 * max(r_minus, r_plus)
+ax.plot([-L, L], [0, 0], [0, 0], linewidth=1.0, color="0.6", linestyle="dotted")
+ax.plot([0, 0], [-L, L], [0, 0], linewidth=1.0, color="0.6", linestyle="dotted")
+ax.plot([0, 0], [0, 0], [-1.4 * z_amp, 1.4 * z_amp], linewidth=1.0, color="0.6", linestyle="dotted")
 
-    # Derived parameters
-    mu = mt / ms
-    kappa = qt / qs
-    omega_0 = 2 * math.pi * freq
-    d = ((kappa + 1) * q**2 / (4 * math.pi * epsilon_0 * ms * uma_to_kg * omega_0**2)) ** (1 / 3)
-    alpha_1 = kappa / mu - 1
-    beta_1 = 1 / mu - 1
-    alpha_2 = kappa / mu + 1
-    beta_2 = 1 / mu + 1
-    gamma = 2 * kappa / (kappa + 1)
-    print("Ion distance: {} um".format(d * 1e6))
+# Base elements (unique colors and linestyles from plotstyle palette)
+ax.plot(x_mag, y_mag, z_mag, linewidth=2.0, color=COLORS[0], linestyle="solid", label=r"Magnetron")
+ax.plot(
+    x_circ,
+    y_circ,
+    z_circ,
+    linewidth=2.0,
+    color=COLORS[1],
+    linestyle="dashed",
+    label=r"Modified\ cyclotron",
+)
+ax.plot(
+    x_axial, y_axial, z_axial, linewidth=2.0, color=COLORS[2], linestyle="dashdot", label=r"Axial"
+)
 
-    # Initial conditions
-    vzs0 = 0
-    if mode == "common":
-        zt0 = (
-            -zs0
-            * 0.5
-            * (
-                alpha_1
-                + beta_1 * gamma
-                - np.sqrt((alpha_2 + beta_2 * gamma) ** 2 - 12 * kappa / mu)
-            )
-            / gamma
-        )
-    elif mode == "stretch":
-        zt0 = (
-            -zs0
-            * 0.5
-            * (
-                alpha_1
-                + beta_1 * gamma
-                + np.sqrt((alpha_2 + beta_2 * gamma) ** 2 - 12 * kappa / mu)
-            )
-            / gamma
-        )
-    else:
-        print("unknown mode")
-    vzt0 = 0
-    y0 = [zs0, vzs0, zt0, vzt0]
+# One short overall-motion strand at front
+x, y, z = traj(t_single, phi_minus=0.0, phi_plus=0.0, phi_z=0.0)
+ax.plot(
+    x, y, z, linewidth=1.6, color=COLORS[3], linestyle="solid", label=r"Overall\ motion (segment)"
+)
 
-    # Time binning
-    N = int(t / res) + 1
-    t = np.linspace(0, t, N)
+# Labels and limits
+ax.set_xlim(-L, L)
+ax.set_ylim(-L, L)
+ax.set_zlim(-1.4 * z_amp, 1.4 * z_amp)
+ax.set_xlabel(r"$x$")
+ax.set_ylabel(r"$y$")
+ax.set_zlabel(r"$z$")
+ax.set_title(rf"Penning trap motions: $r_-={r_minus:.2f}$, $r_+={r_plus:.2f}$, $z_0={z_amp:.2f}$")
 
-    # Solve differential equation
-    sol = odeint(axial_crystal_real, y0, t, args=(omega_0, mu, d, kappa))
-    # plt.plot(t, sol[:,0]); plt.show()
+# Style cleanups (no grid; transparent panes)
+ax.grid(False)
+for pane in [ax.xaxis.pane, ax.yaxis.pane, ax.zaxis.pane]:
+    pane.set_edgecolor("white")
+    pane.fill = False
 
-    # Perform FFT
-    f = fftfreq(N, res)[: N // 2]
-    sol_fft = np.abs(fft(sol[:, 0]))[0 : N // 2]
-    plt.plot(f, sol_fft / max(sol_fft), label=label)
-
-    # Save data
-    np.savetxt(
-        "kappa_{}ms_{}_mt_{}_freq_{}_zs0_{}_mode_{}_t_{}_res_{}.dat".format(
-            kappa, ms, mt, freq, zs0, mode, t[-1], res
-        ),
-        np.column_stack((f, sol_fft)),
-    )
-
-    print(time.time() - ref)
-
-
-ms = 40
-mt = 44
-qs = 1
-qt = 1
-freq = 591.2e3
-zs0 = 0.01e-6
-mode = "common"
-# mode = 'stretch'
-t = 1
-res = 0.5e-6
-calculate_frequency(ms, mt, qs, qt, freq, zs0, mode, t, res, str(zs0))
-
-# for zs0 in np.linspace(1e-6,10e-6,10):
-# calculate_frequency(ms, mt, qs, qt, freq, zs0, mode, t, res, str(zs0))
-
-# plt.legend()
+ax.legend(frameon=True, fontsize=10)
+ax.view_init(elev=22, azim=35)
+fig.tight_layout()
 plt.show()
+# Save figure to thesis figures folder
+out_base = Path("../../../figures/figures_from_python/misc/penning_trap_schematic_single_segment")
+saved_paths = save_fig(fig, out_base, formats=["png", "svg"])  # returns list of saved files
+saved_paths[-1] if saved_paths else str(out_base)

@@ -38,7 +38,6 @@ config:
 
 
 window:
-  # parameters that can be adjusted in the cli args of calc_datas.py
   t_det_max: 10.0
   t_wait: 0.0
   t_coh: 30.0

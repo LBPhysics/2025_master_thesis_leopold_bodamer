@@ -1,5 +1,6 @@
-"""Paper-specific time dependent Liouvillian builders."""
+# TODO the rates of this implementation are currently NOT time-dependent!!!
 
+"""Paper-specific time dependent Liouvillian builders."""
 from __future__ import annotations
 
 import numpy as np
