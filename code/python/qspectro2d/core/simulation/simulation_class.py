@@ -10,7 +10,7 @@ from qutip import (
     QobjEvo,
     ket2dm,
 )
-from typing import List
+from typing import List, Tuple
 from qutip import BosonicEnvironment
 
 from .sim_config import SimulationConfig
@@ -85,13 +85,13 @@ class SimulationModuleOQS:
         elif solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
             self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = QobjEvo(self.H_total)
+            self.evo_obj_int = QobjEvo(lambda t: self.H_total_t(t))
 
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
             self.evo_obj_free = H0_diagonalized
             # BR needs the full system Hamiltonian at all times; include H0 + time-dependent interaction
-            self.evo_obj_int = QobjEvo(self.H_total)
+            self.evo_obj_int = QobjEvo(lambda t: self.H_total_t(t))
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -113,12 +113,21 @@ class SimulationModuleOQS:
         )
         return H_int
 
-    @property
-    def H_total(self, t: float) -> Qobj:
-        """Return total (time-independent) Hamiltonian H0 + H_int at t=0."""
+    def H_total_t(self, t: float) -> Qobj:
+        """Return total Hamiltonian H0 + H_int(t) at time t."""
         return self.H0_diagonalized + self.H_int_sl(t)
 
     # TODO also add time dependent eigenenergies / states? and also all the other operators?
+    def time_dep_eigenstates(self, t: float) -> Tuple[np.ndarray, np.ndarray]:
+        """Eigenvalues & eigenstates (cached).
+
+        Invalidated when `update_frequencies_cm` is called.
+        """
+        return self.H_total_t(t).eigenstates()
+
+    def time_dep_omega_ij(self, i: int, j: int, t: float) -> float:
+        """Return energy difference (frequency) between instantaneous eigenstates i and j in fs^-1."""
+        return self.time_dep_eigenstates(t)[0][i] - self.time_dep_eigenstates(t)[0][j]
 
     # --- Observables ---------------------------------------------------------------
     @property

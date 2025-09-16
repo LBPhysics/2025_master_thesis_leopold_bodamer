@@ -96,7 +96,7 @@ This section explains the core end‑to‑end flow used by both 1D and 2D spectr
 
 1. Configure Inputs
     - Build a Python dict (or future `SimulationConfig`) specifying system, pulse, bath, and numerical parameters.
-    - Example keys: `n_atoms`, `tau_coh`, `T_wait`, `t_det_max`, pulse definitions, solver choice.
+    - Example keys: `n_atoms`, `t_coh`, `t_wait`, `t_det_max`, pulse definitions, solver choice.
 2. Construct Physical Objects
     - Atomic system (site energies, couplings) → diagonalization & cached operators.
     - Laser pulse sequence (each pulse stores cached invariants: support window, sigma, boundary baseline).
@@ -193,8 +193,8 @@ plot_from_relative_path(relative_path, config, simulation_type="2d")
     "data": ...,              # 1D: array | 2D: list of arrays
     "axes": {                 # Standard format
         "t_det": array,
-        "tau_coh": array,     # single value array for 1D, full array for 2D
-        "T_wait": array,      # single value array for 1D, full array for 2D
+        "t_coh": array,     # single value array for 1D, full array for 2D
+        "t_wait": array,      # single value array for 1D, full array for 2D
     },
     "system": SystemParameters instance,
     "config": dict of input parameters,
@@ -233,8 +233,8 @@ plot_from_relative_path(relative_path, config, simulation_type="2d")
 # 1D Simulation
 config_1d = {
     "n_atoms": 1,
-    "tau_coh": 300.0,
-    "T_wait": 1000.0,
+    "t_coh": 300.0,
+    "t_wait": 1000.0,
     "t_det_max": 2000.0,
     # ... other parameters
 }

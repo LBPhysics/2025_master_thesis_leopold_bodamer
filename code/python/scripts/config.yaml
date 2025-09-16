@@ -14,10 +14,9 @@ atomic:
   # frequencies_cm: [15800.0, 16200.0]
   # dip_moments: [-0.23, 1.0]
 
-  n_atoms: 2
-  coupling_cm: 300.0
-  frequencies_cm: [15800.0, 16200.0]
-  dip_moments: [-0.23, 1.0]
+  n_atoms: 1
+  frequencies_cm: [16000.0]
+  dip_moments: [1.0]
   n_chains: 1
   max_excitation: 2
 

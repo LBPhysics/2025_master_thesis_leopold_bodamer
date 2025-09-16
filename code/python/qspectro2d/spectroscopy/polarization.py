@@ -1,19 +1,16 @@
-"""Polarization related helper functions.
-
-Separated from calculations to break circular import chains between
-`qspectro2d.utils.units_and_rwa` and `qspectro2d.spectroscopy.calculations`.
-"""
+"""Polarization related helper functions."""
 
 from __future__ import annotations
 from typing import Union, List
 import numpy as np
-from qutip import Qobj, ket2dm
+from qutip import Qobj, ket2dm, expect
 
 
 def complex_polarization(
     dipole_op: Qobj, state: Union[Qobj, List[Qobj]]
 ) -> Union[complex, np.ndarray]:
-    """Return complex polarization(s) for state(s) given dipole operator.
+    """Return complex / analytical polarization(s) for state(s) given dipole operator.
+    -> extracts only the positive frequency part of the polarization.
 
     Accepts a single Qobj (ket or density matrix) or list of Qobj.
     """
@@ -51,15 +48,12 @@ def _single_qobj__complex_pol(dipole_op: Qobj, state: Qobj) -> complex:
     """
     rho = ket2dm(state) if state.isket else state
     N = dipole_op.shape[0]
-    x = 0j
-    # diagonal half
-    for i in range(N):
-        x += 0.5 * dipole_op[i, i] * rho[i, i]
-    # off-diagonal i<j
-    for i in range(N):
-        for j in range(i + 1, N):
-            x += dipole_op[i, j] * rho[j, i]
-    return complex(x)
+    # extract positive frequency part of dipole operator
+    dipole_op_pos = Qobj(np.triu(dipole_op.full(), k=1), dims=dipole_op.dims)
+
+    pol = expect(dipole_op_pos, rho)
+
+    return complex(pol)
 
 
 __all__ = ["complex_polarization"]
