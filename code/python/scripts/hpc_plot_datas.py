@@ -58,7 +58,7 @@ def run_stacking_script(abs_path: str, skip_if_exists: bool = True) -> str:
 
     If existing 2D found and skip_if_exists=True, returns its base path directly.
     """
-    data_dir = Path(abs_path).parent
+    data_dir = Path(abs_path)
 
     if skip_if_exists:
         existing = detect_existing_2d(data_dir)

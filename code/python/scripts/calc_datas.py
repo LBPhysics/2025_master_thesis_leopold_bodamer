@@ -176,7 +176,7 @@ def run_2d_mode(args):
 
     print(f"\n✅ Batch {batch_idx + 1}/{n_batches} completed!")
     print(f"\n🎯 To stack this datas into 2D (skips automatically if already stacked), run:")
-    print(f'python stack_1dto2d.py --abs_path "{abs_data_path.parent}" --skip_if_exists')
+    print(f'python stack_1dto2d.py --abs_path "{abs_data_path}" --skip_if_exists')
 
 
 def main():

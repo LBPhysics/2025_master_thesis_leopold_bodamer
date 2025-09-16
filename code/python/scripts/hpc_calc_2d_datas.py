@@ -37,7 +37,8 @@ def create_batch_script(
         else:
             mail_type = "END"
 
-    content = f"""#!/bin/bash
+    # Base header shared by all batches
+    header = f"""#!/bin/bash
 #SBATCH --job-name=qs2d_b{batch_idx}
 #SBATCH --chdir={job_dir}
 #SBATCH --output=logs/batch_{batch_idx}.out
@@ -55,11 +56,46 @@ elif [ -f "/home/$USER/miniconda3/etc/profile.d/conda.sh" ]; then
     source "/home/$USER/miniconda3/etc/profile.d/conda.sh"
 fi
 conda activate master_env || true
+"""
 
+    # Body differs for last batch: capture output, extract directory, suggest plotting command
+    if batch_idx == total_batches - 1:
+        body = f"""
+# Execute calc_datas.py from scripts/ (two levels up from job_dir) and capture output
+OUTPUT=$(python ../../calc_datas.py --simulation_type 2d --batch_idx {batch_idx} --n_batches {total_batches} 2>&1 | tee -a logs/batch_{batch_idx}.out)
+STATUS=${{PIPESTATUS[0]}}
+
+if [ "$STATUS" -eq 0 ]; then
+    # Try to extract the 1D data directory path printed by calc_datas.py
+    DIR_PATH=$(printf "%s" "$OUTPUT" | awk -F'--abs_path "|"' '/python stack_1dto2d\.py/ {{print $2}}' | tail -n 1)
+
+    if [ -n "$DIR_PATH" ]; then
+        # Pick the most recent *_data.npz file from that directory
+        LAST_FILE=$(ls -t "$DIR_PATH"/*_data.npz 2>/dev/null | head -n 1)
+        if [ -n "$LAST_FILE" ]; then
+            echo ""
+            echo " to now stack the data and create the plots [in SCRIPTS_DIR ]call:"
+            echo "python hpc_plot_datas.py --abs_path \"$LAST_FILE\""
+            echo ""
+        else
+            echo "WARN: No *_data.npz file found in $DIR_PATH"
+        fi
+    else
+        echo "WARN: Could not detect 1D data directory from calc_datas.py output."
+    fi
+else
+    echo "calc_datas.py failed with exit code $STATUS"
+fi
+"""
+    else:
+        body = f"""
 # Execute calc_datas.py from scripts/ (two levels up from job_dir)
 python ../../calc_datas.py --simulation_type 2d --batch_idx {batch_idx} --n_batches {total_batches}
 """
-    path = job_dir = Path(job_dir) / f"batch_{batch_idx}.slurm"
+
+    content = header + "\n" + body
+
+    path = Path(job_dir) / f"batch_{batch_idx}.slurm"
     # Write with Unix line endings so SLURM doesn't complain on Linux clusters
     try:
         path.write_text(content, newline="\n")
