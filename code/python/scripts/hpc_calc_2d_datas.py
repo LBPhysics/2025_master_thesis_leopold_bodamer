@@ -134,8 +134,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Resolve n_batches: CLI > fallback=1 (like in calc_datas.py)
-    n_batches = args.n_batches if args.n_batches is not None else 1
+    n_batches = args.n_batches
     if n_batches <= 0:
         raise ValueError("n_batches must be a positive integer")
 

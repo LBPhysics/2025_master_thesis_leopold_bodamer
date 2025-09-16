@@ -226,8 +226,6 @@ Examples:
         if args.batch_idx is not None and args.batch_idx < 0:
             raise ValueError("Batch index must be non-negative")
 
-    # EXECUTION LOGIC
-
     print("=" * 80)
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
     print(f"Simulation type: {args.simulation_type}")
