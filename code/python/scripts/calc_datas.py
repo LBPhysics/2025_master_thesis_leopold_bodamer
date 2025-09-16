@@ -230,7 +230,7 @@ Examples:
     print("1D ELECTRONIC SPECTROSCOPY SIMULATION")
     print(f"Simulation type: {args.simulation_type}")
 
-    if args.simulation_type == "1d":
+    if args.simulatipon_type == "1d":
         run_1d_mode(args)
     elif args.simulation_type == "2d":
         run_2d_mode(args)

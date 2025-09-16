@@ -85,13 +85,13 @@ class SimulationModuleOQS:
         elif solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
             self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = QobjEvo(lambda t: self.H_total_t(t))
+            self.evo_obj_int = QobjEvo(self.H_total_t)
 
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
             self.evo_obj_free = H0_diagonalized
             # BR needs the full system Hamiltonian at all times; include H0 + time-dependent interaction
-            self.evo_obj_int = QobjEvo(lambda t: self.H_total_t(t))
+            self.evo_obj_int = QobjEvo(self.H_total_t)
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property

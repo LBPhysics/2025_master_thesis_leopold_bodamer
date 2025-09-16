@@ -116,7 +116,7 @@ def _compute_total_evolution(sim_oqs: SimulationModuleOQS, options: dict) -> Res
 
 def compute_seq_evolution(
     sim_oqs: SimulationModuleOQS,
-    segmentation: bool = False,
+    segmentation: bool = True,
     **solver_options: dict,
 ) -> Result:
     """
