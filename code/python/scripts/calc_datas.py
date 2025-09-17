@@ -220,10 +220,20 @@ def run_2d_mode(args):
         work_by_t[int(it)].append(int(jf))
     if selected_pairs:
         it_min, it_max = min(work_by_t.keys()), max(work_by_t.keys())
+        total_t_points = len(work_by_t)
+        total_freq_samples = sum(len(work_by_t[it]) for it in work_by_t)
         print(
-            f"📊 Processing t_idx in [{it_min},{it_max}] with per-t_coh freq counts: "
-            + ", ".join(f"t{it}:{len(work_by_t[it])}" for it in sorted(work_by_t))
+            f"📊 Processing {total_t_points} t_idx values in range [{it_min},{it_max}] "
+            f"with {total_freq_samples} total frequency samples"
         )
+        # Show some examples for verification
+        example_keys = sorted(work_by_t.keys())[:3]
+        if len(work_by_t) > 3:
+            example_keys.extend(sorted(work_by_t.keys())[-3:])
+        example_str = ", ".join(f"t{it}:{len(work_by_t[it])}" for it in example_keys[:6])
+        if len(work_by_t) > 6:
+            example_str += f", ... ({total_t_points - 6} more)"
+        print(f"    Examples: {example_str}")
     else:
         print("ℹ️  No items assigned to this batch (check n_batches/batch_idx)")
 

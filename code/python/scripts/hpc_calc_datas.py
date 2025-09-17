@@ -22,7 +22,6 @@ Add --no_submit to generate scripts without submitting them.
 from __future__ import annotations
 
 import argparse
-import sys
 from pathlib import Path
 from subprocess import CalledProcessError, run
 
@@ -35,7 +34,7 @@ def _slurm_header(job_name: str, job_dir: Path, mail_type: str = "END,FAIL") -> 
 #SBATCH --output=logs/%x.out
 #SBATCH --error=logs/%x.err
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=1G
+#SBATCH --mem=2G
 #SBATCH --time=0-02:00:00
 #SBATCH --mail-type={mail_type}
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # TODO adjust email

@@ -270,11 +270,6 @@ def _phase_cycle_component(
             phase = -1j * (l * phi1 + m * phi2 + n * phi_det)
             P_out += P_grid[i, j, :] * np.exp(phase)  # TODO not even 1e9 *  can help
             # check if all P_grid entries are zero and warn
-    if np.allclose(P_out, 0.0):
-        print(
-            f"Warning: Extracted P component for signal {lmn} is all zeros.",
-            flush=True,
-        )
 
     if normalize:
         P_out /= len(phases1) * len(phases2)
