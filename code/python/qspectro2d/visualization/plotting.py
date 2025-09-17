@@ -491,7 +491,7 @@ def plot_1d_el_field(
     plt.xlabel(x_label)
     plt.ylabel(ylabel)
     plt.title(final_title)
-    plt.legend()
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     add_text_box(ax=plt.gca(), kwargs=kwargs)
     plt.tight_layout()
     simplify_figure_text(fig)

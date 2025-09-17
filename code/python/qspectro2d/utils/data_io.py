@@ -28,6 +28,10 @@ if TYPE_CHECKING:
     from qspectro2d.core.simulation import SimulationConfig
 from qutip import BosonicEnvironment
 from qspectro2d.utils.file_naming import generate_unique_data_filename
+import numpy as np
+import pickle
+import glob
+import os
 
 logger = get_logger(__name__)
 
@@ -57,7 +61,6 @@ def save_data_file(
 
         # Infer dimensionality
         is_2d = t_coh is not None
-        axes_description = ["t_coh → axis 0", "t_det → axis 1"] if is_2d else ["t_det → axis 0"]
 
         # Default and validate signal_types
         if not signal_types:
@@ -71,7 +74,6 @@ def save_data_file(
         payload: dict = {
             "t_det": t_det,
             "signal_types": np.asarray(signal_types, dtype=str),
-            "axes_description": np.array(axes_description, dtype=object),
         }
         if is_2d:
             payload["t_coh"] = t_coh
@@ -274,27 +276,31 @@ def load_data_from_abs_path(abs_path: str) -> dict:
     if "sim_config" not in info_dict:
         raise KeyError("Missing 'sim_config' in info file")
 
-    # Base result structure
+    # Base result structure (new mode: expose axes at top-level)
     signal_types = data_dict.get("signal_types")
     result: dict = {
-        "axes": {"t_det": data_dict.get("t_det")},
+        "t_det": data_dict.get("t_det"),
         "system": info_dict.get("system"),
         "bath": info_dict.get("bath"),
         "laser": info_dict.get("laser"),
         "sim_config": info_dict.get("sim_config"),
         "signal_types": signal_types,
     }
-
-    # Add optional coherence axis
+    # Optional coherence axis
     if "t_coh" in data_dict and data_dict.get("t_coh") is not None:
-        result["axes"]["t_coh"] = data_dict["t_coh"]
+        t_coh = data_dict["t_coh"]
+        try:
+            if hasattr(t_coh, "__len__") and len(t_coh) > 0:
+                result["t_coh"] = t_coh
+        except Exception:
+            pass
 
     # Add component arrays
     for signal_type in signal_types:
         result[signal_type] = data_dict.get(signal_type)
 
     # Extract optional metadata keys from the npz payload
-    known_keys = set(["t_det", "signal_types", "axes_description"]) | set(signal_types.tolist())
+    known_keys = set(["t_det", "signal_types"]) | set(signal_types.tolist())
     if "t_coh" in data_dict:
         known_keys.add("t_coh")
     metadata = {}

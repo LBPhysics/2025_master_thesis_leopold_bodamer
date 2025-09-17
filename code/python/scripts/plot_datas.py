@@ -10,9 +10,12 @@ Usage:
 import sys
 import argparse
 import numpy as np
-
+import warnings
 from qspectro2d.utils import load_data_from_abs_path
 from qspectro2d.visualization.plotting_functions import plot_data
+
+# Suppress noisy but harmless warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 
 
 def main():
@@ -34,15 +37,44 @@ def main():
     try:
         print(f"📁 Loading specific file: {args.abs_path}")
         loaded = load_data_from_abs_path(abs_path=args.abs_path)
-        is_2d = "t_coh" in loaded["axes"]
+        t_det_axis = loaded.get("t_det")
+        t_coh_axis = loaded.get("t_coh")
+        try:
+            is_2d = (
+                t_coh_axis is not None and hasattr(t_coh_axis, "__len__") and len(t_coh_axis) > 0
+            )
+        except Exception:
+            is_2d = False
 
         # Print a brief metadata summary when present (helps with batch-awareness)
         meta = loaded.get("metadata", {})
         if meta:
             print("\nℹ️  Metadata summary:")
-            for k in ["inhom_batches", "inhom_idx", "coh_batches", "coh_idx", "average_over_inhom"]:
+            for k in [
+                "n_batches",
+                "batch_idx",
+                "n_inhomogen_total",
+                "n_inhomogen_in_batch",
+                "t_idx",
+                "t_coh_value",
+            ]:
                 if k in meta:
                     print(f"  - {k}: {meta[k]}")
+
+        try:
+            n_t_det = len(t_det_axis) if t_det_axis is not None else 0
+        except Exception:
+            n_t_det = 0
+        try:
+            n_t_coh = len(t_coh_axis) if is_2d else 0
+        except Exception:
+            n_t_coh = 0
+        print(f"   Axes: t_det len={n_t_det}; t_coh len={n_t_coh if is_2d else '—'}")
+        sigs = [str(s) for s in loaded.get("signal_types", [])]
+        for s in sigs:
+            arr = loaded.get(s)
+            shape = getattr(arr, "shape", None)
+            print(f"   Signal '{s}' shape: {shape}")
 
         # Prepare a safe plot config depending on the data
         plot_config_local = dict(plot_config)

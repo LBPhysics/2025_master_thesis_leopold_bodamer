@@ -16,7 +16,7 @@ Main components:
 
 from .one_d_field import (
     compute_evolution,
-    parallel_compute_1d_E_with_inhomogenity,
+    parallel_compute_1d_e_comps,
 )
 from .one_d_field import _phase_cycle_component as extract_ift_signal_component
 from .polarization import complex_polarization
@@ -53,7 +53,7 @@ __all__ = [
     "complex_polarization",
     "compute_evolution",
     "check_the_solver",
-    "parallel_compute_1d_E_with_inhomogenity",
+    "parallel_compute_1d_e_comps",
     "extract_ift_signal_component",
     # Inhomogeneous broadening
     "normalized_gauss",

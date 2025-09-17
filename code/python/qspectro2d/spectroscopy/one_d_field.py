@@ -41,19 +41,13 @@ logger = get_logger(__name__)
 
 
 __all__ = [
-    "parallel_compute_1d_E_with_inhomogenity",
+    "parallel_compute_1d_e_comps",
 ]
 
 
 # --------------------------------------------------------------------------------------
 # Internal helpers
 # --------------------------------------------------------------------------------------
-def _get_detection_window(sim: SimulationModuleOQS) -> np.ndarray:
-    """Return the detection-time axis aligned with the tail of the local evolution times."""
-    # This uses the canonical logic from SimulationModuleOQS
-    return sim.times_det_actual
-
-
 def _result_detection_slice(res: Result, t_det: np.ndarray) -> List[Qobj]:
     """Slice the list of states in `res` to only keep the detection window portion."""
     if not hasattr(res, "states") or res.states is None:
@@ -193,7 +187,7 @@ def _compute_polarization_over_window(
     - Uses `compute_seq_evolution` which dispatches ME/BR according to sim.simulation_config.
     - Extracts complex/analytical polarization over the detection window only.
     """
-    t_det = _get_detection_window(sim)
+    t_det = sim.times_det_actual
     # Ensure we store states to extract polarization
     res: Result = compute_evolution(sim, store_states=store_states)
     det_states = _result_detection_slice(res, t_det)
@@ -290,22 +284,19 @@ def _phase_cycle_component(
 # --------------------------------------------------------------------------------------
 # Public API
 # --------------------------------------------------------------------------------------
-def parallel_compute_1d_E_with_inhomogenity(
+def parallel_compute_1d_e_comps(
     sim_oqs: SimulationModuleOQS,
     *,
     phases: Optional[Sequence[float]] = None,
     lmn: Optional[Tuple[int, int, int]] = None,
     phi_det: Optional[float] = None,
     time_cut: Optional[float] = None,
-    inhom_indices: Optional[Sequence[int]] = None,
-    average_over_inhom: bool = True,
 ) -> List[np.ndarray]:
-    """Compute 1D electric field components E_kS(t_det) with phase cycling and inhomogeneity.
+    """Compute 1D electric field components E_kS(t_det) with phase cycling only.
 
-    Flow per your scheme:
-    1) For each inhomogeneous sample (frequencies draw), build full phase grid P_{phi1,phi2}(t)
-    2) Immediately extract all requested components P_{l,m,n}(t) per signal type and convert to E=iP
-    3) Average those E-components over all inhomogeneous samples
+    This simplified function assumes the provided `sim_oqs` already encodes a single
+    inhomogeneous realization (i.e., system frequencies are already set). No internal
+    sampling or averaging over inhomogeneity is performed. Use external batching if needed.
 
     Parameters
     ----------
@@ -314,115 +305,65 @@ def parallel_compute_1d_E_with_inhomogenity(
     phases : Optional[Sequence[float]]
         Phase grid for (phi1, phi2). If None, use PHASE_CYCLING_PHASES truncated to n_phases.
     lmn : Optional[Tuple[int,int,int]]
-        Component to extract; if None, derive from first signal type via COMPONENT_MAP.
+        Component to extract; if None, derive from signal types via COMPONENT_MAP.
     phi_det : Optional[float]
         Detection phase; if None, use DETECTION_PHASE.
-    parallel : bool
-        Run phase pairs in parallel (threaded). Default True.
     time_cut : Optional[float]
-        Truncate detection times after this value [fs].
+        Truncate detection times after this value [fs] (soft mask applied).
 
     Returns
     -------
     List[np.ndarray]
-        List of complex E-components, one per entry in sim_oqs.simulation_config.signal_types.
+        List of complex E-components, one per entry in `sim_oqs.simulation_config.signal_types`.
         Each array has length len(sim_oqs.times_det). A soft time_cut is applied by zeroing beyond cutoff.
-    If `inhom_indices` is provided, only that subset of inhomogeneous samples is processed in
-    this call. When `average_over_inhom=True` (default), the average is taken over the processed
-    subset only. When combining results across batches externally, weight by the number of
-    samples per subset to reproduce the global average.
     """
-    # Set up inhomogeneous sampling using sim config and system settings
-    n_samples = sim_oqs.simulation_config.n_inhomogen
-    base_freqs = np.asarray(sim_oqs.system.frequencies_cm, dtype=float)
-    delta_inhomogen_cm = float(sim_oqs.system.delta_inhomogen_cm)
-
     # Determine phases from config defaults if not provided
     n_ph = sim_oqs.simulation_config.n_phases
     phases_src = phases if phases is not None else PHASE_CYCLING_PHASES
     phases_eff = tuple(float(x) for x in phases_src[:n_ph])
 
-    # Prepare per-sample collectors for E-components per signal type
+    # Prepare grid and helpers
     n_t = len(sim_oqs.times_det)
     sig_types = sim_oqs.simulation_config.signal_types
-    E_samples: List[List[np.ndarray]] = [[] for _ in sig_types]
+    phi_det_val = phi_det if phi_det is not None else float(DETECTION_PHASE)
+
     # Optional time mask (keep length constant)
     t_mask = None
     if time_cut is not None and np.isfinite(time_cut):
         t_mask = (sim_oqs.times_det <= float(time_cut)).astype(np.float64)
 
-    # Choose which inhomogeneous sample indices to process in this call
-    # Use explicit indices if provided, otherwise process all
-    all_indices = np.arange(n_samples, dtype=int)
-    if inhom_indices is not None:
-        sample_indices = np.asarray(list(inhom_indices), dtype=int)
-    else:
-        sample_indices = all_indices
+    # Compute P_{phi1,phi2} grid once for this realization
+    P_grid = np.zeros((len(phases_eff), len(phases_eff), n_t), dtype=np.complex128)
+    futures = []
+    with ProcessPoolExecutor() as ex:
+        for phi1 in phases_eff:
+            for phi2 in phases_eff:
+                futures.append(ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2))
+        temp_results: Dict[Tuple[float, float], Tuple[np.ndarray, np.ndarray]] = {}
+        for fut in as_completed(futures):
+            phi1_v, phi2_v, t_det, P_phi = fut.result()
+            temp_results[(phi1_v, phi2_v)] = (t_det, P_phi)
 
-    # Deterministic per-sample frequency sampling helper (reproducible across batches)
-    def _sample_freqs_for_index(s_idx: int) -> np.ndarray:
-        if np.isclose(delta_inhomogen_cm, 0.0):
-            return base_freqs.copy()
-        # Convert FWHM to sigma for a Gaussian: FWHM = 2*sqrt(2*ln2)*sigma
-        sigma = float(delta_inhomogen_cm) / (2.0 * np.sqrt(2.0 * np.log(2.0)))
-        # Use a stable, per-index seed to make batching reproducible
-        seed_base = 0xA5A5A5  # arbitrary constant
-        rng = np.random.default_rng(int((seed_base + int(s_idx)) % (2**32)))
-        return base_freqs + rng.normal(loc=0.0, scale=sigma, size=base_freqs.shape)
+    for i, phi1 in enumerate(phases_eff):
+        for j, phi2 in enumerate(phases_eff):
+            _, P_phi = temp_results[(phi1, phi2)]
+            P_grid[i, j, :] = P_phi
 
-    # Iterate only over the chosen indices; generate frequencies deterministically per index
-    for s in sample_indices:
-        # Work on a deep copy to avoid mutating user-provided sim
-        sim_s = deepcopy(sim_oqs)
-        # Use deterministic frequencies for this sample index
-        new_freqs = np.asarray(_sample_freqs_for_index(int(s)), dtype=float)
-        sim_s.system.update_frequencies_cm(list(new_freqs))
-        logger.debug(
-            f"Using frequencies for sample {s} / {n_samples}: {sim_s.system.frequencies_cm}"
-        )
-        # Compute P_{phi1,phi2} grid for this sample
-        P_grid = np.zeros((len(phases_eff), len(phases_eff), n_t), dtype=np.complex128)
-        futures = []
-        with ProcessPoolExecutor() as ex:
-            for phi1 in phases_eff:
-                for phi2 in phases_eff:
-                    futures.append(ex.submit(_worker_P_phi_pair, sim_s, phi1, phi2))
-            temp_results: Dict[Tuple[float, float], Tuple[np.ndarray, np.ndarray]] = {}
-            for fut in as_completed(futures):
-                phi1_v, phi2_v, t_det, P_phi = fut.result()
-                temp_results[(phi1_v, phi2_v)] = (t_det, P_phi)
-        for i, phi1 in enumerate(phases_eff):
-            for j, phi2 in enumerate(phases_eff):
-                _, P_phi = temp_results[(phi1, phi2)]
-                P_grid[i, j, :] = P_phi
-
-        # Extract components for this sample and accumulate E sums
-        phi_det_val = phi_det if phi_det is not None else float(DETECTION_PHASE)
-
-        for idx, sig in enumerate(sig_types):
-            lmn_tuple = COMPONENT_MAP[sig] if lmn is None else lmn
-            P_comp = _phase_cycle_component(
-                phases_eff,
-                phases_eff,
-                P_grid,
-                lmn=lmn_tuple,
-                phi_det=phi_det_val,
-                normalize=True,
-            )
-            E_comp = 1j * P_comp
-            if t_mask is not None:
-                E_comp = E_comp * t_mask
-            E_samples[idx].append(E_comp)
-
-    # Reduce across inhom samples (preserve component separation)
+    # Extract components for this realization
     E_list: List[np.ndarray] = []
-    for comp_samples in E_samples:
-        if len(comp_samples) == 0:
-            E_list.append(np.zeros(n_t, dtype=np.complex128))
-        else:
-            stack = np.stack(comp_samples, axis=0)
-            if average_over_inhom:
-                E_list.append(np.mean(stack, axis=0))
-            else:
-                E_list.append(np.sum(stack, axis=0))
+    for sig in sig_types:
+        lmn_tuple = COMPONENT_MAP[sig] if lmn is None else lmn
+        P_comp = _phase_cycle_component(
+            phases_eff,
+            phases_eff,
+            P_grid,
+            lmn=lmn_tuple,
+            phi_det=phi_det_val,
+            normalize=True,
+        )
+        E_comp = 1j * P_comp
+        if t_mask is not None:
+            E_comp = E_comp * t_mask
+        E_list.append(E_comp)
+
     return E_list

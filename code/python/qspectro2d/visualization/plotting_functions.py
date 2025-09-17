@@ -70,7 +70,10 @@ def _extract_and_prepare_data(loaded_data_and_info: dict):
         if signal_type in loaded_data_and_info:
             datas.append(loaded_data_and_info[signal_type])
 
-    axes = loaded_data_and_info["axes"]
+    # Build axes dict from top-level keys provided by loader
+    axes = {"t_det": loaded_data_and_info.get("t_det")}
+    if loaded_data_and_info.get("t_coh") is not None:
+        axes["t_coh"] = loaded_data_and_info.get("t_coh")
 
     return system, bath_dict, laser_dict, dict_combined, sim_config, signal_types, datas, axes
 
@@ -261,6 +264,19 @@ def plot_data(loaded_data_and_info: dict, plot_config: dict, dimension: str) -> 
 
     print(f"   Time points: {len(t_det_vals)}")
     print(f"   Time range: {t_det_vals[0]:.1f} to {t_det_vals[-1]:.1f} fs")
+    # also print if there are any zero elements in the data
+    import numpy as np
+
+    try:
+        all_zero = all(
+            isinstance(a, np.ndarray) and a.size > 0 and np.allclose(a, 0)
+            for a in datas
+        )
+    except Exception:
+        all_zero = False
+    if all_zero:
+        print("⚠️  All-zero data detected; skipping plots.")
+
     print(f"✅ {dimension.upper()} data loaded successfully! Using signals: {signal_types}")
 
     # Get configuration
