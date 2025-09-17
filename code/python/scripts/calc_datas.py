@@ -126,23 +126,22 @@ def run_1d_mode(args):
     t_coh_print = sim_oqs.simulation_config.t_coh
     print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs (from config)")
 
-    # Generate frequency samples and build workload (only frequencies vary in 1D)
+    # Generate frequency samples and choose exactly one frequency index for this batch
     freq_samples = _generate_freq_samples(sim_oqs)
     n_inhom = freq_samples.shape[0]
-    all_pairs = [(0, i_f) for i_f in range(n_inhom)]  # (t_idx=0, freq_idx)
-
-    # Split combined workload if batching is requested
-    n_batches = args.n_batches
-    batch_idx = args.batch_idx
-    if n_batches > 1:
-        chunks = np.array_split(np.arange(len(all_pairs)), n_batches)
-        selected_idx = chunks[batch_idx]
-        selected_pairs = [all_pairs[i] for i in selected_idx]
-    else:
-        selected_pairs = all_pairs
-
-    # Group by t_idx (only 0 here) -> collect frequency indices
-    freq_idx_subset = np.array([fi for (_, fi) in selected_pairs], dtype=int)
+    n_batches = int(args.n_batches)
+    batch_idx = int(args.batch_idx)
+    if n_inhom <= 0:
+        raise ValueError("No inhomogeneous samples available (n_inhomogen == 0)")
+    if batch_idx < 0 or batch_idx >= max(1, n_batches):
+        raise ValueError(f"batch_idx {batch_idx} out of range for n_batches {n_batches}")
+    # Map batch -> a single freq index deterministically
+    if n_batches != n_inhom:
+        print(
+            f"ℹ️  n_batches ({n_batches}) != n_inhomogen ({n_inhom}); using modulo mapping batch_idx % n_inhomogen."
+        )
+    freq_idx_for_batch = batch_idx % n_inhom
+    freq_idx_subset = np.array([freq_idx_for_batch], dtype=int)
     avg_E, contribs = _avg_E_over_freqs_for_tcoh(
         sim_oqs,
         t_coh_print,
@@ -160,7 +159,8 @@ def run_1d_mode(args):
         "n_batches": int(max(1, n_batches)),
         "batch_idx": int(batch_idx),
         "n_inhomogen_total": int(n_inhom),
-        "n_inhomogen_in_batch": int(contribs),
+        "n_inhomogen_in_batch": 1,
+        "freq_idx": int(freq_idx_for_batch),
         "t_idx": 0,
         "t_coh_value": float(t_coh_print),
     }
@@ -209,40 +209,24 @@ def run_2d_mode(args):
     n_t = len(t_coh_vals)
     n_inhom = freq_samples.shape[0]
 
-    # Build combined workload over (t_idx, freq_idx)
-    all_pairs = [(it, jf) for it in range(n_t) for jf in range(n_inhom)]
-    total_pairs = len(all_pairs)
-    if n_batches > 1:
-        chunks = np.array_split(np.arange(total_pairs), n_batches)
-        if batch_idx >= len(chunks):
-            raise ValueError(f"Batch index {batch_idx} exceeds number of n_batches {n_batches}")
-        sel_idx = chunks[batch_idx]
-        selected_pairs = [all_pairs[i] for i in sel_idx]
-    else:
-        selected_pairs = all_pairs
-
-    # Group selected work by t_idx
-    from collections import defaultdict
-
-    work_by_t: dict[int, list[int]] = defaultdict(list)
-    for it, jf in selected_pairs:
-        work_by_t[int(it)].append(int(jf))
-
-    if selected_pairs:
-        it_min = min(work_by_t.keys())
-        it_max = max(work_by_t.keys())
+    # Choose exactly one frequency index for this batch
+    if n_inhom <= 0:
+        raise ValueError("No inhomogeneous samples available (n_inhomogen == 0)")
+    if n_batches != n_inhom:
         print(
-            f"📊 Processing t_idx in [{it_min}, {it_max}] with varying inhom samples per t_coh; total items in batch: {len(selected_pairs)}/{total_pairs}"
+            f"ℹ️  n_batches ({n_batches}) != n_inhomogen ({n_inhom}); using modulo mapping batch_idx % n_inhomogen."
         )
-    else:
-        print("No items assigned to this batch (check n_batches/batch_idx)")
+    freq_idx_for_batch = batch_idx % n_inhom
+    print(
+        f"📊 Processing all t_coh values with single inhom sample freq_idx={freq_idx_for_batch} (batch {batch_idx+1}/{n_batches})"
+    )
 
     abs_data_path = None
     start_time = time.time()
-    for idx, it in enumerate(sorted(work_by_t.keys())):
-        print(f"\n--- Progress: {idx+1}/{len(work_by_t)} (t_idx={it}) ---")
+    for it in range(n_t):
+        print(f"\n--- t_idx={it} / {n_t-1} ---")
         t_coh = float(t_coh_vals[it])
-        freq_idx_subset = np.asarray(work_by_t[it], dtype=int)
+        freq_idx_subset = np.asarray([freq_idx_for_batch], dtype=int)
         avg_E, contribs = _avg_E_over_freqs_for_tcoh(
             sim_oqs,
             t_coh,
@@ -259,7 +243,8 @@ def run_2d_mode(args):
             "n_batches": int(max(1, n_batches)),
             "batch_idx": int(batch_idx),
             "n_inhomogen_total": int(n_inhom),
-            "n_inhomogen_in_batch": int(contribs),
+            "n_inhomogen_in_batch": 1,
+            "freq_idx": int(freq_idx_for_batch),
             "t_idx": int(it),
             "t_coh_value": float(t_coh),
         }
