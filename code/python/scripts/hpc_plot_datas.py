@@ -1,7 +1,9 @@
 """
-Generate and (optionally) submit a SLURM job for stacking 1D data to 2D and plotting.
+Generate and (optionally) submit a SLURM job to plot data.
 
-If a 2D file (contains t_coh axis) already exists in the directory, stacking is skipped.
+This script calls `stack_1dto2d.py --skip_if_exists` first, which will stack 1D → 2D
+if needed or skip when an existing 2D dataset is present, then we create/submit a
+plotting job using the path printed by the stacking script.
 """
 
 from __future__ import annotations
@@ -15,58 +17,15 @@ from subprocess import run, CalledProcessError
 from project_config.paths import SCRIPTS_DIR
 
 
-def map_1d_dir_to_2d_dir(data_dir: Path) -> Path:
-    """Given a 1D data directory path under .../1d_spectroscopy/... map to matching 2d directory.
-
-    Example:
-      /.../data/1d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
-      -> /.../data/2d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
-    If pattern not found, returns original path.
-    """
-    parts = list(data_dir.parts)
-    try:
-        idx = parts.index("1d_spectroscopy")
-        parts[idx] = "2d_spectroscopy"
-        return Path(*parts)
-    except ValueError:
-        return data_dir
-
-
-def detect_existing_2d(data_dir: Path) -> str | None:
-    """Return abs_path base (without suffix) of first detected 2D file in mapped 2D directory.
-
-    A 2D file is identified by presence of 't_det' and 't_coh' axes inside *_data.npz.
-    We look in the 2d_spectroscopy mirror of the provided 1D directory.
-    """
-    target_dir = map_1d_dir_to_2d_dir(data_dir)
-    if not target_dir.exists():
-        return None
-    for f in sorted(target_dir.glob("*_data.npz")):
-        try:
-            with np.load(f, mmap_mode="r") as npz:  # type: ignore
-                if "t_coh" in npz.files:
-                    return str(
-                        f
-                    )  # return full path incl _data.npz (plot script accepts base or with suffix)
-        except Exception:
-            continue
-    return None
-
-
 def run_stacking_script(abs_path: str, skip_if_exists: bool = True) -> str:
-    """Run stack_1dto2d.py unless 2D already present. Return plotting abs_path base.
+    """Call stack_1dto2d.py and return the plotting abs_path printed by it.
 
-    If existing 2D found and skip_if_exists=True, returns its base path directly.
+    Always delegates existence checks to stack_1dto2d.py using --skip_if_exists when requested.
     """
     data_dir = Path(abs_path)
-
+    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(data_dir)]
     if skip_if_exists:
-        existing = detect_existing_2d(data_dir)
-        if existing:
-            print(f"✅ Existing 2D stacked file detected: {existing} (skipping stacking)")
-            return existing[:-9] if existing.endswith("_data.npz") else existing
-
-    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(data_dir), "--skip_if_exists"]
+        cmd.append("--skip_if_exists")
     result = subprocess.run(cmd, capture_output=True, text=True, cwd=SCRIPTS_DIR)
 
     if result.returncode != 0:
@@ -182,6 +141,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    import numpy as np  # Local import to avoid unused import if script only generates
-
     main()

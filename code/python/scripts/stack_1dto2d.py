@@ -16,6 +16,43 @@ if TYPE_CHECKING:
     from qspectro2d.core.simulation import SimulationConfig
 
 
+def map_1d_dir_to_2d_dir(data_dir: Path) -> Path:
+    """Map a 1D data directory path to its corresponding 2D directory.
+
+    Example:
+      /.../data/1d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
+      -> /.../data/2d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
+    If pattern not found, returns the original path.
+    """
+    parts = list(data_dir.parts)
+    try:
+        idx = parts.index("1d_spectroscopy")
+        parts[idx] = "2d_spectroscopy"
+        return Path(*parts)
+    except ValueError:
+        return data_dir
+
+
+def detect_existing_2d(data_dir: Path) -> str | None:
+    """Return the path to a detected 2D file in the mapped 2D directory, if any.
+
+    A 2D file is identified by the presence of a 't_coh' axis inside *_data.npz.
+    Only searches inside the 2D mirror directory of the provided 1D directory.
+    Returns the full path including the '_data.npz' suffix if found, else None.
+    """
+    target_dir = map_1d_dir_to_2d_dir(data_dir)
+    if not target_dir.exists():
+        return None
+    for f in sorted(target_dir.glob("*_data.npz")):
+        try:
+            with np.load(f, mmap_mode="r") as npz:  # type: ignore
+                if "t_coh" in npz.files:
+                    return str(f)
+        except Exception:
+            continue
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description="Stack 1D data into 2D along t_coh.")
     parser.add_argument(
@@ -36,36 +73,20 @@ def main():
     print(f"   Base directory: {abs_path}")
     base_dir = Path(abs_path)
 
-    # Optional early-exit: detect already stacked 2D file in corresponding 2d_spectroscopy tree
+    # Optional early-exit: detect already stacked 2D file
     if args.skip_if_exists:
-        # Map 1d -> 2d directory and check there first
-        parts = list(base_dir.parts)
-        if "1d_spectroscopy" in parts:
-            idx = parts.index("1d_spectroscopy")
-            parts[idx] = "2d_spectroscopy"
-            mapped_2d_dir = Path(*parts)
-            if mapped_2d_dir.exists():
-                candidate_files = sorted(mapped_2d_dir.glob("*_data.npz"))
-                for f in candidate_files:
-                    try:
-                        with np.load(f, mmap_mode="r") as npz:
-                            if "t_coh" in npz.files:
-                                print(
-                                    f"✅ Detected existing stacked 2D file in mapped dir: {f}\nSkipping stacking."
-                                )
-                                print(
-                                    f"🎯 To plot run: python plot_datas.py --abs_path '{str(f)[:-9]}'"
-                                )
-                                return
-                    except Exception:
-                        continue
-        # Local directory check (backward compatible)
+        existing = detect_existing_2d(base_dir)
+        if existing:
+            print(f"✅ Existing 2D stacked file detected: {existing} (skipping stacking)")
+            print(f"🎯 To plot run: python plot_datas.py --abs_path '{existing}'")
+            return
+        # Fallback: check the provided directory itself for any 2D file
         for f in sorted(base_dir.glob("*_data.npz")):
             try:
                 with np.load(f, mmap_mode="r") as npz:
                     if "t_coh" in npz.files:
-                        print(f"✅ Detected existing stacked 2D file: {f}\nSkipping stacking.")
-                        print(f"🎯 To plot run: python plot_datas.py --abs_path '{str(f)[:-9]}'")
+                        print(f"✅ Existing 2D stacked file detected: {f} (skipping stacking)")
+                        print(f"🎯 To plot run: python plot_datas.py --abs_path '{str(f)}'")
                         return
             except Exception:
                 continue
