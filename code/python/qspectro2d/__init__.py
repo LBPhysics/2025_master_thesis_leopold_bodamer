@@ -22,6 +22,16 @@ __version__ = "0.1.0"  # Keep in sync with pyproject.toml
 __author__ = "Leopold"
 __email__ = ""
 
+# Silence a specific QuTiP FutureWarning about keyword-only args in brmesolve
+import warnings as _warnings
+
+_warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r".*c_ops, e_ops, args and options will be keyword only from qutip 5\.3.*",
+    module=r"qutip\.solver\.brmesolve",
+)
+
 
 # LAZY CORE IMPORTS (avoid circular import during package init)
 

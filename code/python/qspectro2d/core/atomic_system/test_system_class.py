@@ -17,7 +17,7 @@ class TestAtomicSystemInitialization:
         assert system.frequencies_cm == [16000.0]
         assert system.dip_moments == [1.0]
         assert system.coupling_cm == 0.0
-        assert system.delta_cm is None
+        assert system.delta_inhomogen_cm is None
         assert system.psi_ini is not None
 
         print("✓ Single atom default initialization successful")
@@ -78,18 +78,14 @@ class TestAtomicSystemInitialization:
 
     def test_frequency_validation_error(self):
         """Test error handling for mismatched frequency count."""
-        with pytest.raises(
-            ValueError, match="frequencies_cm has .* elements but n_atoms="
-        ):
+        with pytest.raises(ValueError, match="frequencies_cm has .* elements but n_atoms="):
             AtomicSystem(n_atoms=2, frequencies_cm=[16000.0, 15800.0, 15600.0])
 
         print("✓ Frequency validation error handling works")
 
     def test_dipole_validation_error(self):
         """Test error handling for mismatched dipole moment count."""
-        with pytest.raises(
-            ValueError, match="dip_moments has .* elements but n_atoms="
-        ):
+        with pytest.raises(ValueError, match="dip_moments has .* elements but n_atoms="):
             AtomicSystem(n_atoms=2, dip_moments=[1.0, 1.2, 1.5])
 
         print("✓ Dipole validation error handling works")
@@ -118,9 +114,7 @@ class TestAtomicSystemProperties:
         """Test basis generation for two atoms."""
         system = AtomicSystem(n_atoms=2)
 
-        assert (
-            system.dimension == 3
-        )  # ground + 2 single excitations (max_excitation=1 by default)
+        assert system.dimension == 3  # ground + 2 single excitations (max_excitation=1 by default)
         assert len(system._basis) == 3
 
         # Check basis dimensions - now using computational basis
@@ -206,9 +200,7 @@ class TestAtomicSystemProperties:
 
     def test_hamiltonian_two_atoms(self):
         """Test Hamiltonian generation for two atoms."""
-        system = AtomicSystem(
-            n_atoms=2, frequencies_cm=[16000.0, 15800.0], coupling_cm=100.0
-        )
+        system = AtomicSystem(n_atoms=2, frequencies_cm=[16000.0, 15800.0], coupling_cm=100.0)
 
         H = system.hamiltonian
 
@@ -319,7 +311,7 @@ class TestAtomicSystemSerialization:
             frequencies_cm=[16000.0, 15800.0],
             dip_moments=[1.0, 1.2],
             coupling_cm=50.0,
-            delta_cm=10.0,
+            delta_inhomogen_cm=10.0,
         )
 
         data = system.to_dict()
@@ -329,16 +321,16 @@ class TestAtomicSystemSerialization:
             "frequencies_cm",
             "dip_moments",
             "coupling_cm",
-            "delta_cm",
+            "delta_inhomogen_cm",
         }
         assert set(data.keys()) == expected_keys
         assert data["coupling_cm"] == 50.0
-        assert data["delta_cm"] == 10.0
+        assert data["delta_inhomogen_cm"] == 10.0
 
         print("✓ Two atom dictionary serialization with coupling successful")
         print(f"  - Keys: {list(data.keys())}")
         print(f"  - coupling_cm: {data['coupling_cm']}")
-        print(f"  - delta_cm: {data['delta_cm']}")
+        print(f"  - delta_inhomogen_cm: {data['delta_inhomogen_cm']}")
 
     def test_json_serialization_roundtrip(self):
         """Test JSON serialization and deserialization roundtrip."""
@@ -523,9 +515,7 @@ class TestAtomicSystemEdgeCases:
         print("✓ Isotropic coupling computation successful")
         print(f"  - Coupling matrix:\n{coupling_matrix}")
         print(f"  - J_01: {J_01:.3f}, J_02: {J_02:.3f}")
-        print(
-            f"  - Ratio J_02/J_01: {actual_ratio:.3f} (expected: {expected_ratio:.3f})"
-        )
+        print(f"  - Ratio J_02/J_01: {actual_ratio:.3f} (expected: {expected_ratio:.3f})")
 
 
 def test_summary_method():

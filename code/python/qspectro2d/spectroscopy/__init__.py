@@ -6,7 +6,7 @@ including pulse evolution calculations, polarization computations, and post-proc
 routines for Fourier transforms and signal analysis.
 
 Main components:
-- calculations: Core spectroscopy calculation functions
+- one_d_field: 1D field and polarization computation pipeline
 - inhomogenity: Tools for handling inhomogeneous broadening
 - post_processing: FFT and signal processing utilities
 - simulation: High-level simulation runners and utilities
@@ -14,12 +14,11 @@ Main components:
 
 # CORE CALCULATION FUNCTIONS
 
-from .calculations import (
-    compute_seq_evolution,
-    compute_1d_polarization,
+from .one_d_field import (
+    compute_evolution,
     parallel_compute_1d_E_with_inhomogenity,
-    extract_ift_signal_component,
 )
+from .one_d_field import _phase_cycle_component as extract_ift_signal_component
 from .polarization import complex_polarization
 
 from .solver_check import check_the_solver
@@ -52,11 +51,9 @@ from qspectro2d.utils import (
 __all__ = [
     # Core calculations
     "complex_polarization",
-    "compute_seq_evolution",
-    "compute_1d_polarization",
+    "compute_evolution",
     "check_the_solver",
     "parallel_compute_1d_E_with_inhomogenity",
-    "parallel_compute_2d_E_with_inhomogenity",
     "extract_ift_signal_component",
     # Inhomogeneous broadening
     "normalized_gauss",

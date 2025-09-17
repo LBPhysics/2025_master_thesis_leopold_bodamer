@@ -16,6 +16,8 @@ atomic:
 
   n_atoms: 1
   frequencies_cm: [16000.0]
+  n_inhomogen: 2
+  delta_inhomogen_cm: 0.0
   dip_moments: [1.0]
   n_chains: 1
   max_excitation: 2
@@ -24,7 +26,7 @@ laser:
   pulse_fwhm_fs: 5.0
   envelope_type: gaussian
   carrier_freq_cm: 16000.0
-  rwa_sl: false
+  rwa_sl: true
 
 bath:
   bath_type: ohmic
@@ -33,11 +35,10 @@ bath:
   coupling: 0.01   # actually in terms of frequency
 
 config:
-  solver: BR
-
+  solver: ME
 
 window:
-  t_det_max: 10.0
-  t_wait: 0.0
-  t_coh: 30.0
-  dt: 1
+  t_det_max: 600.0
+  t_wait: 1000.0
+  t_coh: 300.0
+  dt: 2.0

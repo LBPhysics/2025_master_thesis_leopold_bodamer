@@ -39,6 +39,7 @@ def save_data_file(
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
     signal_types: Optional[List[str]] = None,
+    metadata: Optional[dict] = None,
 ) -> None:
     """Save spectroscopy data(s) with a single np.savez_compressed call.
 
@@ -74,6 +75,11 @@ def save_data_file(
         }
         if is_2d:
             payload["t_coh"] = t_coh
+
+        # Optional metadata (e.g., inhom batching info)
+        if metadata:
+            for k, v in metadata.items():
+                payload[str(k)] = v
 
         # Validate and populate component keys
         for data, signal_type in zip(datas, signal_types):
@@ -283,8 +289,24 @@ def load_data_from_abs_path(abs_path: str) -> dict:
     if "t_coh" in data_dict and data_dict.get("t_coh") is not None:
         result["axes"]["t_coh"] = data_dict["t_coh"]
 
+    # Add component arrays
     for signal_type in signal_types:
         result[signal_type] = data_dict.get(signal_type)
+
+    # Extract optional metadata keys from the npz payload
+    known_keys = set(["t_det", "signal_types", "axes_description"]) | set(signal_types.tolist())
+    if "t_coh" in data_dict:
+        known_keys.add("t_coh")
+    metadata = {}
+    for k in data_dict.keys():
+        if k not in known_keys:
+            metadata[k] = (
+                data_dict[k].item()
+                if hasattr(data_dict[k], "shape") and data_dict[k].shape == ()
+                else data_dict[k]
+            )
+    if metadata:
+        result["metadata"] = metadata
     return result
 
 

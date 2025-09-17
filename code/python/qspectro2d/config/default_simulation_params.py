@@ -16,7 +16,7 @@ from qspectro2d.constants import (
 # === signal processing / phase cycling ===
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 DETECTION_PHASE = 0  # Fixed phase for detection pulse
-SIGNAL_TYPES = ["rephasing"]  # Default signal == photon echo to simulate
+SIGNAL_TYPES = ["rephasing", "nonrephasing"]  # Default signal == photon echo to simulate
 COMPONENT_MAP: dict[str, tuple[int, int, int]] = {
     "average": (0, 0, 0),  # special case for averaging all phases
     "rephasing": (-1, 1, 1),
@@ -49,9 +49,9 @@ N_CHAINS = 1  # defaults to linear chain (single chain layout)
 FREQUENCIES_CM = [16000.0]  # Number of frequency components in the system
 DIP_MOMENTS = [1.0]  # Dipole moments for each atom
 COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
-DELTA_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
+DELTA_INHOMOGEN_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 1  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
-N_INHOMOGEN = 1  # 1 == no inhomogeneous broadening
+N_INHOMOGEN = 2  # 1 == no inhomogeneous broadening
 
 
 # === LASER SYSTEM DEFAULTS ===
@@ -82,7 +82,7 @@ BATH_COUPLING = 1e-4  # * frequencies[0]
 
 
 # === 2D SIMULATION DEFAULTS ===
-T_DET_MAX = 200.0  # Maximum detection time in fs
+T_DET_MAX = 20.0  # Maximum detection time in fs
 DT = 0.1  # Spacing between t_coh, and of also t_det values in fs
 # -> very good resolution
 T_COH = 0.0  # Coherence time in fs
@@ -112,7 +112,7 @@ def validate(params: dict) -> None:
     base_amplitude = params.get("base_amplitude", BASE_AMPLITUDE)
     envelope_type = params.get("envelope_type", ENVELOPE_TYPE)
     coupling_cm = params.get("coupling_cm", COUPLING_CM)
-    delta_cm = params.get("delta_cm", DELTA_CM)
+    delta_inhomogen_cm = params.get("delta_inhomogen_cm", DELTA_INHOMOGEN_CM)
     solver_options = params.get("solver_options", SOLVER_OPTIONS)
     simulation_type = params.get("simulation_type", SIMULATION_TYPE)
     max_workers = params.get("max_workers", 1)
@@ -161,8 +161,8 @@ def validate(params: dict) -> None:
     # Atomic coupling / broadening checks
     if coupling_cm < 0:
         raise ValueError("coupling_cm must be >= 0")
-    if delta_cm < 0:
-        raise ValueError("delta_cm must be >= 0")
+    if delta_inhomogen_cm < 0:
+        raise ValueError("delta_inhomogen_cm must be >= 0")
 
     # TODO deleted dipole posititvity
 

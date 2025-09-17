@@ -4,7 +4,7 @@ Solver validation and diagnostics utilities.
 
 This module provides `check_the_solver`, which stress-tests the configured
 quantum solver and validates density matrix properties over an extended
-time window. It is factored out of `calculations.py` to keep concerns
+time window. It is factored out of the previous calculations module to keep concerns
 separate and simplify maintenance.
 """
 
@@ -22,7 +22,7 @@ from qutip import Qobj, Result
 from qspectro2d.core.simulation import SimulationModuleOQS
 from qspectro2d.utils import apply_RWA_phase_factors
 from project_config.logging_setup import get_logger
-from .calculations import compute_seq_evolution
+from .one_d_field import compute_evolution
 
 
 __all__ = ["check_the_solver"]
@@ -215,7 +215,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     # INPUT VALIDATION
     _validate_simulation_input(copy_sim_oqs)
 
-    result = compute_seq_evolution(copy_sim_oqs, **{"store_states": True})
+    result = compute_evolution(copy_sim_oqs, **{"store_states": True})
     states = result.states
 
     # CHECK THE RESULT

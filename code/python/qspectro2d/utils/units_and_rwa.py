@@ -109,7 +109,8 @@ def get_expect_vals_with_RWA(
         expect_vals = np.array(np.real(expect(e_op, states)))
         updated_expects.append(expect_vals)
     if dipole_op is not None:
-        from qspectro2d.spectroscopy.calculations import complex_polarization
+        # Import locally to avoid circular imports and depend directly on polarization module
+        from qspectro2d.spectroscopy.polarization import complex_polarization
 
         # Calculate expectation value for the dipole operator if provided
         expect_vals_dip = np.array(complex_polarization(dipole_op, states))

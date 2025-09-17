@@ -81,7 +81,11 @@ def load_simulation(
     from qspectro2d.core.simulation.sim_config import SimulationConfig
 
     # LOAD / FALLBACK
-    cfg_root = _read_yaml(Path(path))
+    # If no path is provided, use an empty config so all values fall back to defaults in `dflt`.
+    if path is None:
+        cfg_root = {}
+    else:
+        cfg_root = _read_yaml(Path(path))
 
     # ATOMIC SYSTEM
     atomic_cfg = _get_section(cfg_root, "atomic")
@@ -90,7 +94,7 @@ def load_simulation(
     freqs_cm = list(atomic_cfg.get("frequencies_cm", dflt.FREQUENCIES_CM))
     dip_moments = list(atomic_cfg.get("dip_moments", dflt.DIP_MOMENTS))
     coupling_cm = float(atomic_cfg.get("coupling_cm", dflt.COUPLING_CM))
-    delta_cm = float(atomic_cfg.get("delta_cm", dflt.DELTA_CM))
+    delta_inhomogen_cm = float(atomic_cfg.get("delta_inhomogen_cm", dflt.DELTA_INHOMOGEN_CM))
     max_excitation = int(atomic_cfg.get("max_excitation", dflt.MAX_EXCITATION))
 
     atomic_system = AtomicSystem(
@@ -99,7 +103,7 @@ def load_simulation(
         frequencies_cm=freqs_cm,
         dip_moments=dip_moments,
         coupling_cm=coupling_cm,
-        delta_cm=delta_cm,
+        delta_inhomogen_cm=delta_inhomogen_cm,
         max_excitation=max_excitation,
     )
 
@@ -190,7 +194,7 @@ def load_simulation(
             "base_amplitude": base_amp,
             "envelope_type": envelope,
             "coupling_cm": coupling_cm,
-            "delta_cm": delta_cm,
+            "delta_inhomogen_cm": delta_inhomogen_cm,
             "solver_options": dflt.SOLVER_OPTIONS,  # TODO add those to the sim_config class
             "simulation_type": simulation_type,  # factory defaults (could expose later)
             "max_workers": max_workers,

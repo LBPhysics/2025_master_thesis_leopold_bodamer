@@ -39,7 +39,7 @@ class AtomicSystem:
     frequencies_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
     coupling_cm: float = 0.0
-    delta_cm: float = 0.0  # inhomogeneous broadening
+    delta_inhomogen_cm: float = 0.0  # inhomogeneous broadening
 
     # 1 = existing behaviour (ground + single exc manifold); 2 adds double manifold
     max_excitation: int = 1
@@ -59,7 +59,7 @@ class AtomicSystem:
         # Internal fs^-1 storage (single source of truth for dynamics)
         self._frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
         self._coupling_fs = convert_cm_to_fs(self.coupling_cm)
-        self._delta_fs = convert_cm_to_fs(self.delta_cm)
+        self._delta_fs = convert_cm_to_fs(self.delta_inhomogen_cm)
 
         # Always set cylindrical positions and compute isotropic couplings
         self.n_rings = self.n_atoms // self.n_chains
@@ -85,10 +85,10 @@ class AtomicSystem:
         self._compute_isotropic_couplings()
         self.reset_cache()
 
-    def update_delta_cm(self, new_delta_cm: float) -> None:
+    def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
         """Update inhomogeneous broadening (cm^-1)."""
-        self.delta_cm = new_delta_cm
-        self._delta_fs = float(convert_cm_to_fs(self.delta_cm))
+        self.delta_inhomogen_cm = new_delta_inhomogen_cm
+        self._delta_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
         # Not strictly needed for operators, but keep consistency
         self.reset_cache()
 
@@ -403,7 +403,7 @@ class AtomicSystem:
         lines.append("\n# Coupling / Inhomogeneity:")
         if self.n_atoms == 2:
             lines.append(f"    {'coupling':<20}: {self.coupling_cm} cm^-1")
-            lines.append(f"    {'delta':<20}: {self.delta_cm} cm^-1")
+            lines.append(f"    {'delta':<20}: {self.delta_inhomogen_cm} cm^-1")
         elif self.n_atoms > 2 and self.n_rings is not None:
             lines.append(f"    {'n_rings':<20}: {self.n_rings} (n_chains = {self.n_chains})")
             lines.append(f"    {'positions shape':<20}: {self._positions.shape}")
@@ -427,7 +427,7 @@ class AtomicSystem:
             "n_atoms": self.n_atoms,
             "frequencies_cm": self.frequencies_cm,
             "dip_moments": self.dip_moments,
-            "delta_cm": self.delta_cm,
+            "delta_inhomogen_cm": self.delta_inhomogen_cm,
             "coupling_cm": self.coupling_cm,
         }
         return d
@@ -436,7 +436,7 @@ class AtomicSystem:
         """
         Serialize the system parameters to a JSON string.
 
-        Only basic attributes are included: n_atoms, frequencies_cm, dip_moments, delta_cm, coupling_cm.
+        Only basic attributes are included: n_atoms, frequencies_cm, dip_moments, delta_inhomogen_cm, coupling_cm.
         Quantum objects (Qobj) and computed properties (like Hamiltonians or eigenstates)
         are not serialized and will be recomputed on deserialization.
         """
