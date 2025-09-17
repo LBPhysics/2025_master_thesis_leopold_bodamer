@@ -47,8 +47,6 @@ class SimulationConfig:
             )
             self.rwa_sl = True
 
-        self.t_max = self.t_wait + 2 * self.t_det_max
-
     @property
     def combinations(self) -> int:
         return self.n_phases * self.n_phases * self.n_inhomogen
@@ -63,7 +61,6 @@ class SimulationConfig:
             f"Coherence Time     : {self.t_coh} fs\n"
             f"Wait Time          : {self.t_wait} fs\n"
             f"Max Det. Time      : {self.t_det_max} fs\n\n"
-            f"Total Time (t_max) : {self.t_max} fs\n"
             f"Time Step (dt)     : {self.dt} fs\n"
             "-------------------------------\n"
             f"Solver Type        : {self.ode_solver}\n"

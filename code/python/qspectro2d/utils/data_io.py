@@ -495,8 +495,6 @@ if __name__ == "__main__":
                 # Print some basic info about the loaded data
                 if "data" in data and data["data"] is not None:
                     logger.info("Data shape: %s", data["data"].shape)
-                if "axes" in data and data["axes"]:
-                    logger.info("Axes: %s", list(data["axes"].keys()))
                 if "system" in data and data["system"]:
                     logger.info("System n_atoms: %s", getattr(data["system"], "n_atoms", "Unknown"))
 

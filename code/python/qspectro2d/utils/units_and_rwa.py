@@ -1,75 +1,115 @@
+"""Rotating frame helpers (RWA phase transforms)."""
+
+from __future__ import annotations
+
 import numpy as np
-from typing import Union, List, Sequence
+from typing import Union, List, Sequence, Literal
 from qutip import Qobj, expect
 
-
-# ROTATING WAVE APPROXIMATION FUNCTIONS
-def apply_RWA_phase_factors(
-    states_or_rho: Union[List[Qobj], Qobj, Sequence[Qobj], np.ndarray],
-    times_or_t: Union[np.ndarray, Sequence[float], float],
-    n_atoms: int,
-    omega_laser: float,
-) -> Union[List[Qobj], Qobj]:
-    # Single-state path
-    if isinstance(states_or_rho, Qobj) and isinstance(times_or_t, (float, int, np.floating)):
-        return _apply_single_rwa(states_or_rho, float(times_or_t), n_atoms, omega_laser)
-
-    # Sequence path: accept list/tuple/ndarray of states and times
-    if isinstance(states_or_rho, (list, tuple, np.ndarray)) and isinstance(
-        times_or_t, (np.ndarray, list, tuple)
-    ):
-        # Normalize states to a Python list of Qobj
-        states_list = (
-            list(states_or_rho)
-            if not isinstance(states_or_rho, np.ndarray)
-            else list(states_or_rho.ravel())
-        )
-
-        # Validate all states are Qobj
-        if not all(isinstance(s, Qobj) for s in states_list):
-            raise TypeError("All states must be Qobj instances.")
-
-        # Normalize times to 1D numpy array of floats
-        times_arr = np.asarray(times_or_t, dtype=float).reshape(-1)
-
-        if len(states_list) != times_arr.shape[0]:
-            raise ValueError(
-                f"Length mismatch: {len(states_list)} states vs {times_arr.shape[0]} times"
-            )
-
-        return [
-            _apply_single_rwa(rho, t, n_atoms, omega_laser)
-            for rho, t in zip(states_list, times_arr)
-        ]
-
-    raise TypeError("Invalid input. Expected (Qobj, float) or (Sequence[Qobj], array-like times).")
+__all__ = [
+    "rotating_frame_unitary",
+    "to_rotating_frame_op",
+    "from_rotating_frame_op",
+    "to_rotating_frame_list",
+    "from_rotating_frame_list",
+    "get_expect_vals_with_RWA",
+]
 
 
-def _apply_single_rwa(rho: Qobj, t: float, n_atoms: int, omega: float) -> Qobj:
+def _excitation_number_vector(dim: int, n_atoms: int) -> np.ndarray:
+    """Construct the excitation-number vector n for basis ordering:
+    [0-ex], then [1-ex with n_atoms states], then [2-ex remainder].
     """
-    Apply RWA phase factors for arbitrary n_atoms (supports up to 2 excitations).
-    Phase: exp(-i * ω * t * (n_i - n_j)). Assumes ω in 1/fs and t in fs (dimensionless product).
-    """
-    rho_array = rho.full()
-    dim = rho_array.shape[0]
+    if n_atoms < 0:
+        raise ValueError("n_atoms must be non-negative")
+    if dim <= 0:
+        raise ValueError("dim must be positive")
 
-    # Build excitation number vector n for basis ordering [0-ex, 1-ex (n_atoms states), 2-ex (rest)]
     n = np.zeros(dim, dtype=int)
     # 1-ex manifold: indices [1 .. min(n_atoms, dim-1)]
     one_ex_end = min(n_atoms, dim - 1)
     if one_ex_end >= 1:
         n[1 : one_ex_end + 1] = 1
-    # 2-ex manifold: indices [n_atoms+1 .. dim-1], only if there is room
+    # 2-ex manifold: indices [n_atoms+1 .. dim-1]
     two_ex_start = n_atoms + 1
     if dim > two_ex_start:
         n[two_ex_start:] = 2
+    return n
 
-    # Vectorized phase application
-    delta_n = n[:, None] - n[None, :]
-    phase = np.exp(-1j * delta_n * omega * t)
-    rho_array = rho_array * phase
 
-    return Qobj(rho_array, dims=rho.dims)
+# --- Simple unitary-based API -------------------------------------------------------
+def rotating_frame_unitary(ref: Qobj, t: float, n_atoms: int, omega_laser: float) -> Qobj:
+    """Return U(t) = exp(-i * omega_laser * N * t) matching the dims of `ref`.
+
+    - Basis ordering: [0-ex], [1-ex (n_atoms states)], [2-ex (remainder)].
+    - ρ_RWA(t) = U†(t) ρ_lab(t) U(t)
+    - ρ_lab(t) = U(t) ρ_RWA(t) U†(t)
+    """
+    dim = ref.shape[0]
+    n = _excitation_number_vector(dim, n_atoms)
+    phases = np.exp(-1j * omega_laser * t * n)
+    U_full = np.diag(phases)
+    return Qobj(U_full, dims=ref.dims)
+
+
+def to_rotating_frame_op(rho_lab: Qobj, t: float, n_atoms: int, omega_laser: float) -> Qobj:
+    """Compute ρ_RWA(t) = U†(t) ρ_lab(t) U(t)."""
+    U = rotating_frame_unitary(rho_lab, t, n_atoms, omega_laser)
+    return U.dag() * rho_lab * U
+
+
+def from_rotating_frame_op(rho_rot: Qobj, t: float, n_atoms: int, omega_laser: float) -> Qobj:
+    """Compute ρ_lab(t) = U(t) ρ_RWA(t) U†(t)."""
+    U = rotating_frame_unitary(rho_rot, t, n_atoms, omega_laser)
+    return U * rho_rot * U.dag()
+
+
+def to_rotating_frame_list(
+    states: List[Qobj],
+    times: np.ndarray,
+    n_atoms: int,
+    omega_laser: float,
+) -> List[Qobj]:
+    """Batch version of ρ_RWA = U† ρ_lab U with simple broadcasting.
+
+    - times: scalar → apply same t to all states
+    - times: array-like → must match len(states)
+    """
+    if not all(isinstance(s, Qobj) for s in states):
+        raise TypeError("All states must be Qobj instances.")
+
+    times_arr = np.asarray(times, dtype=float).reshape(-1)
+    if len(times_arr) != len(states):
+        raise ValueError(f"Length mismatch: {len(states)} states vs {times_arr.shape[0]} times")
+    return [
+        to_rotating_frame_op(rho, float(t), n_atoms, omega_laser)
+        for rho, t in zip(states, times_arr)
+    ]
+
+
+def from_rotating_frame_list(
+    states: List[Qobj],
+    times: np.ndarray,
+    n_atoms: int,
+    omega_laser: float,
+) -> List[Qobj]:
+    """Batch version of ρ_lab = U ρ_RWA U† with simple broadcasting.
+
+    - times: scalar → apply same t to all states
+    - times: array-like → must match len(states)
+    """
+    if not all(isinstance(s, Qobj) for s in states):
+        raise TypeError("All states must be Qobj instances.")
+
+    times_arr = np.asarray(times, dtype=float).reshape(-1)
+    if len(times_arr) != len(states):
+        raise ValueError(
+            f"Length mismatch: {len(states_list)} states vs {times_arr.shape[0]} times"
+        )
+    return [
+        from_rotating_frame_op(rho, float(t), n_atoms, omega_laser)
+        for rho, t in zip(states, times_arr)
+    ]
 
 
 def get_expect_vals_with_RWA(
@@ -100,7 +140,10 @@ def get_expect_vals_with_RWA(
     #     e_ops = e_ops + [dipole_op]  # Avoid modifying the original list
 
     if rwa_sl:
-        states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
+        # By default we assume stored states are in the rotating frame and we want lab-frame
+        # expectation values. If you need the opposite, call `to_rotating_frame` explicitly
+        # at the call site and pass rwa_sl=False here to avoid double transforms.
+        states = from_rotating_frame(states, times, n_atoms, omega_laser)
 
     ## Calculate expectation values for each state and each operator
     updated_expects = []

@@ -20,7 +20,7 @@ from qutip import Qobj, Result
 
 # LOCAL IMPORTS
 from qspectro2d.core.simulation import SimulationModuleOQS
-from qspectro2d.utils import apply_RWA_phase_factors
+from qspectro2d.utils import from_rotating_frame_list
 from project_config.logging_setup import get_logger
 from .one_d_field import compute_evolution
 
@@ -64,11 +64,11 @@ def _log_system_diagnostics(sim_oqs: SimulationModuleOQS) -> None:
 
     # System Hamiltonian diagnostics
     try:
-        if hasattr(sim_oqs, "evo_obj_free") and sim_oqs.evo_obj_free is not None:
-            H_free = sim_oqs.evo_obj_free
-            if hasattr(H_free, "dims"):
-                logger.info(f"Free Hamiltonian dims: {H_free.dims}")
-            logger.info(f"Free Hamiltonian type: {type(H_free)}")
+        if hasattr(sim_oqs, "evo_obj") and sim_oqs.evo_obj is not None:
+            H_tot_t = sim_oqs.evo_obj
+            if hasattr(H_tot_t, "dims"):
+                logger.info(f"Total Hamiltonian dims: {H_tot_t.dims}")
+            logger.info(f"Total Hamiltonian type: {type(H_tot_t)}")
 
         if hasattr(sim_oqs, "decay_channels") and sim_oqs.decay_channels:
             logger.info(f"Number of decay channels: {len(sim_oqs.decay_channels)}")
@@ -196,7 +196,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     """
     logger.info(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
     copy_sim_oqs = deepcopy(sim_oqs)
-    t_max = 2 * copy_sim_oqs.simulation_config.t_max
+    t_max = 2 * sim_oqs.times_local[-1]
     dt = 10 * copy_sim_oqs.simulation_config.dt
     t0 = -2 * copy_sim_oqs.laser.pulse_fwhms[0]
     times = np.linspace(t0, t_max, int((t_max - t0) / dt) + 1)
@@ -232,7 +232,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
         n_atoms = copy_sim_oqs.system.n_atoms
         omega_laser = copy_sim_oqs.laser._carrier_freq_fs
         logger.info(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser}")
-        states = apply_RWA_phase_factors(states, times, n_atoms, omega_laser)
+        states = from_rotating_frame_list(states, times, n_atoms, omega_laser)
 
     # Enhanced state checking with more diagnostics
     logger.info("=== STATE-BY-STATE ANALYSIS ===")

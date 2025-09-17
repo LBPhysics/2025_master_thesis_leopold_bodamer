@@ -16,7 +16,7 @@ from qspectro2d.constants import (
 # === signal processing / phase cycling ===
 PHASE_CYCLING_PHASES = [0, np.pi / 2, np.pi, 3 * np.pi / 2]
 DETECTION_PHASE = 0  # Fixed phase for detection pulse
-SIGNAL_TYPES = ["rephasing", "nonrephasing"]  # Default signal == photon echo to simulate
+SIGNAL_TYPES = ["rephasing"]  # Default signal == photon echo to simulate
 COMPONENT_MAP: dict[str, tuple[int, int, int]] = {
     "average": (0, 0, 0),  # special case for averaging all phases
     "rephasing": (-1, 1, 1),

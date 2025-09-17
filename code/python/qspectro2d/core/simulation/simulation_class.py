@@ -73,25 +73,20 @@ class SimulationModuleOQS:
         self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
 
         solver = self.simulation_config.ode_solver
-        H0_diagonalized = self.H0_diagonalized
 
         # if solver != "Paper_eqs" or "BR" or "ME": -> case already covered with warning
         if solver == "Paper_eqs":
             # Use a module-level wrapper + functools.partial to keep object pickleable under Windows spawn.
-            self.evo_obj_free = partial(paper_eqs_evo, self)
-            self.evo_obj_int = self.evo_obj_free
+            self.evo_obj = partial(paper_eqs_evo, self)
             self.decay_channels = []
 
         elif solver == "ME":
             self.decay_channels = self.sb_coupling.me_decay_channels
-            self.evo_obj_free = H0_diagonalized
-            self.evo_obj_int = QobjEvo(self.H_total_t)
+            self.evo_obj = QobjEvo(self.H_total_t)
 
         elif solver == "BR":
             self.decay_channels = self.sb_coupling.br_decay_channels
-            self.evo_obj_free = H0_diagonalized
-            # BR needs the full system Hamiltonian at all times; include H0 + time-dependent interaction
-            self.evo_obj_int = QobjEvo(self.H_total_t)
+            self.evo_obj = QobjEvo(self.H_total_t)
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -175,32 +170,23 @@ class SimulationModuleOQS:
 
     # --- Time grids ----------------------------------------------------------------
     @property
-    def times_global(self):  # lazy compute
-        if not hasattr(self, "_times_global"):
-            t0 = -self.laser.pulse_fwhms[0]
-            t_max = self.simulation_config.t_max
-            dt = self.simulation_config.dt
-            n_steps = int(np.round((t_max - t0) / dt)) + 1
-            self._times_global = np.linspace(t0, t_max, n_steps)
-        return self._times_global
-
-    @times_global.setter
-    def times_global(self, value):
-        self._times_global = value
-
-    @property
     def times_local(self):
         if hasattr(self, "_times_local_manual"):
             return self._times_local_manual
-        tg = self.times_global
+
+        t0 = -2 * self.laser.pulse_fwhms[0]
         cfg = self.simulation_config
         t_max_curr = cfg.t_coh + cfg.t_wait + cfg.t_det_max
-        idx = np.abs(tg - t_max_curr).argmin()
-        return tg[: idx + 1]
+        dt = cfg.dt
+        # Compute number of steps to cover from t0 to t_max_curr with step dt
+        n_steps = int(np.floor((t_max_curr - t0) / dt)) + 10  # small buffer
+        # Generate time grid: [t0, t0 + dt, ..., t_max_curr]
+        times = t0 + dt * np.arange(n_steps, dtype=float)
+        return times
 
     @times_local.setter
-    def times_local(self, value):
-        self._times_local_manual = value
+    def times_local(self, times: np.ndarray):
+        self._times_local_manual = np.asarray(times, dtype=float).reshape(-1)
 
     def reset_times_local(self):
         if hasattr(self, "_times_local_manual"):
@@ -208,16 +194,25 @@ class SimulationModuleOQS:
 
     @property
     def times_det(self):
+        # Detection time grid with exact spacing dt starting at the first time >0 in times_local.
+
         dt = self.simulation_config.dt
         t_det_max = self.simulation_config.t_det_max
-        n_steps = int(np.round(t_det_max / dt)) + 1
-        return np.linspace(0, t_det_max, n_steps)
+        # Compute the first time > 0
+        times_local = self.times_local
+        t_start = times_local[times_local >= 0][0]
+        n_steps = int(np.floor(t_det_max / dt)) + 1
+        if t_start + dt * (n_steps - 1) > t_det_max:
+            # Cap it to avoid overshooting t_det_max and times_local
+            n_steps = int(np.floor((t_det_max - t_start) / dt)) + 1
+            n_steps = min(n_steps, times_local[times_local >= 0].size)
+        return t_start + dt * np.arange(n_steps, dtype=float)
 
     @property
     def times_det_actual(self):
-        self.reset_times_local()
-        td = self.times_det
-        return self.times_local[-len(td) :]
+        cfg = self.simulation_config
+        t_det0 = cfg.t_coh + cfg.t_wait
+        return self.times_det + t_det0
 
     # Evolution objects (Paper specific ones live in liouvillian_paper / redfield)
     def summary(self) -> str:

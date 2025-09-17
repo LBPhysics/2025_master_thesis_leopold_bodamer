@@ -88,12 +88,8 @@ def _avg_E_over_freqs_for_tcoh(
     sim_cfg = sim_oqs.simulation_config
     sim_cfg.t_coh = float(t_coh_val)
     t_wait = sim_cfg.t_wait
-    t_det_max = sim_cfg.t_det_max
-    sim_cfg.t_max = t_wait + 2 * t_det_max
-    if hasattr(sim_oqs, "_times_global"):
-        delattr(sim_oqs, "_times_global")
     sim_oqs.reset_times_local()
-    sim_oqs.laser.update_delays([sim_cfg.t_coh, t_wait])
+    sim_oqs.laser.update_delays([t_coh_val, t_wait])
 
     if freq_indices.size == 0:
         return [], 0
@@ -126,7 +122,7 @@ def run_1d_mode(args):
     t_coh_print = sim_oqs.simulation_config.t_coh
     print(f"🎯 Running 1D mode with t_coh = {t_coh_print:.2f} fs (from config)")
 
-    # Generate frequency samples and choose exactly one frequency index for this batch
+    # Generate frequency samples and split indices equally across batches
     freq_samples = _generate_freq_samples(sim_oqs)
     n_inhom = freq_samples.shape[0]
     n_batches = int(args.n_batches)
@@ -135,13 +131,8 @@ def run_1d_mode(args):
         raise ValueError("No inhomogeneous samples available (n_inhomogen == 0)")
     if batch_idx < 0 or batch_idx >= max(1, n_batches):
         raise ValueError(f"batch_idx {batch_idx} out of range for n_batches {n_batches}")
-    # Map batch -> a single freq index deterministically
-    if n_batches != n_inhom:
-        print(
-            f"ℹ️  n_batches ({n_batches}) != n_inhomogen ({n_inhom}); using modulo mapping batch_idx % n_inhomogen."
-        )
-    freq_idx_for_batch = batch_idx % n_inhom
-    freq_idx_subset = np.array([freq_idx_for_batch], dtype=int)
+    chunks = np.array_split(np.arange(n_inhom), max(1, n_batches))
+    freq_idx_subset = chunks[batch_idx]
     avg_E, contribs = _avg_E_over_freqs_for_tcoh(
         sim_oqs,
         t_coh_print,
@@ -149,6 +140,11 @@ def run_1d_mode(args):
         freq_idx_subset,
         time_cut=time_cut,
     )
+
+    # If this batch has no assigned samples, skip saving
+    if contribs == 0:
+        print("ℹ️  No inhomogeneous samples assigned to this batch; nothing to save for 1D.")
+        return
 
     # Save one averaged dataset for this t_coh
     sim_config_obj = sim_oqs.simulation_config
@@ -159,8 +155,7 @@ def run_1d_mode(args):
         "n_batches": int(max(1, n_batches)),
         "batch_idx": int(batch_idx),
         "n_inhomogen_total": int(n_inhom),
-        "n_inhomogen_in_batch": 1,
-        "freq_idx": int(freq_idx_for_batch),
+        "n_inhomogen_in_batch": int(contribs),
         "t_idx": 0,
         "t_coh_value": float(t_coh_print),
     }
@@ -187,7 +182,7 @@ def run_1d_mode(args):
 
     # Next-step hints: stacking (optional) and plotting
     print(f"\n🎯 To stack this datas into 2D (skips automatically if already stacked), run:")
-    print(f'python stack_1dto2d.py --abs_path "{abs_data_path}" --skip_if_exists')
+    print(f'python stack_1dto2d.py --abs_path "{abs_data_path.parent}" --skip_if_exists')
     print(f"\n🎯 To plot this datas, run:")
     print(f'python plot_datas.py --abs_path "{abs_data_path}"')
 
@@ -208,25 +203,36 @@ def run_2d_mode(args):
     freq_samples = _generate_freq_samples(sim_oqs)
     n_t = len(t_coh_vals)
     n_inhom = freq_samples.shape[0]
-
-    # Choose exactly one frequency index for this batch
     if n_inhom <= 0:
         raise ValueError("No inhomogeneous samples available (n_inhomogen == 0)")
-    if n_batches != n_inhom:
+    # Build Cartesian workload and split equally across batches
+    all_pairs = [(it, jf) for it in range(n_t) for jf in range(n_inhom)]
+    total_pairs = len(all_pairs)
+    chunks = np.array_split(np.arange(total_pairs), max(1, n_batches))
+    if batch_idx < 0 or batch_idx >= len(chunks):
+        raise ValueError(f"batch_idx {batch_idx} out of range for n_batches {n_batches}")
+    sel_idx = chunks[batch_idx]
+    selected_pairs = [all_pairs[i] for i in sel_idx]
+    from collections import defaultdict
+
+    work_by_t: dict[int, list[int]] = defaultdict(list)
+    for it, jf in selected_pairs:
+        work_by_t[int(it)].append(int(jf))
+    if selected_pairs:
+        it_min, it_max = min(work_by_t.keys()), max(work_by_t.keys())
         print(
-            f"ℹ️  n_batches ({n_batches}) != n_inhomogen ({n_inhom}); using modulo mapping batch_idx % n_inhomogen."
+            f"📊 Processing t_idx in [{it_min},{it_max}] with per-t_coh freq counts: "
+            + ", ".join(f"t{it}:{len(work_by_t[it])}" for it in sorted(work_by_t))
         )
-    freq_idx_for_batch = batch_idx % n_inhom
-    print(
-        f"📊 Processing all t_coh values with single inhom sample freq_idx={freq_idx_for_batch} (batch {batch_idx+1}/{n_batches})"
-    )
+    else:
+        print("ℹ️  No items assigned to this batch (check n_batches/batch_idx)")
 
     abs_data_path = None
     start_time = time.time()
-    for it in range(n_t):
-        print(f"\n--- t_idx={it} / {n_t-1} ---")
+    for idx, it in enumerate(sorted(work_by_t.keys())):
+        print(f"\n--- Progress: {idx+1}/{len(work_by_t)} (t_idx={it}) ---")
         t_coh = float(t_coh_vals[it])
-        freq_idx_subset = np.asarray([freq_idx_for_batch], dtype=int)
+        freq_idx_subset = np.asarray(work_by_t[it], dtype=int)
         avg_E, contribs = _avg_E_over_freqs_for_tcoh(
             sim_oqs,
             t_coh,
@@ -243,8 +249,7 @@ def run_2d_mode(args):
             "n_batches": int(max(1, n_batches)),
             "batch_idx": int(batch_idx),
             "n_inhomogen_total": int(n_inhom),
-            "n_inhomogen_in_batch": 1,
-            "freq_idx": int(freq_idx_for_batch),
+            "n_inhomogen_in_batch": int(contribs),
             "t_idx": int(it),
             "t_coh_value": float(t_coh),
         }
@@ -264,7 +269,7 @@ def run_2d_mode(args):
     print(f"\n✅ Batch {batch_idx + 1}/{n_batches} completed!")
     if abs_data_path is not None:
         print(f"\n🎯 To stack this datas into 2D (skips automatically if already stacked), run:")
-        print(f'python stack_1dto2d.py --abs_path "{abs_data_path}" --skip_if_exists')
+        print(f'python stack_1dto2d.py --abs_path "{abs_data_path.parent}" --skip_if_exists')
         print(f"\n🎯 To plot this datas, run:")
         print(f'python plot_datas.py --abs_path "{abs_data_path}"')
     else:

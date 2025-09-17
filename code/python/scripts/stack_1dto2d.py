@@ -1,8 +1,10 @@
 from typing import cast, TYPE_CHECKING
 from qspectro2d.utils import (
-    save_simulation_data,
     list_available_data_files,
     load_info_file,
+    save_data_file,
+    save_info_file,
+    generate_unique_data_filename,
 )
 from pathlib import Path
 import argparse
@@ -68,10 +70,10 @@ def main():
             except Exception:
                 continue
 
-    # Filter to only include _data.npz files
+    # Filter to only include _data.npz files and sort deterministically
     abs_paths = list_available_data_files(base_dir)
-    data_files = [path for path in abs_paths if path.endswith("_data.npz")]
-    abs_data_paths = list(set(data_files))
+    data_files = sorted({path for path in abs_paths if path.endswith("_data.npz")})
+    abs_data_paths = list(data_files)
 
     if not abs_data_paths:
         print("❌ No valid data files found.")
@@ -82,28 +84,38 @@ def main():
     results = []
     shapes = []
     signal_types = None
+    t_det_vals = None
 
     for path in abs_data_paths:
         try:
             abs_data_path = Path(path)
-            data_npz = np.load(abs_data_path, mmap_mode="r")
-            # If any file already has t_coh axis, treat as already stacked and abort stacking logic
-            if args.skip_if_exists and "t_coh" in data_npz.files:
-                print(f"✅ Found already stacked 2D file: {abs_data_path}. Aborting stacking.")
-                print(
-                    f'🎯 To plot this data, run:\npython plot_datas.py --abs_path "{str(abs_data_path)[:-9]}"'
-                )
-                return
-            signal_types = data_npz["signal_types"]
-            datas: list[np.ndarray] = []
-            for sig_type in signal_types:
-                if sig_type in data_npz.files:
-                    datas.append(data_npz[sig_type])
-            # Extract t_coh value from filename (remove _data.npz first)
-            path_without_suffix = str(path).replace("_data.npz", "")
-            t_coh_str = path_without_suffix.split("t_coh_")[1]
-            t_coh_val = t_coh_str.split("_")[0]
-            t_coh = float(t_coh_val)
+            with np.load(abs_data_path, mmap_mode="r") as data_npz:
+                # If any file already has t_coh axis, treat as already stacked and abort stacking logic
+                if args.skip_if_exists and "t_coh" in data_npz.files:
+                    print(f"✅ Found already stacked 2D file: {abs_data_path}. Aborting stacking.")
+                    print(
+                        f'🎯 To plot this data, run:\npython plot_datas.py --abs_path "{str(abs_data_path)[:-9]}"'
+                    )
+                    return
+                if signal_types is None:
+                    signal_types = data_npz["signal_types"]
+                else:
+                    other_signal_types = data_npz["signal_types"]
+                    if not np.array_equal(other_signal_types, signal_types):
+                        raise ValueError("Inconsistent signal_types across files; cannot stack.")
+                datas: list[np.ndarray] = []
+                for sig_type in signal_types:
+                    if sig_type in data_npz.files:
+                        datas.append(data_npz[sig_type])
+                if t_det_vals is None:
+                    t_det_vals = data_npz["t_det"]
+            # Extract t_coh value from the paired _info.pkl (SimulationConfig), not the filename
+            info_path = Path(str(abs_data_path).replace("_data.npz", "_info.pkl"))
+            loaded_info = load_info_file(info_path)
+            sim_config = loaded_info.get("sim_config")
+            if sim_config is None:
+                raise KeyError(f"Missing 'sim_config' in info file: {info_path}")
+            t_coh = float(sim_config.t_coh)
 
             results.append((t_coh, datas))
             shapes.append(datas[0].shape)
@@ -142,32 +154,56 @@ def main():
             stacked_data[j][i] = data_array
         t_coh_vals[i] = t_coh
 
-    # Load metadata once from the first file
-    abs_info_path = [Path(path) for path in abs_paths if path.endswith("_info.pkl")]
-    loaded_info_data = load_info_file(abs_info_path[0])
+    # Load metadata once from the first data file's paired info
+    first_data_path = Path(abs_data_paths[0])
+    first_info_path = Path(str(first_data_path).replace("_data.npz", "_info.pkl"))
+    loaded_info_data = load_info_file(first_info_path)
     system = loaded_info_data["system"]
     bath = loaded_info_data.get("bath") or loaded_info_data.get("bath_params")
     laser = loaded_info_data["laser"]
     sim_config: SimulationConfig = loaded_info_data.get("sim_config")
 
-    # Get time axis (assumes same for all)
-    t_det_vals = data_npz["t_det"]  # new required key
+    # Get time axis (assumes same for all), captured from loop above
+    if t_det_vals is None:
+        raise RuntimeError("t_det axis not found in any input file.")
     sim_config.simulation_type = "2d"
     sim_config.t_coh = 0.0  # indicates varied
 
+    # Save data and info separately with metadata
     # stacked_data shape: (num_t_coh, len(t_det_vals)) => axes: t_coh (axis0), t_det (axis1)
-    abs_path = save_simulation_data(
-        system=system,
-        sim_config=sim_config,
-        bath=bath,
-        laser=laser,
-        datas=stacked_data,  # Pass as list
+    abs_base_path = generate_unique_data_filename(system, sim_config)
+    abs_data_path = Path(f"{abs_base_path}_data.npz")
+
+    metadata = {
+        "stacked": True,
+        "n_inputs": int(num_t_coh),
+        "source_base_dir": str(base_dir),
+        "t_coh_min": float(np.min(t_coh_vals)),
+        "t_coh_max": float(np.max(t_coh_vals)),
+    }
+
+    # Write compressed data file
+    save_data_file(
+        abs_data_path=abs_data_path,
+        datas=stacked_data,
         t_det=t_det_vals,
         t_coh=t_coh_vals,
+        signal_types=list(signal_types),
+        metadata=metadata,
+    )
+
+    # Write paired metadata/info file
+    abs_info_path = Path(f"{abs_base_path}_info.pkl")
+    save_info_file(
+        abs_info_path=abs_info_path,
+        system=system,
+        bath=bath,
+        laser=laser,
+        sim_config=sim_config,
     )
     print("✅ Stacking completed.")
     print(f"\n🎯 To plot this data, run:")
-    print(f'python plot_datas.py --abs_path "{abs_path}"')
+    print(f'python plot_datas.py --abs_path "{abs_data_path}"')
 
 
 if __name__ == "__main__":

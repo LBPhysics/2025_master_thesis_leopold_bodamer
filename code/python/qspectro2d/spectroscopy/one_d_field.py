@@ -8,36 +8,32 @@ Steps:
 - P_{phi1,phi2}(t) = P_total(t) - Σ_i P_i(t), with P_total using all pulses and P_i with only pulse i active
 - P(t) is the complex/analytical polarization: P(t) = ⟨μ_+⟩(t), using the positive-frequency part of μ
 
-Reuses existing building blocks:
-- Evolution: compute_seq_evolution(sim_oqs, ...)
-- Polarization extraction: complex_polarization(dipole_op, states)
-
 Supports ME and BR solvers via the internals of SimulationModuleOQS.
 """
 
 from __future__ import annotations
 
-from typing import Iterable, List, Sequence, Tuple, Optional, Dict, Union
+import imp
+from typing import List, Sequence, Tuple, Optional, Dict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 from copy import deepcopy
 
-from qutip import Qobj, Result, QobjEvo, mesolve, brmesolve
+from qutip import Qobj, Result, mesolve, brmesolve
 
 from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.spectroscopy.polarization import complex_polarization
-from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from project_config.logging_setup import get_logger
 from qspectro2d.config.default_simulation_params import (
     PHASE_CYCLING_PHASES,
     COMPONENT_MAP,
     DETECTION_PHASE,
 )
+from qspectro2d.utils.units_and_rwa import from_rotating_frame_list
 
-
-logger = get_logger(__name__)
+logger = get_logger(__name__, level="INFO")
 
 
 __all__ = [
@@ -52,66 +48,34 @@ def _result_detection_slice(res: Result, t_det: np.ndarray) -> List[Qobj]:
     """Slice the list of states in `res` to only keep the detection window portion."""
     if not hasattr(res, "states") or res.states is None:
         raise RuntimeError("Evolution result did not store states; pass store_states=True.")
-    n_det = len(t_det)
-    n_all = len(res.times)
-    start = n_all - n_det
-    if start < 0:
-        raise ValueError("Detection window longer than total evolution.")
-    return res.states[start:]
+    # t_det approx [0, dt, 2dt, ..., t_det_max]
+    # while res.times approx [t0, t0+dt, ..., t_max]
+    # so i want to find the corresponding indices in res.times that match t_det best and extract those states
+    res_times = np.asarray(res.times)
+    t_det = np.asarray(t_det)
 
+    # Assuming res_times is sorted and equally spaced
+    if len(res_times) < 2:
+        raise ValueError("res.times must have at least 2 elements to determine dt.")
 
-def _run_evolution(
-    ode_solver: str,
-    evo_obj: Union[Qobj, QobjEvo],
-    decay_ops_list: List[Qobj],
-    current_state: Qobj,
-    tlist: np.ndarray,
-    options: dict,
-) -> Result:
-    """
-    Execute quantum evolution for a single time segment or either activated or deactivated pulse.
+    dt = res_times[1] - res_times[0]
 
-    Parameters
-    ----------
-    ode_solver : str
-        Solver type: "ME" for standard master equation / "BR" for Bloch-Redfield master equation.
-    evo_obj : Union[Qobj, QobjEvo]
-        Evolution operator (Hamiltonian or Liouvillian).
-        Can be a static Qobj or time-dependent QobjEvo.
-    decay_ops_list : List[Qobj]
-        List of collapse operators for dissipative dynamics.
-    current_state : Qobj
-        Initial density matrix for this time segment.
-    tlist : np.ndarray
-        Time points for this evolution segment.
-    options : dict
-        Solver options (atol, rtol, store_states, etc.).
+    # Find the starting index for t_det[0]
+    start_idx = np.argmin(np.abs(res_times - t_det[0]))
 
-    Returns
-    -------
-    Result
-        QuTiP Result object with evolution data for this segment.
-    """
-    if ode_solver == "BR":
-        # Optional Bloch-Redfield secular cutoff passthrough TODO add to options
-        sec_cutoff = options.get("sec_cutoff", None)
-        res = brmesolve(
-            H=evo_obj,
-            psi0=current_state,
-            tlist=tlist,
-            a_ops=decay_ops_list,
-            options=options,
-            sec_cutoff=sec_cutoff,
-        )
-    else:
-        res = mesolve(
-            H=evo_obj,
-            rho0=current_state,
-            tlist=tlist,
-            c_ops=decay_ops_list,
-            options=options,
-        )
-    return res
+    # Generate indices assuming t_det is equally spaced with same dt
+    indices = start_idx + np.arange(len(t_det))
+
+    # Verify the indices are within bounds
+    if indices[-1] >= len(res_times):
+        raise ValueError("t_det extends beyond res.times.")
+
+    # Optional: Check for exact match (within tolerance)
+    tolerance = dt / 2
+    if not np.allclose(res_times[indices], t_det, atol=tolerance):
+        raise ValueError("t_det does not match res.times within tolerance.")
+
+    return [res.states[i] for i in indices]
 
 
 def compute_evolution(
@@ -121,21 +85,10 @@ def compute_evolution(
     """
     Compute the evolution of the quantum system for a given pulse sequence.
 
-    This function handles multi-pulse quantum evolution by segmenting the time array
-    based on pulse regions and using appropriate evolution operators for each segment.
-    It supports both interactive (with pulses) and free evolution periods.
-
     Parameters
     ----------
     sim_oqs : SimulationModuleOQS
         Prepared simulation object containing:
-        - system: AtomicSystem with initial state, dipole operators, etc.
-        - laser: LaserPulseSequence with pulse definitions
-        - times_local: Time array for evolution
-        - evo_obj_int: Evolution operator for interactive periods
-        - evo_obj_free: Evolution operator for free evolution periods
-        - simulation_config: Solver settings and tolerances
-        - decay_channels: List of decay operators for dissipation
     **solver_options : dict
         User overrides for solver options (highest precedence).
         Examples: store_states=True, atol=1e-8, rtol=1e-6
@@ -150,12 +103,6 @@ def compute_evolution(
 
     Notes
     -----
-    The function automatically segments the time evolution based on pulse activity:
-    - Uses evo_obj_int during pulse periods (when laser field is active)
-    - Uses evo_obj_free during free evolution periods (no laser field)
-    - Handles overlapping time segments by extending segments by one point
-    - Combines results from all segments into a single Result object
-
     The evolution is computed using either mesolve (master equation) or brmesolve
     (Bloch-Redfield master equation) depending on the ode_solver setting.
     """
@@ -168,18 +115,31 @@ def compute_evolution(
     current_state = sim_oqs.system.psi_ini
     actual_times = sim_oqs.times_local
     decay_ops_list = sim_oqs.decay_channels
-    evo_obj = sim_oqs.evo_obj_int
-    return _run_evolution(
-        sim_oqs.simulation_config.ode_solver,
-        evo_obj,
-        decay_ops_list,
-        current_state,
-        actual_times,
-        options,
-    )
+    evo_obj = sim_oqs.evo_obj
+    ode_solver = sim_oqs.simulation_config.ode_solver
+    if ode_solver == "BR":
+        # Optional Bloch-Redfield secular cutoff passthrough TODO add to options
+        # sec_cutoff = options.get("sec_cutoff", None)
+        res = brmesolve(
+            H=evo_obj,
+            psi0=current_state,
+            tlist=actual_times,
+            a_ops=decay_ops_list,
+            options=options,
+            # sec_cutoff=sec_cutoff,
+        )
+    else:
+        res = mesolve(
+            H=evo_obj,
+            rho0=current_state,
+            tlist=actual_times,
+            c_ops=decay_ops_list,
+            options=options,
+        )
+    return res
 
 
-def _compute_polarization_over_window(
+def _compute_polarization_over_det(  # TODO generalize to arbitrary window
     sim: SimulationModuleOQS, *, store_states: bool = True
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Evolve the system once (with current laser settings) and return (t_det, P(t_det)).
@@ -192,10 +152,43 @@ def _compute_polarization_over_window(
     res: Result = compute_evolution(sim, store_states=store_states)
     det_states = _result_detection_slice(res, t_det)
 
+    if sim.simulation_config.rwa_sl:
+        # States are stored in the rotating frame; convert back to lab for polarization
+        det_states = from_rotating_frame_list(
+            det_states, t_det, sim.system.n_atoms, sim.laser._carrier_freq_fs
+        )
+
     # Analytical polarization using positive-frequency part of dipole operator
     mu_op = sim.system.to_eigenbasis(sim.system.dipole_op)
     P_t = complex_polarization(mu_op, det_states)  # np.ndarray[complex]
-    return t_det, P_t
+    return sim.times_det, P_t
+
+
+def _compute_polarization_over_window(
+    sim: SimulationModuleOQS,
+    window: np.ndarray | List = None,
+    *,
+    store_states: bool = True,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Evolve the system once (with current laser settings) and return (t_det, P(t_det)).
+
+    - Uses `compute_seq_evolution` which dispatches ME/BR according to sim.simulation_config.
+    - Extracts complex/analytical polarization over the detection window only.
+    """
+    # Ensure we store states to extract polarization
+    res: Result = compute_evolution(sim, store_states=store_states)
+    window_states = _result_detection_slice(res, window)
+
+    if sim.simulation_config.rwa_sl:
+        # States are stored in the rotating frame; convert back to lab for polarization
+        window_states = from_rotating_frame_list(
+            window_states, window, sim.system.n_atoms, sim.laser._carrier_freq_fs
+        )
+
+    # Analytical polarization using positive-frequency part of dipole operator
+    mu_op = sim.system.to_eigenbasis(sim.system.dipole_op)
+    P_t = complex_polarization(mu_op, window_states)  # np.ndarray[complex]
+    return window, P_t
 
 
 def _with_only_pulse_i_active(sim: SimulationModuleOQS, i: int) -> SimulationModuleOQS:
@@ -232,13 +225,13 @@ def _compute_P_phi1_phi2(
     _set_pulse_phases_inplace(sim_work, phi1, phi2)
 
     # Total signal with all pulses
-    t_det, P_total = _compute_polarization_over_window(sim_work)
+    t_det, P_total = _compute_polarization_over_det(sim_work)
 
     # Linear signals: only pulse i active
     P_linear_sum = np.zeros_like(P_total, dtype=np.complex128)
     for i in range(len(sim_work.laser.pulses)):
         sim_i = _with_only_pulse_i_active(sim_work, i)
-        _, P_i = _compute_polarization_over_window(sim_i)
+        _, P_i = _compute_polarization_over_det(sim_i)
         P_linear_sum += P_i
 
     P_phi = P_total - P_linear_sum
@@ -264,7 +257,7 @@ def _phase_cycle_component(
     *,
     lmn: Tuple[int, int, int] = (0, 0, 0),
     phi_det: float = 0.0,  # default is overridden at call site using DETECTION_PHASE
-    normalize: bool = True,
+    normalize: bool = False,
 ) -> np.ndarray:
     """Extract P_{l,m,n}(t) from a grid P[phi1,phi2,t].
 
@@ -275,7 +268,14 @@ def _phase_cycle_component(
     for i, phi1 in enumerate(phases1):
         for j, phi2 in enumerate(phases2):
             phase = -1j * (l * phi1 + m * phi2 + n * phi_det)
-            P_out += P_grid[i, j, :] * np.exp(phase)
+            P_out += P_grid[i, j, :] * np.exp(phase)  # TODO not even 1e9 *  can help
+            # check if all P_grid entries are zero and warn
+    if np.allclose(P_out, 0.0):
+        print(
+            f"Warning: Extracted P component for signal {lmn} is all zeros.",
+            flush=True,
+        )
+
     if normalize:
         P_out /= len(phases1) * len(phases2)
     return P_out
@@ -330,7 +330,7 @@ def parallel_compute_1d_e_comps(
     # Optional time mask (keep length constant)
     t_mask = None
     if time_cut is not None and np.isfinite(time_cut):
-        t_mask = (sim_oqs.times_det <= float(time_cut)).astype(np.float64)
+        t_mask = (sim_oqs.times_det_actual <= float(time_cut)).astype(np.float64)
 
     # Compute P_{phi1,phi2} grid once for this realization
     P_grid = np.zeros((len(phases_eff), len(phases_eff), n_t), dtype=np.complex128)
@@ -348,6 +348,7 @@ def parallel_compute_1d_e_comps(
         for j, phi2 in enumerate(phases_eff):
             _, P_phi = temp_results[(phi1, phi2)]
             P_grid[i, j, :] = P_phi
+            # i want to somehow visualize P_grid at this point
 
     # Extract components for this realization
     E_list: List[np.ndarray] = []

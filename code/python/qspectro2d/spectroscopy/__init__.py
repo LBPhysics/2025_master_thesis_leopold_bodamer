@@ -43,7 +43,11 @@ from .post_processing import (
 # SIMULATION FUNCTIONS
 
 from qspectro2d.utils import (
-    apply_RWA_phase_factors,
+    rotating_frame_unitary,
+    to_rotating_frame_op,
+    from_rotating_frame_op,
+    to_rotating_frame_list,
+    from_rotating_frame_list,
     get_expect_vals_with_RWA,
 )
 
@@ -63,6 +67,10 @@ __all__ = [
     "compute_1d_fft_wavenumber",
     "compute_2d_fft_wavenumber",
     # Functions with RWA
-    "apply_RWA_phase_factors",
+    "rotating_frame_unitary",
+    "to_rotating_frame_op",
+    "from_rotating_frame_op",
+    "to_rotating_frame_list",
+    "from_rotating_frame_list",
     "get_expect_vals_with_RWA",
 ]
