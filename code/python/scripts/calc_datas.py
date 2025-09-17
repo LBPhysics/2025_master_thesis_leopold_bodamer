@@ -195,6 +195,7 @@ def run_2d_mode(args):
 
     # Build base simulation (applies CLI overrides inside)
     sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
+    sim_config_obj = sim_oqs.simulation_config
 
     print(f"🎯 Running 2D mode - batch {batch_idx + 1}/{n_batches}")
 
@@ -221,10 +222,11 @@ def run_2d_mode(args):
     if selected_pairs:
         it_min, it_max = min(work_by_t.keys()), max(work_by_t.keys())
         total_t_points = len(work_by_t)
-        total_freq_samples = sum(len(work_by_t[it]) for it in work_by_t)
+        total_work_pairs = sum(len(work_by_t[it]) for it in work_by_t)
+        freq_per_t = len(work_by_t[list(work_by_t.keys())[0]]) if work_by_t else 0
+        print(f"📊 Processing {total_t_points} t_coh values in range [{it_min},{it_max}]")
         print(
-            f"📊 Processing {total_t_points} t_idx values in range [{it_min},{it_max}] "
-            f"with {total_freq_samples} total frequency samples"
+            f"    {freq_per_t} frequency sample(s) per t_coh → {total_work_pairs} total (t_coh, freq) pairs"
         )
         # Show some examples for verification
         example_keys = sorted(work_by_t.keys())[:3]
@@ -252,8 +254,8 @@ def run_2d_mode(args):
         )
 
         # Save averaged dataset for this t_coh in this batch
-        sim_oqs.simulation_config.t_coh = t_coh
-        abs_path = generate_unique_data_filename(sim_oqs.system, sim_oqs.simulation_config)
+        sim_config_obj.t_coh = t_coh
+        abs_path = generate_unique_data_filename(sim_oqs.system, sim_config_obj)
         abs_data_path = Path(f"{abs_path}_data.npz")
         metadata = {
             "n_batches": int(max(1, n_batches)),
@@ -267,11 +269,19 @@ def run_2d_mode(args):
             abs_data_path,
             avg_E,
             sim_oqs.times_det,
-            signal_types=sim_oqs.simulation_config.signal_types,
+            signal_types=sim_config_obj.signal_types,
             metadata=metadata,
         )
+        abs_info_path = Path(f"{abs_path}_info.pkl")
+        save_info_file(
+            abs_info_path,
+            sim_oqs.system,
+            bath=sim_oqs.bath,
+            laser=sim_oqs.laser,
+            sim_config=sim_config_obj,
+        )
         print(
-            f"Saved 2D partial for t_coh={t_coh:.2f} fs with {contribs}/{n_inhom} inhom samples in this batch."
+            f"Saved 2D for t_coh={t_coh:.2f} fs with {contribs}/{n_inhom} inhom samples in this batch."
         )
     elapsed_time = time.time() - start_time
     print(f"Total execution time: {elapsed_time:.2f} seconds")

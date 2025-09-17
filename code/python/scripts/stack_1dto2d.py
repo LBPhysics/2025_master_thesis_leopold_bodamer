@@ -71,7 +71,10 @@ def main():
 
     print("\n🔍 Scanning available files:")
     print(f"   Base directory: {abs_path}")
+
     base_dir = Path(abs_path)
+    if not base_dir.is_dir():
+        base_dir = base_dir.parent
 
     # Optional early-exit: detect already stacked 2D file
     if args.skip_if_exists:
@@ -130,13 +133,16 @@ def main():
                         datas.append(data_npz[sig_type])
                 if t_det_vals is None:
                     t_det_vals = data_npz["t_det"]
-            # Extract t_coh value from the paired _info.pkl (SimulationConfig), not the filename
-            info_path = Path(str(abs_data_path).replace("_data.npz", "_info.pkl"))
-            loaded_info = load_info_file(info_path)
-            sim_config = loaded_info.get("sim_config")
-            if sim_config is None:
-                raise KeyError(f"Missing 'sim_config' in info file: {info_path}")
-            t_coh = float(sim_config.t_coh)
+                # Extract t_coh value from metadata in the datafile
+                if "metadata" in data_npz.files:
+                    metadata = (
+                        data_npz["metadata"].item()
+                        if hasattr(data_npz["metadata"], "item")
+                        else data_npz["metadata"]
+                    )
+                    t_coh = float(metadata["t_coh_value"])
+                else:
+                    raise KeyError(f"Missing 'metadata' in data file: {abs_data_path}")
 
             results.append((t_coh, datas))
             shapes.append(datas[0].shape)
