@@ -6,7 +6,9 @@ including standardized file formats and directory management.
 """
 
 from __future__ import annotations
+from curses import meta
 import signal
+from unittest import result
 
 
 # IMPORTS
@@ -64,8 +66,7 @@ def save_data_file(
 
         # Optional metadata (e.g., inhom batching info)
         if metadata:
-            for k, v in metadata.items():
-                payload[str(k)] = v
+            payload["metadata"] = metadata
 
         # Validate and populate component keys
         signal_types = metadata["signal_types"]
@@ -265,26 +266,7 @@ def load_simulation_data(abs_path: Path) -> dict:
     for signal_type in sim_config.signal_types:
         result[signal_type] = data_dict.get(signal_type)
 
-    # Extract optional metadata keys from the npz payload
-    known_keys = [
-        "n_batches",
-        "batch_idx",
-        "n_inhomogen_in_batch",
-        "t_idx",
-        "t_coh_value",
-        "signal_types",
-    ]
-
-    metadata = {}
-    for k in data_dict.keys():
-        if k not in known_keys:
-            metadata[k] = (
-                data_dict[k].item()
-                if hasattr(data_dict[k], "shape") and data_dict[k].shape == ()
-                else data_dict[k]
-            )
-    if metadata:
-        result["metadata"] = metadata
+    result["metadata"] = data_dict.get("metadata")
 
     return result
 

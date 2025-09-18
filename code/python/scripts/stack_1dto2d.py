@@ -225,10 +225,10 @@ def main() -> None:
     )
     out_path = save_simulation_data(
         sim_oqs,
+        metadata,
         stacked_data,
         t_det=t_det_axis,
         t_coh=t_coh_vals,
-        metadata=metadata,
     )
     print("✅ Stacking complete.")
     print("\n🎯 To plot run:")
