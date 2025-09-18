@@ -243,9 +243,14 @@ def run_2d_mode(args) -> None:
     elapsed = time.time() - start_time
     print(f"\n✅ Batch {batch_idx + 1}/{n_batches} finished in {elapsed:.2f} s")
     if saved_paths:
-        print("\n🎯 Next: stack into 2D (after all batches finished) with e.g.:")
+        print("\n🎯 Next steps (after ALL batches finished):")
         example = saved_paths[-1]
-        print(f"python stack_1dto2d.py --abs_path '{example}' --skip_if_exists")
+        # Provide both stacking (to build the 2D array from all per-t_coh files)
+        # and HPC plotting instructions using the same example path.
+        print("  1. Stack per-t_coh files into a 2D dataset:")
+        print(f"     python stack_1dto2d.py --abs_path '{example}' --skip_if_exists")
+        print("  2. (Optionally) submit HPC plotting job for the stacked result:")
+        print(f"     python hpc_plot_datas.py --abs_path '{example}'")
     else:
         print("ℹ️  No files saved in this batch.")
 
