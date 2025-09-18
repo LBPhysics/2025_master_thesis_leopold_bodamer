@@ -1,19 +1,34 @@
-from typing import cast, TYPE_CHECKING
-from qspectro2d.utils import (
-    list_available_data_files,
-    load_info_file,
-    save_data_file,
-    save_info_file,
-    generate_unique_data_filename,
-)
-from pathlib import Path
-import argparse
-import numpy as np
-import sys
+"""Stack multiple 1D simulation results (varying t_coh) into a single 2D file.
 
-if TYPE_CHECKING:
-    # Imported only for static type checking / IDE autocomplete
-    from qspectro2d.core.simulation import SimulationConfig
+Workflow assumptions:
+    - Each input ``*_data.npz`` corresponds to one coherence time value and
+        contains metadata including ``t_coh_value`` and ``signal_types`` plus the
+        time detection axis ``t_det``.
+    - Files reside in a directory under ``.../data/1d_spectroscopy/...``.
+    - A mirror directory under ``.../data/2d_spectroscopy/...`` will host the
+        stacked 2D dataset.
+
+The produced 2D file stores axes ``t_coh`` and ``t_det`` and a list of stacked
+signal arrays with shape (n_t_coh, ... original 1D shape ...).
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import numpy as np
+
+from qspectro2d.utils import (
+    list_available_files,
+    load_info_file,
+    save_simulation_data,
+)
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
 
 
 def map_1d_dir_to_2d_dir(data_dir: Path) -> Path:
@@ -53,8 +68,8 @@ def detect_existing_2d(data_dir: Path) -> str | None:
     return None
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Stack 1D data into 2D along t_coh.")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Stack multiple 1D spectra into a 2D dataset.")
     parser.add_argument(
         "--abs_path",
         type=str,
@@ -83,20 +98,10 @@ def main():
             print(f"✅ Existing 2D stacked file detected: {existing} (skipping stacking)")
             print(f"🎯 To plot run: python plot_datas.py --abs_path '{existing}'")
             return
-        # Fallback: check the provided directory itself for any 2D file
-        for f in sorted(base_dir.glob("*_data.npz")):
-            try:
-                with np.load(f, mmap_mode="r") as npz:
-                    if "t_coh" in npz.files:
-                        print(f"✅ Existing 2D stacked file detected: {f} (skipping stacking)")
-                        print(f"🎯 To plot run: python plot_datas.py --abs_path '{str(f)}'")
-                        return
-            except Exception:
-                continue
 
     # Filter to only include _data.npz files and sort deterministically
-    abs_paths = list_available_data_files(base_dir)
-    data_files = sorted({path for path in abs_paths if path.endswith("_data.npz")})
+    abs_paths = list_available_files(base_dir)
+    data_files = sorted({p for p in abs_paths if p.endswith("_data.npz")})
     abs_data_paths = list(data_files)
 
     if not abs_data_paths:
@@ -105,132 +110,129 @@ def main():
 
     print(f"\n📥 Loading {len(abs_data_paths)} data files (memory-efficient)...\n")
 
-    results = []
-    shapes = []
-    signal_types = None
-    t_det_vals = None
+    # Weighted merge of partial files with same t_coh_value
+    # ----------------------------------------------------------------------------------
+    groups: dict[float, list[dict]] = {}
+    signal_types: list[str] | None = None
+    t_det_axis: np.ndarray | None = None
+    shape_reference: tuple[int, ...] | None = None
 
-    for path in abs_data_paths:
+    for fp in abs_data_paths:
         try:
-            abs_data_path = Path(path)
-            with np.load(abs_data_path, mmap_mode="r") as data_npz:
-                # If any file already has t_coh axis, treat as already stacked and abort stacking logic
-                if args.skip_if_exists and "t_coh" in data_npz.files:
-                    print(f"✅ Found already stacked 2D file: {abs_data_path}. Aborting stacking.")
-                    print(
-                        f'🎯 To plot this data, run:\npython plot_datas.py --abs_path "{str(abs_data_path)[:-9]}"'
-                    )
-                    return
+            with np.load(fp, mmap_mode="r") as npz:  # type: ignore[arg-type]
+                metadata = npz.get("metadata", None)
+                if metadata is None:
+                    raise ValueError("metadata missing")
+                sig_types = list(metadata["signal_types"])  # type: ignore[index]
                 if signal_types is None:
-                    signal_types = data_npz["signal_types"]
-                else:
-                    other_signal_types = data_npz["signal_types"]
-                    if not np.array_equal(other_signal_types, signal_types):
-                        raise ValueError("Inconsistent signal_types across files; cannot stack.")
-                datas: list[np.ndarray] = []
-                for sig_type in signal_types:
-                    if sig_type in data_npz.files:
-                        datas.append(data_npz[sig_type])
-                if t_det_vals is None:
-                    t_det_vals = data_npz["t_det"]
-                # Extract t_coh value from metadata in the datafile
-                if "metadata" in data_npz.files:
-                    metadata = (
-                        data_npz["metadata"].item()
-                        if hasattr(data_npz["metadata"], "item")
-                        else data_npz["metadata"]
-                    )
-                    t_coh = float(metadata["t_coh_value"])
-                else:
-                    raise KeyError(f"Missing 'metadata' in data file: {abs_data_path}")
-
-            results.append((t_coh, datas))
-            shapes.append(datas[0].shape)
-
-            print(f"   ✅ Loaded: t_coh = {t_coh}")
+                    signal_types = sig_types
+                elif signal_types != sig_types:
+                    raise ValueError("Inconsistent signal_types across files")
+                t_coh_val = float(metadata["t_coh_value"])  # type: ignore[index]
+                n_inhom_batch = int(metadata.get("n_inhomogen_in_batch", 0))
+                arrays = []
+                for s in signal_types:
+                    if s not in npz:
+                        raise ValueError(f"Signal '{s}' missing in {fp}")
+                    arr = np.array(npz[s])
+                    arrays.append(arr)
+                    if shape_reference is None:
+                        shape_reference = arr.shape
+                    elif shape_reference != arr.shape:
+                        raise ValueError(
+                            f"Shape mismatch for t_coh={t_coh_val}: {arr.shape} vs {shape_reference}"
+                        )
+                if t_det_axis is None:
+                    t_det_axis = np.array(npz["t_det"])  # type: ignore[index]
+                groups.setdefault(t_coh_val, []).append(
+                    {"arrays": arrays, "weight": float(max(1, n_inhom_batch)), "path": fp}
+                )
+                print(f"   ✅ Loaded t_coh={t_coh_val:.4g} (weight {n_inhom_batch}) from {fp}")
         except Exception as e:
-            print(f"   ❌ Failed to load {path}: {e}")
+            print(f"   ❌ Skipping {fp}: {e}")
 
-    if not results:
-        print("❌ No valid data loaded — cannot stack. Aborting.")
+    if not groups or signal_types is None or t_det_axis is None:
+        print("❌ No valid inputs to stack.")
         sys.exit(1)
 
-    if len(set(shapes)) > 1:
-        print("❌ Inconsistent data shapes — cannot safely stack.")
-        for s in set(shapes):
-            print(f"   Detected shape: {s}")
-        sys.exit(1)
+    # Merge: for each t_coh take weighted average over partial contributions
+    merged: list[tuple[float, list[np.ndarray], float]] = []
+    per_t_provenance: list[dict] = []
+    for t_coh_val, entries in sorted(groups.items(), key=lambda kv: kv[0]):
+        total_w = sum(e["weight"] for e in entries)
+        n_signals = len(signal_types)
+        acc = [
+            np.zeros(shape_reference, dtype=entries[0]["arrays"][i].dtype) for i in range(n_signals)
+        ]
+        for e in entries:
+            w = e["weight"]
+            for i, arr in enumerate(e["arrays"]):
+                acc[i] += w * arr
+        merged_arrays = [a / total_w for a in acc]
+        merged.append((t_coh_val, merged_arrays, total_w))
+        per_t_provenance.append(
+            {
+                "t_coh_value": t_coh_val,
+                "total_weight": total_w,
+                "n_partials": len(entries),
+                "sources": [e["path"] for e in entries],
+            }
+        )
+        if len(entries) > 1:
+            print(
+                f"   🔗 Merged {len(entries)} partial files for t_coh={t_coh_val:.4g} (total weight {total_w})"
+            )
 
-    # Sort by t_coh
-    results.sort(key=lambda r: r[0])
+    n_t_coh = len(merged)
+    dtype = merged[0][1][0].dtype
+    n_signals = len(signal_types)
+    stacked_data = [np.empty((n_t_coh, *shape_reference), dtype=dtype) for _ in range(n_signals)]
+    t_coh_vals = np.empty(n_t_coh)
+    total_weights = []
+    for i, (t_coh_val, arrays, total_w) in enumerate(merged):
+        t_coh_vals[i] = t_coh_val
+        for j, arr in enumerate(arrays):
+            stacked_data[j][i] = arr
+        total_weights.append(total_w)
 
-    shape_single = results[0][1][0].shape  # Shape of first data array from first signal type
-    dtype = results[0][1][0].dtype  # Dtype of first data array
-    num_t_coh = len(results)
-    num_signal_types = len(signal_types)
-
-    # Create a list of stacked arrays, one for each signal type
-    stacked_data = [
-        np.empty((num_t_coh, *shape_single), dtype=dtype) for _ in range(num_signal_types)
-    ]
-    t_coh_vals = np.empty(num_t_coh)
-
-    for i, (t_coh, datas) in enumerate(results):
-        # Stack each signal type separately
-        for j, data_array in enumerate(datas):
-            stacked_data[j][i] = data_array
-        t_coh_vals[i] = t_coh
-
-    # Load metadata once from the first data file's paired info
-    first_data_path = Path(abs_data_paths[0])
-    first_info_path = Path(str(first_data_path).replace("_data.npz", "_info.pkl"))
-    loaded_info_data = load_info_file(first_info_path)
-    system = loaded_info_data["system"]
-    bath = loaded_info_data.get("bath") or loaded_info_data.get("bath_params")
-    laser = loaded_info_data["laser"]
-    sim_config: SimulationConfig = loaded_info_data.get("sim_config")
-
-    # Get time axis (assumes same for all), captured from loop above
-    if t_det_vals is None:
-        raise RuntimeError("t_det axis not found in any input file.")
+    # Load simulation structural info from one accompanying _info.pkl file
+    first_info = Path(str(abs_data_paths[0]).replace("_data.npz", "_info.pkl"))
+    info_payload = load_info_file(first_info)
+    system = info_payload["system"]
+    bath = info_payload.get("bath") or info_payload.get("bath_params")
+    laser = info_payload["laser"]
+    sim_config: SimulationConfig = info_payload["sim_config"]
     sim_config.simulation_type = "2d"
-    sim_config.t_coh = 0.0  # indicates varied
-
-    # Save data and info separately with metadata
-    # stacked_data shape: (num_t_coh, len(t_det_vals)) => axes: t_coh (axis0), t_det (axis1)
-    abs_base_path = generate_unique_data_filename(system, sim_config)
-    abs_data_path = Path(f"{abs_base_path}_data.npz")
+    sim_config.t_coh = None
 
     metadata = {
         "stacked": True,
-        "n_inputs": int(num_t_coh),
+        "n_inputs": int(n_t_coh),
         "source_base_dir": str(base_dir),
+        "signal_types": signal_types,
         "t_coh_min": float(np.min(t_coh_vals)),
         "t_coh_max": float(np.max(t_coh_vals)),
+        "merged_partials": True,
+        "t_coh_total_weights": total_weights,
+        "provenance": per_t_provenance,
     }
 
-    # Write compressed data file
-    save_data_file(
-        abs_data_path=abs_data_path,
-        datas=stacked_data,
-        t_det=t_det_vals,
-        t_coh=t_coh_vals,
-        signal_types=list(signal_types),
-        metadata=metadata,
-    )
-
-    # Write paired metadata/info file
-    abs_info_path = Path(f"{abs_base_path}_info.pkl")
-    save_info_file(
-        abs_info_path=abs_info_path,
+    sim_oqs = SimulationModuleOQS(
         system=system,
         bath=bath,
         laser=laser,
         sim_config=sim_config,
     )
-    print("✅ Stacking completed.")
-    print(f"\n🎯 To plot this data, run:")
-    print(f'python plot_datas.py --abs_path "{abs_data_path}"')
+    out_path = save_simulation_data(
+        sim_oqs,
+        stacked_data,
+        t_det=t_det_axis,
+        t_coh=t_coh_vals,
+        metadata=metadata,
+    )
+    print("✅ Stacking complete.")
+    print("\n🎯 To plot run:")
+    print(f"python plot_datas.py --abs_path '{out_path}'")
 
 
 if __name__ == "__main__":

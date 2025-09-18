@@ -84,8 +84,7 @@ def __getattr__(name):  # PEP 562 lazy attribute loading
     # Utils exports (lazy)
     if name in {
         "save_simulation_data",
-        "load_data_from_abs_path",
-        "load_latest_data_from_directory",
+        "load_simulation_data",
     }:
         from . import utils as _utils
 
@@ -124,8 +123,7 @@ except ImportError as e:
 try:
     from .utils import (
         save_simulation_data,
-        load_data_from_abs_path,
-        load_latest_data_from_directory,
+        load_simulation_data,
     )
 except ImportError as e:
     print(f"Warning: Could not import data module: {e}")
@@ -169,8 +167,7 @@ __all__ = [
     "plot_all_pulse_components",
     # Data management
     "save_simulation_data",
-    "load_data_from_abs_path",
-    "load_latest_data_from_directory",
+    "load_simulation_data",
     # Configuration
     "DATA_DIR",
     "FIGURES_DIR",

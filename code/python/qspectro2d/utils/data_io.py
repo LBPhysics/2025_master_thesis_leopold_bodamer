@@ -6,16 +6,17 @@ including standardized file formats and directory management.
 """
 
 from __future__ import annotations
+import signal
 
 
 # IMPORTS
 
 import numpy as np
 import pickle
-import os
 import glob
 from pathlib import Path
 from typing import Optional, List, TYPE_CHECKING
+from qutip import BosonicEnvironment
 
 ### Project-specific imports
 from project_config.paths import DATA_DIR
@@ -25,13 +26,8 @@ from project_config.logging_setup import get_logger
 if TYPE_CHECKING:
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
-    from qspectro2d.core.simulation import SimulationConfig
-from qutip import BosonicEnvironment
+    from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
 from qspectro2d.utils.file_naming import generate_unique_data_filename
-import numpy as np
-import pickle
-import glob
-import os
 
 logger = get_logger(__name__)
 
@@ -39,22 +35,19 @@ logger = get_logger(__name__)
 # data saving functions
 def save_data_file(
     abs_data_path: Path,
+    metadata: Optional[dict],
     datas: List[np.ndarray],
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
-    signal_types: Optional[List[str]] = None,
-    metadata: Optional[dict] = None,
 ) -> None:
     """Save spectroscopy data(s) with a single np.savez_compressed call.
 
     Distinctions:
       - Dimensionality (1D vs 2D) inferred from t_coh is None or not.
-      - Single vs multi-component data inferred from provided `datas` and `signal_types`.
+      - Single vs multi-component data inferred from provided `datas`.
 
     Stored keys:
-      - Single (rephasing/nonrephasing): array stored under that key, plus axes
-      - Two components: keys 'rephasing' and 'non_rephasing', plus axes
-      - Also stores 'signal_types' as a numpy array of strings.
+      - Data arrays stored under 'data1', 'data2', etc., plus axes
     """
     try:
         abs_data_path.parent.mkdir(parents=True, exist_ok=True)
@@ -62,18 +55,9 @@ def save_data_file(
         # Infer dimensionality
         is_2d = t_coh is not None
 
-        # Default and validate signal_types
-        if not signal_types:
-            signal_types = ["rephasing"] * len(datas)
-        if len(datas) != len(signal_types):
-            raise ValueError(
-                f"len(datas)={len(datas)} must match len(signal_types)={len(signal_types)}"
-            )
-
         # Base payload
         payload: dict = {
             "t_det": t_det,
-            "signal_types": np.asarray(signal_types, dtype=str),
         }
         if is_2d:
             payload["t_coh"] = t_coh
@@ -84,7 +68,13 @@ def save_data_file(
                 payload[str(k)] = v
 
         # Validate and populate component keys
-        for data, signal_type in zip(datas, signal_types):
+        signal_types = metadata["signal_types"]
+        if len(signal_types) != len(datas):
+            raise ValueError(
+                f"Length of signal_types ({len(signal_types)}) must match number of datas ({len(datas)})"
+            )
+
+        for i, data in enumerate(datas):
             if is_2d:
                 if not isinstance(data, np.ndarray) or data.shape != (
                     len(t_coh),
@@ -96,10 +86,8 @@ def save_data_file(
             else:
                 if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
                     raise ValueError(f"1D data must have shape (len(t_det),) = ({len(t_det)},)")
-            key = str(signal_type)
-            if key == "non_rephasing":
-                key = "nonrephasing"
-            payload[key] = data
+                key = signal_types[i]
+                payload[key] = data
 
         # Single write
         np.savez_compressed(abs_data_path, **payload)
@@ -145,10 +133,8 @@ def save_info_file(
 
 
 def save_simulation_data(
-    system: "AtomicSystem",
-    sim_config: "SimulationConfig",
-    bath: BosonicEnvironment,
-    laser: "LaserPulseSequence",
+    sim_module: SimulationModuleOQS,
+    metadata: dict,
     datas: List[np.ndarray],
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
@@ -161,27 +147,26 @@ def save_simulation_data(
         datas (List[np.ndarray]): Simulation results (1D/2D or absorptive tuple).
         t_det (np.ndarray): Detection time axis.
         t_coh (Optional[np.ndarray]): Coherence time axis for 2D data.
-        system (AtomicSystem): System parameters object.
-        sim_config (SimulationConfig): Simulation configuration object.
 
     Returns:
         Path]: absolute path to DATA_DIR for the saved numpy data file and info file.
     """
 
-    # Generate unique filenames
+    system: "AtomicSystem" = sim_module.system
+    sim_config: "SimulationConfig" = sim_module.simulation_config
+    bath: "BosonicEnvironment" = sim_module.bath
+    laser: "LaserPulseSequence" = sim_module.laser
 
+    # Generate unique filenames
     abs_base_path = generate_unique_data_filename(system, sim_config)
     abs_data_path = Path(f"{abs_base_path}_data.npz")  # still legacy suffix pattern
     abs_info_path = Path(f"{abs_base_path}_info.pkl")
 
     # Save files
-    sig_types = getattr(sim_config, "signal_types", None) or ["rephasing"]
-
-    save_data_file(abs_data_path, datas, t_det, t_coh, signal_types=sig_types)
+    save_data_file(abs_data_path, metadata, datas, t_det, t_coh=t_coh)
     save_info_file(abs_info_path, system, bath, laser, sim_config)
 
     # Return absolute path to DATA_DIR
-
     return abs_data_path
 
 
@@ -197,6 +182,8 @@ def load_data_file(abs_data_path: Path) -> dict:
         dict: Dictionary containing loaded numpy data arrays
     """
     try:
+        logger.debug("Loading data: %s", abs_data_path)
+
         with np.load(abs_data_path, allow_pickle=True) as data_file:
             data_dict = {key: data_file[key] for key in data_file.files}
         # Enforce required key
@@ -228,81 +215,66 @@ def load_info_file(abs_info_path: Path) -> dict:
                 info = pickle.load(info_file)
             logger.info("Loaded info: %s", abs_info_path)
             return info
-
-        # 2. If not found, search for any .pkl file in the same directory
-        parent_dir = abs_info_path.parent
-        logger.warning("Info not found, searching for .pkl in %s", parent_dir)
-
-        # Find the first .pkl file in the directory
-        pkl_files = list(parent_dir.glob("*.pkl"))
-
-        if pkl_files:
-            alt_path = pkl_files[0]  # Use the first .pkl file found
-            logger.info("Using alternative info file: %s", alt_path)
-            with open(alt_path, "rb") as info_file:
-                info = pickle.load(info_file)
-            logger.info("Loaded info: %s", alt_path)
-            return info
-        else:
-            raise FileNotFoundError(f"No .pkl files found in directory: {parent_dir}")
-
     except Exception:
         logger.exception("Failed to load info: %s", abs_info_path)
         raise
 
 
-def load_data_from_abs_path(abs_path: str) -> dict:
-    """Load simulation data (new format only).
-
-    Expects the saved file to contain component arrays under
-    keys matching entries in 'signal_types' stored in the file. Also supports
-    legacy key 'non_rephasing'. Returns axes, components, and signal_types list.
-    """
+def load_simulation_data(abs_path: Path) -> dict:
+    """Load simulation data (new format only)."""
     # Determine the base path (without file extensions)
     if abs_path.endswith("_data.npz"):
-        base_path = abs_path[:-9]  # Remove '_data.npz'
+        abs_data_path = Path(abs_path)
+        abs_info_path = Path(abs_path[:-9] + "_info.pkl")
     elif abs_path.endswith("_info.pkl"):
-        base_path = abs_path[:-9]  # Remove '_info.pkl'
+        abs_info_path = Path(abs_path)
+        abs_data_path = Path(abs_path[:-9] + "_data.npz")
     else:
-        base_path = abs_path
+        raise ValueError("Path must end with '_data.npz' or '_info.pkl'")
 
-    logger.debug("Loading data bundle: %s", base_path)
-    abs_data_path = base_path + "_data.npz"
-    abs_info_path = base_path + "_info.pkl"
-
-    data_dict = load_data_file(Path(abs_data_path))
-    info_dict = load_info_file(Path(abs_info_path))
+    logger.debug("Loading data bundle: %s", abs_path)
+    data_dict = load_data_file(abs_data_path)
+    info_dict = load_info_file(abs_info_path)
 
     if "sim_config" not in info_dict:
         raise KeyError("Missing 'sim_config' in info file")
 
-    # Base result structure (new mode: expose axes at top-level)
-    signal_types = data_dict.get("signal_types")
+    # Axes
+    t_det = data_dict.get("t_det")
+    t_coh = data_dict.get("t_coh") if "t_coh" in data_dict else None
+    is_2d = t_coh is not None and t_coh.size > 0 if isinstance(t_coh, np.ndarray) else False
+
+    # Base result structure
+    sim_config = info_dict["sim_config"]
     result: dict = {
-        "t_det": data_dict.get("t_det"),
         "system": info_dict.get("system"),
         "bath": info_dict.get("bath"),
         "laser": info_dict.get("laser"),
-        "sim_config": info_dict.get("sim_config"),
-        "signal_types": signal_types,
+        "sim_config": sim_config,
+        "t_det": data_dict.get("t_det"),
     }
+
     # Optional coherence axis
-    if "t_coh" in data_dict and data_dict.get("t_coh") is not None:
-        t_coh = data_dict["t_coh"]
+    if is_2d:
         try:
             if hasattr(t_coh, "__len__") and len(t_coh) > 0:
                 result["t_coh"] = t_coh
         except Exception:
             pass
 
-    # Add component arrays
-    for signal_type in signal_types:
+    for signal_type in sim_config.signal_types:
         result[signal_type] = data_dict.get(signal_type)
 
     # Extract optional metadata keys from the npz payload
-    known_keys = set(["t_det", "signal_types"]) | set(signal_types.tolist())
-    if "t_coh" in data_dict:
-        known_keys.add("t_coh")
+    known_keys = [
+        "n_batches",
+        "batch_idx",
+        "n_inhomogen_in_batch",
+        "t_idx",
+        "t_coh_value",
+        "signal_types",
+    ]
+
     metadata = {}
     for k in data_dict.keys():
         if k not in known_keys:
@@ -313,55 +285,11 @@ def load_data_from_abs_path(abs_path: str) -> dict:
             )
     if metadata:
         result["metadata"] = metadata
+
     return result
 
 
-def load_latest_data_from_directory(abs_base_dir: str) -> dict:
-    """
-    Find and load the most recent data file from a base directory and all subdirectories.
-
-    Args:
-        abs_base_dir: Base directory path
-
-    Returns:
-        dict: The loaded data dictionary from the most recent file
-    """
-
-    # validate path
-
-    if not abs_base_dir.is_dir():
-        abs_base_dir = abs_base_dir.parent
-    if not abs_base_dir.exists():
-        raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
-
-    logger.debug("Searching latest data in: %s", abs_base_dir)
-
-    # Find all data files recursively
-
-    data_pattern = str(abs_base_dir / "**" / "*_data.npz")
-    data_files = glob.glob(data_pattern, recursive=True)
-
-    if not data_files:
-        raise FileNotFoundError(f"No data files found in {abs_base_dir}")
-
-    # Find the most recent file
-
-    latest_file = max(data_files, key=os.path.getmtime)
-    latest_path = Path(latest_file)
-
-    # Convert to absolute path string without _data.npz
-    abs_path = latest_path
-    abs_path_str = str(abs_path)
-    if abs_path_str.endswith("_data.npz"):
-        abs_path_str = abs_path_str[:-9]  # Remove suffix
-    logger.info("Loading latest file: %s", abs_path_str)
-
-    # Load and return the data
-
-    return load_data_from_abs_path(abs_path_str)
-
-
-def list_available_data_files(abs_base_dir: Path) -> List[str]:
+def list_available_files(abs_base_dir: Path) -> List[str]:
     """
     List all available data files in a directory with their metadata without loading the full data.
 
@@ -380,11 +308,9 @@ def list_available_data_files(abs_base_dir: Path) -> List[str]:
     logger.debug("Listing data files in: %s", abs_base_dir)
 
     # Find all data files recursively
-
     logger.debug("Listing data files in: %s", abs_base_dir)
 
     # Find all data and info files recursively
-
     data_pattern = str(abs_base_dir / "**" / "*_data.npz")
     info_pattern = str(abs_base_dir / "**" / "*_info.pkl")
 
@@ -400,127 +326,8 @@ def list_available_data_files(abs_base_dir: Path) -> List[str]:
         return []
 
     # Print summary
-
     logger.info("Found %d files in %s", len(all_files), abs_base_dir)
     for file_path in all_files:
         logger.debug("file: %s", file_path)
 
     return all_files
-
-
-def list_data_files_in_directory(abs_base_dir: Path) -> List[str]:
-    """
-    List all data files in a specific directory (non-recursive) as absolute paths.
-
-    Args:
-        abs_base_dir: Base directory path absolute
-
-    Returns:
-        List[str]: List of absolute paths (without _data.npz suffix) for files in the same directory
-    """
-    if not abs_base_dir.exists():
-        raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
-
-    logger.debug("Listing data files in: %s", abs_base_dir)
-
-    # Find data files in current directory only (non-recursive)
-
-    data_files = list(abs_base_dir.glob("*_data.npz"))
-
-    if not data_files:
-        logger.warning("No data files found: %s", abs_base_dir)
-        return []
-
-    # remove suffix
-    abs_paths = []
-
-    for data_file in data_files:
-        abs_path = data_file
-        abs_path_str = str(abs_path)
-
-        # Remove '_data.npz' suffix
-        if abs_path_str.endswith("_data.npz"):
-            abs_path_str = abs_path_str[:-9]
-
-        abs_paths.append(abs_path_str)
-
-    # Sort paths for consistent output
-    abs_paths.sort()
-
-    logger.info("Found %d data files in %s", len(abs_paths), abs_base_dir)
-    for path in abs_paths:
-        logger.debug("file: %s", path)
-
-    return abs_paths
-
-
-# TEST CODE (when run directly)
-
-if __name__ == "__main__":
-    logger.info("Testing qspectro2d.utils.data_io module...")
-    logger.info("%s", "=" * 50)
-
-    # Test 1: List available data files
-    logger.info("Test 1: Listing available data files...")
-    try:
-        # Try to list files in common directories
-        test_dirs = ["1d_spectroscopy", "2d_spectroscopy", "bath_correlator", "tests"]
-
-        for test_dir in test_dirs:
-            try:
-                logger.info("Checking directory: %s", test_dir)
-                file_info = list_available_data_files(Path(test_dir))
-                if file_info:
-                    logger.info("Found %d files", len(file_info))
-                else:
-                    logger.info("No files found in %s", test_dir)
-            except FileNotFoundError:
-                logger.info("Directory does not exist: %s", test_dir)
-            except Exception as e:
-                logger.exception("Error accessing %s", test_dir)
-
-    except Exception as e:
-        print(f"❌ Error in test 1: {e}")
-
-    # Test 2: Try to load latest data from a directory
-    logger.info("Test 2: Loading latest data...")
-    try:
-        # Try common directories
-        for test_dir in ["1d_spectroscopy", "2d_spectroscopy", "tests"]:
-            try:
-                logger.info("Attempting to load latest from: %s", test_dir)
-                data = load_latest_data_from_directory(Path(test_dir))
-                logger.info("Loaded data keys: %s", list(data.keys()))
-
-                # Print some basic info about the loaded data
-                if "data" in data and data["data"] is not None:
-                    logger.info("Data shape: %s", data["data"].shape)
-                if "system" in data and data["system"]:
-                    logger.info("System n_atoms: %s", getattr(data["system"], "n_atoms", "Unknown"))
-
-                # Only test the first successful load to avoid too much output
-                break
-
-            except FileNotFoundError:
-                logger.info("No data files found in %s", test_dir)
-            except Exception as e:
-                logger.exception("Error loading from %s", test_dir)
-
-    except Exception:
-        logger.exception("Error in test 2")
-
-    # Test 4: Show DATA_DIR information
-    print(f"\n📁 Test 4: DATA_DIR information...")
-    try:
-        print(f"   DATA_DIR: {DATA_DIR}")
-        print(f"   Exists: {DATA_DIR.exists()}")
-        if DATA_DIR.exists():
-            subdirs = [d for d in DATA_DIR.iterdir() if d.is_dir()]
-            print(f"   Subdirectories: {[d.name for d in subdirs[:10]]}")  # Show first 10
-            if len(subdirs) > 10:
-                print(f"   ... and {len(subdirs) - 10} more")
-    except Exception as e:
-        print(f"❌ Error in test 4: {e}")
-
-    print("\n" + "=" * 50)
-    print("🏁 Testing complete!")

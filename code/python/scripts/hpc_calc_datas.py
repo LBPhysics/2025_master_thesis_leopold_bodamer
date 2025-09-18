@@ -22,22 +22,33 @@ Add --no_submit to generate scripts without submitting them.
 from __future__ import annotations
 
 import argparse
+import shutil
 from pathlib import Path
 from subprocess import CalledProcessError, run
 
 
-def _slurm_header(job_name: str, job_dir: Path, mail_type: str = "END,FAIL") -> str:
-    """Return a simple SLURM header for a single-job script."""
+def _slurm_header(
+    job_name: str,
+    job_dir: Path,
+    mail_type: str = "END,FAIL",
+    cpus: int = 16,
+    mem: str = "2G",
+    time_limit: str = "0-02:00:00",
+) -> str:
+    """Return a simple SLURM header for a single-job script.
+
+    The email is left as a TODO so users are forced to personalize it.
+    """
     return f"""#!/bin/bash
 #SBATCH --job-name={job_name}
 #SBATCH --chdir={job_dir}
 #SBATCH --output=logs/%x.out
 #SBATCH --error=logs/%x.err
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=2G
-#SBATCH --time=0-02:00:00
+#SBATCH --cpus-per-task={cpus}
+#SBATCH --mem={mem}
+#SBATCH --time={time_limit}
 #SBATCH --mail-type={mail_type}
-#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # TODO adjust email
+#SBATCH --mail-user=CHANGE_ME@example.com  # TODO set your email
 
 # Load conda (adjust to your cluster if needed)
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
@@ -56,6 +67,9 @@ def _create_batch_script(
     sim_type: str,
     batch_idx: int,
     n_batches: int,
+    cpus: int,
+    mem: str,
+    time_limit: str,
 ) -> Path:
     """Create a single SLURM script that runs one batch of calc_datas.py."""
     calc_path = (scripts_dir / "calc_datas.py").resolve()
@@ -70,7 +84,14 @@ def _create_batch_script(
         mail_type = "END,FAIL"
     else:
         mail_type = "NONE"
-    header = _slurm_header(job_name=job_name, job_dir=job_dir, mail_type=mail_type)
+    header = _slurm_header(
+        job_name=job_name,
+        job_dir=job_dir,
+        mail_type=mail_type,
+        cpus=cpus,
+        mem=mem,
+        time_limit=time_limit,
+    )
 
     body = (
         f"python {calc_path} --simulation_type {sim_type} "
@@ -88,11 +109,18 @@ def _create_batch_script(
 
 def _submit_all(job_dir: Path) -> None:
     """Submit all .slurm scripts in job_dir via sbatch."""
+    sbatch_path = shutil.which("sbatch")
+    if not sbatch_path:
+        print("WARN: 'sbatch' not found in PATH; skipping automatic submission.")
+        return
     for slurm_script in sorted(job_dir.glob("*.slurm")):
         try:
-            run(["sbatch", str(slurm_script)], check=True)
+            run([sbatch_path, str(slurm_script)], check=True)
         except (FileNotFoundError, CalledProcessError) as exc:
-            print(f"WARN: Failed submitting {slurm_script.name}: {exc}")
+            print(
+                f"WARN: Failed submitting {slurm_script.name}: {exc}\n"
+                f"Suggestion: inspect script or submit manually with 'sbatch {slurm_script.name}'"
+            )
 
 
 def main() -> None:
@@ -114,10 +142,13 @@ def main() -> None:
         default=10,
         help="Total number of batches (creates this many SLURM scripts)",
     )
+    parser.add_argument("--cpus", type=int, default=16, help="CPUs per task (default: 16)")
+    parser.add_argument("--mem", type=str, default="2G", help="Memory (default: 2G)")
     parser.add_argument(
-        "--no_submit",
-        action="store_true",
-        help="Only generate scripts, do not submit via sbatch",
+        "--time_limit", type=str, default="0-02:00:00", help="Walltime e.g. 0-02:00:00"
+    )
+    parser.add_argument(
+        "--no_submit", action="store_true", help="Only generate scripts, do not submit"
     )
     args = parser.parse_args()
 
@@ -145,6 +176,9 @@ def main() -> None:
             sim_type=args.simulation_type,
             batch_idx=bidx,
             n_batches=args.n_batches,
+            cpus=args.cpus,
+            mem=args.mem,
+            time_limit=args.time_limit,
         )
 
     print(f"Generated {args.n_batches} scripts in: {job_dir}")
