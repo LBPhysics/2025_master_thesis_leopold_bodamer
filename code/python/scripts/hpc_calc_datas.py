@@ -48,7 +48,7 @@ def _slurm_header(
 #SBATCH --mem={mem}
 #SBATCH --time={time_limit}
 #SBATCH --mail-type={mail_type}
-#SBATCH --mail-user=CHANGE_ME@example.com  # TODO set your email
+#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # TODO set your email
 
 # Load conda (adjust to your cluster if needed)
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then

@@ -236,35 +236,8 @@ def load_simulation_data(abs_path: Path) -> dict:
     data_dict = load_data_file(abs_data_path)
     info_dict = load_info_file(abs_info_path)
 
-    # Axes
-    t_det = data_dict.get("t_det")
-    t_coh = data_dict.get("t_coh") if "t_coh" in data_dict else None
-    is_2d = t_coh is not None and t_coh.size > 0 if isinstance(t_coh, np.ndarray) else False
-
-    # Base result structure
-    sim_config = info_dict["sim_config"]
-    result: dict = {
-        "system": info_dict.get("system"),
-        "bath": info_dict.get("bath"),
-        "laser": info_dict.get("laser"),
-        "sim_config": sim_config,
-        "t_det": t_det,
-    }
-
-    # Optional coherence axis
-    if is_2d:
-        try:
-            if hasattr(t_coh, "__len__") and len(t_coh) > 0:
-                result["t_coh"] = t_coh
-        except Exception:
-            pass
-
-    for signal_type in sim_config.signal_types:
-        result[signal_type] = data_dict.get(signal_type)
-
-    result["metadata"] = data_dict.get("metadata")
-
-    return result
+    # Combine data and info into a single dictionary
+    return {**data_dict, **info_dict}
 
 
 def list_available_files(abs_base_dir: Path) -> List[str]:

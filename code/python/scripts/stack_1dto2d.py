@@ -188,16 +188,16 @@ def main() -> None:
                 f"   🔗 Merged {len(entries)} partial files for t_coh={t_coh_val:.4g} (total weight {total_w})"
             )
 
-    n_t_coh = len(merged)
+    n_t_coh = len(merged)  # number of unique coherence times
     dtype = merged[0][1][0].dtype
     n_signals = len(signal_types)
     stacked_data = [np.empty((n_t_coh, *shape_reference), dtype=dtype) for _ in range(n_signals)]
     t_coh_vals = np.empty(n_t_coh)
     total_weights = []
-    for i, (t_coh_val, arrays, total_w) in enumerate(merged):
+    for i, (t_coh_val, arrays, total_w) in enumerate(merged):  # i is the index along the t_coh axis
         t_coh_vals[i] = t_coh_val
         for j, arr in enumerate(arrays):
-            stacked_data[j][i] = arr
+            stacked_data[j][i] = arr  # holds signal type j at coherence index i.
         total_weights.append(total_w)
 
     # Load simulation structural info from one accompanying _info.pkl file
