@@ -2,7 +2,7 @@
 
 Workflow assumptions:
     - Each input ``*_data.npz`` corresponds to one coherence time value and
-        contains metadata including ``t_coh_value`` and ``signal_types`` plus the
+        contains ``t_coh_value`` and ``signal_types`` plus the
         time detection axis ``t_det``.
     - Files reside in a directory under ``.../data/1d_spectroscopy/...``.
     - A mirror directory under ``.../data/2d_spectroscopy/...`` will host the
@@ -17,7 +17,6 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -26,9 +25,8 @@ from qspectro2d.utils import (
     load_info_file,
     save_simulation_data,
 )
-
-if TYPE_CHECKING:  # pragma: no cover - typing only
-    from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
+from qspectro2d.core.simulation import SimulationModuleOQS
+from qspectro2d.core.simulation import SimulationConfig
 
 
 def map_1d_dir_to_2d_dir(data_dir: Path) -> Path:
@@ -120,46 +118,26 @@ def main() -> None:
     for fp in abs_data_paths:
         try:
             with np.load(fp, mmap_mode="r", allow_pickle=True) as npz:  # type: ignore[arg-type]
-                meta_obj = npz.get("metadata", None)
-                metadata = None
-                # New-format: metadata stored as 0-d object array containing dict
-                if meta_obj is not None:
-                    if isinstance(meta_obj, np.ndarray) and meta_obj.shape == ():
-                        try:
-                            metadata = meta_obj.item()
-                        except Exception:
-                            metadata = None
-                    elif isinstance(meta_obj, dict):  # rare but handle
-                        metadata = meta_obj
-                    else:
-                        raise ValueError("metadata missing")
-
-                # Normalize types
-                if isinstance(metadata.get("signal_types"), np.ndarray):
-                    metadata["signal_types"] = [
-                        x.item() if isinstance(x, np.ndarray) and x.shape == () else x
-                        for x in metadata["signal_types"].tolist()
-                    ]
-                sig_types = list(metadata["signal_types"])  # type: ignore[index]
+                sig_types = list(npz.get("signal_types"))  # type: ignore[index]
                 if signal_types is None:
                     signal_types = sig_types
                 elif signal_types != sig_types:
                     raise ValueError("Inconsistent signal_types across files")
 
                 # Coherence time value
-                t_coh_raw = metadata["t_coh_value"]  # type: ignore[index]
+                t_coh_raw = npz.get("t_coh_value")  # type: ignore[index]
                 if isinstance(t_coh_raw, (list, tuple)):
                     t_coh_raw = t_coh_raw[0]
                 t_coh_val = float(t_coh_raw)
-                n_inhom_batch = int(metadata.get("n_inhomogen_in_batch", 0))
+                n_inhom_batch = int(npz.get("n_inhomogen_in_batch", 0))
 
-                # Load signal arrays
-                arrays = []
+                # Load signal components
+                sigs = []
                 for s in signal_types:
                     if s not in npz:
                         raise ValueError(f"Signal '{s}' missing in {fp}")
                     arr = np.array(npz[s])
-                    arrays.append(arr)
+                    sigs.append(arr)
                     if shape_reference is None:
                         shape_reference = arr.shape
                     elif shape_reference != arr.shape:
@@ -170,7 +148,7 @@ def main() -> None:
                     t_det_axis = np.array(npz["t_det"])  # type: ignore[index]
 
                 groups.setdefault(t_coh_val, []).append(
-                    {"arrays": arrays, "weight": float(max(1, n_inhom_batch)), "path": fp}
+                    {"signals": sigs, "weight": float(max(1, n_inhom_batch)), "path": fp}
                 )
                 print(f"   ✅ Loaded t_coh={t_coh_val:.4g} (weight {n_inhom_batch}) from {fp}")
         except Exception as e:
@@ -186,12 +164,14 @@ def main() -> None:
     for t_coh_val, entries in sorted(groups.items(), key=lambda kv: kv[0]):
         total_w = sum(e["weight"] for e in entries)
         n_signals = len(signal_types)
+        # Initialize accumulators using dtype of the first entry's signals
         acc = [
-            np.zeros(shape_reference, dtype=entries[0]["arrays"][i].dtype) for i in range(n_signals)
+            np.zeros(shape_reference, dtype=entries[0]["signals"][i].dtype)
+            for i in range(n_signals)
         ]
         for e in entries:
             w = e["weight"]
-            for i, arr in enumerate(e["arrays"]):
+            for i, arr in enumerate(e["signals"]):
                 acc[i] += w * arr
         merged_arrays = [a / total_w for a in acc]
         merged.append((t_coh_val, merged_arrays, total_w))
@@ -231,7 +211,6 @@ def main() -> None:
     sim_config.t_coh = None
 
     metadata = {
-        "stacked": True,
         "n_inputs": int(n_t_coh),
         "source_base_dir": str(base_dir),
         "signal_types": signal_types,
@@ -243,10 +222,10 @@ def main() -> None:
     }
 
     sim_oqs = SimulationModuleOQS(
+        simulation_config=sim_config,
         system=system,
         bath=bath,
         laser=laser,
-        sim_config=sim_config,
     )
     out_path = save_simulation_data(
         sim_oqs,

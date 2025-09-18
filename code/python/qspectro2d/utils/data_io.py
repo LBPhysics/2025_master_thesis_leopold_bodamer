@@ -48,8 +48,10 @@ def save_data_file(
       - Dimensionality (1D vs 2D) inferred from t_coh is None or not.
       - Single vs multi-component data inferred from provided `datas`.
 
-    Stored keys:
-      - Data arrays stored under 'data1', 'data2', etc., plus axes
+        Stored keys:
+            - Axes: 't_det' and optionally 't_coh'
+            - One array per signal type stored under its signal name (metadata['signal_types'])
+            - all other metadata key-value pairs are stored at the top level
     """
     try:
         abs_data_path.parent.mkdir(parents=True, exist_ok=True)
@@ -65,8 +67,8 @@ def save_data_file(
             payload["t_coh"] = t_coh
 
         # Optional metadata (e.g., inhom batching info)
-        if metadata:
-            payload["metadata"] = metadata
+        for k, v in metadata.items():
+            payload[k] = v
 
         # Validate and populate component keys
         signal_types = metadata["signal_types"]
@@ -76,19 +78,16 @@ def save_data_file(
             )
 
         for i, data in enumerate(datas):
+            sig_key = signal_types[i]
             if is_2d:
-                if not isinstance(data, np.ndarray) or data.shape != (
-                    len(t_coh),
-                    len(t_det),
-                ):
+                if not isinstance(data, np.ndarray) or data.shape != (len(t_coh), len(t_det)):
                     raise ValueError(
                         f"2D data must have shape (len(t_coh), len(t_det)) = ({len(t_coh)}, {len(t_det)})"
                     )
             else:
                 if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
                     raise ValueError(f"1D data must have shape (len(t_det),) = ({len(t_det)},)")
-                sig_key = signal_types[i]
-                payload[sig_key] = data
+            payload[sig_key] = data
 
         # Single write
         np.savez_compressed(abs_data_path, **payload)
@@ -249,7 +248,7 @@ def load_simulation_data(abs_path: Path) -> dict:
         "bath": info_dict.get("bath"),
         "laser": info_dict.get("laser"),
         "sim_config": sim_config,
-        "t_det": data_dict.get("t_det"),
+        "t_det": t_det,
     }
 
     # Optional coherence axis

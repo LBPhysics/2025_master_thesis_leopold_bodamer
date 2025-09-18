@@ -46,6 +46,13 @@ def main():
         except Exception:
             is_2d = False
 
+        # Extract metadata dict from numpy array if needed
+        metadata_raw = loaded.get("metadata")
+        if isinstance(metadata_raw, np.ndarray) and metadata_raw.shape == ():
+            metadata = metadata_raw.item()
+        else:
+            metadata = metadata_raw or {}
+
         # TODO could print a short metadata summary here
         n_t_det = len(t_det_axis)
         try:
@@ -53,7 +60,7 @@ def main():
         except Exception:
             n_t_coh = 0
         print(f"   Axes: t_det len={n_t_det}; t_coh len={n_t_coh if is_2d else '—'}")
-        sigs = [str(s) for s in loaded.get("metadata", {}).get("signal_types", [])]
+        sigs = [str(s) for s in metadata.get("signal_types", [])]
         datas = []
         for s in sigs:
             arr = loaded.get(s)

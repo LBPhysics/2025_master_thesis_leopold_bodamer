@@ -33,7 +33,7 @@ def run_stacking_script(abs_path: str, skip_if_exists: bool = True) -> str:
 
     # Parse the output to find the plotting command
     output = result.stdout
-    match = re.search(r'python plot_datas\.py --abs_path "([^"]+)"', output)
+    match = re.search(r'python plot_datas\.py --abs_path [\'"]([^\'"]+)[\'"]', output)
     if not match:
         raise RuntimeError("Could not find the plotting abs_path in stacking output")
 
@@ -51,8 +51,8 @@ def create_plotting_script(
 #SBATCH --output=logs/plotting.out
 #SBATCH --error=logs/plotting.err
 #SBATCH --partition=GPGPU
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=8G
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=200G
 #SBATCH --time=0-01:00:00
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # TODO CHANGE THE MAIL HERE

@@ -16,7 +16,6 @@ The resulting files are stored via ``save_simulation_data`` and contain
 metadata keys required by downstream stacking & plotting scripts:
     - signal_types
     - t_coh_value
-    - stacked (False here; True after stacking)
     - n_batches / batch_idx / n_inhomogen_in_batch (provenance)
 
 Examples:
@@ -68,7 +67,7 @@ def _generate_freq_samples(sim_oqs: SimulationModuleOQS) -> np.ndarray:
     return np.atleast_2d(samples)
 
 
-def _avg_E_over_freqs_for_tcoh(
+def _avg_E_sigs_over_freqs_for_tcoh(
     sim_oqs: SimulationModuleOQS,
     t_coh_val: float,
     freq_samples: np.ndarray,
@@ -145,7 +144,7 @@ def run_1d_mode(args) -> None:
 
     freq_chunks = np.array_split(np.arange(n_inhom), n_batches)
     freq_idx_subset = freq_chunks[batch_idx]
-    avg_E, contribs = _avg_E_over_freqs_for_tcoh(
+    avg_E_sigs, contribs = _avg_E_sigs_over_freqs_for_tcoh(
         sim_oqs, t_coh_val, freq_samples, freq_idx_subset, time_cut=time_cut
     )
 
@@ -156,14 +155,10 @@ def run_1d_mode(args) -> None:
     # Persist averaged dataset
     metadata = {
         "signal_types": sim_oqs.simulation_config.signal_types,
-        "stacked": False,
-        "n_batches": n_batches,
-        "batch_idx": batch_idx,
         "n_inhomogen_in_batch": int(contribs),
-        "t_idx": 0,
         "t_coh_value": float(t_coh_val),
     }
-    abs_data_path = save_simulation_data(sim_oqs, metadata, avg_E, t_det=sim_oqs.times_det)
+    abs_data_path = save_simulation_data(sim_oqs, metadata, avg_E_sigs, t_det=sim_oqs.times_det)
 
     print(
         f"✅ Saved 1D result for t_coh={t_coh_val:.2f} fs with {contribs}/{n_inhom} inhom samples."
@@ -228,7 +223,7 @@ def run_2d_mode(args) -> None:
         print(
             f"\n--- t_idx={t_i} ({idx+1}/{len(work_by_t)}) : t_coh={t_coh_val:.2f} fs with {len(freq_idx_subset)} freq samples ---"
         )
-        avg_E, contribs = _avg_E_over_freqs_for_tcoh(
+        avg_E_sigs, contribs = _avg_E_sigs_over_freqs_for_tcoh(
             sim_oqs, t_coh_val, freq_samples, freq_idx_subset, time_cut=time_cut
         )
         if contribs == 0:
@@ -238,14 +233,10 @@ def run_2d_mode(args) -> None:
         sim_cfg.t_coh = t_coh_val
         metadata = {
             "signal_types": sim_cfg.signal_types,
-            "stacked": False,
-            "n_batches": n_batches,
-            "batch_idx": batch_idx,
             "n_inhomogen_in_batch": int(contribs),
-            "t_idx": int(t_i),
             "t_coh_value": float(t_coh_val),
         }
-        out_path = save_simulation_data(sim_oqs, metadata, avg_E, t_det=sim_oqs.times_det)
+        out_path = save_simulation_data(sim_oqs, metadata, avg_E_sigs, t_det=sim_oqs.times_det)
         saved_paths.append(str(out_path))
         print(f"    ✅ Saved {out_path}")
 
