@@ -65,28 +65,47 @@ class SimulationModuleOQS:
     laser: LaserPulseSequence
     bath: BosonicEnvironment
 
-    sl_coupling: SystemLaserCoupling = field(init=False)
     sb_coupling: SystemBathCoupling = field(init=False)
 
     def __post_init__(self) -> None:
+        # TODO THEY COULD POTENTIALLY CHANGE AFTER CONSTRUCTION
         self.sb_coupling = SystemBathCoupling(self.system, self.bath)
-        self.sl_coupling = SystemLaserCoupling(self.system, self.laser)
+        # Defer solver-dependent initialization (evo object & decay channels)
+        # until first access so that changing simulation_config.ode_solver
+        # after construction (for experimentation) is possible via reset.
+        self._evo_obj = None  # type: ignore[attr-defined]
+        self._decay_channels = None  # type: ignore[attr-defined]
 
+    # --- Deferred solver-dependent initialization ---------------------------------
+    @property
+    def evo_obj(self):  # type: ignore[override]
         solver = self.simulation_config.ode_solver
-
-        # if solver != "Paper_eqs" or "BR" or "ME": -> case already covered with warning
         if solver == "Paper_eqs":
-            # Use a module-level wrapper + functools.partial to keep object pickleable under Windows spawn.
-            self.evo_obj = partial(paper_eqs_evo, self)
-            self.decay_channels = []
+            # Keep pickleable: use module-level function partially bound to self.
+            self._evo_obj = partial(paper_eqs_evo, self)
+        elif solver == "ME" or solver == "BR":
+            self._evo_obj = QobjEvo(self.H_total_t)
+        else:  # Fallback: create generic evolution
+            self._evo_obj = QobjEvo(self.H0_diagonalized)
+        return self._evo_obj
 
+    @property
+    def decay_channels(self):  # type: ignore[override]
+        solver = self.simulation_config.ode_solver
+        if solver == "Paper_eqs":
+            self._decay_channels = []
         elif solver == "ME":
-            self.decay_channels = self.sb_coupling.me_decay_channels
-            self.evo_obj = QobjEvo(self.H_total_t)
-
+            self._decay_channels = self.sb_coupling.me_decay_channels
         elif solver == "BR":
-            self.decay_channels = self.sb_coupling.br_decay_channels
-            self.evo_obj = QobjEvo(self.H_total_t)
+            self._decay_channels = self.sb_coupling.br_decay_channels
+        else:  # Fallback: create generic evolution with no decay channels.
+            self._decay_channels = []
+        return self._decay_channels
+
+    def reset_solver_objects(self) -> None:
+        """Reset cached solver objects so they are rebuilt on next access."""
+        self._evo_obj = None
+        self._decay_channels = None
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -110,7 +129,9 @@ class SimulationModuleOQS:
 
     def H_total_t(self, t: float) -> Qobj:
         """Return total Hamiltonian H0 + H_int(t) at time t."""
-        return self.H0_diagonalized + self.H_int_sl(t)
+        H_total = self.H0_diagonalized + self.H_int_sl(t)
+        print(f"H at t={t}: {H_total.norm()}")
+        return H_total
 
     # TODO also add time dependent eigenenergies / states? and also all the other operators?
     def time_dep_eigenstates(self, t: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -193,7 +214,7 @@ class SimulationModuleOQS:
             delattr(self, "_times_local_manual")
 
     @property
-    def times_det(self):
+    def t_det(self):
         # Detection time grid with exact spacing dt starting at the first time >0 in times_local.
 
         dt = self.simulation_config.dt
@@ -209,10 +230,10 @@ class SimulationModuleOQS:
         return t_start + dt * np.arange(n_steps, dtype=float)
 
     @property
-    def times_det_actual(self):
+    def t_det_actual(self):
         cfg = self.simulation_config
         t_det0 = cfg.t_coh + cfg.t_wait
-        return self.times_det + t_det0
+        return self.t_det + t_det0
 
     # Evolution objects (Paper specific ones live in liouvillian_paper / redfield)
     def summary(self) -> str:

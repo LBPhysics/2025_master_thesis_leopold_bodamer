@@ -213,7 +213,6 @@ def main() -> None:
     metadata = {
         "n_inputs": int(n_t_coh),
         "source_base_dir": str(base_dir),
-        "signal_types": signal_types,
         "t_coh_min": float(np.min(t_coh_vals)),
         "t_coh_max": float(np.max(t_coh_vals)),
         "merged_partials": True,

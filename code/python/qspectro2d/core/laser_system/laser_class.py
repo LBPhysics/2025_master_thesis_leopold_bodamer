@@ -331,21 +331,17 @@ class LaserPulseSequence:
 
     def update_phases(self, phases: List[float]) -> None:
         """
-        Update the pulse_phases of the first two pulses in the LaserPulseSequence.
-
-        Args:
-            phase1 (float): Phase to set for the first pulse.
-            phase2 (float): Phase to set for the second pulse.
-
+        Update the pulse_phases of the pulses in the LaserPulseSequence.
         Raises:
-            ValueError: If there are fewer than two pulses in the system.
+            ValueError: If the number of pulses doesnt match the phases.
         """
-        if len(phases) != len(self.pulses):
+        if len(phases) - 1 > len(self.pulses):
             raise ValueError(
-                f"Number of phases ({len(phases)}) must match number of pulses ({len(self.pulses)})"
+                f"Number of pulses ({len(self.pulses)}) must be at least number of phases ({len(phases)})"
             )
         for i, phase in enumerate(phases):
-            self.pulses[i].pulse_phase = phase
+            if i < len(self.pulses):
+                self.pulses[i].pulse_phase = phase
 
     def update_delays(self, delays: List[float]) -> None:
         """

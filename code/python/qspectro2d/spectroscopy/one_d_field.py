@@ -44,7 +44,7 @@ __all__ = [
 # --------------------------------------------------------------------------------------
 # Internal helpers
 # --------------------------------------------------------------------------------------
-def _result_detection_slice(res: Result, t_det: np.ndarray) -> List[Qobj]:
+def _result_window_slice(res: Result, t_det: np.ndarray) -> List[Qobj]:
     """Slice the list of states in `res` to only keep the detection window portion."""
     if not hasattr(res, "states") or res.states is None:
         raise RuntimeError("Evolution result did not store states; pass store_states=True.")
@@ -112,28 +112,24 @@ def compute_evolution(
     if solver_options:
         options.update(solver_options)
 
-    current_state = sim_oqs.system.psi_ini
-    actual_times = sim_oqs.times_local
-    decay_ops_list = sim_oqs.decay_channels
-    evo_obj = sim_oqs.evo_obj
     ode_solver = sim_oqs.simulation_config.ode_solver
     if ode_solver == "BR":
         # Optional Bloch-Redfield secular cutoff passthrough TODO add to options
         # sec_cutoff = options.get("sec_cutoff", None)
         res = brmesolve(
-            H=evo_obj,
-            psi0=current_state,
-            tlist=actual_times,
-            a_ops=decay_ops_list,
+            H=sim_oqs.evo_obj,
+            psi0=sim_oqs.system.psi_ini,
+            tlist=sim_oqs.times_local,
+            a_ops=sim_oqs.decay_channels,
             options=options,
             # sec_cutoff=sec_cutoff,
         )
     else:
         res = mesolve(
-            H=evo_obj,
-            rho0=current_state,
-            tlist=actual_times,
-            c_ops=decay_ops_list,
+            H=sim_oqs.evo_obj,
+            rho0=sim_oqs.system.psi_ini,
+            tlist=sim_oqs.times_local,
+            c_ops=sim_oqs.decay_channels,
             options=options,
         )
     return res
@@ -147,10 +143,10 @@ def _compute_polarization_over_det(  # TODO generalize to arbitrary window
     - Uses `compute_seq_evolution` which dispatches ME/BR according to sim.simulation_config.
     - Extracts complex/analytical polarization over the detection window only.
     """
-    t_det = sim.times_det_actual
+    t_det = sim.t_det_actual
     # Ensure we store states to extract polarization
     res: Result = compute_evolution(sim, store_states=store_states)
-    det_states = _result_detection_slice(res, t_det)
+    det_states = _result_window_slice(res, t_det)
 
     if sim.simulation_config.rwa_sl:
         # States are stored in the rotating frame; convert back to lab for polarization
@@ -161,7 +157,7 @@ def _compute_polarization_over_det(  # TODO generalize to arbitrary window
     # Analytical polarization using positive-frequency part of dipole operator
     mu_op = sim.system.to_eigenbasis(sim.system.dipole_op)
     P_t = complex_polarization(mu_op, det_states)  # np.ndarray[complex]
-    return sim.times_det, P_t
+    return sim.t_det, P_t
 
 
 def _compute_polarization_over_window(
@@ -177,7 +173,7 @@ def _compute_polarization_over_window(
     """
     # Ensure we store states to extract polarization
     res: Result = compute_evolution(sim, store_states=store_states)
-    window_states = _result_detection_slice(res, window)
+    window_states = _result_window_slice(res, window)
 
     if sim.simulation_config.rwa_sl:
         # States are stored in the rotating frame; convert back to lab for polarization
@@ -200,17 +196,9 @@ def _with_only_pulse_i_active(sim: SimulationModuleOQS, i: int) -> SimulationMod
     """
     sim_i = deepcopy(sim)
     # Build a one-pulse sequence matching the i-th pulse timing and phase
-    pulse_i = sim_i.laser.pulses[i]
+    pulse_i = sim.laser.pulses[i]
     sim_i.laser = LaserPulseSequence(pulses=[pulse_i])
     return sim_i
-
-
-def _set_pulse_phases_inplace(sim: SimulationModuleOQS, phi1: float, phi2: float) -> None:
-    """Set the phases of the first two pulses in-place, preserving others."""
-    if len(sim.laser.pulses) < 2:
-        raise ValueError("At least two pulses are required for phase cycling (phi1, phi2).")
-    sim.laser.pulses[0].pulse_phase = float(phi1)
-    sim.laser.pulses[1].pulse_phase = float(phi2)
 
 
 def _compute_P_phi1_phi2(
@@ -222,7 +210,7 @@ def _compute_P_phi1_phi2(
     """
     # Work on copies to avoid permanently mutating `sim`
     sim_work = deepcopy(sim)
-    _set_pulse_phases_inplace(sim_work, phi1, phi2)
+    sim_work.laser.update_phases(phases=[phi1, phi2])
 
     # Total signal with all pulses
     t_det, P_total = _compute_polarization_over_det(sim_work)
@@ -310,7 +298,7 @@ def parallel_compute_1d_e_comps(
     -------
     List[np.ndarray]
         List of complex E-components, one per entry in `sim_oqs.simulation_config.signal_types`.
-        Each array has length len(sim_oqs.times_det). A soft time_cut is applied by zeroing beyond cutoff.
+        Each array has length len(sim_oqs.t_det). A soft time_cut is applied by zeroing beyond cutoff.
     """
     # Determine phases from config defaults if not provided
     n_ph = sim_oqs.simulation_config.n_phases
@@ -318,14 +306,14 @@ def parallel_compute_1d_e_comps(
     phases_eff = tuple(float(x) for x in phases_src[:n_ph])
 
     # Prepare grid and helpers
-    n_t = len(sim_oqs.times_det)
+    n_t = len(sim_oqs.t_det)
     sig_types = sim_oqs.simulation_config.signal_types
     phi_det_val = phi_det if phi_det is not None else float(DETECTION_PHASE)
 
     # Optional time mask (keep length constant)
     t_mask = None
     if time_cut is not None and np.isfinite(time_cut):
-        t_mask = (sim_oqs.times_det_actual <= float(time_cut)).astype(np.float64)
+        t_mask = (sim_oqs.t_det_actual <= float(time_cut)).astype(np.float64)
 
     # Compute P_{phi1,phi2} grid once for this realization
     P_grid = np.zeros((len(phases_eff), len(phases_eff), n_t), dtype=np.complex128)
@@ -334,10 +322,10 @@ def parallel_compute_1d_e_comps(
         for phi1 in phases_eff:
             for phi2 in phases_eff:
                 futures.append(ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2))
-        temp_results: Dict[Tuple[float, float], Tuple[np.ndarray, np.ndarray]] = {}
+        temp_results: Dict[Tuple[float, float], np.ndarray] = {}
         for fut in as_completed(futures):
-            phi1_v, phi2_v, t_det, P_phi = fut.result()
-            temp_results[(phi1_v, phi2_v)] = (t_det, P_phi)
+            phi1_v, phi2_v, _, P_phi = fut.result()
+            temp_results[(phi1_v, phi2_v)] = P_phi
 
     for i, phi1 in enumerate(phases_eff):
         for j, phi2 in enumerate(phases_eff):

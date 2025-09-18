@@ -26,7 +26,7 @@ laser:
   pulse_fwhm_fs: 6.0
   envelope_type: gaussian
   carrier_freq_cm: 16000.0
-  rwa_sl: true
+  rwa_sl: false
 
 bath:
   bath_type: ohmic
@@ -40,5 +40,5 @@ config:
 window:
   t_det_max: 60.0
   t_wait: 10.0
-  t_coh: 30.0
+  t_coh: 6.0
   dt: 0.1

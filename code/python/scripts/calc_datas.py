@@ -7,7 +7,7 @@ Two execution modes sharing the same underlying simulation object:
         across several batches by partitioning the inhomogeneous samples.
 
     2d mode:
-        Treats every detection time value ``times_det`` as a coherence time point
+        Treats every detection time value ``t_det`` as a coherence time point
         and (optionally) splits the Cartesian product (t_coh, inhom sample) over
         batches. Each processed t_coh produces an individual 1D file which can
         later be stacked into a true 2D dataset using ``stack_1dto2d.py``.
@@ -158,7 +158,7 @@ def run_1d_mode(args) -> None:
         "n_inhomogen_in_batch": int(contribs),
         "t_coh_value": float(t_coh_val),
     }
-    abs_data_path = save_simulation_data(sim_oqs, metadata, avg_E_sigs, t_det=sim_oqs.times_det)
+    abs_data_path = save_simulation_data(sim_oqs, metadata, avg_E_sigs, t_det=sim_oqs.t_det)
 
     print(
         f"✅ Saved 1D result for t_coh={t_coh_val:.2f} fs with {contribs}/{n_inhom} inhom samples."
@@ -176,7 +176,7 @@ def run_2d_mode(args) -> None:
 
     print(f"🎯 Running 2D mode batch {batch_idx + 1}/{n_batches}")
 
-    t_coh_vals = sim_oqs.times_det  # reuse detection times as coherence-axis grid
+    t_coh_vals = sim_oqs.t_det  # reuse detection times as coherence-axis grid
     freq_samples = _generate_freq_samples(sim_oqs)
     n_t = len(t_coh_vals)
     n_inhom = freq_samples.shape[0]
@@ -236,7 +236,7 @@ def run_2d_mode(args) -> None:
             "n_inhomogen_in_batch": int(contribs),
             "t_coh_value": float(t_coh_val),
         }
-        out_path = save_simulation_data(sim_oqs, metadata, avg_E_sigs, t_det=sim_oqs.times_det)
+        out_path = save_simulation_data(sim_oqs, metadata, avg_E_sigs, t_det=sim_oqs.t_det)
         saved_paths.append(str(out_path))
         print(f"    ✅ Saved {out_path}")
 

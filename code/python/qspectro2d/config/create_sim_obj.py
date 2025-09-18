@@ -127,7 +127,7 @@ def load_simulation(
 
     # Apply early overrides (timing relevant for pulse delays)
     delays = [t_coh, t_wait]  # -> 3 pulses
-    phases = [0.0, 0.0, 0.0]
+    phases = [0.0, 0.0, dflt.DETECTION_PHASE]  # last phase is detection phase
 
     laser_sequence = LaserPulseSequence.from_delays(
         delays=delays,

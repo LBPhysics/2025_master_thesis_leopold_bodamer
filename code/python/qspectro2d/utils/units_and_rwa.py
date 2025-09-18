@@ -143,7 +143,7 @@ def get_expect_vals_with_RWA(
         # By default we assume stored states are in the rotating frame and we want lab-frame
         # expectation values. If you need the opposite, call `to_rotating_frame` explicitly
         # at the call site and pass rwa_sl=False here to avoid double transforms.
-        states = from_rotating_frame(states, times, n_atoms, omega_laser)
+        states = from_rotating_frame_list(states, times, n_atoms, omega_laser)
 
     ## Calculate expectation values for each state and each operator
     updated_expects = []
