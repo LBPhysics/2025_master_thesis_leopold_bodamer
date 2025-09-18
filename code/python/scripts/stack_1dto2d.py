@@ -119,18 +119,41 @@ def main() -> None:
 
     for fp in abs_data_paths:
         try:
-            # allow_pickle=True because some metadata may store Python objects (SimulationConfig fragments)
             with np.load(fp, mmap_mode="r", allow_pickle=True) as npz:  # type: ignore[arg-type]
-                metadata = npz.get("metadata", None)
-                if metadata is None:
-                    raise ValueError("metadata missing")
+                meta_obj = npz.get("metadata", None)
+                metadata = None
+                # New-format: metadata stored as 0-d object array containing dict
+                if meta_obj is not None:
+                    if isinstance(meta_obj, np.ndarray) and meta_obj.shape == ():
+                        try:
+                            metadata = meta_obj.item()
+                        except Exception:
+                            metadata = None
+                    elif isinstance(meta_obj, dict):  # rare but handle
+                        metadata = meta_obj
+                    else:
+                        raise ValueError("metadata missing")
+
+                # Normalize types
+                if isinstance(metadata.get("signal_types"), np.ndarray):
+                    metadata["signal_types"] = [
+                        x.item() if isinstance(x, np.ndarray) and x.shape == () else x
+                        for x in metadata["signal_types"].tolist()
+                    ]
                 sig_types = list(metadata["signal_types"])  # type: ignore[index]
                 if signal_types is None:
                     signal_types = sig_types
                 elif signal_types != sig_types:
                     raise ValueError("Inconsistent signal_types across files")
-                t_coh_val = float(metadata["t_coh_value"])  # type: ignore[index]
+
+                # Coherence time value
+                t_coh_raw = metadata["t_coh_value"]  # type: ignore[index]
+                if isinstance(t_coh_raw, (list, tuple)):
+                    t_coh_raw = t_coh_raw[0]
+                t_coh_val = float(t_coh_raw)
                 n_inhom_batch = int(metadata.get("n_inhomogen_in_batch", 0))
+
+                # Load signal arrays
                 arrays = []
                 for s in signal_types:
                     if s not in npz:
@@ -145,6 +168,7 @@ def main() -> None:
                         )
                 if t_det_axis is None:
                     t_det_axis = np.array(npz["t_det"])  # type: ignore[index]
+
                 groups.setdefault(t_coh_val, []).append(
                     {"arrays": arrays, "weight": float(max(1, n_inhom_batch)), "path": fp}
                 )
