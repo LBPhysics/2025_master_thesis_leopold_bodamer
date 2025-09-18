@@ -87,8 +87,8 @@ def save_data_file(
             else:
                 if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
                     raise ValueError(f"1D data must have shape (len(t_det),) = ({len(t_det)},)")
-                key = signal_types[i]
-                payload[key] = data
+                sig_key = signal_types[i]
+                payload[sig_key] = data
 
         # Single write
         np.savez_compressed(abs_data_path, **payload)
@@ -236,9 +236,6 @@ def load_simulation_data(abs_path: Path) -> dict:
     logger.debug("Loading data bundle: %s", abs_path)
     data_dict = load_data_file(abs_data_path)
     info_dict = load_info_file(abs_info_path)
-
-    if "sim_config" not in info_dict:
-        raise KeyError("Missing 'sim_config' in info file")
 
     # Axes
     t_det = data_dict.get("t_det")

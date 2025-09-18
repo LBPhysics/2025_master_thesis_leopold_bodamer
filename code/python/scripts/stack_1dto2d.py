@@ -119,7 +119,8 @@ def main() -> None:
 
     for fp in abs_data_paths:
         try:
-            with np.load(fp, mmap_mode="r") as npz:  # type: ignore[arg-type]
+            # allow_pickle=True because some metadata may store Python objects (SimulationConfig fragments)
+            with np.load(fp, mmap_mode="r", allow_pickle=True) as npz:  # type: ignore[arg-type]
                 metadata = npz.get("metadata", None)
                 if metadata is None:
                     raise ValueError("metadata missing")
