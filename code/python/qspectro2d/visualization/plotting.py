@@ -2,13 +2,14 @@ from matplotlib.colors import TwoSlopeNorm
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Literal, Union, Tuple
+from matplotlib.axes import Axes
 
 from plotstyle import init_style, COLORS, LINE_STYLES
 from plotstyle.style import simplify_figure_text
 
 from qspectro2d.core.laser_system.laser_fcts import (
     pulse_envelopes,
-    _single_pulse_envelope,
+    single_pulse_envelope,
     e_pulses,
     epsilon_pulses,
 )
@@ -56,7 +57,7 @@ def plot_pulse_envelopes(
     for idx, pulse in enumerate(pulse_seq.pulses):
 
         # get the individual envelope from the pulse_envelopes function
-        individual_envelope = _single_pulse_envelope(times, pulse)
+        individual_envelope = single_pulse_envelope(times, pulse)
         t_peak = pulse.pulse_peak_time
         Delta_width = pulse.pulse_fwhm_fs
         ax.plot(
@@ -452,7 +453,8 @@ def plot_1d_el_field(
     section: Union[tuple[float, float], None] = None,
     function_symbol: str = "S",
     figsize: Tuple[float, float] = (6.5, 4.0),
-    normalize: bool = True,
+    normalize: bool = False,
+    ax: Union[Axes, None] = None,
     **kwargs: dict,
 ) -> plt.Figure:
     """Plot 1D complex data (time or frequency domain).
@@ -462,7 +464,12 @@ def plot_1d_el_field(
     Normalization: optional (default True) to max absolute amplitude
     Cropping: optional via section=(min,max)
     """
-    fig = plt.figure(figsize=figsize)
+    created_fig = False
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+        created_fig = True
+    else:
+        fig = ax.figure
 
     # CROP + NORMALIZE
 
@@ -487,15 +494,16 @@ def plot_1d_el_field(
     color, linestyle = _style_for_component(component)
 
     # PLOT
-    plt.plot(axis_det, y_data, label=label, color=color, linestyle=linestyle)
-    plt.xlabel(x_label)
-    plt.ylabel(ylabel)
-    plt.title(final_title)
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    add_text_box(ax=plt.gca(), kwargs=kwargs)
-    plt.tight_layout()
+    ax.plot(axis_det, y_data, label=label, color=color, linestyle=linestyle)
+    ax.set_xlabel(x_label)
+    ax.set_ylabel(ylabel)
+    ax.set_title(final_title)
+    ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    add_text_box(ax=ax, kwargs=kwargs)
+    fig.tight_layout()
     simplify_figure_text(fig)
-    plt.close(fig)
+    if created_fig:
+        plt.close(fig)
     return fig
 
 
@@ -509,7 +517,8 @@ def plot_2d_el_field(
     use_custom_colormap: bool = False,
     section: Union[list[tuple[float, float]], None] = None,
     figsize: Tuple[float, float] = (7.0, 5.6),
-    normalize: bool = True,
+    normalize: bool = False,
+    ax: Union[Axes, None] = None,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
@@ -640,7 +649,12 @@ def plot_2d_el_field(
 
     # GENERATE FIGURE
 
-    fig, ax = plt.subplots(figsize=figsize)
+    created_fig = False
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+        created_fig = True
+    else:
+        fig = ax.figure
     # Create the pcolormesh plot for the 2D data
     im_plot = ax.imshow(
         data,  # data shape: [len(axis_coh), len(axis_det)]
@@ -674,7 +688,8 @@ def plot_2d_el_field(
     """# Add a border around the plot for better visual definition plt.gca().spines["top"].set_visible(True); plt.gca().spines["bottom"].set_linewidth(1.5)"""
 
     simplify_figure_text(fig)
-    plt.close(fig)  # keep figure open for further user modification if desired
+    if created_fig:
+        plt.close(fig)  # keep figure open for further user modification if desired
     return fig
 
 

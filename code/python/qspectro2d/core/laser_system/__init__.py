@@ -12,8 +12,6 @@ from .laser_fcts import e_pulses, epsilon_pulses, pulse_envelopes
 from .laser_class import (
     LaserPulseSequence,
     LaserPulse,
-    identify_non_zero_pulse_regions,
-    split_by_active_regions,
 )
 
 
@@ -24,8 +22,6 @@ __all__ = [
     "e_pulses",
     "epsilon_pulses",
     "pulse_envelopes",
-    "identify_non_zero_pulse_regions",
-    "split_by_active_regions",
     # classes
     "LaserPulseSequence",
     "LaserPulse",

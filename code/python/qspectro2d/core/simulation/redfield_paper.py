@@ -71,7 +71,7 @@ def _redfield_paper_2atom(sim_oqs: SimulationModuleOQS) -> Qobj:
     idx_33 = stacked_index(size, 3, 3)
 
     R = np.zeros((size * size, size * size), dtype=complex)
-    omega_laser = sim_oqs.laser._carrier_freq_fs
+    omega_laser = sim_oqs.laser.carrier_freq_fs
 
     # One-excitation coherences
     term = -1j * (sim_oqs.system.omega_ij(1, 0) - omega_laser) - sim_oqs.sb_coupling.paper_Gamma_ij(

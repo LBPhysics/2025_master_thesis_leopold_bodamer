@@ -13,13 +13,10 @@ Supports ME and BR solvers via the internals of SimulationModuleOQS.
 
 from __future__ import annotations
 
-import imp
 from typing import List, Sequence, Tuple, Optional, Dict
 from concurrent.futures import ProcessPoolExecutor, as_completed
-
 import numpy as np
 from copy import deepcopy
-
 from qutip import Qobj, Result, mesolve, brmesolve
 
 from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
@@ -44,38 +41,17 @@ __all__ = [
 # --------------------------------------------------------------------------------------
 # Internal helpers
 # --------------------------------------------------------------------------------------
-def _result_window_slice(res: Result, t_det: np.ndarray) -> List[Qobj]:
+def slice_states_to_window(res: Result, window: np.ndarray) -> List[Qobj]:
     """Slice the list of states in `res` to only keep the detection window portion."""
-    if not hasattr(res, "states") or res.states is None:
-        raise RuntimeError("Evolution result did not store states; pass store_states=True.")
-    # t_det approx [0, dt, 2dt, ..., t_det_max]
-    # while res.times approx [t0, t0+dt, ..., t_max]
-    # so i want to find the corresponding indices in res.times that match t_det best and extract those states
-    res_times = np.asarray(res.times)
-    t_det = np.asarray(t_det)
-
     # Assuming res_times is sorted and equally spaced
-    if len(res_times) < 2:
+    times = np.asarray(res.times)
+    if len(times) < 2:
         raise ValueError("res.times must have at least 2 elements to determine dt.")
-
-    dt = res_times[1] - res_times[0]
-
-    # Find the starting index for t_det[0]
-    start_idx = np.argmin(np.abs(res_times - t_det[0]))
-
-    # Generate indices assuming t_det is equally spaced with same dt
-    indices = start_idx + np.arange(len(t_det))
-
-    # Verify the indices are within bounds
-    if indices[-1] >= len(res_times):
-        raise ValueError("t_det extends beyond res.times.")
-
-    # Optional: Check for exact match (within tolerance)
-    tolerance = dt / 2
-    if not np.allclose(res_times[indices], t_det, atol=tolerance):
-        raise ValueError("t_det does not match res.times within tolerance.")
-
-    return [res.states[i] for i in indices]
+    window = np.asarray(window)
+    start_idx = np.argmin(np.abs(times - window[0]))
+    idxs = start_idx + np.arange(len(window))
+    idxs = idxs[idxs < len(times)]
+    return [res.states[i] for i in idxs]
 
 
 def compute_evolution(
@@ -135,32 +111,7 @@ def compute_evolution(
     return res
 
 
-def _compute_polarization_over_det(  # TODO generalize to arbitrary window
-    sim: SimulationModuleOQS, *, store_states: bool = True
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Evolve the system once (with current laser settings) and return (t_det, P(t_det)).
-
-    - Uses `compute_seq_evolution` which dispatches ME/BR according to sim.simulation_config.
-    - Extracts complex/analytical polarization over the detection window only.
-    """
-    t_det = sim.t_det_actual
-    # Ensure we store states to extract polarization
-    res: Result = compute_evolution(sim, store_states=store_states)
-    det_states = _result_window_slice(res, t_det)
-
-    if sim.simulation_config.rwa_sl:
-        # States are stored in the rotating frame; convert back to lab for polarization
-        det_states = from_rotating_frame_list(
-            det_states, t_det, sim.system.n_atoms, sim.laser._carrier_freq_fs
-        )
-
-    # Analytical polarization using positive-frequency part of dipole operator
-    mu_op = sim.system.to_eigenbasis(sim.system.dipole_op)
-    P_t = complex_polarization(mu_op, det_states)  # np.ndarray[complex]
-    return sim.t_det, P_t
-
-
-def _compute_polarization_over_window(
+def compute_polarization_over_window(
     sim: SimulationModuleOQS,
     window: np.ndarray | List = None,
     *,
@@ -173,12 +124,12 @@ def _compute_polarization_over_window(
     """
     # Ensure we store states to extract polarization
     res: Result = compute_evolution(sim, store_states=store_states)
-    window_states = _result_window_slice(res, window)
+    window_states = slice_states_to_window(res, window)
 
     if sim.simulation_config.rwa_sl:
         # States are stored in the rotating frame; convert back to lab for polarization
         window_states = from_rotating_frame_list(
-            window_states, window, sim.system.n_atoms, sim.laser._carrier_freq_fs
+            window_states, window, sim.system.n_atoms, sim.laser.carrier_freq_fs
         )
 
     # Analytical polarization using positive-frequency part of dipole operator
@@ -187,8 +138,10 @@ def _compute_polarization_over_window(
     return window, P_t
 
 
-def _with_only_pulse_i_active(sim: SimulationModuleOQS, i: int) -> SimulationModuleOQS:
-    """Return a deep-copied sim where only pulse i is active (others have amplitude 0).
+def sim_with_only_pulses(
+    sim: SimulationModuleOQS, active_indices: List[int]
+) -> SimulationModuleOQS:
+    """Return a deep-copied sim where only pulses in active_indices are active (others have amplitude 0).
 
     Notes:
     - Deep-copy is used to avoid mutating the input and to be process/thread-safe.
@@ -196,8 +149,8 @@ def _with_only_pulse_i_active(sim: SimulationModuleOQS, i: int) -> SimulationMod
     """
     sim_i = deepcopy(sim)
     # Build a one-pulse sequence matching the i-th pulse timing and phase
-    pulse_i = sim.laser.pulses[i]
-    sim_i.laser = LaserPulseSequence(pulses=[pulse_i])
+    pulses = [sim.laser.pulses[i] for i in active_indices]
+    sim_i.laser = LaserPulseSequence(pulses=pulses)
     return sim_i
 
 
@@ -210,20 +163,21 @@ def _compute_P_phi1_phi2(
     """
     # Work on copies to avoid permanently mutating `sim`
     sim_work = deepcopy(sim)
-    sim_work.laser.update_phases(phases=[phi1, phi2])
+    sim_work.laser.pulse_phases = [phi1, phi2]
 
     # Total signal with all pulses
-    t_det, P_total = _compute_polarization_over_det(sim_work)
+    t_det_actual = sim_work.t_det_actual
+    t_det_a, P_total = compute_polarization_over_window(sim_work, t_det_actual)
 
     # Linear signals: only pulse i active
     P_linear_sum = np.zeros_like(P_total, dtype=np.complex128)
     for i in range(len(sim_work.laser.pulses)):
-        sim_i = _with_only_pulse_i_active(sim_work, i)
-        _, P_i = _compute_polarization_over_det(sim_i)
+        sim_i = sim_with_only_pulses(sim_work, [i])
+        _, P_i = compute_polarization_over_window(sim_i, t_det_actual)
         P_linear_sum += P_i
 
     P_phi = P_total - P_linear_sum
-    return t_det, P_phi
+    return t_det_a, P_phi
 
 
 def _worker_P_phi_pair(
@@ -234,13 +188,12 @@ def _worker_P_phi_pair(
     A deep copy of the simulation is created per worker to avoid shared state.
     """
     sim_local = deepcopy(sim_template)
-    t_det, P_phi = _compute_P_phi1_phi2(sim_local, phi1, phi2)
-    return phi1, phi2, t_det, P_phi
+    t_det_a, P_phi = _compute_P_phi1_phi2(sim_local, phi1, phi2)
+    return phi1, phi2, t_det_a, P_phi
 
 
-def _phase_cycle_component(
-    phases1: Sequence[float],
-    phases2: Sequence[float],
+def phase_cycle_component(
+    phases: Sequence[float],
     P_grid: np.ndarray,
     *,
     lmn: Tuple[int, int, int] = (0, 0, 0),
@@ -253,14 +206,14 @@ def _phase_cycle_component(
     """
     l, m, n = lmn
     P_out = np.zeros(P_grid.shape[-1], dtype=np.complex128)
-    for i, phi1 in enumerate(phases1):
-        for j, phi2 in enumerate(phases2):
+    for i, phi1 in enumerate(phases):
+        for j, phi2 in enumerate(phases):
             phase = -1j * (l * phi1 + m * phi2 + n * phi_det)
             P_out += P_grid[i, j, :] * np.exp(phase)  # TODO not even 1e9 *  can help
             # check if all P_grid entries are zero and warn
 
     if normalize:
-        P_out /= len(phases1) * len(phases2)
+        P_out /= len(phases) ** 2
     return P_out
 
 
@@ -329,7 +282,7 @@ def parallel_compute_1d_e_comps(
 
     for i, phi1 in enumerate(phases_eff):
         for j, phi2 in enumerate(phases_eff):
-            _, P_phi = temp_results[(phi1, phi2)]
+            P_phi = temp_results[(phi1, phi2)]
             P_grid[i, j, :] = P_phi
             # i want to somehow visualize P_grid at this point
 
@@ -337,8 +290,7 @@ def parallel_compute_1d_e_comps(
     E_list: List[np.ndarray] = []
     for sig in sig_types:
         lmn_tuple = COMPONENT_MAP[sig] if lmn is None else lmn
-        P_comp = _phase_cycle_component(
-            phases_eff,
+        P_comp = phase_cycle_component(
             phases_eff,
             P_grid,
             lmn=lmn_tuple,

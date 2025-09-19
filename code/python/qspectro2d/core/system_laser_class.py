@@ -19,7 +19,7 @@ class SystemLaserCoupling:
 
     def delta_rabi(self, i: int = 0):
         """Calculate the detuning for the i-th transition. [fs⁻¹]"""
-        return self.laser._carrier_freq_fs - self.system._frequencies_fs[i]
+        return self.laser.carrier_freq_fs - self.system._frequencies_fs[i]
 
     def rabi_gen(self, i: int = 0):
         """Calculate the generalized Rabi frequency for the i-th transition. [fs⁻¹]"""
@@ -75,8 +75,8 @@ if __name__ == "__main__":
     mock_atomic_system = AtomicSystem(
         n_atoms=2, at_frequencies_cm_cm=[16000.0, 16100.0], dip_moments=[1.0, 2.0]
     )
-    seq = LaserPulseSequence.from_delays(
-        delays=[100.0, 300.0],
+    seq = LaserPulseSequence.from_pulse_delays(
+        pulse_delays=[100.0, 300.0],
         base_amplitude=0.05,
         pulse_fwhm_fs=10.0,
         carrier_freq_cm=15800.0,

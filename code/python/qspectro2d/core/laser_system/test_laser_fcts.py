@@ -1,7 +1,7 @@
 """Tests for laser_fcts.py functions.
 
 Covers:
-- _single_pulse_envelope (cos2 & gaussian)
+- single_pulse_envelope (cos2 & gaussian)
 - pulse_envelopes (scalar vs vector, multi-pulse combination)
 - e_pulses (phase handling)
 - epsilon_pulses (carrier inclusion)
@@ -42,16 +42,16 @@ def _make_pulse(
     )
 
 
-# _single_pulse_envelope
+# single_pulse_envelope
 
 
-def test_single_pulse_envelope_cos2_peak_and_edges():
+def testsingle_pulse_envelope_cos2_peak_and_edges():
     fwhm = 10.0
     peak_t = 50.0
     pulse = _make_pulse(0, peak_t, fwhm, 1.0, 16000.0, 0.0, "cos2")
     t = np.linspace(peak_t - fwhm * 1.5, peak_t + fwhm * 1.5, 301)
 
-    env_vals = laser_fcts._single_pulse_envelope(t, pulse)
+    env_vals = laser_fcts.single_pulse_envelope(t, pulse)
 
     # Peak should be ~1
     peak_idx = np.abs(t - peak_t).argmin()
@@ -67,7 +67,7 @@ def test_single_pulse_envelope_cos2_peak_and_edges():
     assert env_vals[0] == 0.0 and env_vals[-1] == 0.0
 
 
-def test_single_pulse_envelope_gaussian_peak_and_baseline():
+def testsingle_pulse_envelope_gaussian_peak_and_baseline():
     fwhm = 8.0
     peak_t = 20.0
     pulse = _make_pulse(0, peak_t, fwhm, 1.0, 16000.0, 0.0, "gaussian")
@@ -75,7 +75,7 @@ def test_single_pulse_envelope_gaussian_peak_and_baseline():
     extended = pulse._t_end - pulse.pulse_peak_time
     t = np.linspace(peak_t - 1.2 * extended, peak_t + 1.2 * extended, 601)
 
-    env_vals = laser_fcts._single_pulse_envelope(t, pulse)
+    env_vals = laser_fcts.single_pulse_envelope(t, pulse)
 
     sigma = pulse._sigma
     boundary_val = pulse._boundary_val  # now value at extended edge

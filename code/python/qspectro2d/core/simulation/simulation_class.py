@@ -18,7 +18,6 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.laser_system.laser_fcts import e_pulses, epsilon_pulses
 from qspectro2d.core.system_bath_class import SystemBathCoupling
-from qspectro2d.core.system_laser_class import SystemLaserCoupling
 from qspectro2d.constants import HBAR
 
 
@@ -70,11 +69,6 @@ class SimulationModuleOQS:
     def __post_init__(self) -> None:
         # TODO THEY COULD POTENTIALLY CHANGE AFTER CONSTRUCTION
         self.sb_coupling = SystemBathCoupling(self.system, self.bath)
-        # Defer solver-dependent initialization (evo object & decay channels)
-        # until first access so that changing simulation_config.ode_solver
-        # after construction (for experimentation) is possible via reset.
-        self._evo_obj = None  # type: ignore[attr-defined]
-        self._decay_channels = None  # type: ignore[attr-defined]
 
     # --- Deferred solver-dependent initialization ---------------------------------
     @property
@@ -82,30 +76,23 @@ class SimulationModuleOQS:
         solver = self.simulation_config.ode_solver
         if solver == "Paper_eqs":
             # Keep pickleable: use module-level function partially bound to self.
-            self._evo_obj = partial(paper_eqs_evo, self)
+            evo_obj = partial(paper_eqs_evo, self)
         elif solver == "ME" or solver == "BR":
-            self._evo_obj = QobjEvo(self.H_total_t)
+            evo_obj = QobjEvo(self.H_total_t)
         else:  # Fallback: create generic evolution
-            self._evo_obj = QobjEvo(self.H0_diagonalized)
-        return self._evo_obj
+            evo_obj = QobjEvo(self.H0_diagonalized)
+        return evo_obj
 
     @property
     def decay_channels(self):  # type: ignore[override]
         solver = self.simulation_config.ode_solver
-        if solver == "Paper_eqs":
-            self._decay_channels = []
-        elif solver == "ME":
-            self._decay_channels = self.sb_coupling.me_decay_channels
+        if solver == "ME":
+            decay_channels = self.sb_coupling.me_decay_channels
         elif solver == "BR":
-            self._decay_channels = self.sb_coupling.br_decay_channels
-        else:  # Fallback: create generic evolution with no decay channels.
-            self._decay_channels = []
-        return self._decay_channels
-
-    def reset_solver_objects(self) -> None:
-        """Reset cached solver objects so they are rebuilt on next access."""
-        self._evo_obj = None
-        self._decay_channels = None
+            decay_channels = self.sb_coupling.br_decay_channels
+        else:  # for Paper_eqs & Fallback: create generic evolution with no decay channels.
+            decay_channels = []
+        return decay_channels
 
     # --- Hamiltonians & Evolutions -------------------------------------------------
     @property
@@ -114,7 +101,7 @@ class SimulationModuleOQS:
         Es, _ = self.system.eigenstates
         H_diag = Qobj(np.diag(Es), dims=self.system.hamiltonian.dims)
         if self.simulation_config.rwa_sl:
-            omega_L = self.laser._carrier_freq_fs
+            omega_L = self.laser.carrier_freq_fs
             # Determine excitation number for each eigenstate
             # Based on index: 0 -> 0 excitations, 1..N -> 1, N+1..end -> 2
             H_diag -= HBAR * omega_L * self.system.number_op  # is the same in both bases

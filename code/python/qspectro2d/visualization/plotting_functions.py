@@ -222,7 +222,7 @@ def plot_data(
     sim_config = cast(SimulationConfig, loaded_data_and_info.get("sim_config"))
     t_det = loaded_data_and_info.get("t_det")
     t_coh = loaded_data_and_info.get("t_coh") if dimension == "2d" else None
-    signal_types: Sequence[str] = sim_config["signal_types"]
+    signal_types: Sequence[str] = sim_config.signal_types
 
     missing = [
         k

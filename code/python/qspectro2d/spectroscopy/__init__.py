@@ -18,7 +18,7 @@ from .one_d_field import (
     compute_evolution,
     parallel_compute_1d_e_comps,
 )
-from .one_d_field import _phase_cycle_component as extract_ift_signal_component
+from .one_d_field import phase_cycle_component as extract_ift_signal_component
 from .polarization import complex_polarization
 
 from .solver_check import check_the_solver

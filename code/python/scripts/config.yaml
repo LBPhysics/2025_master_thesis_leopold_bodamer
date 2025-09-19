@@ -24,7 +24,7 @@ atomic:
 
 laser:
   pulse_fwhm_fs: 6.0
-  envelope_type: gaussian
+  envelope_type: cos2
   carrier_freq_cm: 16000.0
   rwa_sl: false
 
@@ -35,10 +35,10 @@ bath:
   coupling: 0.01   # actually in terms of frequency
 
 config:
-  solver: ME
+  solver: Paper_eqs
 
 window:
   t_det_max: 60.0
-  t_wait: 10.0
-  t_coh: 6.0
+  t_wait: 1.0
+  t_coh: 30.0
   dt: 0.1

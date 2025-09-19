@@ -128,7 +128,7 @@ This section explains the core end‑to‑end flow used by both 1D and 2D spectr
 - Pulse envelopes now avoid repeated Gaussian baseline computation via precomputed `_boundary_val` & window limits.
 
 ### Extension Points (Design Intent)
-- Add new pulse shapes: implement in `_single_pulse_envelope` (and extend validation) without touching propagation.
+- Add new pulse shapes: implement in `single_pulse_envelope` (and extend validation) without touching propagation.
 - New solvers: register callable in a future solver registry; accept `SimulationConfig` / system handles.
 - Output formats: swap pickle writer with HDF5 layer using the same payload dict schema.
 

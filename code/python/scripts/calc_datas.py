@@ -98,9 +98,10 @@ def _avg_E_sigs_over_freqs_for_tcoh(
     """
     sim_cfg = sim_oqs.simulation_config
     sim_cfg.t_coh = float(t_coh_val)
-    t_wait = sim_cfg.t_wait
     sim_oqs.reset_times_local()  # recompute local time axes
-    sim_oqs.laser.update_delays([t_coh_val, t_wait])
+    new_delays = sim_oqs.laser.pulse_delays
+    new_delays[0] = t_coh_val
+    sim_oqs.laser.pulse_delays = new_delays
 
     if freq_indices.size == 0:
         return [], 0

@@ -103,9 +103,7 @@ def from_rotating_frame_list(
 
     times_arr = np.asarray(times, dtype=float).reshape(-1)
     if len(times_arr) != len(states):
-        raise ValueError(
-            f"Length mismatch: {len(states_list)} states vs {times_arr.shape[0]} times"
-        )
+        raise ValueError(f"Length mismatch: {len(states)} states vs {times_arr.shape[0]} times")
     return [
         from_rotating_frame_op(rho, float(t), n_atoms, omega_laser)
         for rho, t in zip(states, times_arr)

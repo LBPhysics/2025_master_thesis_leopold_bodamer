@@ -230,7 +230,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     # Apply RWA phase factors if needed
     if getattr(copy_sim_oqs.simulation_config, "rwa_sl", False):
         n_atoms = copy_sim_oqs.system.n_atoms
-        omega_laser = copy_sim_oqs.laser._carrier_freq_fs
+        omega_laser = copy_sim_oqs.laser.carrier_freq_fs
         logger.info(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser}")
         states = from_rotating_frame_list(states, times, n_atoms, omega_laser)
 

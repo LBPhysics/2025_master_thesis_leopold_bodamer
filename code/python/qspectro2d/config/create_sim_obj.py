@@ -61,7 +61,7 @@ def load_simulation(
     BEFORE constructing the laser sequence & simulation config so that all
     derived internal time arrays are consistent. This avoids the need to
     rebuild the `SimulationModuleOQS` later and prevents mismatches (e.g.
-    insufficient evolution states) when large coherence delays were first
+    insufficient evolution states) when large coherence pulse_delays were first
     baked in and then changed afterwards.
 
     Parameters
@@ -125,12 +125,12 @@ def load_simulation(
     dt = float(window_cfg.get("dt", dflt.DT))
     t_det_max = float(window_cfg.get("t_det_max", dflt.T_DET_MAX))
 
-    # Apply early overrides (timing relevant for pulse delays)
-    delays = [t_coh, t_wait]  # -> 3 pulses
+    # Apply early overrides (timing relevant for pulse pulse_delays)
+    pulse_delays = [t_coh, t_wait]  # -> 3 pulses
     phases = [0.0, 0.0, dflt.DETECTION_PHASE]  # last phase is detection phase
 
-    laser_sequence = LaserPulseSequence.from_delays(
-        delays=delays,
+    laser_sequence = LaserPulseSequence.from_pulse_delays(
+        pulse_delays=pulse_delays,
         base_amplitude=base_amp,
         pulse_fwhm_fs=pulse_fwhm_fs,
         carrier_freq_cm=carrier_cm,

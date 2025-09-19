@@ -22,7 +22,6 @@ class SimulationConfig:
     solver_options: dict[str, float | int] = field(
         default_factory=lambda: {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
     )
-    relative_e0s: List[float] = field(default_factory=lambda: [1.0, 1.0, 0.1])
     rwa_sl: bool = True
 
     dt: float = 0.1

@@ -64,12 +64,12 @@ class TestLaserPulse:
 
         expected_freq = convert_cm_to_fs(freq_cm)
         assert np.isclose(pulse.pulse_freq_fs, expected_freq)
-        assert pulse._carrier_freq_fs == pulse.pulse_freq_fs
+        assert pulse.carrier_freq_fs == pulse.pulse_freq_fs
 
         print("✓ LaserPulse frequency conversion successful")
         print(f"  - Original: {freq_cm} cm^-1")
         print(f"  - Converted: {pulse.pulse_freq_fs:.6f} rad/fs")
-        print(f"  - omega_laser: {pulse._carrier_freq_fs:.6f} rad/fs")
+        print(f"  - omega_laser: {pulse.carrier_freq_fs:.6f} rad/fs")
 
     def test_active_time_range(self):
         """Test active time range calculation."""
@@ -200,14 +200,14 @@ class TestLaserPulseSequence:
 
         assert len(seq.pulses) == 0
         assert seq.E0 == 0.0
-        assert seq._carrier_freq_fs is None
+        assert seq.carrier_freq_fs is None
         assert seq.pulse_peak_times == []
         assert seq.pulse_amplitudes == []
 
         print("✓ Empty LaserPulseSequence initialization successful")
         print(f"  - Number of pulses: {len(seq.pulses)}")
         print(f"  - E0: {seq.E0}")
-        print(f"  - omega_laser: {seq._carrier_freq_fs}")
+        print(f"  - omega_laser: {seq.carrier_freq_fs}")
 
     def test_basic_initialization_with_pulses(self):
         """Test initialization with a list of pulses."""
@@ -235,22 +235,22 @@ class TestLaserPulseSequence:
 
         assert len(seq.pulses) == 2
         assert seq.E0 == 0.1  # First pulse amplitude
-        assert np.isclose(seq._carrier_freq_fs, convert_cm_to_fs(16000.0))
+        assert np.isclose(seq.carrier_freq_fs, convert_cm_to_fs(16000.0))
         assert seq.pulse_peak_times == [50.0, 100.0]
         assert seq.pulse_amplitudes == [0.1, 0.05]
 
         print("✓ LaserPulseSequence initialization with pulses successful")
         print(f"  - Number of pulses: {len(seq.pulses)}")
         print(f"  - E0: {seq.E0}")
-        print(f"  - omega_laser: {seq._carrier_freq_fs:.6f} rad/fs")
+        print(f"  - omega_laser: {seq.carrier_freq_fs:.6f} rad/fs")
         print(f"  - Peak times: {seq.pulse_peak_times}")
         print(f"  - Amplitudes: {seq.pulse_amplitudes}")
 
-    def test_from_delays_factory(self):
-        """Test creation from delays using factory method."""
-        delays = [200.0, 300.0]
-        seq = LaserPulseSequence.from_delays(
-            delays=delays,
+    def test_from_pulse_delays_factory(self):
+        """Test creation from pulse_delays using factory method."""
+        pulse_delays = [200.0, 300.0]
+        seq = LaserPulseSequence.from_pulse_delays(
+            pulse_delays=pulse_delays,
             base_amplitude=0.05,
             pulse_fwhm_fs=10.0,
             carrier_freq_cm=15800.0,
@@ -266,7 +266,7 @@ class TestLaserPulseSequence:
         assert seq.pulse_phases == [0.0, 0.5, 1.0]
         assert all(env == "gaussian" for env in seq.envelope_types)
 
-        print("✓ LaserPulseSequence from_delays factory successful")
+        print("✓ LaserPulseSequence from_pulse_delays factory successful")
         print(f"  - Number of pulses: {len(seq)}")
         print(f"  - Peak times: {seq.pulse_peak_times}")
         print(f"  - Amplitudes: {seq.pulse_amplitudes}")
@@ -340,7 +340,7 @@ class TestLaserPulseSequence:
 
     def test_update_phases(self):
         """Test phase updating functionality."""
-        seq = LaserPulseSequence.from_delays([0.0, 10.0])
+        seq = LaserPulseSequence.from_pulse_delays([0.0, 10.0])
 
         # Update phases
         new_phases = [0.5, 1.5, 2.5]  # New phases for each pulse
@@ -355,7 +355,7 @@ class TestLaserPulseSequence:
 
     def test_update_phases_validation(self):
         """Test phase update validation."""
-        seq = LaserPulseSequence.from_delays([0.0])  # Single pulse
+        seq = LaserPulseSequence.from_pulse_delays([0.0])  # Single pulse
 
         # Should raise error for wrong number of phases
         with pytest.raises(ValueError):
@@ -365,7 +365,9 @@ class TestLaserPulseSequence:
 
     def test_active_pulses_at_time(self):
         """Test getting active pulses at a specific time."""
-        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
+        seq = LaserPulseSequence.from_pulse_delays(
+            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0
+        )
 
         # Test at pulse peak time
         active_at_100 = seq.get_active_pulses_at_time(100.0)
@@ -382,7 +384,9 @@ class TestLaserPulseSequence:
 
     def test_total_amplitude_at_time(self):
         """Test total amplitude calculation at a specific time."""
-        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
+        seq = LaserPulseSequence.from_pulse_delays(
+            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0
+        )
 
         # Test at pulse peak time
         total_amp_at_100 = seq.get_total_amplitude_at_time(100.0)
@@ -398,7 +402,7 @@ class TestLaserPulseSequence:
 
     def test_serialization_roundtrip(self):
         """Test serialization and deserialization roundtrip."""
-        original_seq = LaserPulseSequence.from_delays(
+        original_seq = LaserPulseSequence.from_pulse_delays(
             [200.0, 300.0],
             base_amplitude=0.05,
             pulse_fwhm_fs=10.0,
@@ -435,7 +439,9 @@ class TestLaserUtilityFunctions:
 
     def test_identify_non_zero_pulse_regions(self):
         """Test identification of non-zero pulse regions."""
-        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
+        seq = LaserPulseSequence.from_pulse_delays(
+            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0
+        )
 
         times = np.linspace(0, 300, 301)
         active_regions = identify_non_zero_pulse_regions(times, seq)
@@ -457,7 +463,9 @@ class TestLaserUtilityFunctions:
 
     def test_split_by_active_regions(self):
         """Test splitting time array by active regions."""
-        seq = LaserPulseSequence.from_delays([100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0)
+        seq = LaserPulseSequence.from_pulse_delays(
+            [100.0, 200.0], base_amplitude=1.0, pulse_fwhm_fs=10.0
+        )
 
         times = np.linspace(0, 300, 301)
         active_regions = identify_non_zero_pulse_regions(times, seq)
@@ -479,7 +487,7 @@ class TestLaserUtilityFunctions:
     def test_combined_utility_workflow(self):
         """Test combined workflow of utility functions."""
         # Create a more complex pulse sequence
-        seq = LaserPulseSequence.from_delays(
+        seq = LaserPulseSequence.from_pulse_delays(
             [50.0, 100.0, 200.0],
             base_amplitude=1.0,
             pulse_fwhm_fs=8.0,
@@ -514,7 +522,7 @@ class TestLaserUtilityFunctions:
 
 def test_laser_pulse_sequence_len():
     """Test __len__ method of LaserPulseSequence."""
-    seq = LaserPulseSequence.from_delays([0.0, 10.0, 20.0])
+    seq = LaserPulseSequence.from_pulse_delays([0.0, 10.0, 20.0])
     assert len(seq) == 4
 
     empty_seq = LaserPulseSequence()

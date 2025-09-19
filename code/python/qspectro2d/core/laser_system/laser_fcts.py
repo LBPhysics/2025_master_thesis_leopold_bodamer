@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-def _single_pulse_envelope(t_array: np.ndarray, pulse: "LaserPulse") -> np.ndarray:
+def single_pulse_envelope(t_array: np.ndarray, pulse: "LaserPulse") -> np.ndarray:
     """Compute envelope contribution of a single pulse for provided time array.
 
     Parameters
@@ -85,7 +85,7 @@ def pulse_envelopes(
 
     envelope_total = np.zeros_like(t_array, dtype=float)
     for pulse in pulse_seq.pulses:
-        envelope_total += _single_pulse_envelope(t_array, pulse)
+        envelope_total += single_pulse_envelope(t_array, pulse)
 
     if is_scalar:
         return float(envelope_total[0])
@@ -123,7 +123,7 @@ def e_pulses(
         E0 = pulse.pulse_amplitude
         if phi is None or E0 is None:
             continue
-        single_env = _single_pulse_envelope(t_array, pulse)
+        single_env = single_pulse_envelope(t_array, pulse)
         field_total += E0 * single_env * np.exp(-1j * phi)
 
     if is_scalar:
@@ -163,7 +163,7 @@ def epsilon_pulses(
         phi = pulse.pulse_phase
         if omega is None or E0 is None or phi is None:
             continue
-        single_env = _single_pulse_envelope(t_array, pulse)
+        single_env = single_pulse_envelope(t_array, pulse)
         carrier = np.exp(-1j * (-omega * t_array + phi))
         field_total += E0 * single_env * carrier
 

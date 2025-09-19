@@ -34,8 +34,6 @@ from .bath_system import (
 from .laser_system import (
     LaserPulse,
     LaserPulseSequence,
-    identify_non_zero_pulse_regions,
-    split_by_active_regions,
     # PULSE FIELD FUNCTIONS
     pulse_envelopes,
     e_pulses,
@@ -75,8 +73,6 @@ __all__ = [
     "pulse_envelopes",
     "e_pulses",
     "epsilon_pulses",
-    "identify_non_zero_pulse_regions",
-    "split_by_active_regions",
     # Solver functions
     "matrix_ODE_paper",
     "redfield_paper",

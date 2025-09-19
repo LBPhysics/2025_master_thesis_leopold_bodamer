@@ -258,17 +258,3 @@ class SystemBathCoupling:
 
     def __str__(self) -> str:
         return self.summary()
-
-
-if __name__ == "__main__":
-    from qutip import OhmicEnvironment
-
-    # Create mock instances of AtomicSystem and BathSystem
-    atomic_system = AtomicSystem(n_atoms=1, frequencies_cm=[16000.0], dip_moments=[1.0])
-    bath_class = OhmicEnvironment(alpha=0.1, T=0.1, wc=10, s=1.0)
-
-    # Instantiate SystemBathCoupling
-    system_bath_coupling = SystemBathCoupling(system=atomic_system, bath=bath_class)
-
-    # Call the summary method
-    system_bath_coupling.summary()

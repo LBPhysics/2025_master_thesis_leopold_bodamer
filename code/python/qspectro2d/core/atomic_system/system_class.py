@@ -7,28 +7,8 @@ from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
 from functools import cached_property
 from qutip import basis, ket2dm, Qobj
+
 from qspectro2d.constants import HBAR, convert_cm_to_fs, convert_fs_to_cm
-
-
-def pair_to_index(i: int, j: int, n: int) -> int:
-    """0-based canonical index for |i,j> with i<j, given n atoms.
-    ground=0, singles=1..n, doubles=(n+1)..
-    Returns the index+1 of the basis corresponding to the double excitation |i,j>.
-    """
-    assert 1 <= i < j <= n
-    return 1 + n + math.comb(j - 1, 2) + i
-
-
-def index_to_pair(k: int, n: int) -> Tuple[int, int]:
-    """Inverse map: from index k (in double block == corresponds to state basis[k-1]) to (atoms i,j excited)."""
-    pair_rank = k - (1 + n)  # rank inside double block (0-based)
-
-    # find j with C(j-1,2) < r <= C(j,2)
-    j = 2
-    while math.comb(j, 2) < pair_rank:
-        j += 1
-    i = pair_rank - math.comb(j - 1, 2)
-    return i, j
 
 
 @dataclass
@@ -75,21 +55,6 @@ class AtomicSystem:
         # keep fs cache in sync
         self._frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
         # cached spectrum/operators depend on frequencies
-        self.reset_cache()
-
-    def update_coupling_cm(self, new_coupling_cm: float) -> None:
-        """Update base coupling (cm^-1) and refresh internal fs cache/coupling matrix."""
-        self.coupling_cm = new_coupling_cm
-        self._coupling_fs = float(convert_cm_to_fs(self.coupling_cm))
-        # Coupling affects J matrix and H; recompute couplings and reset caches
-        self._compute_isotropic_couplings()
-        self.reset_cache()
-
-    def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
-        """Update inhomogeneous broadening (cm^-1)."""
-        self.delta_inhomogen_cm = new_delta_inhomogen_cm
-        self._delta_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
-        # Not strictly needed for operators, but keep consistency
         self.reset_cache()
 
     def reset_cache(self) -> None:
@@ -460,3 +425,46 @@ class AtomicSystem:
         """
         d = json.loads(json_str)
         return cls.from_dict(d)
+
+
+def pair_to_index(i: int, j: int, n: int) -> int:
+    """0-based canonical index for |i,j> with i<j, given n atoms.
+    ground=0, singles=1..n, doubles=(n+1)..
+    Returns the index+1 of the basis corresponding to the double excitation |i,j>.
+    """
+    assert 1 <= i < j <= n
+    return 1 + n + math.comb(j - 1, 2) + i
+
+
+def index_to_pair(k: int, n: int) -> Tuple[int, int]:
+    """Inverse map: from index k (in double block == corresponds to state basis[k-1]) to (atoms i,j excited)."""
+    pair_rank = k - (1 + n)  # rank inside double block (0-based)
+
+    # find j with C(j-1,2) < r <= C(j,2)
+    j = 2
+    while math.comb(j, 2) < pair_rank:
+        j += 1
+    i = pair_rank - math.comb(j - 1, 2)
+    return i, j
+
+
+''' 
+Not used 
+
+
+    def update_coupling_cm(self, new_coupling_cm: float) -> None:
+        """Update base coupling (cm^-1) and refresh internal fs cache/coupling matrix."""
+        self.coupling_cm = new_coupling_cm
+        self._coupling_fs = float(convert_cm_to_fs(self.coupling_cm))
+        # Coupling affects J matrix and H; recompute couplings and reset caches
+        self._compute_isotropic_couplings()
+        self.reset_cache()
+
+    def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
+        """Update inhomogeneous broadening (cm^-1)."""
+        self.delta_inhomogen_cm = new_delta_inhomogen_cm
+        self._delta_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
+        # Not strictly needed for operators, but keep consistency
+        self.reset_cache()
+
+'''
