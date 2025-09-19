@@ -12,14 +12,13 @@ redfield          : Redfield tensor construction helpers
 """
 
 from .sim_config import SimulationConfig
-from .simulation_class import SimulationModuleOQS, H_int_
+from .simulation_class import SimulationModuleOQS
 from .liouvillian_paper import matrix_ODE_paper
 from .redfield_paper import redfield_paper
 
 __all__ = [
     "SimulationConfig",
     "SimulationModuleOQS",
-    "H_int_",
     "matrix_ODE_paper",
     "redfield_paper",
 ]

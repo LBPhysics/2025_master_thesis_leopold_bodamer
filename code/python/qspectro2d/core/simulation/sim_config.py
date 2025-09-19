@@ -46,10 +46,6 @@ class SimulationConfig:
             )
             self.rwa_sl = True
 
-    @property
-    def combinations(self) -> int:
-        return self.n_phases * self.n_phases * self.n_inhomogen
-
     def summary(self) -> str:
         return (
             "SimulationConfig Summary:\n"
@@ -67,7 +63,6 @@ class SimulationConfig:
             "-------------------------------\n"
             f"Phase Cycles       : {self.n_phases}\n"
             f"Inhom. Points      : {self.n_inhomogen}\n"
-            f"Total Combinations : {self.combinations}\n"
             f"Max Workers        : {self.max_workers}\n"
             "-------------------------------\n"
         )

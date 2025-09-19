@@ -3,14 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import partial
+from functools import cached_property
 import numpy as np
-from qutip import (
-    Qobj,
-    QobjEvo,
-    ket2dm,
-)
-from typing import List, Tuple
+from qutip import Qobj, QobjEvo, ket2dm
+from typing import List, Tuple, Union
 from qutip import BosonicEnvironment
 
 from .sim_config import SimulationConfig
@@ -19,41 +15,6 @@ from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.laser_system.laser_fcts import e_pulses, epsilon_pulses
 from qspectro2d.core.system_bath_class import SystemBathCoupling
 from qspectro2d.constants import HBAR
-
-
-def H_int_(t: float, lowering_op: Qobj, rwa_sl: bool, laser: LaserPulseSequence) -> Qobj:
-    """Interaction Hamiltonian (-μ·E) with optional RWA.
-
-    Parameters
-    ----------
-    t : float
-        Time.
-    lowering_op : Qobj
-        System lowering operator in eigenbasis!.
-    rwa_sl : bool
-        Apply rotating wave approximation.
-    laser : LaserPulseSequence
-        Pulse sequence.
-    """
-    if rwa_sl:
-        E_field_RWA = e_pulses(t, laser)
-        return -(lowering_op.dag() * E_field_RWA + lowering_op * np.conj(E_field_RWA))
-    dipole_op = lowering_op + lowering_op.dag()
-    E_field = epsilon_pulses(t, laser)
-    return -dipole_op * (E_field + np.conj(E_field))
-
-
-def paper_eqs_evo(sim: "SimulationModuleOQS", t: float) -> Qobj:  # pragma: no cover simple wrapper
-    """Global helper for 'Paper_eqs' solver evolution.
-
-    Kept at module scope so partial(paper_eqs_evo, sim) remains pickleable.
-    Lazy import inside to avoid circular import at module load.
-    """
-    from qspectro2d.core.simulation.liouvillian_paper import (
-        matrix_ODE_paper as _matrix_ODE_paper,
-    )
-
-    return _matrix_ODE_paper(t, sim)
 
 
 @dataclass
@@ -72,19 +33,18 @@ class SimulationModuleOQS:
 
     # --- Deferred solver-dependent initialization ---------------------------------
     @property
-    def evo_obj(self):  # type: ignore[override]
+    def evo_obj(self) -> Union[Qobj, QobjEvo]:
         solver = self.simulation_config.ode_solver
         if solver == "Paper_eqs":
-            # Keep pickleable: use module-level function partially bound to self.
-            evo_obj = partial(paper_eqs_evo, self)
+            evo_obj = QobjEvo(self.paper_eqs_evo)
         elif solver == "ME" or solver == "BR":
             evo_obj = QobjEvo(self.H_total_t)
-        else:  # Fallback: create generic evolution
-            evo_obj = QobjEvo(self.H0_diagonalized)
+        else:  # Fallback: create evolution without lasers
+            evo_obj = self.H0_diagonalized
         return evo_obj
 
     @property
-    def decay_channels(self):  # type: ignore[override]
+    def decay_channels(self):
         solver = self.simulation_config.ode_solver
         if solver == "ME":
             decay_channels = self.sb_coupling.me_decay_channels
@@ -107,34 +67,49 @@ class SimulationModuleOQS:
             H_diag -= HBAR * omega_L * self.system.number_op  # is the same in both bases
         return H_diag
 
-    def H_int_sl(self, t: float) -> Qobj:
-        lowering_op = self.system.lowering_op
-        H_int = H_int_(
-            t, self.system.to_eigenbasis(lowering_op), self.simulation_config.rwa_sl, self.laser
+    def paper_eqs_evo(self, t: float) -> Qobj:  # pragma: no cover simple wrapper
+        """Global helper for 'Paper_eqs' solver evolution.
+
+        Kept at module scope so partial(paper_eqs_evo, sim) remains pickleable.
+        Lazy import inside to avoid circular import at module load.
+        """
+        from qspectro2d.core.simulation.liouvillian_paper import (
+            matrix_ODE_paper as _matrix_ODE_paper,
         )
-        return H_int
+
+        return _matrix_ODE_paper(t, self)
+
+    def H_int_sl(self, t: float) -> Qobj:
+        """Interaction Hamiltonian (-μ·E) with optional RWA."""
+        lowering_op = self.system.lowering_op
+        lowering_op = self.system.to_eigenbasis(lowering_op)
+        if self.simulation_config.rwa_sl:
+            E_field_RWA = e_pulses(t, self.laser)
+            return -(lowering_op.dag() * E_field_RWA + lowering_op * np.conj(E_field_RWA))
+        dipole_op = lowering_op + lowering_op.dag()
+        E_field = epsilon_pulses(t, self.laser)
+        return -dipole_op * (E_field + np.conj(E_field))
 
     def H_total_t(self, t: float) -> Qobj:
         """Return total Hamiltonian H0 + H_int(t) at time t."""
         H_total = self.H0_diagonalized + self.H_int_sl(t)
-        print(f"H at t={t}: {H_total.norm()}")
+        # print(f"H at t={t}: {H_total.norm()}")
         return H_total
 
     # TODO also add time dependent eigenenergies / states? and also all the other operators?
     def time_dep_eigenstates(self, t: float) -> Tuple[np.ndarray, np.ndarray]:
-        """Eigenvalues & eigenstates (cached).
-
-        Invalidated when `update_frequencies_cm` is called.
-        """
+        """Eigenvalues & eigenstates."""
         return self.H_total_t(t).eigenstates()
 
     def time_dep_omega_ij(self, i: int, j: int, t: float) -> float:
         """Return energy difference (frequency) between instantaneous eigenstates i and j in fs^-1."""
-        return self.time_dep_eigenstates(t)[0][i] - self.time_dep_eigenstates(t)[0][j]
+        Es, _ = self.time_dep_eigenstates(t)
+        return Es[i] - Es[j]
 
     # --- Observables ---------------------------------------------------------------
-    @property
+    @cached_property
     def observable_ops(self) -> List[Qobj]:
+        """in the eigenbasis of H0 (diagonalized system Hamiltonian)."""
         sys = self.system
         n = sys.n_atoms
 
@@ -160,7 +135,7 @@ class SimulationModuleOQS:
 
         return ops
 
-    @property
+    @cached_property
     def observable_strs(self) -> List[str]:
         sys = self.system
         n = sys.n_atoms
@@ -187,7 +162,7 @@ class SimulationModuleOQS:
         t_max_curr = cfg.t_coh + cfg.t_wait + cfg.t_det_max
         dt = cfg.dt
         # Compute number of steps to cover from t0 to t_max_curr with step dt
-        n_steps = int(np.floor((t_max_curr - t0) / dt)) + 10  # small buffer
+        n_steps = int(np.floor((t_max_curr - t0) / dt)) + 1
         # Generate time grid: [t0, t0 + dt, ..., t_max_curr]
         times = t0 + dt * np.arange(n_steps, dtype=float)
         return times
@@ -200,10 +175,9 @@ class SimulationModuleOQS:
         if hasattr(self, "_times_local_manual"):
             delattr(self, "_times_local_manual")
 
-    @property
+    @cached_property
     def t_det(self):
         # Detection time grid with exact spacing dt starting at the first time >0 in times_local.
-
         dt = self.simulation_config.dt
         t_det_max = self.simulation_config.t_det_max
         # Compute the first time > 0
@@ -221,14 +195,3 @@ class SimulationModuleOQS:
         cfg = self.simulation_config
         t_det0 = cfg.t_coh + cfg.t_wait
         return self.t_det + t_det0
-
-    # Evolution objects (Paper specific ones live in liouvillian_paper / redfield)
-    def summary(self) -> str:
-        return (
-            "SimulationModuleOQS Summary\n"
-            f"Solver: {self.simulation_config.ode_solver}\n"
-            f"Decay channels: {len(self.decay_channels)}\n"
-        )
-
-    def __str__(self) -> str:  # pragma: no cover simple repr
-        return self.summary()

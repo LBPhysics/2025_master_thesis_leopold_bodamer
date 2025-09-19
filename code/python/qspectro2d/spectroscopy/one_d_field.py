@@ -200,9 +200,9 @@ def phase_cycle_component(
     phi_det: float = 0.0,  # default is overridden at call site using DETECTION_PHASE
     normalize: bool = False,
 ) -> np.ndarray:
-    """Extract P_{l,m,n}(t) from a grid P[phi1,phi2,t].
+    """Extract P_{l,m,n}(t) from a grid P^3[phi1,phi2,t].
 
-    P_{l,m,n}(t) = Σ_{phi1} Σ_{phi2} P_{phi1,phi2}(t) exp(-i(l phi1 + m phi2 + n phi_det))
+    P_{l,m,n}(t) = Σ_{phi1} Σ_{phi2} P^3_{phi1,phi2}(t) exp(-i(l phi1 + m phi2 + n phi_det))
     """
     l, m, n = lmn
     P_out = np.zeros(P_grid.shape[-1], dtype=np.complex128)
@@ -282,9 +282,7 @@ def parallel_compute_1d_e_comps(
 
     for i, phi1 in enumerate(phases_eff):
         for j, phi2 in enumerate(phases_eff):
-            P_phi = temp_results[(phi1, phi2)]
-            P_grid[i, j, :] = P_phi
-            # i want to somehow visualize P_grid at this point
+            P_grid[i, j, :] = temp_results[(phi1, phi2)]
 
     # Extract components for this realization
     E_list: List[np.ndarray] = []

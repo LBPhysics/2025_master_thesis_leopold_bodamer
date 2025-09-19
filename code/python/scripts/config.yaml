@@ -23,10 +23,10 @@ atomic:
   max_excitation: 2
 
 laser:
-  pulse_fwhm_fs: 6.0
-  envelope_type: cos2
+  pulse_fwhm_fs: 5.0
+  envelope_type: gaussian
   carrier_freq_cm: 16000.0
-  rwa_sl: false
+  rwa_sl: true
 
 bath:
   bath_type: ohmic
@@ -35,10 +35,10 @@ bath:
   coupling: 0.01   # actually in terms of frequency
 
 config:
-  solver: Paper_eqs
+  solver: ME
 
 window:
   t_det_max: 60.0
-  t_wait: 1.0
+  t_wait: 5.0
   t_coh: 30.0
-  dt: 0.1
+  dt: 0.2

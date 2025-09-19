@@ -57,6 +57,13 @@ class AtomicSystem:
         # cached spectrum/operators depend on frequencies
         self.reset_cache()
 
+    def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
+        """Update inhomogeneous broadening (cm^-1)."""
+        self.delta_inhomogen_cm = new_delta_inhomogen_cm
+        self._delta_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
+        # Not strictly needed for operators, but keep consistency
+        self.reset_cache()
+
     def reset_cache(self) -> None:
         """Invalidate cached spectral quantities affected by parameter changes."""
         # delete cached_properties to force recompute on parameter changes
@@ -460,11 +467,5 @@ Not used
         self._compute_isotropic_couplings()
         self.reset_cache()
 
-    def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
-        """Update inhomogeneous broadening (cm^-1)."""
-        self.delta_inhomogen_cm = new_delta_inhomogen_cm
-        self._delta_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
-        # Not strictly needed for operators, but keep consistency
-        self.reset_cache()
 
 '''

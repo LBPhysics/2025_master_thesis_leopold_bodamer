@@ -77,7 +77,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     # Coherences
     L[idx_eg, idx_gg] = +1j / HBAR * Et_conj * mu
     L[idx_eg, idx_ee] = -1j / HBAR * Et_conj * mu
-    L[idx_eg, idx_eg] = -deph_rate_tot + 1j * (w0 - wL)
+    L[idx_eg, idx_eg] = -deph_rate_tot - 1j * (w0 - wL)
     L[idx_ge, idx_gg] = -1j / HBAR * Et * mu
     L[idx_ge, idx_ee] = +1j / HBAR * Et * mu
     L[idx_ge, idx_ge] = -deph_rate_tot + 1j * (w0 - wL)
