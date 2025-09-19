@@ -17,6 +17,8 @@ metadata keys required by downstream stacking & plotting scripts:
 Examples:
     python calc_datas.py --simulation_type 1d
     python calc_datas.py --simulation_type 2d
+    # 2D in batches (N batches, pick batch i)
+    python calc_datas.py --simulation_type 2d --n_batches 8 --batch_idx 0
 """
 
 from __future__ import annotations
@@ -92,11 +94,34 @@ def run_2d_mode(args) -> None:
     sim_cfg = sim_oqs.simulation_config
     print("🎯 Running 2D mode (iterate over t_det as t_coh)")
 
-    t_coh_vals = sim_oqs.t_det  # reuse detection times as coherence-axis grid
+    # Reuse detection times as coherence-axis grid
+    t_coh_vals = sim_oqs.t_det
+    N_total = len(t_coh_vals)
+
+    # Determine index subset for batching
+    batch_idx: int = int(getattr(args, "batch_idx", 0))
+    n_batches: int = int(getattr(args, "n_batches", 1))
+    if n_batches < 1:
+        raise ValueError("--n_batches must be >= 1")
+    if batch_idx < 0 or batch_idx >= n_batches:
+        raise ValueError("--batch_idx must satisfy 0 <= batch_idx < n_batches")
+
+    if n_batches == 1:
+        indices = np.arange(N_total)
+        batch_note = "all"
+    else:
+        # Split into contiguous chunks as evenly as possible
+        # Use numpy to avoid off-by-one; ensures full coverage
+        chunks = np.array_split(np.arange(N_total), n_batches)
+        indices = chunks[batch_idx]
+        batch_note = f"batch {batch_idx+1}/{n_batches} (size={indices.size})"
+
+    print(f"📦 Batching: {batch_note}; total t_coh points={N_total}")
+
     saved_paths: list[str] = []
     start_time = time.time()
-    for t_i, t_coh_val in enumerate(t_coh_vals):
-        t_coh_val = float(t_coh_val)
+    for t_i in indices.tolist():
+        t_coh_val = float(t_coh_vals[t_i])
         print(f"\n--- t_idx={t_i} : t_coh={t_coh_val:.2f} fs ---")
         E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
 
@@ -129,7 +154,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Run 1D or multi-t_coh (2d-style) spectroscopy simulations (no inhomogeneity).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""Examples:\n  python calc_datas.py --simulation_type 1d\n  python calc_datas.py --simulation_type 2d""",
+        epilog=(
+            """Examples:\n  python calc_datas.py --simulation_type 1d\n  python calc_datas.py --simulation_type 2d\n  python calc_datas.py --simulation_type 2d --n_batches 8 --batch_idx 0"""
+        ),
     )
     parser.add_argument(
         "--simulation_type",
@@ -137,6 +164,19 @@ def main() -> None:
         default="1d",
         choices=["1d", "2d"],
         help="Execution mode (default: 1d)",
+    )
+    # Batching options (used for 2d mode only)
+    parser.add_argument(
+        "--n_batches",
+        type=int,
+        default=1,
+        help="Split the 2d run into N batches (default: 1, i.e., no batching)",
+    )
+    parser.add_argument(
+        "--batch_idx",
+        type=int,
+        default=0,
+        help="Zero-based index selecting which batch to run (0..n_batches-1)",
     )
     args = parser.parse_args()
 

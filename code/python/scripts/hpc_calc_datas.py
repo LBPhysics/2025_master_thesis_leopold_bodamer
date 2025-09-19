@@ -11,6 +11,9 @@ Usage (on the cluster login node):
     # 1D: compute one trace at the configured t_coh
     python hpc_calc_datas.py --simulation_type 1d
 
+    # 2D in batches (create N scripts, one per batch; submit all):
+    python hpc_calc_datas.py --simulation_type 2d --n_batches 16
+
 Add --no_submit to generate the script without submitting it.
 """
 
@@ -64,7 +67,10 @@ def _create_job_script(
     mem: str,
     time_limit: str,
 ) -> Path:
-    """Create a single SLURM script that runs calc_datas.py once for sim_type."""
+    """Create a single SLURM script that runs calc_datas.py once for sim_type.
+
+    Note: This variant does not pass batching flags; see `_create_batch_job_scripts`.
+    """
     calc_path = (scripts_dir / "calc_datas.py").resolve()
     if not calc_path.exists():
         raise FileNotFoundError(f"calc_datas.py not found at {calc_path}")
@@ -89,6 +95,49 @@ def _create_job_script(
     script_path.write_text(text, encoding="utf-8")
     script_path.chmod(0o755)
     return script_path
+
+
+def _create_batch_job_scripts(
+    *,
+    scripts_dir: Path,
+    job_dir: Path,
+    sim_type: str,
+    n_batches: int,
+    cpus: int,
+    mem: str,
+    time_limit: str,
+) -> list[Path]:
+    """Create multiple SLURM scripts, one per batch, for calc_datas.py 2d runs.
+
+    Each script passes `--n_batches` and its corresponding `--batch_idx`.
+    """
+    calc_path = (scripts_dir / "calc_datas.py").resolve()
+    if not calc_path.exists():
+        raise FileNotFoundError(f"calc_datas.py not found at {calc_path}")
+
+    scripts: list[Path] = []
+    for bi in range(n_batches):
+        job_name = f"qs_{sim_type}_b{bi:03d}-of-{n_batches}"
+        header = _slurm_header(
+            job_name=job_name,
+            job_dir=job_dir,
+            mail_type="END,FAIL",
+            cpus=cpus,
+            mem=mem,
+            time_limit=time_limit,
+        )
+        body = (
+            f"python {calc_path} --simulation_type {sim_type} "
+            f"--n_batches {n_batches} --batch_idx {bi}\n"
+        )
+        content = header + "\n" + body
+        script_path = job_dir / f"run_{sim_type}_batch_{bi:03d}_of_{n_batches}.slurm"
+        text = content.replace("\r\n", "\n").replace("\r", "\n")
+        script_path.write_text(text, encoding="utf-8")
+        script_path.chmod(0o755)
+        scripts.append(script_path)
+
+    return scripts
 
 
 def _submit_all(job_dir: Path) -> None:
@@ -126,6 +175,15 @@ def main() -> None:
     parser.add_argument(
         "--no_submit", action="store_true", help="Only generate scripts, do not submit"
     )
+    parser.add_argument(
+        "--n_batches",
+        type=int,
+        default=1,
+        help=(
+            "For 2d runs: create this many batch scripts (default: 1). "
+            "Each batch will handle a disjoint subset of t_coh points."
+        ),
+    )
     args = parser.parse_args()
 
     scripts_dir = Path(__file__).resolve().parent
@@ -141,17 +199,29 @@ def main() -> None:
     logs_dir = job_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=False)
 
-    # Create a single script
-    slurm_script = _create_job_script(
-        scripts_dir=scripts_dir,
-        job_dir=job_dir,
-        sim_type=args.simulation_type,
-        cpus=args.cpus,
-        mem=args.mem,
-        time_limit=args.time_limit,
-    )
-
-    print(f"Generated script: {slurm_script}")
+    generated: list[Path] = []
+    if args.simulation_type == "2d" and args.n_batches > 1:
+        generated = _create_batch_job_scripts(
+            scripts_dir=scripts_dir,
+            job_dir=job_dir,
+            sim_type=args.simulation_type,
+            n_batches=args.n_batches,
+            cpus=args.cpus,
+            mem=args.mem,
+            time_limit=args.time_limit,
+        )
+        print(f"Generated {len(generated)} batch scripts in: {job_dir}")
+    else:
+        slurm_script = _create_job_script(
+            scripts_dir=scripts_dir,
+            job_dir=job_dir,
+            sim_type=args.simulation_type,
+            cpus=args.cpus,
+            mem=args.mem,
+            time_limit=args.time_limit,
+        )
+        generated = [slurm_script]
+        print(f"Generated script: {slurm_script}")
 
     if not args.no_submit:
         _submit_all(job_dir)
