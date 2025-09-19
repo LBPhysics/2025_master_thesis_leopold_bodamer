@@ -1,43 +1,48 @@
 """
 Generate and (optionally) submit a SLURM job to plot data.
 
-This script calls `stack_1dto2d.py --skip_if_exists` first, which will stack 1D → 2D
-if needed or skip when an existing 2D dataset is present, then we create/submit a
-plotting job using the path printed by the stacking script.
+Simplified flow (no regex parsing):
+    1) If a 2D dataset already exists for the given 1D directory, use it.
+    2) Otherwise, invoke `stack_1dto2d.py` to create it, then discover its path.
+    3) Create and submit a SLURM job that runs `plot_datas.py --abs_path <2d_path>`.
 """
 
 from __future__ import annotations
 
 import argparse
-import re
-import subprocess
 from pathlib import Path
 from subprocess import run, CalledProcessError
 
 from project_config.paths import SCRIPTS_DIR
+from stack_1dto2d import detect_existing_2d
 
 
-def run_stacking_script(abs_path: str, skip_if_exists: bool = True) -> str:
-    """Call stack_1dto2d.py and return the plotting abs_path printed by it.
+def ensure_2d_dataset(abs_path: str, skip_if_exists: bool = True) -> str:
+    """Ensure a 2D dataset exists for the given 1D base path and return its abs path.
 
-    Always delegates existence checks to stack_1dto2d.py using --skip_if_exists when requested.
+    If `skip_if_exists` is True and a 2D file is found already, it's returned.
+    Otherwise, runs `stack_1dto2d.py` to create it and then discovers the path.
     """
-    data_dir = Path(abs_path)
-    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(data_dir)]
+    base = Path(abs_path)
+    base_dir = base if base.is_dir() else base.parent
+
+    existing = detect_existing_2d(base_dir)
+    if skip_if_exists and existing:
+        return existing
+
+    # Run stacking script to create/refresh the 2D dataset
+    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(base_dir)]
     if skip_if_exists:
         cmd.append("--skip_if_exists")
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=SCRIPTS_DIR)
+    proc = run(cmd, cwd=SCRIPTS_DIR, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(f"stack_1dto2d.py failed: {proc.stderr}")
 
-    if result.returncode != 0:
-        raise RuntimeError(f"Stacking script failed: {result.stderr}")
-
-    # Parse the output to find the plotting command
-    output = result.stdout
-    match = re.search(r'python plot_datas\.py --abs_path [\'"]([^\'"]+)[\'"]', output)
-    if not match:
-        raise RuntimeError("Could not find the plotting abs_path in stacking output")
-
-    return match.group(1)
+    # Discover newly created 2D dataset
+    new_path = detect_existing_2d(base_dir)
+    if not new_path:
+        raise RuntimeError("2D dataset not found after stacking")
+    return new_path
 
 
 def create_plotting_script(
@@ -45,6 +50,7 @@ def create_plotting_script(
     job_dir: Path,
 ) -> Path:
     """Create a SLURM script that runs plot_datas.py with the given abs_path."""
+    plot_py = (SCRIPTS_DIR / "plot_datas.py").resolve()
     content = f"""#!/bin/bash
 #SBATCH --job-name=plot_data
 #SBATCH --chdir={job_dir}
@@ -65,8 +71,8 @@ elif [ -f "/home/$USER/miniconda3/etc/profile.d/conda.sh" ]; then
 fi
 conda activate master_env || true
 
-# Execute plot_datas.py from scripts/ (two levels up from job_dir)
-python ../../plot_datas.py --abs_path "{abs_path}"
+# Execute plot_datas.py from scripts (absolute path)
+python {plot_py} --abs_path "{abs_path}"
 """
     path = job_dir / "plotting.slurm"
     # Write with Unix line endings so SLURM doesn't complain on Linux clusters
@@ -105,9 +111,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("🔄 Preparing 2D dataset (stacking if needed)...")
+    print("🔄 Ensuring 2D dataset (stacking if needed)...")
     try:
-        plotting_abs_path = run_stacking_script(args.abs_path)
+        plotting_abs_path = ensure_2d_dataset(args.abs_path)
         print(f"✅ Dataset ready. Plot path base: {plotting_abs_path}")
     except RuntimeError as e:
         print(f"❌ Stacking failed: {e}")

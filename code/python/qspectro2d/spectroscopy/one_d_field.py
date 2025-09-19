@@ -50,7 +50,7 @@ def slice_states_to_window(res: Result, window: np.ndarray) -> List[Qobj]:
     window = np.asarray(window)
     start_idx = np.argmin(np.abs(times - window[0]))
     idxs = start_idx + np.arange(len(window))
-    idxs = idxs[idxs < len(times)]
+    idxs = np.clip(idxs, 0, len(times) - 1)  # stay in bounds
     return [res.states[i] for i in idxs]
 
 

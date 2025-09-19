@@ -1,12 +1,11 @@
 """Stack multiple 1D simulation results (varying t_coh) into a single 2D file.
 
-Workflow assumptions:
-    - Each input ``*_data.npz`` corresponds to one coherence time value and
-        contains ``t_coh_value`` and ``signal_types`` plus the
-        time detection axis ``t_det``.
-    - Files reside in a directory under ``.../data/1d_spectroscopy/...``.
-    - A mirror directory under ``.../data/2d_spectroscopy/...`` will host the
-        stacked 2D dataset.
+Simplified workflow (no inhomogeneity, no partial merging):
+        - Each input ``*_data.npz`` corresponds to one coherence time value and
+            contains ``t_coh_value``, ``signal_types``, and the time detection axis ``t_det``.
+        - Files reside in a directory under ``.../data/1d_spectroscopy/...``.
+        - A mirror directory under ``.../data/2d_spectroscopy/...`` will host the
+            stacked 2D dataset.
 
 The produced 2D file stores axes ``t_coh`` and ``t_det`` and a list of stacked
 signal arrays with shape (n_t_coh, ... original 1D shape ...).
@@ -108,9 +107,9 @@ def main() -> None:
 
     print(f"\n📥 Loading {len(abs_data_paths)} data files (memory-efficient)...\n")
 
-    # Weighted merge of partial files with same t_coh_value
+    # Group by t_coh_value (assume at most one file per value)
     # ----------------------------------------------------------------------------------
-    groups: dict[float, list[dict]] = {}
+    groups: dict[float, dict] = {}
     signal_types: list[str] | None = None
     t_det_axis: np.ndarray | None = None
     shape_reference: tuple[int, ...] | None = None
@@ -129,7 +128,6 @@ def main() -> None:
                 if isinstance(t_coh_raw, (list, tuple)):
                     t_coh_raw = t_coh_raw[0]
                 t_coh_val = float(t_coh_raw)
-                n_inhom_batch = int(npz.get("n_inhomogen_in_batch", 0))
 
                 # Load signal components
                 sigs = []
@@ -147,10 +145,13 @@ def main() -> None:
                 if t_det_axis is None:
                     t_det_axis = np.array(npz["t_det"])  # type: ignore[index]
 
-                groups.setdefault(t_coh_val, []).append(
-                    {"signals": sigs, "weight": float(max(1, n_inhom_batch)), "path": fp}
-                )
-                print(f"   ✅ Loaded t_coh={t_coh_val:.4g} (weight {n_inhom_batch}) from {fp}")
+                if t_coh_val in groups:
+                    # If duplicates exist, keep the last one encountered (simple rule)
+                    print(
+                        f"   🔁 Duplicate t_coh={t_coh_val:.4g} found; replacing previous entry with {fp}"
+                    )
+                groups[t_coh_val] = {"signals": sigs, "path": fp}
+                print(f"   ✅ Loaded t_coh={t_coh_val:.4g} from {fp}")
         except Exception as e:
             print(f"   ❌ Skipping {fp}: {e}")
 
@@ -158,47 +159,20 @@ def main() -> None:
         print("❌ No valid inputs to stack.")
         sys.exit(1)
 
-    # Merge: for each t_coh take weighted average over partial contributions
-    merged: list[tuple[float, list[np.ndarray], float]] = []
-    per_t_provenance: list[dict] = []
-    for t_coh_val, entries in sorted(groups.items(), key=lambda kv: kv[0]):
-        total_w = sum(e["weight"] for e in entries)
-        n_signals = len(signal_types)
-        # Initialize accumulators using dtype of the first entry's signals
-        acc = [
-            np.zeros(shape_reference, dtype=entries[0]["signals"][i].dtype)
-            for i in range(n_signals)
-        ]
-        for e in entries:
-            w = e["weight"]
-            for i, arr in enumerate(e["signals"]):
-                acc[i] += w * arr
-        merged_arrays = [a / total_w for a in acc]
-        merged.append((t_coh_val, merged_arrays, total_w))
-        per_t_provenance.append(
-            {
-                "t_coh_value": t_coh_val,
-                "total_weight": total_w,
-                "n_partials": len(entries),
-                "sources": [e["path"] for e in entries],
-            }
-        )
-        if len(entries) > 1:
-            print(
-                f"   🔗 Merged {len(entries)} partial files for t_coh={t_coh_val:.4g} (total weight {total_w})"
-            )
-
-    n_t_coh = len(merged)  # number of unique coherence times
-    dtype = merged[0][1][0].dtype
+    # Prepare stacked arrays in ascending t_coh order (no averaging/merging)
+    sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
+    n_t_coh = len(sorted_items)
+    dtype = sorted_items[0][1]["signals"][0].dtype
     n_signals = len(signal_types)
     stacked_data = [np.empty((n_t_coh, *shape_reference), dtype=dtype) for _ in range(n_signals)]
     t_coh_vals = np.empty(n_t_coh)
-    total_weights = []
-    for i, (t_coh_val, arrays, total_w) in enumerate(merged):  # i is the index along the t_coh axis
+    sources: list[str] = []
+    for i, (t_coh_val, entry) in enumerate(sorted_items):  # i is the index along the t_coh axis
         t_coh_vals[i] = t_coh_val
+        arrays = entry["signals"]
         for j, arr in enumerate(arrays):
             stacked_data[j][i] = arr  # holds signal type j at coherence index i.
-        total_weights.append(total_w)
+        sources.append(entry["path"])
 
     # Load simulation structural info from one accompanying _info.pkl file
     first_info = Path(str(abs_data_paths[0]).replace("_data.npz", "_info.pkl"))
@@ -211,13 +185,16 @@ def main() -> None:
     sim_config.t_coh = None
 
     metadata = {
+        "signal_types": signal_types,
         "n_inputs": int(n_t_coh),
         "source_base_dir": str(base_dir),
         "t_coh_min": float(np.min(t_coh_vals)),
         "t_coh_max": float(np.max(t_coh_vals)),
-        "merged_partials": True,
-        "t_coh_total_weights": total_weights,
-        "provenance": per_t_provenance,
+        "merged_partials": False,
+        "provenance": {
+            "sources": sources,
+            "note": "Simplified stacking (no averaging). One file per t_coh.",
+        },
     }
 
     sim_oqs = SimulationModuleOQS(

@@ -1,22 +1,17 @@
 """
-Generate and submit SLURM jobs for spectroscopy runs (simple and clear).
+Generate and submit a single SLURM job for spectroscopy runs (no batching, no inhomogeneity).
 
-This script creates one SLURM script per batch index (0..n_batches-1) that calls
-`calc_datas.py` with `--simulation_type`, `--n_batches`, and `--batch_idx`, then
-submits them via `sbatch`.
-
-Works for both modes supported by `calc_datas.py`:
-- 1d: distributes inhomogeneous samples across batches for a single t_coh
-- 2d: distributes the Cartesian workload over t_coh x inhomogeneity across batches
+This script creates one SLURM script that calls `calc_datas.py` with
+`--simulation_type` (either "1d" or "2d"), then submits it via `sbatch`.
 
 Usage (on the cluster login node):
-    # 2D, split into 10 SLURM jobs
-    python hpc_calc_datas.py --simulation_type 2d --n_batches 10
+    # 2D: iterate over all t_det as t_coh, saving one file per point
+    python hpc_calc_datas.py --simulation_type 2d
 
-    # 1D, split inhomogeneous averaging into 4 SLURM jobs
-    python hpc_calc_datas.py --simulation_type 1d --n_batches 4
+    # 1D: compute one trace at the configured t_coh
+    python hpc_calc_datas.py --simulation_type 1d
 
-Add --no_submit to generate scripts without submitting them.
+Add --no_submit to generate the script without submitting it.
 """
 
 from __future__ import annotations
@@ -60,30 +55,22 @@ conda activate master_env || true
 """
 
 
-def _create_batch_script(
+def _create_job_script(
     *,
     scripts_dir: Path,
     job_dir: Path,
     sim_type: str,
-    batch_idx: int,
-    n_batches: int,
     cpus: int,
     mem: str,
     time_limit: str,
 ) -> Path:
-    """Create a single SLURM script that runs one batch of calc_datas.py."""
+    """Create a single SLURM script that runs calc_datas.py once for sim_type."""
     calc_path = (scripts_dir / "calc_datas.py").resolve()
     if not calc_path.exists():
         raise FileNotFoundError(f"calc_datas.py not found at {calc_path}")
 
-    job_name = f"qs_{sim_type}_b{batch_idx}of{n_batches}"
-    # Mail policy: only first and last batches send emails
-    if batch_idx == 0:
-        mail_type = "FAIL"
-    elif batch_idx == n_batches - 1:
-        mail_type = "END,FAIL"
-    else:
-        mail_type = "NONE"
+    job_name = f"qs_{sim_type}"
+    mail_type = "END,FAIL"
     header = _slurm_header(
         job_name=job_name,
         job_dir=job_dir,
@@ -93,13 +80,10 @@ def _create_batch_script(
         time_limit=time_limit,
     )
 
-    body = (
-        f"python {calc_path} --simulation_type {sim_type} "
-        f"--n_batches {n_batches} --batch_idx {batch_idx}\n"
-    )
+    body = f"python {calc_path} --simulation_type {sim_type}\n"
 
     content = header + "\n" + body
-    script_path = job_dir / f"batch_{batch_idx}.slurm"
+    script_path = job_dir / f"run_{sim_type}.slurm"
     # Ensure LF newlines for SLURM
     text = content.replace("\r\n", "\n").replace("\r", "\n")
     script_path.write_text(text, encoding="utf-8")
@@ -125,9 +109,7 @@ def _submit_all(job_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description=(
-            "Generate N SLURM scripts (batch_0..batch_N-1) that call calc_datas.py and submit them."
-        )
+        description=("Generate one SLURM script that calls calc_datas.py and submit it.")
     )
     parser.add_argument(
         "--simulation_type",
@@ -135,12 +117,6 @@ def main() -> None:
         default="2d",
         choices=["1d", "2d"],
         help="Simulation type to run in each batch (default: 2d)",
-    )
-    parser.add_argument(
-        "--n_batches",
-        type=int,
-        default=10,
-        help="Total number of batches (creates this many SLURM scripts)",
     )
     parser.add_argument("--cpus", type=int, default=16, help="CPUs per task (default: 16)")
     parser.add_argument("--mem", type=str, default="2G", help="Memory (default: 2G)")
@@ -152,13 +128,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if args.n_batches <= 0:
-        raise ValueError("--n_batches must be a positive integer")
-
     scripts_dir = Path(__file__).resolve().parent
     job_root = scripts_dir / "batch_jobs"
 
-    base_name = f"{args.simulation_type}_{args.n_batches}b"
+    base_name = f"{args.simulation_type}"
     job_dir = job_root / base_name
     suffix = 0
     while job_dir.exists():
@@ -168,20 +141,17 @@ def main() -> None:
     logs_dir = job_dir / "logs"
     logs_dir.mkdir(parents=True, exist_ok=False)
 
-    # Create one script per batch
-    for bidx in range(args.n_batches):
-        _create_batch_script(
-            scripts_dir=scripts_dir,
-            job_dir=job_dir,
-            sim_type=args.simulation_type,
-            batch_idx=bidx,
-            n_batches=args.n_batches,
-            cpus=args.cpus,
-            mem=args.mem,
-            time_limit=args.time_limit,
-        )
+    # Create a single script
+    slurm_script = _create_job_script(
+        scripts_dir=scripts_dir,
+        job_dir=job_dir,
+        sim_type=args.simulation_type,
+        cpus=args.cpus,
+        mem=args.mem,
+        time_limit=args.time_limit,
+    )
 
-    print(f"Generated {args.n_batches} scripts in: {job_dir}")
+    print(f"Generated script: {slurm_script}")
 
     if not args.no_submit:
         _submit_all(job_dir)
