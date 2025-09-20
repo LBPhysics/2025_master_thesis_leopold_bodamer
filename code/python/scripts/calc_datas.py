@@ -102,10 +102,6 @@ def run_2d_mode(args) -> None:
     # Determine index subset for batching
     batch_idx: int = int(getattr(args, "batch_idx", 0))
     n_batches: int = int(getattr(args, "n_batches", 1))
-    if n_batches < 1:
-        raise ValueError("--n_batches must be >= 1")
-    if batch_idx < 0 or batch_idx >= n_batches:
-        raise ValueError("--batch_idx must satisfy 0 <= batch_idx < n_batches")
 
     if n_batches == 1:
         indices = np.arange(N_total)
