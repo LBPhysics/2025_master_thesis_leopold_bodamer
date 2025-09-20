@@ -1,14 +1,17 @@
-"""Stack multiple 1D simulation results (varying t_coh) into a single 2D file.
+"""Stack many 1D per-t_coh results into a single 2D dataset.
 
-Simplified workflow (no inhomogeneity, no partial merging):
-        - Each input ``*_data.npz`` corresponds to one coherence time value and
-            contains ``t_coh_value``, ``signal_types``, and the time detection axis ``t_det``.
-        - Files reside in a directory under ``.../data/1d_spectroscopy/...``.
-        - A mirror directory under ``.../data/2d_spectroscopy/...`` will host the
-            stacked 2D dataset.
+Usage:
+  python stack_1dto2d.py --abs_path \
+    "/home/<user>/Master_thesis/data/1d_spectroscopy/.../t_dm..._t_wait..._dt.../"
 
-The produced 2D file stores axes ``t_coh`` and ``t_det`` and a list of stacked
-signal arrays with shape (n_t_coh, ... original 1D shape ...).
+Behavior:
+- Discovers all "*_data.npz" files in the given folder.
+- Loads each file, reads its "t_coh_value", "t_det", and arrays named by "signal_types".
+- Sorts by t_coh_value, stacks arrays into 2D: shape (n_tcoh, n_tdet).
+- Writes output into the corresponding 2D directory by replacing
+  "data/1d_spectroscopy" with "data/2d_spectroscopy" and saving "2d_data.npz".
+
+Keep it simple and readable.
 """
 
 from __future__ import annotations
@@ -16,217 +19,162 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import List, Dict, Any, Tuple
 
 import numpy as np
 
-from qspectro2d.utils import (
-    list_available_files,
-    load_info_file,
-    save_simulation_data,
-)
-from qspectro2d.core.simulation import SimulationModuleOQS
-from qspectro2d.core.simulation import SimulationConfig
+from qspectro2d.utils.data_io import load_data_file
 
 
-def map_1d_dir_to_2d_dir(data_dir: Path) -> Path:
-    """Map a 1D data directory path to its corresponding 2D directory.
+def _discover_1d_files(folder: Path) -> List[Path]:
+    """Return sorted list of all *_data.npz files in the folder."""
+    if not folder.is_dir():
+        raise NotADirectoryError(f"Not a directory: {folder}")
+    return sorted(folder.glob("*_data.npz"))
 
-    Example:
-      /.../data/1d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
-      -> /.../data/2d_spectroscopy/N2/.../t_dm100.0_t_wait_0.0_dt_0.1
-    If pattern not found, returns the original path.
-    """
-    parts = list(data_dir.parts)
+
+def _derive_2d_folder(from_1d_folder: Path) -> Path:
+    """Map 1D folder .../data/1d_spectroscopy/... -> .../data/2d_spectroscopy/..."""
+    parts = list(from_1d_folder.parts)
     try:
         idx = parts.index("1d_spectroscopy")
-        parts[idx] = "2d_spectroscopy"
-        return Path(*parts)
-    except ValueError:
-        return data_dir
+    except ValueError as exc:
+        raise ValueError("The provided path must include '1d_spectroscopy'") from exc
+    parts[idx] = "2d_spectroscopy"
+    return Path(*parts)
 
 
-def detect_existing_2d(data_dir: Path) -> str | None:
-    """Return the path to a detected 2D file in the mapped 2D directory, if any.
+def _load_entries(
+    files: List[Path],
+) -> Tuple[List[float], np.ndarray, List[str], Dict[str, List[np.ndarray]]]:
+    """Load all files and organize data by signal type.
 
-    A 2D file is identified by the presence of a 't_coh' axis inside *_data.npz.
-    Only searches inside the 2D mirror directory of the provided 1D directory.
-    Returns the full path including the '_data.npz' suffix if found, else None.
+    Returns:
+        tcoh_vals: list of t_coh_value (floats)
+        t_det: detection time axis (from first file; validated against others)
+        signal_types: list of signal keys
+        per_sig_data: mapping signal_name -> list of 1D arrays (ordered like files)
     """
-    target_dir = map_1d_dir_to_2d_dir(data_dir)
-    if not target_dir.exists():
-        return None
-    for f in sorted(target_dir.glob("*_data.npz")):
-        try:
-            with np.load(f, mmap_mode="r") as npz:  # type: ignore
-                if "t_coh" in npz.files:
-                    return str(f)
-        except Exception:
-            continue
-    return None
+    if not files:
+        raise FileNotFoundError("No *_data.npz files found in the given folder")
+
+    tcoh_vals: List[float] = []
+    t_det: np.ndarray | None = None
+    signal_types: List[str] | None = None
+    per_sig_data: Dict[str, List[np.ndarray]] = {}
+
+    for fp in files:
+        d = load_data_file(fp)
+        if "t_coh_value" not in d:
+            raise KeyError(f"Missing 't_coh_value' in {fp}")
+        if "t_det" not in d:
+            raise KeyError(f"Missing 't_det' in {fp}")
+        if "signal_types" not in d:
+            raise KeyError(f"Missing 'signal_types' in {fp}")
+
+        tcoh_vals.append(float(d["t_coh_value"]))
+        if t_det is None:
+            t_det = d["t_det"]
+        else:
+            if d["t_det"].shape != t_det.shape or not np.allclose(d["t_det"], t_det):
+                raise ValueError(f"Inconsistent t_det across files; first={files[0]}, bad={fp}")
+
+        stypes = list(map(str, d["signal_types"]))
+        if signal_types is None:
+            signal_types = stypes
+            for s in signal_types:
+                per_sig_data[s] = []
+        else:
+            if stypes != signal_types:
+                raise ValueError(
+                    f"Inconsistent signal_types across files; first={files[0]}, bad={fp}"
+                )
+
+        for s in signal_types:
+            if s not in d:
+                raise KeyError(f"Missing data for signal '{s}' in {fp}")
+            arr = d[s]
+            if arr.ndim != 1:
+                raise ValueError(
+                    f"Expected 1D array for signal '{s}' in {fp}, got shape {arr.shape}"
+                )
+            per_sig_data[s].append(arr)
+
+    assert t_det is not None and signal_types is not None
+    return tcoh_vals, t_det, signal_types, per_sig_data
+
+
+def _stack_to_2d(
+    tcoh_vals: List[float],
+    t_det: np.ndarray,
+    signal_types: List[str],
+    per_sig_data: Dict[str, List[np.ndarray]],
+) -> Tuple[np.ndarray, Dict[str, np.ndarray]]:
+    """Sort by t_coh and stack into 2D arrays per signal.
+
+    Returns:
+        t_coh: sorted array of t_coh values
+        stacked: mapping signal -> 2D array with shape (n_tcoh, n_tdet)
+    """
+    order = np.argsort(np.asarray(tcoh_vals))
+    t_coh = np.asarray(tcoh_vals, dtype=float)[order]
+    stacked: Dict[str, np.ndarray] = {}
+    for s in signal_types:
+        mat = np.vstack([per_sig_data[s][i] for i in order])
+        stacked[s] = mat
+    return t_coh, stacked
+
+
+def _save_2d(
+    out_folder: Path,
+    t_det: np.ndarray,
+    t_coh: np.ndarray,
+    signal_types: List[str],
+    stacked: Dict[str, np.ndarray],
+) -> Path:
+    """Write a single compressed file with axes and components named by signal_types."""
+    out_folder.mkdir(parents=True, exist_ok=True)
+    out_path = out_folder / "2d_data.npz"
+    payload: Dict[str, Any] = {
+        "t_det": t_det,
+        "t_coh": t_coh,
+        "signal_types": np.array(signal_types, dtype=object),
+    }
+    for s, arr in stacked.items():
+        payload[s] = arr
+    np.savez_compressed(out_path, **payload)
+    return out_path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Stack multiple 1D spectra into a 2D dataset.")
+    parser = argparse.ArgumentParser(description="Stack 1D per-t_coh outputs into a 2D dataset.")
     parser.add_argument(
-        "--abs_path",
-        type=str,
-        default="1d_spectroscopy",
-        help="Base directory containing 1D data files (absolute path)",
-    )
-    parser.add_argument(
-        "--skip_if_exists",
-        action="store_true",
-        help="Skip stacking if a 2D file already exists.",
+        "--abs_path", type=str, required=True, help="Absolute path to the 1D results directory"
     )
     args = parser.parse_args()
-    abs_path = args.abs_path
 
-    print("\n🔍 Scanning available files:")
-    print(f"   Base directory: {abs_path}")
+    in_dir = Path(args.abs_path).expanduser().resolve()
+    print("=" * 80)
+    print("STACK 1D -> 2D")
+    print(f"Input directory: {in_dir}")
 
-    base_dir = Path(abs_path)
-    if not base_dir.is_dir():
-        base_dir = base_dir.parent
-
-    # Optional early-exit: detect already stacked 2D file
-    if args.skip_if_exists:
-        existing = detect_existing_2d(base_dir)
-        if existing:
-            print(f"✅ Existing 2D stacked file detected: {existing} (skipping stacking)")
-            print(f"🎯 To plot run: python plot_datas.py --abs_path '{existing}'")
-            return
-
-    # Filter to only include _data.npz files and sort deterministically
-    abs_paths = list_available_files(base_dir)
-    data_files = sorted({p for p in abs_paths if p.endswith("_data.npz")})
-    abs_data_paths = list(data_files)
-
-    if not abs_data_paths:
-        print("❌ No valid data files found.")
+    files = _discover_1d_files(in_dir)
+    print(f"Found {len(files)} files to stack")
+    if not files:
+        print("No files found; aborting.")
         sys.exit(1)
 
-    print(f"\n📥 Loading {len(abs_data_paths)} data files (memory-efficient)...\n")
+    tcoh_vals, t_det, signal_types, per_sig_data = _load_entries(files)
+    t_coh, stacked = _stack_to_2d(tcoh_vals, t_det, signal_types, per_sig_data)
 
-    # Group by t_coh_value (assume at most one file per value)
-    # ----------------------------------------------------------------------------------
-    groups: dict[float, dict] = {}
-    signal_types: list[str] | None = None
-    t_det_axis: np.ndarray | None = None
-    shape_reference: tuple[int, ...] | None = None
+    out_dir = _derive_2d_folder(in_dir)
+    out_path = _save_2d(out_dir, t_det, t_coh, signal_types, stacked)
 
-    for fp in abs_data_paths:
-        try:
-            with np.load(fp, mmap_mode="r", allow_pickle=True) as npz:
-                sig_types = list(npz.get("signal_types"))
-                if signal_types is None:
-                    signal_types = sig_types
-                elif signal_types != sig_types:
-                    raise ValueError("Inconsistent signal_types across files")
-
-                # Coherence time value
-                t_coh_val = float(npz["t_coh_value"])
-                # Load signal components
-                sigs = []
-                for s in signal_types:
-                    if s not in npz:
-                        raise ValueError(f"Signal '{s}' missing in {fp}")
-                    arr = np.array(npz[s])
-                    sigs.append(arr)
-                    if shape_reference is None:
-                        shape_reference = arr.shape
-                    elif shape_reference != arr.shape:
-                        raise ValueError(
-                            f"Shape mismatch for t_coh={t_coh_val}: {arr.shape} vs {shape_reference}"
-                        )
-                if t_det_axis is None:
-                    t_det_axis = np.array(npz["t_det"])
-
-                groups[t_coh_val] = {"signals": sigs, "path": fp}
-                print(f"   ✅ Loaded t_coh={t_coh_val:.4g} from {fp}")
-        except Exception as e:
-            print(f"   ❌ Skipping {fp}: {e}")
-
-    if not groups or signal_types is None or t_det_axis is None:
-        print("❌ No valid inputs to stack.")
-        sys.exit(1)
-
-    # ----------------------------------------------------------------------------------
-
-    # Coverage diagnostics: expected t_coh grid equals detection axis of inputs
-    # (by construction in calc_datas 2D mode). If some batches didn't run or
-    # outputs are in a different directory, we will see missing values here.
-    expected_tcoh = np.asarray(t_det_axis, dtype=float)
-    got_tcoh = np.array(sorted(groups.keys()), dtype=float)
-    if expected_tcoh.size != got_tcoh.size or not np.allclose(expected_tcoh, got_tcoh):
-        # Build a tolerant set comparison to report a compact summary
-        def to_key(arr: np.ndarray) -> set[float]:
-            return {float(np.round(x, 9)) for x in arr}
-
-        missing = sorted(to_key(expected_tcoh) - to_key(got_tcoh))
-        extra = sorted(to_key(got_tcoh) - to_key(expected_tcoh))
-        print(
-            f"⚠️  Incomplete coverage: expected {expected_tcoh.size} t_coh points, "
-            f"found {got_tcoh.size}. Missing ≈ {len(missing)}; Extra ≈ {len(extra)}"
-        )
-        if missing:
-            sample = ", ".join(f"{v:.4g}" for v in missing[:8])
-            tail = " ..." if len(missing) > 8 else ""
-            print(f"   Missing sample: [{sample}{tail}]")
-        if extra:
-            sample = ", ".join(f"{v:.4g}" for v in extra[:8])
-            tail = " ..." if len(extra) > 8 else ""
-            print(f"   Unexpected sample: [{sample}{tail}]")
-
-    # ----------------------------------------------------------------------------------
-
-    # Prepare stacked arrays in ascending t_coh order (no averaging/merging)
-    sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
-    n_t_coh = len(sorted_items)
-    dtype = sorted_items[0][1]["signals"][0].dtype
-    n_signals = len(signal_types)
-    stacked_data = [np.empty((n_t_coh, *shape_reference), dtype=dtype) for _ in range(n_signals)]
-    t_coh_vals = np.empty(n_t_coh)
-    sources: list[str] = []
-    for i, (t_coh_val, entry) in enumerate(sorted_items):  # i is the index along the t_coh axis
-        t_coh_vals[i] = t_coh_val
-        arrays = entry["signals"]
-        for j, arr in enumerate(arrays):
-            stacked_data[j][i] = arr  # holds signal type j at coherence index i.
-        sources.append(entry["path"])
-
-    # Load simulation structural info from one accompanying _info.pkl file
-    first_info = Path(str(abs_data_paths[0]).replace("_data.npz", "_info.pkl"))
-    info_payload = load_info_file(first_info)
-    system = info_payload["system"]
-    bath = info_payload.get("bath") or info_payload.get("bath_params")
-    laser = info_payload["laser"]
-    sim_config: SimulationConfig = info_payload["sim_config"]
-    sim_config.simulation_type = "2d"
-    sim_config.t_coh = None
-
-    metadata = {
-        "signal_types": signal_types,
-        "n_inputs": int(n_t_coh),
-        "source_base_dir": str(base_dir),
-    }
-
-    sim_oqs = SimulationModuleOQS(
-        simulation_config=sim_config,
-        system=system,
-        bath=bath,
-        laser=laser,
-    )
-    out_path = save_simulation_data(
-        sim_oqs,
-        metadata,
-        stacked_data,
-        t_det=t_det_axis,
-        t_coh=t_coh_vals,
-    )
-    print("✅ Stacking complete.")
-    print("\n🎯 To plot run:")
-    print(f"python plot_datas.py --abs_path '{out_path}'")
+    print(f"Saved 2D dataset: {out_path}")
+    print(f"To plot the 2D data, run:")
+    print(f"python plot_datas.py --abs_path {out_path}")
+    print("Done.")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

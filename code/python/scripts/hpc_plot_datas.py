@@ -1,10 +1,11 @@
 """
 Generate and (optionally) submit a SLURM job to plot data.
 
-Simplified flow (no regex parsing):
-    1) If a 2D dataset already exists for the given 1D directory, use it.
-    2) Otherwise, invoke `stack_1dto2d.py` to create it, then discover its path.
-    3) Create and submit a SLURM job that runs `plot_datas.py --abs_path <2d_path>`.
+Flow (kept simple to match the new stacking script):
+    1) Normalize the provided path to the 1D results directory.
+    2) Invoke `stack_1dto2d.py --abs_path <1d_dir>` to build/update the 2D dataset.
+    3) Derive the 2D path deterministically and submit a job to run
+       `plot_datas.py --abs_path <2d_data.npz>`.
 """
 
 from __future__ import annotations
@@ -14,35 +15,42 @@ from pathlib import Path
 from subprocess import run, CalledProcessError
 
 from project_config.paths import SCRIPTS_DIR
-from stack_1dto2d import detect_existing_2d
 
 
-def ensure_2d_dataset(abs_path: str, skip_if_exists: bool = True) -> str:
-    """Ensure a 2D dataset exists for the given 1D base path and return its abs path.
+def _derive_1d_dir(abs_path: str) -> Path:
+    """Return the 1D directory given a path that may be a file or a directory."""
+    p = Path(abs_path).expanduser().resolve()
+    return p if p.is_dir() else p.parent
 
-    If `skip_if_exists` is True and a 2D file is found already, it's returned.
-    Otherwise, runs `stack_1dto2d.py` to create it and then discovers the path.
-    """
-    base = Path(abs_path)
-    base_dir = base if base.is_dir() else base.parent
 
-    existing = detect_existing_2d(base_dir)
-    if skip_if_exists and existing:
-        return existing
+def _derive_2d_dir(from_1d_dir: Path) -> Path:
+    """Map .../data/1d_spectroscopy/... -> .../data/2d_spectroscopy/..."""
+    parts = list(from_1d_dir.parts)
+    try:
+        idx = parts.index("1d_spectroscopy")
+    except ValueError as exc:
+        raise ValueError("The provided path must include '1d_spectroscopy'") from exc
+    parts[idx] = "2d_spectroscopy"
+    return Path(*parts)
 
-    # Run stacking script to create/refresh the 2D dataset
-    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(base_dir)]
-    if skip_if_exists:
-        cmd.append("--skip_if_exists")
+
+def ensure_2d_dataset(abs_path: str) -> Path:
+    """Run stacking for the given 1D path and return the absolute 2D file path."""
+    one_d_dir = _derive_1d_dir(abs_path)
+
+    # Always run stacking (kept simple; idempotent and quick compared to compute)
+    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(one_d_dir)]
     proc = run(cmd, cwd=SCRIPTS_DIR, capture_output=True, text=True)
     if proc.returncode != 0:
-        raise RuntimeError(f"stack_1dto2d.py failed: {proc.stderr}")
+        raise RuntimeError(
+            f"stack_1dto2d.py failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+        )
 
-    # Discover newly created 2D dataset
-    new_path = detect_existing_2d(base_dir)
-    if not new_path:
-        raise RuntimeError("2D dataset not found after stacking")
-    return new_path
+    two_d_dir = _derive_2d_dir(one_d_dir)
+    two_d_path = two_d_dir / "2d_data.npz"
+    if not two_d_path.exists():
+        raise RuntimeError(f"2D dataset not found after stacking: {two_d_path}")
+    return two_d_path
 
 
 def create_plotting_script(
@@ -96,13 +104,15 @@ def execute_slurm_script(job_dir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate and optionally submit a SLURM job for stacking 1D data to 2D and plotting. Skips stacking if 2D already exists."
+        description="Generate and optionally submit a SLURM job to stack 1D data to 2D and plot it."
     )
     parser.add_argument(
         "--abs_path",
         type=str,
         required=True,
-        help="Absolute path to one of the 1D data files (e.g., t_coh_50.0_data.npz).",
+        help=(
+            "Absolute path to the 1D directory OR a single 1D data file (e.g., t_coh_50.0_data.npz)."
+        ),
     )
     parser.add_argument(
         "--no_submit",
@@ -111,10 +121,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("🔄 Ensuring 2D dataset (stacking if needed)...")
+    print("🔄 Building 2D dataset (via stacking)...")
     try:
-        plotting_abs_path = ensure_2d_dataset(args.abs_path)
-        print(f"✅ Dataset ready. Plot path base: {plotting_abs_path}")
+        two_d_file = ensure_2d_dataset(args.abs_path)
+        print(f"✅ Dataset ready: {two_d_file}")
     except RuntimeError as e:
         print(f"❌ Stacking failed: {e}")
         return
@@ -132,10 +142,7 @@ def main() -> None:
     logs_dir.mkdir(parents=True, exist_ok=False)
 
     # Create the script
-    create_plotting_script(
-        abs_path=plotting_abs_path,
-        job_dir=job_dir,
-    )
+    create_plotting_script(abs_path=str(two_d_file), job_dir=job_dir)
 
     print(f"Generated plotting script in: {job_dir}")
 
