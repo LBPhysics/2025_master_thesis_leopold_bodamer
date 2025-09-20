@@ -153,7 +153,8 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    in_dir = Path(args.abs_path).expanduser().resolve()
+    sanitized = args.abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    in_dir = Path(sanitized).expanduser().resolve()
     print("=" * 80)
     print("STACK 1D -> 2D")
     print(f"Input directory: {in_dir}")

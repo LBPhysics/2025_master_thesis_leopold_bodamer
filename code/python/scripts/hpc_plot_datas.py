@@ -18,8 +18,12 @@ from project_config.paths import SCRIPTS_DIR
 
 
 def _derive_1d_dir(abs_path: str) -> Path:
-    """Return the 1D directory given a path that may be a file or a directory."""
-    p = Path(abs_path).expanduser().resolve()
+    """Return the 1D directory given a path that may be a file or a directory.
+
+    Also sanitizes accidental newlines/carriage-returns or stray quotes from copy/paste.
+    """
+    sanitized = abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    p = Path(sanitized).expanduser().resolve()
     return p if p.is_dir() else p.parent
 
 
