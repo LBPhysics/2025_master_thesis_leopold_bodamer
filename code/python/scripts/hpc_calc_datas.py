@@ -94,7 +94,7 @@ def main() -> None:
     if n_batches <= 0:
         raise ValueError("--n_batches must be a positive integer")
 
-    job_dir = Path(__file__).resolve().parent
+    job_dir = Path(__file__).resolve().parent.parent / "batch_jobs"
     _ensure_logs_dir(job_dir)
 
     print(f"Creating and submitting {n_batches} SLURM jobs from {job_dir} ...")

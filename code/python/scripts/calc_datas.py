@@ -144,9 +144,9 @@ def run_2d_mode(args) -> None:
     elapsed = time.time() - start_time
     print(f"\n✅ Finished computing {len(saved_paths)} t_coh points in {elapsed:.2f} s")
     if saved_paths:
+        example = saved_paths[-1]
         if n_batches == 1:
             print("\n🎯 Next steps:")
-            example = saved_paths[-1]
             print("  1. Stack per-t_coh files into a 2D dataset:")
             print(f"     python stack_1dto2d.py --abs_path '{example}' --skip_if_exists")
             print("  2. Plot a single 1D file (example):")
