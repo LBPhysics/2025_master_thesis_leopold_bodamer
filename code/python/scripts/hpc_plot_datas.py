@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import re
 from subprocess import run, CalledProcessError
 
 from project_config.paths import SCRIPTS_DIR
@@ -39,7 +40,12 @@ def _derive_2d_dir(from_1d_dir: Path) -> Path:
 
 
 def ensure_2d_dataset(abs_path: str) -> Path:
-    """Run stacking for the given 1D path and return the absolute 2D file path."""
+    """Run stacking for the given 1D path and return the absolute 2D data file path.
+
+    Since stacking now saves using save_simulation_data (unique filenames), we parse
+    the stdout for a line like: "Saved 2D dataset: <abs_path>".
+    As a fallback, we search the derived 2D directory for the newest "*_data.npz".
+    """
     one_d_dir = _derive_1d_dir(abs_path)
 
     # Always run stacking (kept simple; idempotent and quick compared to compute)
@@ -50,11 +56,21 @@ def ensure_2d_dataset(abs_path: str) -> Path:
             f"stack_1dto2d.py failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
         )
 
+    # Try to parse the saved path from stdout
+    m = re.search(r"Saved 2D dataset:\s*(.+)", proc.stdout)
+    if m:
+        saved_path = Path(m.group(1).strip()).expanduser().resolve()
+        if saved_path.exists():
+            return saved_path
+
+    # Fallback: discover newest *_data.npz in the derived 2D directory
     two_d_dir = _derive_2d_dir(one_d_dir)
-    two_d_path = two_d_dir / "2d_data.npz"
-    if not two_d_path.exists():
-        raise RuntimeError(f"2D dataset not found after stacking: {two_d_path}")
-    return two_d_path
+    candidates = sorted(two_d_dir.glob("*_data.npz"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if candidates:
+        return candidates[0]
+    raise RuntimeError(
+        "2D dataset not found after stacking; no explicit path in output and no *_data.npz in 2D dir."
+    )
 
 
 def create_plotting_script(

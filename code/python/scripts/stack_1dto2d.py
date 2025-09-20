@@ -19,11 +19,16 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+import copy
 from typing import List, Dict, Any, Tuple
 
 import numpy as np
 
-from qspectro2d.utils.data_io import load_data_file
+from qspectro2d.utils.data_io import (
+    load_data_file,
+    load_info_file,
+    save_simulation_data,
+)
 
 
 def _discover_1d_files(folder: Path) -> List[Path]:
@@ -125,27 +130,6 @@ def _stack_to_2d(
     return t_coh, stacked
 
 
-def _save_2d(
-    out_folder: Path,
-    t_det: np.ndarray,
-    t_coh: np.ndarray,
-    signal_types: List[str],
-    stacked: Dict[str, np.ndarray],
-) -> Path:
-    """Write a single compressed file with axes and components named by signal_types."""
-    out_folder.mkdir(parents=True, exist_ok=True)
-    out_path = out_folder / "2d_data.npz"
-    payload: Dict[str, Any] = {
-        "t_det": t_det,
-        "t_coh": t_coh,
-        "signal_types": np.array(signal_types, dtype=object),
-    }
-    for s, arr in stacked.items():
-        payload[s] = arr
-    np.savez_compressed(out_path, **payload)
-    return out_path
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Stack 1D per-t_coh outputs into a 2D dataset.")
     parser.add_argument(
@@ -228,8 +212,44 @@ def main() -> None:
         else:
             print("  (none)")
 
-    out_dir = _derive_2d_folder(in_dir)
-    out_path = _save_2d(out_dir, t_det, t_coh, signal_types, stacked)
+    # Load the 1D bundle info once and re-use it for saving via save_simulation_data
+    first_data = files[0]
+    if str(first_data).endswith("_data.npz"):
+        first_info = Path(str(first_data)[:-9] + "_info.pkl")
+    else:
+        first_info = first_data.with_suffix(".pkl")
+
+    info = load_info_file(first_info)
+    if not info:
+        print(f"❌ Could not load info from {first_info}; cannot save 2D bundle.")
+        sys.exit(1)
+
+    # Prepare a minimal sim module stub with adjusted simulation_type for 2D naming
+    system = info["system"]
+    bath = info["bath"]
+    laser = info["laser"]
+    original_cfg = info["sim_config"]
+    sim_cfg_2d = copy.deepcopy(original_cfg)
+    # Ensure the directory naming routes to 2D location
+    if hasattr(sim_cfg_2d, "simulation_type"):
+        sim_cfg_2d.simulation_type = "2d"
+
+    from qspectro2d.core import SimulationModuleOQS  # avoid circular import
+
+    sim_2d = SimulationModuleOQS(sim_cfg_2d, system, laser, bath)
+    metadata: Dict[str, Any] = {
+        "signal_types": list(signal_types),
+        "stacked_from_dir": str(in_dir),
+    }
+    datas: List[np.ndarray] = [stacked[s] for s in signal_types]
+
+    out_path = save_simulation_data(
+        sim_module=sim_2d,
+        metadata=metadata,
+        datas=datas,
+        t_det=t_det,
+        t_coh=t_coh,
+    )
 
     print(f"Saved 2D dataset: {out_path}")
     print(f"To plot the 2D data, run:")
