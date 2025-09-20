@@ -168,6 +168,66 @@ def main() -> None:
     tcoh_vals, t_det, signal_types, per_sig_data = _load_entries(files)
     t_coh, stacked = _stack_to_2d(tcoh_vals, t_det, signal_types, per_sig_data)
 
+    # --- Contribution analysis & reporting ---
+    # Build per-row non-zero masks from stacked data:
+    # mask_any: row has any non-zero across any signal
+    # mask_all: row has non-zero in every signal (i.e., no all-zero signal at that t_coh)
+    # mask_all_zero: row is all-zero across all signals
+    n_rows = len(t_coh)
+    if n_rows > 0:
+        per_signal_row_any = []
+        for s in signal_types:
+            arr2d = stacked[s]
+            # Ensure correct shape
+            if arr2d.ndim != 2 or arr2d.shape[0] != n_rows:
+                raise ValueError(
+                    f"Stacked array for signal '{s}' has unexpected shape {arr2d.shape}"
+                )
+            per_signal_row_any.append(np.any(arr2d != 0, axis=1))
+
+        # Combine across signals
+        per_signal_row_any = np.stack(per_signal_row_any, axis=0)  # (n_signals, n_rows)
+        mask_any = np.any(per_signal_row_any, axis=0)
+        mask_all = np.all(per_signal_row_any, axis=0)
+        mask_all_zero = ~mask_any
+
+        # Pretty-print helpers
+        def fmt_vals(vals: np.ndarray) -> str:
+            return ", ".join(f"{v:.3f}" for v in vals)
+
+        idx_all = np.arange(n_rows)
+        print("-" * 80)
+        print(f"Processed coherence values (n={n_rows}):")
+        print(f"  indices: [{', '.join(map(str, idx_all))}]")
+        print(f"  t_coh(fs): [{fmt_vals(t_coh)}]")
+
+        # Rows with any non-zero contribution
+        any_idxs = idx_all[mask_any]
+        any_vals = t_coh[mask_any]
+        print(f"Rows with any non-zero contribution (n={any_idxs.size}):")
+        print(f"  indices: [{', '.join(map(str, any_idxs))}]")
+        print(f"  t_coh(fs): [{fmt_vals(any_vals)}]")
+
+        # Rows entirely zero across all signals
+        zero_idxs = idx_all[mask_all_zero]
+        zero_vals = t_coh[mask_all_zero]
+        print(f"Rows all-zero across signals (n={zero_idxs.size}):")
+        if zero_idxs.size:
+            print(f"  indices: [{', '.join(map(str, zero_idxs))}]")
+            print(f"  t_coh(fs): [{fmt_vals(zero_vals)}]")
+        else:
+            print("  (none)")
+
+        # Rows with only non-zero contributions in every signal
+        all_idxs = idx_all[mask_all]
+        all_vals = t_coh[mask_all]
+        print(f"Rows with only non-zero contributions in every signal (n={all_idxs.size}):")
+        if all_idxs.size:
+            print(f"  indices: [{', '.join(map(str, all_idxs))}]")
+            print(f"  t_coh(fs): [{fmt_vals(all_vals)}]")
+        else:
+            print("  (none)")
+
     out_dir = _derive_2d_folder(in_dir)
     out_path = _save_2d(out_dir, t_det, t_coh, signal_types, stacked)
 
