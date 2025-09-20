@@ -116,19 +116,15 @@ def main() -> None:
 
     for fp in abs_data_paths:
         try:
-            with np.load(fp, mmap_mode="r", allow_pickle=True) as npz:  # type: ignore[arg-type]
-                sig_types = list(npz.get("signal_types"))  # type: ignore[index]
+            with np.load(fp, mmap_mode="r", allow_pickle=True) as npz:
+                sig_types = list(npz.get("signal_types"))
                 if signal_types is None:
                     signal_types = sig_types
                 elif signal_types != sig_types:
                     raise ValueError("Inconsistent signal_types across files")
 
                 # Coherence time value
-                t_coh_raw = npz.get("t_coh_value")  # type: ignore[index]
-                if isinstance(t_coh_raw, (list, tuple)):
-                    t_coh_raw = t_coh_raw[0]
-                t_coh_val = float(t_coh_raw)
-
+                t_coh_val = float(npz["t_coh_value"])
                 # Load signal components
                 sigs = []
                 for s in signal_types:
@@ -143,13 +139,8 @@ def main() -> None:
                             f"Shape mismatch for t_coh={t_coh_val}: {arr.shape} vs {shape_reference}"
                         )
                 if t_det_axis is None:
-                    t_det_axis = np.array(npz["t_det"])  # type: ignore[index]
+                    t_det_axis = np.array(npz["t_det"])
 
-                if t_coh_val in groups:
-                    # If duplicates exist, keep the last one encountered (simple rule)
-                    print(
-                        f"   🔁 Duplicate t_coh={t_coh_val:.4g} found; replacing previous entry with {fp}"
-                    )
                 groups[t_coh_val] = {"signals": sigs, "path": fp}
                 print(f"   ✅ Loaded t_coh={t_coh_val:.4g} from {fp}")
         except Exception as e:
@@ -158,6 +149,35 @@ def main() -> None:
     if not groups or signal_types is None or t_det_axis is None:
         print("❌ No valid inputs to stack.")
         sys.exit(1)
+
+    # ----------------------------------------------------------------------------------
+
+    # Coverage diagnostics: expected t_coh grid equals detection axis of inputs
+    # (by construction in calc_datas 2D mode). If some batches didn't run or
+    # outputs are in a different directory, we will see missing values here.
+    expected_tcoh = np.asarray(t_det_axis, dtype=float)
+    got_tcoh = np.array(sorted(groups.keys()), dtype=float)
+    if expected_tcoh.size != got_tcoh.size or not np.allclose(expected_tcoh, got_tcoh):
+        # Build a tolerant set comparison to report a compact summary
+        def to_key(arr: np.ndarray) -> set[float]:
+            return {float(np.round(x, 9)) for x in arr}
+
+        missing = sorted(to_key(expected_tcoh) - to_key(got_tcoh))
+        extra = sorted(to_key(got_tcoh) - to_key(expected_tcoh))
+        print(
+            f"⚠️  Incomplete coverage: expected {expected_tcoh.size} t_coh points, "
+            f"found {got_tcoh.size}. Missing ≈ {len(missing)}; Extra ≈ {len(extra)}"
+        )
+        if missing:
+            sample = ", ".join(f"{v:.4g}" for v in missing[:8])
+            tail = " ..." if len(missing) > 8 else ""
+            print(f"   Missing sample: [{sample}{tail}]")
+        if extra:
+            sample = ", ".join(f"{v:.4g}" for v in extra[:8])
+            tail = " ..." if len(extra) > 8 else ""
+            print(f"   Unexpected sample: [{sample}{tail}]")
+
+    # ----------------------------------------------------------------------------------
 
     # Prepare stacked arrays in ascending t_coh order (no averaging/merging)
     sorted_items = sorted(groups.items(), key=lambda kv: kv[0])
@@ -188,13 +208,6 @@ def main() -> None:
         "signal_types": signal_types,
         "n_inputs": int(n_t_coh),
         "source_base_dir": str(base_dir),
-        "t_coh_min": float(np.min(t_coh_vals)),
-        "t_coh_max": float(np.max(t_coh_vals)),
-        "merged_partials": False,
-        "provenance": {
-            "sources": sources,
-            "note": "Simplified stacking (no averaging). One file per t_coh.",
-        },
     }
 
     sim_oqs = SimulationModuleOQS(

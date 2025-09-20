@@ -18,6 +18,7 @@ YAML Schema (example of all options):
 from __future__ import annotations
 
 import os
+from re import T
 import numpy as np
 import psutil
 from pathlib import Path
@@ -163,6 +164,7 @@ def load_simulation(
     simulation_type = str(config_cfg.get("simulation_type", dflt.SIMULATION_TYPE))
     n_inhomogen = int(atomic_cfg.get("n_inhomogen", dflt.N_INHOMOGEN))
     max_workers = get_max_workers()
+    print(f"🔧 Configured to use max_workers={max_workers} for parallel tasks.", flush=True)
 
     # -----------------
     # VALIDATION (physics-level) BEFORE FINAL ASSEMBLY

@@ -264,14 +264,27 @@ def parallel_compute_1d_e_comps(
     phi_det_val = phi_det if phi_det is not None else float(DETECTION_PHASE)
 
     # Optional time mask (keep length constant)
+    # NOTE:
+    # - `time_cut` is returned by solver validation in ABSOLUTE simulation time.
+    # - For 2D runs (varying t_coh), the detection window is shifted by
+    #   t0_det = t_coh + t_wait. Applying an absolute cutoff directly to
+    #   `t_det_actual` would incorrectly truncate traces once t0_det > time_cut
+    #   (observed as a diagonal "cut" in 2D maps around a given t_coh).
+    # - Convert the absolute cutoff to a RELATIVE cutoff with respect to the
+    #   start of the detection window so all t_coh share the same usable span.
     t_mask = None
     if time_cut is not None and np.isfinite(time_cut):
-        t_mask = (sim_oqs.t_det_actual <= float(time_cut)).astype(np.float64)
+        t0_det = float(sim_oqs.simulation_config.t_coh + sim_oqs.simulation_config.t_wait)
+        cut_rel = float(time_cut) - t0_det  # cutoff measured from start of detection window
+        # Build mask over the local detection axis; negative cut -> all zeros
+        t_mask = (sim_oqs.t_det <= cut_rel).astype(np.float64)
 
     # Compute P_{phi1,phi2} grid once for this realization
     P_grid = np.zeros((len(phases_eff), len(phases_eff), n_t), dtype=np.complex128)
     futures = []
-    with ProcessPoolExecutor() as ex:
+    # Respect configured/SLURM CPU allocation to avoid oversubscription on HPC
+    max_workers = sim_oqs.simulation_config.max_workers
+    with ProcessPoolExecutor(max_workers=max_workers) as ex:
         for phi1 in phases_eff:
             for phi2 in phases_eff:
                 futures.append(ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2))

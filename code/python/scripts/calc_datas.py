@@ -81,6 +81,7 @@ def run_1d_mode(args) -> None:
     metadata = {
         "signal_types": sim_oqs.simulation_config.signal_types,
         "t_coh_value": float(t_coh_val),
+        "time_cut": float(time_cut),
     }
     abs_data_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
 
@@ -116,19 +117,29 @@ def run_2d_mode(args) -> None:
         indices = chunks[batch_idx]
         batch_note = f"batch {batch_idx+1}/{n_batches} (size={indices.size})"
 
-    print(f"📦 Batching: {batch_note}; total t_coh points={N_total}")
+    if indices.size:
+        span = (float(t_coh_vals[indices[0]]), float(t_coh_vals[indices[-1]]))
+        print(
+            f"📦 Batching: {batch_note}; total t_coh points={N_total}; "
+            f"this job covers indices [{indices[0]}..{indices[-1]}] → t_coh in [{span[0]:.3g}, {span[1]:.3g}] fs"
+        )
+    else:
+        print(
+            f"📦 Batching: {batch_note}; total t_coh points={N_total}; this job covers no indices (empty chunk)"
+        )
 
     saved_paths: list[str] = []
     start_time = time.time()
     for t_i in indices.tolist():
         t_coh_val = float(t_coh_vals[t_i])
-        print(f"\n--- t_idx={t_i} : t_coh={t_coh_val:.2f} fs ---")
+        print(f"\n--- t_coh={t_coh_val:.2f} fs  [{t_i} / {N_total}]---")
         E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
 
         sim_cfg.t_coh = t_coh_val
         metadata = {
             "signal_types": sim_cfg.signal_types,
             "t_coh_value": float(t_coh_val),
+            "time_cut": float(time_cut),
         }
         out_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
         saved_paths.append(str(out_path))
@@ -137,12 +148,16 @@ def run_2d_mode(args) -> None:
     elapsed = time.time() - start_time
     print(f"\n✅ Finished computing {len(saved_paths)} t_coh points in {elapsed:.2f} s")
     if saved_paths:
-        print("\n🎯 Next steps:")
-        example = saved_paths[-1]
-        print("  1. Stack per-t_coh files into a 2D dataset:")
-        print(f"     python stack_1dto2d.py --abs_path '{example}' --skip_if_exists")
-        print("  2. Plot a single 1D file (example):")
-        print(f"     python plot_datas.py --abs_path '{example}'")
+        if n_batches == 1:
+            print("\n🎯 Next steps:")
+            example = saved_paths[-1]
+            print("  1. Stack per-t_coh files into a 2D dataset:")
+            print(f"     python stack_1dto2d.py --abs_path '{example}' --skip_if_exists")
+            print("  2. Plot a single 1D file (example):")
+            print(f"     python plot_datas.py --abs_path '{example}'")
+        else:
+            print("\n🎯 Next step:")
+            print(f"     python hpc_plot_datas.py --abs_path '{example}'")
     else:
         print("ℹ️  No files saved.")
 

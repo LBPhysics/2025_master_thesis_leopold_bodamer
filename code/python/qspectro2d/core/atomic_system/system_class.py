@@ -158,7 +158,8 @@ class AtomicSystem:
 
     @property
     def lowering_op(self) -> Qobj:
-        """return the lowering operator in the canonical basis"""
+        """return the lowering operator in the canonical basis
+        ~ positive frequency part of the dipole operator mu^(+)"""
         lowering_op = 0
         # Single-excitation lowering operator: sum_i μ_i |0><i|
         for i in range(1, self.n_atoms + 1):

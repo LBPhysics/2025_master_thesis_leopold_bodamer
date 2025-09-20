@@ -120,41 +120,36 @@ def get_expect_vals_with_RWA(
     dipole_op: Qobj = None,
 ) -> List[np.ndarray]:
     """
-    Calculate the expectation values in the result with RWA phase factors.
-
     Parameters:
         states: Results of the pulse evolution (data.states from qutip.Result)
         times: Time points at which the expectation values are calculated
         n_atoms: Number of atoms in the system
-        e_ops: The operators for which the expectation values are calculated
+        e_ops: operators in the eigenbasis of H0
         omega_laser: Frequency of the laser
         rwa_sl: Whether to apply the RWA phase factors
-        dipole_op: Dipole operator to include in expectation values
+        dipole_op: also in eigenbasis!
 
     Returns:
         List of arrays containing expectation values for each operator
     """
-    # if dipole_op is not None:
-    #     e_ops = e_ops + [dipole_op]  # Avoid modifying the original list
-
     if rwa_sl:
         # By default we assume stored states are in the rotating frame and we want lab-frame
         # expectation values. If you need the opposite, call `to_rotating_frame` explicitly
         # at the call site and pass rwa_sl=False here to avoid double transforms.
-        states = from_rotating_frame_list(states, times, n_atoms, omega_laser)
-
+        states = from_rotating_frame_list(states, times - times[0], n_atoms, omega_laser)
+    states_lab = states
     ## Calculate expectation values for each state and each operator
     updated_expects = []
     for e_op in e_ops:
         # Calculate expectation value for each state with this operator
-        expect_vals = np.array(np.real(expect(e_op, states)))
+        expect_vals = np.array(np.real(expect(e_op, states_lab)))
         updated_expects.append(expect_vals)
     if dipole_op is not None:
         # Import locally to avoid circular imports and depend directly on polarization module
         from qspectro2d.spectroscopy.polarization import complex_polarization
 
         # Calculate expectation value for the dipole operator if provided
-        expect_vals_dip = np.array(complex_polarization(dipole_op, states))
+        expect_vals_dip = np.array(complex_polarization(dipole_op, states_lab))
         updated_expects.append(expect_vals_dip)
 
     return updated_expects

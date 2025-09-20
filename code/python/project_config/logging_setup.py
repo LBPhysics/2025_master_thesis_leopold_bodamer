@@ -1,50 +1,35 @@
-"""Centralized logging setup for the repository.
+"""No-op logger shim.
 
-Usage:
+This module intentionally disables logging across the project while keeping the
+same import surface. All calls like::
+
     from project_config.logging_setup import get_logger
     logger = get_logger(__name__)
+    logger.info("...")
 
-This configures a consistent formatter and logs to both stderr and a file under logs/.
-Call ensure_dirs() before heavy jobs to guarantee the logs directory exists.
+silently do nothing and will not write to stderr or files.
 """
 
 from __future__ import annotations
 
 import logging
-from logging.handlers import RotatingFileHandler
-from pathlib import Path
-
-from .paths import LOGS_DIR, ensure_dirs
-
-
-_FORMAT = "%(asctime)s | %(levelname)s | %(name)s:%(lineno)d | %(message)s"
-_DATEFMT = "%Y-%m-%d %H:%M:%S"
-
-
-def _setup_handlers() -> list[logging.Handler]:
-    ensure_dirs()
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    handlers: list[logging.Handler] = []
-
-    # Stream handler (stderr)
-    sh = logging.StreamHandler()
-    sh.setFormatter(logging.Formatter(_FORMAT, datefmt=_DATEFMT))
-    handlers.append(sh)
-
-    # Rotating file handler
-    log_file = Path(LOGS_DIR) / "qspectro2d.log"
-    fh = RotatingFileHandler(log_file, maxBytes=2_000_000, backupCount=3)
-    fh.setFormatter(logging.Formatter(_FORMAT, datefmt=_DATEFMT))
-    handlers.append(fh)
-
-    return handlers
 
 
 def get_logger(name: str = "qspectro2d", level: int = logging.INFO) -> logging.Logger:
+    """Return a disabled logger that emits nothing.
+
+    - Attaches a NullHandler
+    - Sets a very high level
+    - Disables propagation
+    """
     logger = logging.getLogger(name)
-    if not logger.handlers:
-        logger.setLevel(level)
-        for h in _setup_handlers():
-            logger.addHandler(h)
-        logger.propagate = False
+    # Remove any pre-existing handlers and ensure a NullHandler is present
+    try:
+        logger.handlers.clear()
+    except Exception:
+        # Older Python versions: fall back to reassign
+        logger.handlers = []  # type: ignore[attr-defined]
+    logger.addHandler(logging.NullHandler())
+    logger.setLevel(logging.CRITICAL + 10)
+    logger.propagate = False
     return logger

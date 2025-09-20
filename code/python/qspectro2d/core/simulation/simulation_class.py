@@ -14,7 +14,6 @@ from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.laser_system.laser_fcts import e_pulses, epsilon_pulses
 from qspectro2d.core.system_bath_class import SystemBathCoupling
-from qspectro2d.constants import HBAR
 
 
 @dataclass
@@ -64,7 +63,7 @@ class SimulationModuleOQS:
             omega_L = self.laser.carrier_freq_fs
             # Determine excitation number for each eigenstate
             # Based on index: 0 -> 0 excitations, 1..N -> 1, N+1..end -> 2
-            H_diag -= HBAR * omega_L * self.system.number_op  # is the same in both bases
+            H_diag -= omega_L * self.system.number_op  # is the same in both bases
         return H_diag
 
     def paper_eqs_evo(self, t: float) -> Qobj:  # pragma: no cover simple wrapper
@@ -84,16 +83,15 @@ class SimulationModuleOQS:
         lowering_op = self.system.lowering_op
         lowering_op = self.system.to_eigenbasis(lowering_op)
         if self.simulation_config.rwa_sl:
-            E_field_RWA = e_pulses(t, self.laser)
-            return -(lowering_op.dag() * E_field_RWA + lowering_op * np.conj(E_field_RWA))
+            E_plus_RWA = e_pulses(t, self.laser)
+            return -(lowering_op.dag() * E_plus_RWA + lowering_op * np.conj(E_plus_RWA))
         dipole_op = lowering_op + lowering_op.dag()
-        E_field = epsilon_pulses(t, self.laser)
-        return -dipole_op * (E_field + np.conj(E_field))
+        E_plus = epsilon_pulses(t, self.laser)
+        return -dipole_op * (E_plus + np.conj(E_plus))
 
     def H_total_t(self, t: float) -> Qobj:
         """Return total Hamiltonian H0 + H_int(t) at time t."""
         H_total = self.H0_diagonalized + self.H_int_sl(t)
-        # print(f"H at t={t}: {H_total.norm()}")
         return H_total
 
     # TODO also add time dependent eigenenergies / states? and also all the other operators?

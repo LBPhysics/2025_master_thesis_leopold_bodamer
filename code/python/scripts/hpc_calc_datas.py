@@ -1,52 +1,49 @@
-"""
-Generate and submit a single SLURM job for spectroscopy runs (no batching, no inhomogeneity).
+"""Minimal SLURM job generator and submitter for batched 2D runs.
 
-This script creates one SLURM script that calls `calc_datas.py` with
-`--simulation_type` (either "1d" or "2d"), then submits it via `sbatch`.
+This script creates one SLURM script per batch index (0..n_batches-1)
+and submits them with ``sbatch``. The only CLI argument is ``--n_batches``.
 
-Usage (on the cluster login node):
-    # 2D: iterate over all t_det as t_coh, saving one file per point
-    python hpc_calc_datas.py --simulation_type 2d
+Each job runs:
+    python calc_datas.py --simulation_type 2d --n_batches {n_batches} --batch_idx {batch_idx}
 
-    # 1D: compute one trace at the configured t_coh
-    python hpc_calc_datas.py --simulation_type 1d
-
-    # 2D in batches (create N scripts, one per batch; submit all):
-    python hpc_calc_datas.py --simulation_type 2d --n_batches 16
-
-Add --no_submit to generate the script without submitting it.
+Notes:
+- Mail notifications are included ONLY for the first and last batch indices.
+- The working directory for the job is set to the directory containing this file.
+- Log files are written to ``logs/<job_name>.out`` and ``logs/<job_name>.err`` relative to that directory.
 """
 
 from __future__ import annotations
 
 import argparse
 import shutil
+import subprocess
 from pathlib import Path
-from subprocess import CalledProcessError, run
 
 
-def _slurm_header(
-    job_name: str,
-    job_dir: Path,
-    mail_type: str = "END,FAIL",
-    cpus: int = 16,
-    mem: str = "2G",
-    time_limit: str = "0-02:00:00",
-) -> str:
-    """Return a simple SLURM header for a single-job script.
+def _slurm_script_text(*, job_name: str, job_dir: Path, n_batches: int, batch_idx: int) -> str:
+    """Render the SLURM script text for a single batch index.
 
-    The email is left as a TODO so users are forced to personalize it.
+    Mail directives are included only for first and last batches.
     """
+    job_dir_str = str(job_dir)
+    mail_lines = (
+        (
+            '#SBATCH --mail-type="END,FAIL"\n'
+            "#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de\n"
+        )
+        if (batch_idx == 0 or batch_idx == n_batches - 1)
+        else ""
+    )
+
     return f"""#!/bin/bash
 #SBATCH --job-name={job_name}
-#SBATCH --chdir={job_dir}
+#SBATCH --chdir={job_dir_str}
 #SBATCH --output=logs/%x.out
 #SBATCH --error=logs/%x.err
-#SBATCH --cpus-per-task={cpus}
-#SBATCH --mem={mem}
-#SBATCH --time={time_limit}
-#SBATCH --mail-type={mail_type}
-#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # TODO set your email
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=2G
+#SBATCH --time=0-02:00:00
+{mail_lines}
 
 # Load conda (adjust to your cluster if needed)
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
@@ -55,179 +52,75 @@ elif [ -f "/home/$USER/miniconda3/etc/profile.d/conda.sh" ]; then
     source "/home/$USER/miniconda3/etc/profile.d/conda.sh"
 fi
 conda activate master_env || true
+
+python calc_datas.py --simulation_type 2d --n_batches {n_batches} --batch_idx {batch_idx}
 """
 
 
-def _create_job_script(
-    *,
-    scripts_dir: Path,
-    job_dir: Path,
-    sim_type: str,
-    cpus: int,
-    mem: str,
-    time_limit: str,
-) -> Path:
-    """Create a single SLURM script that runs calc_datas.py once for sim_type.
+def _ensure_logs_dir(job_dir: Path) -> None:
+    """Create the logs directory under the job_dir if missing."""
+    logs_dir = job_dir / "logs"
+    if not logs_dir.exists():
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
-    Note: This variant does not pass batching flags; see `_create_batch_job_scripts`.
+
+def _submit_job(script_path: Path) -> str:
+    """Submit a job with sbatch and return the scheduler response.
+
+    If ``sbatch`` is not available, a helpful error is raised.
     """
-    calc_path = (scripts_dir / "calc_datas.py").resolve()
-    if not calc_path.exists():
-        raise FileNotFoundError(f"calc_datas.py not found at {calc_path}")
+    sbatch = shutil.which("sbatch")
+    if sbatch is None:
+        raise RuntimeError("sbatch not found on PATH. Run this on your cluster login node.")
 
-    job_name = f"qs_{sim_type}"
-    mail_type = "END,FAIL"
-    header = _slurm_header(
-        job_name=job_name,
-        job_dir=job_dir,
-        mail_type=mail_type,
-        cpus=cpus,
-        mem=mem,
-        time_limit=time_limit,
-    )
-
-    body = f"python {calc_path} --simulation_type {sim_type}\n"
-
-    content = header + "\n" + body
-    script_path = job_dir / f"run_{sim_type}.slurm"
-    # Ensure LF newlines for SLURM
-    text = content.replace("\r\n", "\n").replace("\r", "\n")
-    script_path.write_text(text, encoding="utf-8")
-    script_path.chmod(0o755)
-    return script_path
-
-
-def _create_batch_job_scripts(
-    *,
-    scripts_dir: Path,
-    job_dir: Path,
-    sim_type: str,
-    n_batches: int,
-    cpus: int,
-    mem: str,
-    time_limit: str,
-) -> list[Path]:
-    """Create multiple SLURM scripts, one per batch, for calc_datas.py 2d runs.
-
-    Each script passes `--n_batches` and its corresponding `--batch_idx`.
-    """
-    calc_path = (scripts_dir / "calc_datas.py").resolve()
-    if not calc_path.exists():
-        raise FileNotFoundError(f"calc_datas.py not found at {calc_path}")
-
-    scripts: list[Path] = []
-    for bi in range(n_batches):
-        job_name = f"qs_{sim_type}_b{bi:03d}-of-{n_batches}"
-        header = _slurm_header(
-            job_name=job_name,
-            job_dir=job_dir,
-            mail_type="END,FAIL",
-            cpus=cpus,
-            mem=mem,
-            time_limit=time_limit,
-        )
-        body = (
-            f"python {calc_path} --simulation_type {sim_type} "
-            f"--n_batches {n_batches} --batch_idx {bi}\n"
-        )
-        content = header + "\n" + body
-        script_path = job_dir / f"run_{sim_type}_batch_{bi:03d}_of_{n_batches}.slurm"
-        text = content.replace("\r\n", "\n").replace("\r", "\n")
-        script_path.write_text(text, encoding="utf-8")
-        script_path.chmod(0o755)
-        scripts.append(script_path)
-
-    return scripts
-
-
-def _submit_all(job_dir: Path) -> None:
-    """Submit all .slurm scripts in job_dir via sbatch."""
-    sbatch_path = shutil.which("sbatch")
-    if not sbatch_path:
-        print("WARN: 'sbatch' not found in PATH; skipping automatic submission.")
-        return
-    for slurm_script in sorted(job_dir.glob("*.slurm")):
-        try:
-            run([sbatch_path, str(slurm_script)], check=True)
-        except (FileNotFoundError, CalledProcessError) as exc:
-            print(
-                f"WARN: Failed submitting {slurm_script.name}: {exc}\n"
-                f"Suggestion: inspect script or submit manually with 'sbatch {slurm_script.name}'"
-            )
+    result = subprocess.run([sbatch, str(script_path)], capture_output=True, text=True, check=True)
+    return result.stdout.strip()
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description=("Generate one SLURM script that calls calc_datas.py and submit it.")
-    )
-    parser.add_argument(
-        "--simulation_type",
-        type=str,
-        default="2d",
-        choices=["1d", "2d"],
-        help="Simulation type to run in each batch (default: 2d)",
-    )
-    parser.add_argument("--cpus", type=int, default=16, help="CPUs per task (default: 16)")
-    parser.add_argument("--mem", type=str, default="2G", help="Memory (default: 2G)")
-    parser.add_argument(
-        "--time_limit", type=str, default="0-02:00:00", help="Walltime e.g. 0-02:00:00"
-    )
-    parser.add_argument(
-        "--no_submit", action="store_true", help="Only generate scripts, do not submit"
+        description="Generate and submit SLURM jobs for batched 2D spectroscopy runs.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--n_batches",
         type=int,
-        default=1,
-        help=(
-            "For 2d runs: create this many batch scripts (default: 1). "
-            "Each batch will handle a disjoint subset of t_coh points."
-        ),
+        required=True,
+        help="Total number of batches (creates one job per batch_idx 0..n_batches-1)",
     )
     args = parser.parse_args()
 
-    scripts_dir = Path(__file__).resolve().parent
-    job_root = scripts_dir / "batch_jobs"
+    n_batches = int(args.n_batches)
+    if n_batches <= 0:
+        raise ValueError("--n_batches must be a positive integer")
 
-    base_name = f"{args.simulation_type}"
-    job_dir = job_root / base_name
-    suffix = 0
-    while job_dir.exists():
-        suffix += 1
-        job_dir = job_root / f"{base_name}_{suffix}"
+    job_dir = Path(__file__).resolve().parent
+    _ensure_logs_dir(job_dir)
 
-    logs_dir = job_dir / "logs"
-    logs_dir.mkdir(parents=True, exist_ok=False)
+    print(f"Creating and submitting {n_batches} SLURM jobs from {job_dir} ...")
 
-    generated: list[Path] = []
-    if args.simulation_type == "2d" and args.n_batches > 1:
-        generated = _create_batch_job_scripts(
-            scripts_dir=scripts_dir,
+    for batch_idx in range(n_batches):
+        job_name = f"calc_datas_2d_b{batch_idx:03d}_of_{n_batches:03d}"
+        script_name = f"slurm_{job_name}.sh"
+        script_path = job_dir / script_name
+
+        content = _slurm_script_text(
+            job_name=job_name,
             job_dir=job_dir,
-            sim_type=args.simulation_type,
-            n_batches=args.n_batches,
-            cpus=args.cpus,
-            mem=args.mem,
-            time_limit=args.time_limit,
+            n_batches=n_batches,
+            batch_idx=batch_idx,
         )
-        print(f"Generated {len(generated)} batch scripts in: {job_dir}")
-    else:
-        slurm_script = _create_job_script(
-            scripts_dir=scripts_dir,
-            job_dir=job_dir,
-            sim_type=args.simulation_type,
-            cpus=args.cpus,
-            mem=args.mem,
-            time_limit=args.time_limit,
-        )
-        generated = [slurm_script]
-        print(f"Generated script: {slurm_script}")
+        script_path.write_text(content, encoding="utf-8")
 
-    if not args.no_submit:
-        _submit_all(job_dir)
-    else:
-        print("Submission skipped (use without --no_submit to sbatch).")
+        try:
+            submit_msg = _submit_job(script_path)
+        except Exception as exc:  # Fail fast with a clear message
+            raise RuntimeError(f"Failed to submit {script_name}: {exc}") from exc
+
+        print(f"  submitted {script_name}: {submit_msg}")
+
+    print("All jobs submitted.")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
