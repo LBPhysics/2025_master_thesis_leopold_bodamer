@@ -193,3 +193,90 @@ class SimulationModuleOQS:
         cfg = self.simulation_config
         t_det0 = cfg.t_coh + cfg.t_wait
         return self.t_det + t_det0
+
+    # --- Helper functions -----------------------------------------------------------
+    # MAKE THEM TIME DEP HERE
+
+    # only for the paper solver
+    def time_dep_paper_gamma_ij(self, i: int, j: int, t: float) -> float:
+        """
+        Calculate the population relaxation rates. for the dimer system, analogous to the gamma_ij in the paper.
+
+        Parameters:
+            i (int): Index of the first state.
+            j (int): Index of the second state.
+
+        Returns:
+            float: Population relaxation rate.
+        """
+        w_ij = self.time_dep_omega_ij(i, j, t)
+        """
+        from qspectro2d.core.bath_system.bath_fcts import (
+            power_spectrum_func_paper,
+            extract_bath_parameters,
+        )
+
+        args = extract_bath_parameters(self.bath)
+        
+        args["alpha"] = args["alpha"] * args["wc"]  # rescale coupling for paper eqs
+        P_wij = power_spectrum_func_paper(w_ij, **args)
+        """
+        P_wij = self.bath.power_spectrum(w_ij)
+        return np.sin(2 * self.sb_coupling.theta) ** 2 * P_wij
+
+    def time_dep_paper_Gamma_ij(self, i: int, j: int, t: float) -> float:
+        """
+        Calculate the pure dephasing rates. for the dimer system, analogous to the gamma_ij in the paper.
+
+        Parameters:
+            i (int): Index of the first state.
+            j (int): Index of the second state.
+
+        Returns:
+            float: Pure dephasing rate.
+        """
+        # Pure dephasing rates helper
+        """
+        from qspectro2d.core.bath_system.bath_fcts import (
+            power_spectrum_func_paper,
+            extract_bath_parameters,
+        )
+
+        args = extract_bath_parameters(self.bath)
+        args["alpha"] = args["alpha"] * args["wc"]  # rescale coupling for paper eqs
+        P_0 = power_spectrum_func_paper(0, **args)
+        """
+        P_0 = self.bath.power_spectrum(0)
+        Gamma_t_ab = 2 * np.cos(2 * self.sb_coupling.theta) ** 2 * P_0  # tilde
+        Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.sb_coupling.theta) ** 2) * P_0
+        Gamma_11 = self.time_dep_paper_gamma_ij(2, 1, t)
+        Gamma_22 = self.time_dep_paper_gamma_ij(1, 2, t)
+        Gamma_abar_0 = 2 * P_0
+        Gamma_abar_a = Gamma_abar_0  # holds for dimer
+        if i == 1:
+            if j == 0:
+                return Gamma_t_a0 + 0.5 * self.time_dep_paper_gamma_ij(2, i, t)
+            elif j == 1:
+                return Gamma_11
+            elif j == 2:
+                return Gamma_t_ab + 0.5 * (
+                    self.time_dep_paper_gamma_ij(i, j, t) + self.time_dep_paper_gamma_ij(j, i, t)
+                )
+        if i == 2:
+            if j == 0:
+                return Gamma_t_a0 + 0.5 * self.time_dep_paper_gamma_ij(1, i, t)
+            elif j == 1:
+                return Gamma_t_ab + 0.5 * (
+                    self.time_dep_paper_gamma_ij(i, j, t) + self.time_dep_paper_gamma_ij(j, i, t)
+                )
+            elif j == 2:
+                return Gamma_22
+        elif i == 3:
+            if j == 0:
+                return Gamma_abar_0
+            elif j == 1:
+                return Gamma_abar_a + 0.5 * (self.time_dep_paper_gamma_ij(2, j, t))
+            elif j == 2:
+                return Gamma_abar_a + 0.5 * (self.time_dep_paper_gamma_ij(1, j, t))
+        else:
+            raise ValueError("Invalid indices for i and j.")
