@@ -51,7 +51,7 @@ DIP_MOMENTS = [1.0]  # Dipole moments for each atom
 COUPLING_CM = 0.0  # Coupling strength [cm⁻¹]
 DELTA_INHOMOGEN_CM = 0.0  # Inhomogeneous broadening [cm⁻¹]
 MAX_EXCITATION = 1  # 1 -> ground+single manifold, 2 -> add double-excitation manifold
-N_INHOMOGEN = 2  # 1 == no inhomogeneous broadening
+N_INHOMOGEN = 1  # 1 == no inhomogeneous broadening
 
 
 # === LASER SYSTEM DEFAULTS ===
