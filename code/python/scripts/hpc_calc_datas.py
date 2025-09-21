@@ -94,6 +94,13 @@ def main() -> None:
         action="store_true",
         help="Only generate the .slurm scripts without submitting via sbatch.",
     )
+    parser.add_argument(
+        "--simulation_type",
+        type=str,
+        default="2d",
+        choices=["1d", "2d"],
+        help="Execution mode (default: 1d)",
+    )
     args = parser.parse_args()
 
     n_batches = int(args.n_batches)
