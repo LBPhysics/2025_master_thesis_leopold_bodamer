@@ -44,7 +44,9 @@ def _collect_group_files(anchor: Path) -> List[Path]:
             continue
         try:
             d = load_simulation_data(p)
-        except Exception:
+        except Exception as e:
+            print(f"⚠️  Skipping corrupted file: {p}")
+            print(f"    Error: {e}")
             continue
         if d.get("inhom_enabled", False) and d.get("inhom_group_id") == group_id:
             if anchor_tcoh is None or np.isclose(
