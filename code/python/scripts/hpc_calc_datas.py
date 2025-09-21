@@ -1,4 +1,4 @@
-"""Minimal SLURM job generator and submitter for batched 2D runs.
+"""Minimal SLURM job generator and submitter for batched 1D/2D runs.
 
 This script creates one SLURM script per batch index (0..n_batches-1)
 and, by default, submits them with ``sbatch``.
@@ -10,7 +10,7 @@ Layout:
     via Slurm's ``--output``/``--error`` options.
 
 Each job runs (from the batching directory):
-        python ../../calc_datas.py --simulation_type 2d --n_batches {n_batches} --batch_idx {batch_idx}
+    python ../../calc_datas.py --simulation_type {sim_type} --n_batches {n_batches} --batch_idx {batch_idx}
 
 Notes:
 - Mail notifications are included ONLY for the first and last batch indices.
@@ -24,7 +24,9 @@ import subprocess
 from pathlib import Path
 
 
-def _slurm_script_text(*, job_name: str, n_batches: int, batch_idx: int) -> str:
+def _slurm_script_text(
+    *, job_name: str, n_batches: int, batch_idx: int, simulation_type: str
+) -> str:
     """Render the SLURM script text for a single batch index.
 
     Mail directives are included only for first and last batches.
@@ -47,7 +49,7 @@ def _slurm_script_text(*, job_name: str, n_batches: int, batch_idx: int) -> str:
 #SBATCH --time=0-02:00:00
 {mail_lines}
 
-python ../../calc_datas.py --simulation_type 2d --n_batches {n_batches} --batch_idx {batch_idx}
+python ../../calc_datas.py --simulation_type {simulation_type} --n_batches {n_batches} --batch_idx {batch_idx}
 """
 
 
@@ -80,7 +82,7 @@ def _submit_job(script_path: Path) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Generate and submit SLURM jobs for batched 2D spectroscopy runs.",
+        description="Generate and submit SLURM jobs for batched 1D/2D spectroscopy runs.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -99,7 +101,7 @@ def main() -> None:
         type=str,
         default="2d",
         choices=["1d", "2d"],
-        help="Execution mode (default: 1d)",
+        help="Execution mode (default: 2d)",
     )
     args = parser.parse_args()
 
@@ -111,7 +113,8 @@ def main() -> None:
 
     # Create a unique job directory under scripts_dir/batch_jobs
     job_root = scripts_dir / "batch_jobs"
-    base_name = f"{n_batches}batches"
+    sim_type = str(args.simulation_type).lower()
+    base_name = f"{sim_type}_{n_batches}batches"
     job_dir = job_root / base_name
     suffix = 0
     while job_dir.exists():
@@ -124,7 +127,7 @@ def main() -> None:
     print(f"{action_verb} {n_batches} SLURM jobs in {job_dir} ...")
 
     for batch_idx in range(n_batches):
-        job_name = f"calc2d_b{batch_idx:03d}_of_{n_batches:03d}"
+        job_name = f"{sim_type}_b{batch_idx:03d}_of_{n_batches:03d}"
         script_name = f"slurm_{job_name}.slurm"
         script_path = job_dir / script_name
 
@@ -132,6 +135,7 @@ def main() -> None:
             job_name=job_name,
             n_batches=n_batches,
             batch_idx=batch_idx,
+            simulation_type=sim_type,
         )
         script_path.write_text(content, encoding="utf-8")
 
