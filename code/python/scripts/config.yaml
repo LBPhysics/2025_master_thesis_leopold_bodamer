@@ -37,6 +37,7 @@ bath:
 
 config:
   solver: ME
+  signal_types: [nonrephasing, rephasing, average]
 
 window:
   t_det_max: 100.0

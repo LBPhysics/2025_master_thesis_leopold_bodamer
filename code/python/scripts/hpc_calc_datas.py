@@ -128,7 +128,7 @@ def main() -> None:
 
     for batch_idx in range(n_batches):
         job_name = f"{sim_type}_b{batch_idx:03d}_of_{n_batches:03d}"
-        script_name = f"slurm_{job_name}.slurm"
+        script_name = f"{job_name}.slurm"
         script_path = job_dir / script_name
 
         content = _slurm_script_text(
