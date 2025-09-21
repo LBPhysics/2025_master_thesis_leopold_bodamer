@@ -104,6 +104,7 @@ def plot_pulse_envelopes(
     return fig, ax
 
 
+# TODO delete not used
 def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
     """
     Plot the RWA electric field (envelope only) over time for N pulses using LaserPulseSequence.
@@ -166,6 +167,7 @@ def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, sho
     return fig, ax
 
 
+# TODO delete not used
 def plot_epsilon_pulses(
     times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
 ):
@@ -357,6 +359,7 @@ def plot_example_evo(
     return fig
 
 
+# TODO delete not used
 def plot_example_polarization(
     times: np.ndarray,
     P_full: np.ndarray,

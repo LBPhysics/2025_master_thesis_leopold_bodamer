@@ -17,9 +17,6 @@ from .plotting import (
     crop_nd_data_along_axis,
     add_custom_contour_lines,
 )
-from .plotting_functions import (
-    plot_data,
-)
 
 __all__ = [
     # plotting.py
@@ -33,6 +30,4 @@ __all__ = [
     "plot_example_polarization",
     "crop_nd_data_along_axis",
     "add_custom_contour_lines",
-    # plotting_functions.py
-    "plot_data",
 ]

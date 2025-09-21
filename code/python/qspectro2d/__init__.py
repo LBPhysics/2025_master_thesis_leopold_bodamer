@@ -72,8 +72,6 @@ def __getattr__(name):  # PEP 562 lazy attribute loading
 
     # Visualization exports (lazy)
     if name in {
-        "plot_data",
-        "plot_data",
         "plot_pulse_envelopes",
         "plot_all_pulse_components",
     }:
@@ -109,8 +107,6 @@ def __getattr__(name):  # PEP 562 lazy attribute loading
 
 try:
     from .visualization import (
-        plot_data,
-        plot_data,
         plot_pulse_envelopes,
         plot_all_pulse_components,
     )
@@ -161,8 +157,6 @@ __all__ = [
     "compute_1d_fft_wavenumber",
     "compute_2d_fft_wavenumber",
     # Visualization
-    "plot_data",
-    "plot_data",
     "plot_pulse_envelopes",
     "plot_all_pulse_components",
     # Data management
