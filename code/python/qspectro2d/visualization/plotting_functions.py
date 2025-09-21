@@ -24,6 +24,7 @@ Key simplifications:
 from __future__ import annotations
 
 import gc
+import time
 import matplotlib.pyplot as plt
 from typing import Any, Iterable, List, Sequence, Tuple, Dict, cast
 from qutip import BosonicEnvironment
@@ -57,10 +58,7 @@ def _collect_saved_paths(accumulator: List[str], saved: Any) -> None:
 
 
 def _extend_and_fft(
-    datas: Sequence[Any],
-    signal_types: Sequence[str],
-    t_det,
-    t_coh,
+    loaded_data_and_info: Dict[str, Any],
     extend_for: Tuple[int, int],
     dimension: str,
 ):
@@ -69,8 +67,23 @@ def _extend_and_fft(
     Returns (freq_axes, data_freq, freq_labels).
     Failed signals are skipped but reported; at least one must survive.
     """
-    kept_data = []
-    kept_types = []
+    # Extract inputs from loaded dict
+    sim_config = loaded_data_and_info.get("sim_config")
+    if sim_config is None:
+        raise KeyError("'sim_config' missing in loaded_data_and_info")
+    signal_types: Sequence[str] = sim_config.signal_types
+    t_det = loaded_data_and_info.get("t_det")
+    if t_det is None:
+        raise KeyError("'t_det' missing in loaded_data_and_info")
+    t_coh = loaded_data_and_info.get("t_coh") if dimension == "2d" else None
+
+    datas: Sequence[Any] = [loaded_data_and_info.get(st) for st in signal_types]
+    if any(d is None for d in datas):
+        missing_signals = [st for st, d in zip(signal_types, datas) if d is None]
+        raise KeyError(f"Missing signal arrays for: {missing_signals}")
+
+    kept_data: list[Any] = []
+    kept_types: list[str] = []
     extended_axes: Any = None
     for i, (data, st) in enumerate(zip(datas, signal_types)):
         try:
@@ -231,16 +244,6 @@ def plot_data(
     t_coh = loaded_data_and_info.get("t_coh") if dimension == "2d" else None
     signal_types: Sequence[str] = sim_config.signal_types
 
-    missing = [
-        k
-        for k in ("system", "bath", "laser", "sim_config", "t_det")
-        if k not in loaded_data_and_info
-    ]
-    if missing:
-        raise KeyError(f"Missing required keys: {missing}")
-    if not signal_types:
-        raise KeyError("'signal_types' list is empty or missing.")
-
     # Collect raw data arrays
     datas = [loaded_data_and_info.get(st) for st in signal_types]
     if any(d is None for d in datas):
@@ -258,7 +261,6 @@ def plot_data(
         print(f"   t_coh: n={len(t_coh)} range=[{t_coh[0]:.2f},{t_coh[-1]:.2f}] fs")
 
     # ---- Config with defaults
-    spectral_components = plot_config.get("spectral_components_to_plot", ["abs", "real", "img"])
     extend_for = plot_config.get("extend_for", (0, 0))
     section = plot_config.get("section")
     if (
@@ -270,62 +272,56 @@ def plot_data(
         # Provided as 2D section but we are 1D: take first window only
         section = section[0]
     time_components = ["real", "abs", "img", "phase"]
-
-    do_time = plot_config.get("plot_time_domain", True)
-    do_freq = plot_config.get("plot_frequency_domain", True)
+    spectral_components = time_components
 
     # Choose plotting callable
     plot_func = plot_1d_el_field if dimension == "1d" else plot_2d_el_field
 
     # ---- Time domain
-    if do_time:
-        print(f"📊 Time domain ...")
+    print(f"📊 Time domain ...")
+    saved = _plot_components(
+        datas=datas,
+        signal_types=signal_types,
+        axis_det=t_det,
+        axis_coh=t_coh,
+        domain="time",
+        components=time_components,
+        plot_func=plot_func,
+        base_metadata=meta,
+        system=system,
+        sim_config=sim_config,
+        dimension=dimension,
+    )
+    for p in saved:
+        print(f"   💾 {p}")
+
+    # ---- Frequency domain
+    print(f"📊 Frequency domain ... (extend={extend_for})")
+    try:
+        freq_axes, freq_datas, kept_types = _extend_and_fft(
+            loaded_data_and_info=loaded_data_and_info,
+            extend_for=extend_for,
+            dimension=dimension,
+        )
+        axis_det_f, axis_coh_f = (freq_axes, None) if dimension == "1d" else freq_axes
         saved = _plot_components(
-            datas=datas,
-            signal_types=signal_types,
-            axis_det=t_det,
-            axis_coh=t_coh,
-            domain="time",
-            components=time_components,
+            datas=freq_datas,
+            signal_types=kept_types,
+            axis_det=axis_det_f,
+            axis_coh=axis_coh_f,
+            domain="freq",
+            components=spectral_components,
             plot_func=plot_func,
             base_metadata=meta,
             system=system,
             sim_config=sim_config,
             dimension=dimension,
+            section=section,
         )
         for p in saved:
             print(f"   💾 {p}")
-    # ---- Frequency domain
-    if do_freq:
-        print(f"📊 Frequency domain ... (extend={extend_for})")
-        try:
-            freq_axes, freq_datas, kept_types = _extend_and_fft(
-                datas=datas,
-                signal_types=signal_types,
-                t_det=t_det,
-                t_coh=t_coh,
-                extend_for=extend_for,
-                dimension=dimension,
-            )
-            axis_det_f, axis_coh_f = (freq_axes, None) if dimension == "1d" else freq_axes
-            saved = _plot_components(
-                datas=freq_datas,
-                signal_types=kept_types,
-                axis_det=axis_det_f,
-                axis_coh=axis_coh_f,
-                domain="freq",
-                components=spectral_components,
-                plot_func=plot_func,
-                base_metadata=meta,
-                system=system,
-                sim_config=sim_config,
-                dimension=dimension,
-                section=section,
-            )
-            for p in saved:
-                print(f"   💾 {p}")
-        except Exception as e:  # pragma: no cover
-            print(f"❌ Frequency domain skipped: {e}")
+    except Exception as e:  # pragma: no cover
+        print(f"❌ Frequency domain skipped: {e}")
 
     plt.close("all")
     gc.collect()
