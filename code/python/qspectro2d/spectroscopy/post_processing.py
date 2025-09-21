@@ -155,8 +155,9 @@ def compute_1d_fft_wavenumber(
     t_dets: np.ndarray,
     datas: List[np.ndarray],
     signal_types: List[str] = ["rephasing"],
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, List[np.ndarray], List[str]]:
     """
+    S(T_wait, w_det) = ∫ E(T_wait, t_det) e^{-i w_det t_det} dt_det
     Compute 1D FFT of spectroscopy data and convert frequency axis to wavenumber units.
 
     This function performs a 1D FFT on the input data and converts the
@@ -167,9 +168,7 @@ def compute_1d_fft_wavenumber(
     ----------
     t_dets : np.ndarray
         Time axis for detection (t_det) in femtoseconds. Shape: (N_t_det,)
-        Must be evenly spaced for accurate FFT.
-    datas : List[np.ndarray]
-        One or two 1D arrays with shape (N_t_det,), typically time-domain
+    datas : List[np.ndarray] (N_t_det,) time-domain E-field signal components
         data for the requested signal_types. For absorptive spectra, pass both components
         [rephasing, nonrephasing].
     signal_types : List[str], default=["rephasing"]
@@ -179,37 +178,23 @@ def compute_1d_fft_wavenumber(
 
     Returns
     -------
-    tuple[np.ndarray, np.ndarray]
+    tuple[np.ndarray, List[np.ndarray], List[str]]
         nu_dets : np.ndarray
-            Wavenumber axis for detection in units of 10^4 cm⁻¹.
-            Shape: (N_t_det,) - full spectrum including negative frequencies.
-        s1d : np.ndarray
-            1D FFT spectrum with complex values.
-            Shape: (N_t_det,).
-            Scaled by dt_det for consistency with 2D implementation.
+        spectra : List[np.ndarray]
+            List of 1D FFT spectra in frequency space (fftshifted), scaled by dt_det.
+            Contains entries for requested components in deterministic order:
+            [rephasing?, nonrephasing?, absorptive?, average?].
+        labels : List[str]
+            Labels corresponding to each spectrum entry (e.g., 'rephasing', 'absorptive').
 
     Notes
     -----
-    - Uses np.fft.fft() for full complex FFT, consistent with 2D implementation
     - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
       * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
       * Wavenumber = frequency / c, scaled by 10^4
     - Results are fftshifted to center zero frequency
     - Absorptive spectrum is computed as real((S_re + S_nr)/2) when both components
       are provided.
-
-    Examples
-    --------
-    >>> t_dets = np.linspace(0, 100, 101)  # 0-100 fs, dt_det = 1 fs
-    >>> data = [np.random.rand(101) + 1j*np.random.rand(101)]  # Single component
-    >>> nu_dets, spectrum = compute_1d_fft_wavenumber(t_dets, data, ["rephasing"])
-
-    >>> # Absorptive spectrum with both components
-    >>> data_re = np.random.rand(101) + 1j*np.random.rand(101)
-    >>> data_nr = np.random.rand(101) + 1j*np.random.rand(101)
-    >>> nu_dets, spectrum = compute_1d_fft_wavenumber(
-    ...     t_dets, [data_re, data_nr], ["rephasing", "nonrephasing"]
-    ... )
     """
     # Calculate sampling parameters
     dt_det = t_dets[1] - t_dets[0]  # Sampling interval in fs
@@ -229,39 +214,57 @@ def compute_1d_fft_wavenumber(
 
     if not datas:
         raise ValueError("'datas' must contain at least one 1D array")
+    if len(datas) != len(signal_types):
+        raise ValueError(
+            f"Length mismatch: len(datas)={len(datas)} vs len(signal_types)={len(signal_types)}"
+        )
 
     # Validate all arrays and compute individual spectra
-    S_list: list[np.ndarray] = []
-    for idx, data in enumerate(datas):
+    # Compute spectra dictionary by type for first occurrence
+    S_by_type: dict[str, np.ndarray] = {}
+    for idx, (data, sig) in enumerate(zip(datas, signal_types)):
         _validate(data, f"datas[{idx}]")
-        S_list.append(_fft1d(data))
+        sig_norm = sig.lower()
+        if sig_norm not in ("rephasing", "nonrephasing", "average"):
+            # Allow unknown tags but still compute their FFT and store under the raw name
+            S_by_type.setdefault(sig_norm, _fft1d(data))
+            continue
+        if sig_norm not in S_by_type:
+            S_by_type[sig_norm] = _fft1d(data)
 
-    uniq = set(signal_types)
-    if uniq == {"rephasing"}:
-        s1d_out = S_list[0]
-    elif uniq == {"nonrephasing"}:
-        s1d_out = S_list[0]
-    elif uniq == {"rephasing", "nonrephasing"}:
-        # Find first occurrence of each component
-        try:
-            S_re = next(S for S, s in zip(S_list, signal_types) if s == "rephasing")
-            S_nr = next(S for S, s in zip(S_list, signal_types) if s == "nonrephasing")
-        except StopIteration:
-            raise ValueError("Both rephasing and nonrephasing must be provided for absorptive")
-        s1d_out = np.real((S_re + S_nr) / 2.0)
-    else:
-        raise ValueError(f"Unsupported combination of signal_types: {sorted(list(uniq))}")
+    uniq = set(map(str.lower, signal_types))
+
+    # Assemble outputs in deterministic order
+    spectra: List[np.ndarray] = []
+    labels: List[str] = []
+    if "rephasing" in uniq and "rephasing" in S_by_type:
+        spectra.append(S_by_type["rephasing"])
+        labels.append("rephasing")
+    if "nonrephasing" in uniq and "nonrephasing" in S_by_type:
+        spectra.append(S_by_type["nonrephasing"])
+        labels.append("nonrephasing")
+    if ("rephasing" in uniq and "nonrephasing" in uniq) and (
+        "rephasing" in S_by_type and "nonrephasing" in S_by_type
+    ):
+        spectra.append(np.real((S_by_type["rephasing"] + S_by_type["nonrephasing"]) / 2.0))
+        labels.append("absorptive")
+    if "average" in uniq and "average" in S_by_type:
+        spectra.append(S_by_type["average"])
+        labels.append("average")
+
+    # Include any additional custom tags (not one of the above) if present
+    for k, v in S_by_type.items():
+        if k not in ("rephasing", "nonrephasing", "average"):
+            spectra.append(v)
+            labels.append(k)
 
     # Generate frequency axis and shift
     freq_dets = np.fft.fftfreq(N_t_det, d=dt_det)
     freq_dets = np.fft.fftshift(freq_dets)
 
-    # Convert to wavenumber (10^4 cm^-1)
-    # Speed of light: c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
-    # Wavenumber = frequency / c, scaled by 10^4
     nu_dets = freq_dets / 2.998 * 10
 
-    return nu_dets, s1d_out
+    return nu_dets, spectra, labels
 
 
 def compute_2d_fft_wavenumber(
@@ -269,17 +272,15 @@ def compute_2d_fft_wavenumber(
     t_cohs: np.ndarray,
     datas: List[np.ndarray],
     signal_types: List[str] = ["rephasing"],
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Compute 2D FFT and return a single spectrum (always one ndarray output).
+) -> tuple[np.ndarray, np.ndarray, List[np.ndarray], List[str]]:
+    """Compute 2D FFT S(w_coh, T_wait, w_det) = ∫ E(t_coh, T_wait, t_det) e^{-i w_det t_det -i w_coh t_coh} dt_det dt_coh
 
     Parameters
     ----------
-    t_dets : np.ndarray
-        Detection time axis (N_t_det,)
-    t_cohs : np.ndarray
-        Coherence time axis (N_t_coh,)
+    t_dets : np.ndarray Detection time axis (N_t_det,)
+    t_cohs : np.ndarray Coherence time axis (N_t_coh,)
     datas : List[np.ndarray]
-        One or two 2D arrays with shape (N_t_coh, N_t_det), typically time-domain
+        2D arrays with shape (N_t_coh, N_t_det)
         data for the requested signal_types. For absorptive spectra, pass both components
         [rephasing, nonrephasing].
     signal_types : List[str], default=["rephasing"]
@@ -289,9 +290,13 @@ def compute_2d_fft_wavenumber(
 
     Returns
     -------
-    (nu_dets, nu_cohs, S)
+    (nu_dets, nu_cohs, spectra, labels)
         nu_dets, nu_cohs : np.ndarray (wavenumber axis, 10^4 cm^-1)
-        S       : np.ndarray complex spectrum with shape (N_t_coh, N_t_det)
+        spectra : List[np.ndarray]
+            List of complex spectra with shape (N_t_coh, N_t_det) in deterministic order:
+            [rephasing?, nonrephasing?, absorptive?, average?] (fftshifted, scaled).
+        labels : List[str]
+            Labels corresponding to each spectrum entry.
 
     Notes
     -----
@@ -314,50 +319,68 @@ def compute_2d_fft_wavenumber(
     def _fft2(arr: np.ndarray, signal_type: str) -> np.ndarray:
         tmp_local = np.fft.fft(arr, axis=0)
         tmp_local = np.fft.fft(tmp_local, axis=1)
-        # TODO for now just fix this
-        spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
-        """
-        if signal_type == "rephasing":  # flip coh -> +
+        sig = signal_type.lower()
+        if sig == "rephasing":  # flip coh -> +
             spec = np.flip(tmp_local, axis=0)
-        elif signal_type == "nonrephasing":  # flip both -> +
+        elif sig == "nonrephasing":  # flip both -> +
             spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
-        elif signal_type == "average":  # no change
+        elif sig == "average":  # no change
             spec = tmp_local
         else:
-            raise ValueError(f"Internal signal_type '{signal_type}' unsupported")
-        """
+            # Unknown tag: treat as no-flip 'normal' FFT
+            spec = tmp_local
         return spec * (dt_coh * dt_det)
 
     if not datas:
         raise ValueError("'datas' must contain at least one 2D array")
+    if len(datas) != len(signal_types):
+        raise ValueError(
+            f"Length mismatch: len(datas)={len(datas)} vs len(signal_types)={len(signal_types)}"
+        )
 
     # Validate all arrays and compute individual spectra
-    S_list: list[np.ndarray] = []
+    # Compute spectra dictionary by type for first occurrence
+    S_by_type: dict[str, np.ndarray] = {}
     for idx, (data, sig) in enumerate(zip(datas, signal_types)):
         _validate(data, f"datas[{idx}]")
-        S_list.append(_fft2(data, sig))
+        sig_norm = sig.lower()
+        if sig_norm not in S_by_type:
+            S_by_type[sig_norm] = _fft2(data, sig_norm)
 
-    uniq = set(signal_types)
-    if uniq == {"rephasing"} or uniq == {"average"} or uniq == {"nonrephasing"}:
-        S_out = S_list[0]
-    elif uniq == {"rephasing", "nonrephasing"}:
-        # Find first occurrence of each component
-        try:
-            S_re = next(S for S, s in zip(S_list, signal_types) if s == "rephasing")
-            S_nr = next(S for S, s in zip(S_list, signal_types) if s == "nonrephasing")
-        except StopIteration:
-            raise ValueError("Both rephasing and nonrephasing must be provided for absorptive")
-        S_out = np.real((S_re + S_nr) / 2.0)
-    else:
-        raise ValueError(f"Unsupported combination of signal_types: {sorted(list(uniq))}")
+    uniq = set(map(str.lower, signal_types))
 
     # Frequency axes & shift
     freq_cohs = np.fft.fftfreq(N_coh, d=dt_coh)
     freq_dets = np.fft.fftfreq(N_det, d=dt_det)
-    S_out = np.fft.fftshift(S_out, axes=(0, 1))
     freq_cohs = np.fft.fftshift(freq_cohs)
     freq_dets = np.fft.fftshift(freq_dets)
 
     nu_cohs = freq_cohs / 2.998 * 10
     nu_dets = freq_dets / 2.998 * 10
-    return nu_dets, nu_cohs, S_out
+
+    # Assemble outputs in deterministic order and fftshift each
+    spectra_2d: List[np.ndarray] = []
+    labels_2d: List[str] = []
+    if "rephasing" in uniq and "rephasing" in S_by_type:
+        spectra_2d.append(np.fft.fftshift(S_by_type["rephasing"], axes=(0, 1)))
+        labels_2d.append("rephasing")
+    if "nonrephasing" in uniq and "nonrephasing" in S_by_type:
+        spectra_2d.append(np.fft.fftshift(S_by_type["nonrephasing"], axes=(0, 1)))
+        labels_2d.append("nonrephasing")
+    if ("rephasing" in uniq and "nonrephasing" in uniq) and (
+        "rephasing" in S_by_type and "nonrephasing" in S_by_type
+    ):
+        absorptive = np.real((S_by_type["rephasing"] + S_by_type["nonrephasing"]) / 2.0)
+        spectra_2d.append(np.fft.fftshift(absorptive, axes=(0, 1)))
+        labels_2d.append("absorptive")
+    if "average" in uniq and "average" in S_by_type:
+        spectra_2d.append(np.fft.fftshift(S_by_type["average"], axes=(0, 1)))
+        labels_2d.append("average")
+
+    # Include any additional custom tags (not one of the above) if present
+    for k, v in S_by_type.items():
+        if k not in ("rephasing", "nonrephasing", "average"):
+            spectra_2d.append(np.fft.fftshift(v, axes=(0, 1)))
+            labels_2d.append(k)
+
+    return nu_dets, nu_cohs, spectra_2d, labels_2d

@@ -29,8 +29,6 @@ def _collect_group_files(anchor: Path) -> List[Path]:
     The anchor must be a path to a single `_data.npz` file from an inhomogeneous 1D run.
     """
     base = load_simulation_data(anchor)
-    if not base.get("inhom_enabled", False):
-        raise ValueError("Provided file is not marked as inhomogeneous (inhom_enabled=False).")
     group_id = base.get("inhom_group_id")
     if group_id is None:
         raise ValueError("Missing inhom_group_id in anchor file metadata.")
@@ -49,7 +47,9 @@ def _collect_group_files(anchor: Path) -> List[Path]:
         except Exception:
             continue
         if d.get("inhom_enabled", False) and d.get("inhom_group_id") == group_id:
-            if anchor_tcoh is None or np.isclose(float(d.get("t_coh_value", 0.0)), float(anchor_tcoh)):
+            if anchor_tcoh is None or np.isclose(
+                float(d.get("t_coh_value", 0.0)), float(anchor_tcoh)
+            ):
                 matches.append(p)
     if not matches:
         raise FileNotFoundError("No matching inhomogeneous files found for group.")
@@ -94,7 +94,6 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
         "inhom_enabled": True,
         "inhom_averaged": True,
         "inhom_group_id": first.get("inhom_group_id"),
-        "inhom_total": int(first.get("inhom_total", len(files))),
         "inhom_n_files": len(files),
     }
 

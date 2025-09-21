@@ -155,30 +155,12 @@ def save_simulation_data(
     # Generate unique base filename
     abs_base_path = generate_unique_data_filename(system, sim_config)
 
-    # If inhomogeneous grouping is provided, place outputs under a stable subfolder
-    try:
-        if (
-            metadata
-            and metadata.get("inhom_enabled")
-            and metadata.get("inhom_group_id") is not None
-        ):
-            group = str(metadata.get("inhom_group_id"))
-            p = Path(abs_base_path)
-            abs_base_path = str(p.parent / f"inhom_group_{group}" / p.name)
-    except Exception:
-        # Be robust if metadata is missing or malformed
-        pass
-
     # Append tags for averaged data variants (keeps plotting compatibility)
     suffix_bits: list[str] = []
-    try:
-        if metadata.get("inhom_averaged") is True:
-            suffix_bits.append("inhom_avg")
-        if metadata.get("t_coh_averaged") is True:
-            suffix_bits.append("tcoh_avg")
-    except Exception:
-        # If metadata isn't a dict-like, ignore suffix additions
-        pass
+    if metadata.get("inhom_averaged") is True:
+        suffix_bits.append("inhom_avg")
+    if metadata.get("t_coh_averaged") is True:
+        suffix_bits.append("tcoh_avg")
     if suffix_bits:
         abs_base_path = f"{abs_base_path}_{'_'.join(suffix_bits)}"
 

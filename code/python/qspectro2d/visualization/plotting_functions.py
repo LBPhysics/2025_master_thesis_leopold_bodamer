@@ -66,7 +66,7 @@ def _extend_and_fft(
 ):
     """Pad (time) axes then compute FFTs.
 
-    Returns (freq_axes, data_freq, kept_signal_types).
+    Returns (freq_axes, data_freq, freq_labels).
     Failed signals are skipped but reported; at least one must survive.
     """
     kept_data = []
@@ -94,16 +94,16 @@ def _extend_and_fft(
     if not kept_data:
         raise ValueError("All signals failed during extension.")
     if dimension == "1d":
-        nu_det, freq_datas = compute_1d_fft_wavenumber(
+        nu_det, freq_datas, freq_labels = compute_1d_fft_wavenumber(
             extended_axes, kept_data, signal_types=kept_types
         )
         freq_axes = nu_det
     else:
-        nu_det, nu_coh, freq_datas = compute_2d_fft_wavenumber(
+        nu_det, nu_coh, freq_datas, freq_labels = compute_2d_fft_wavenumber(
             extended_axes[0], extended_axes[1], kept_data, signal_types=kept_types
         )
         freq_axes = (nu_det, nu_coh)
-    return freq_axes, freq_datas, kept_types
+    return freq_axes, freq_datas, freq_labels
 
 
 def _plot_components(
@@ -123,9 +123,8 @@ def _plot_components(
 ) -> List[str]:
     """Loop over components (and signals for time domain) producing figures.
 
-    For time domain we make one figure per (signal, component). For frequency
-    domain we pass the batch to the underlying plot function (it already
-    supports multi-signal overlays / stacking).
+    For both time and frequency domain we make one figure per (signal/label, component).
+    Frequency labels come from the FFT step (e.g., 'rephasing','nonrephasing','absorptive').
     """
     saved_paths: List[str] = []
     for comp in components:
@@ -153,6 +152,42 @@ def _plot_components(
                             **md,
                         )
                     )
+                    base_name = generate_unique_plot_filename(
+                        system=system, sim_config=sim_config, domain=domain, component=comp
+                    )
+                    # Append the freq-domain label to the filename for clear linkage
+                    safe_label = str(st).replace(" ", "_")
+                    filename = f"{base_name}_{safe_label}"
+                    saved = save_fig(
+                        fig,
+                        filename=filename,
+                    )
+                    _collect_saved_paths(saved_paths, saved)
+            else:  # frequency domain: iterate and save one per spectrum label
+                for data, st in zip(datas, signal_types):
+                    md = {**base_metadata, "signal_type": st}
+                    fig = (
+                        plot_func(
+                            axis_det=axis_det,
+                            data=data,
+                            domain=domain,
+                            use_custom_colormap=True,
+                            component=comp,
+                            **kwargs,
+                            **md,
+                        )
+                        if dimension == "1d"
+                        else plot_func(
+                            axis_det=axis_det,
+                            axis_coh=axis_coh,
+                            data=data,
+                            domain=domain,
+                            use_custom_colormap=True,
+                            component=comp,
+                            **kwargs,
+                            **md,
+                        )
+                    )
                     saved = save_fig(
                         fig,
                         filename=generate_unique_plot_filename(
@@ -160,34 +195,6 @@ def _plot_components(
                         ),
                     )
                     _collect_saved_paths(saved_paths, saved)
-            else:  # frequency domain: datas is already batch
-                fig = (
-                    plot_func(
-                        axis_det=axis_det,
-                        data=datas,
-                        domain=domain,
-                        use_custom_colormap=True,
-                        component=comp,
-                        **kwargs,
-                    )
-                    if dimension == "1d"
-                    else plot_func(
-                        axis_det=axis_det,
-                        axis_coh=axis_coh,
-                        data=datas,
-                        domain=domain,
-                        use_custom_colormap=True,
-                        component=comp,
-                        **kwargs,
-                    )
-                )
-                saved = save_fig(
-                    fig,
-                    filename=generate_unique_plot_filename(
-                        system=system, sim_config=sim_config, domain=domain, component=comp
-                    ),
-                )
-                _collect_saved_paths(saved_paths, saved)
         except Exception as e:  # pragma: no cover (defensive path)
             print(f"❌ Error plotting {dimension.upper()} {domain} {comp}: {e}")
     return saved_paths

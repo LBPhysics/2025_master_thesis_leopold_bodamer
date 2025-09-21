@@ -255,8 +255,8 @@ def main() -> None:
     sim_2d = SimulationModuleOQS(sim_cfg_2d, system, laser, bath)
     metadata: Dict[str, Any] = {
         "t_coh_averaged": True,
+        "inhom_averaged": False,
         "signal_types": list(signal_types),
-        "stacked_from_dir": str(in_dir),
     }
     datas: List[np.ndarray] = [stacked[s] for s in signal_types]
 
