@@ -107,16 +107,16 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
         parts.append(f"N{n_atoms}({n_chains}x{n_rings})")
     else:
         parts.append(f"N{n_atoms}")
-    freqs_cm = sys_f.get("frequencies_cm", [])
-    dip_moms = sys_f.get("dip_moments", [])
-    freq_str = "-".join(str(int(f)) for f in freqs_cm)
-    dip_str = "-".join(str(round(d, 1)) for d in dip_moms)
-    parts.append(f"f{freq_str}cm_mu{dip_str}")
+    # For inhomogeneous batches, avoid embedding per-run numeric parameters to keep a stable folder
+    n_inhomogen = int(sim_f.get("n_inhomogen", 1) or 1)
+    if n_inhomogen > 1:
+        # Generic markers so all inhom configs land in the same directory
+        parts.append("inhom")
 
     if n_atoms > 1:
-        # Add coupling strength if applicable
+        # Add coupling strength if applicable. For inhom runs, avoid numeric per-run values.
         coupling_cm = sys_f.get("coupling_cm")
-        if coupling_cm > 0:
+        if coupling_cm and coupling_cm > 0:
             parts.append(f"{round(coupling_cm, 0)}cm")
 
     # Add solver if available
@@ -129,11 +129,6 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
     parts.append(
         f"t_dm{sim_f.get('t_det_max', 'na')}_t_wait_{sim_f.get('t_wait', 'na')}_dt_{sim_f.get('dt', 'na')}"
     )
-
-    n_inhomogen = sim_f.get("n_inhomogen", 1)
-    if n_inhomogen > 1:
-        parts.append("inhom")
-    # Join all parts with path separator
 
     return Path(*parts)
 

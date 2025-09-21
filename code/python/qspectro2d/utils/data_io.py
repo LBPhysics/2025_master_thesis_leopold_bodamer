@@ -155,6 +155,20 @@ def save_simulation_data(
     # Generate unique base filename
     abs_base_path = generate_unique_data_filename(system, sim_config)
 
+    # If inhomogeneous grouping is provided, place outputs under a stable subfolder
+    try:
+        if (
+            metadata
+            and metadata.get("inhom_enabled")
+            and metadata.get("inhom_group_id") is not None
+        ):
+            group = str(metadata.get("inhom_group_id"))
+            p = Path(abs_base_path)
+            abs_base_path = str(p.parent / f"inhom_group_{group}" / p.name)
+    except Exception:
+        # Be robust if metadata is missing or malformed
+        pass
+
     # Append tags for averaged data variants (keeps plotting compatibility)
     suffix_bits: list[str] = []
     try:

@@ -34,6 +34,8 @@ def _collect_group_files(anchor: Path) -> List[Path]:
     group_id = base.get("inhom_group_id")
     if group_id is None:
         raise ValueError("Missing inhom_group_id in anchor file metadata.")
+    # Keep t_coh constant if present (multiple coherence delays in same folder)
+    anchor_tcoh = base.get("t_coh_value", None)
 
     dir_path = Path(anchor).parent
     all_npz = list(dir_path.glob("*_data.npz"))
@@ -47,7 +49,8 @@ def _collect_group_files(anchor: Path) -> List[Path]:
         except Exception:
             continue
         if d.get("inhom_enabled", False) and d.get("inhom_group_id") == group_id:
-            matches.append(p)
+            if anchor_tcoh is None or np.isclose(float(d.get("t_coh_value", 0.0)), float(anchor_tcoh)):
+                matches.append(p)
     if not matches:
         raise FileNotFoundError("No matching inhomogeneous files found for group.")
     return sorted(matches)

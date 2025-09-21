@@ -32,10 +32,16 @@ from qspectro2d.utils.data_io import (
 
 
 def _discover_1d_files(folder: Path) -> List[Path]:
-    """Return sorted list of all *_data.npz files in the folder."""
+    """Return sorted list of all *_data.npz files in the folder.
+
+    If any averaged files ("*_inhom_avg_data.npz") exist, prefer only those.
+    This avoids stacking raw per-config files with duplicate t_coh values.
+    """
     if not folder.is_dir():
         raise NotADirectoryError(f"Not a directory: {folder}")
-    return sorted(folder.glob("*_data.npz"))
+    candidates = sorted(folder.glob("*_data.npz"))
+    avgs = [p for p in candidates if str(p).endswith("_inhom_avg_data.npz")]
+    return avgs if avgs else candidates
 
 
 def _derive_2d_folder(from_1d_folder: Path) -> Path:
@@ -106,6 +112,16 @@ def _load_entries(
             per_sig_data[s].append(arr)
 
     assert t_det is not None and signal_types is not None
+
+    # Guard against duplicate coherence values when averaging was not used
+    unique_count = len(set(map(lambda x: float(x), tcoh_vals)))
+    if unique_count != len(tcoh_vals):
+        raise ValueError(
+            "Found duplicate t_coh_value entries. If this directory contains raw inhomogeneous "
+            "per-config files, run inhom_stack_1d.py first or point this script to the folder "
+            "containing only averaged files (_inhom_avg_data.npz)."
+        )
+
     return tcoh_vals, t_det, signal_types, per_sig_data
 
 

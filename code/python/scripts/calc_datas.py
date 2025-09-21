@@ -174,6 +174,9 @@ def run_1d_mode(args) -> None:
         "t_coh_value": float(t_coh_val),
         "time_cut": float(time_cut),
         "inhom_enabled": False,
+        # Batch metadata for consistent downstream handling
+        "n_batches": 1,
+        "batch_idx": 0,
     }
     abs_data_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
 
@@ -228,6 +231,9 @@ def run_2d_mode(args) -> None:
             "signal_types": sim_cfg.signal_types,
             "t_coh_value": float(t_coh_val),
             "time_cut": float(time_cut),
+            # Batch metadata for consistency with inhom 1D
+            "n_batches": int(n_batches),
+            "batch_idx": int(batch_idx),
         }
         out_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
         saved_paths.append(str(out_path))
