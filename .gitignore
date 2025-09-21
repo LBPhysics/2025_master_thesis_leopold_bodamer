@@ -8,7 +8,7 @@
 /dataSources.local.xml
 
 # My ignored files
-# /figures/figures_from_python/
+/figures/figures_from_python/
 /figures/tests
 latex/test/
 .idea/
