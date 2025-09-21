@@ -287,6 +287,26 @@ def plot_data(
     ):
         # Provided as 2D section but we are 1D: take first window only
         section = section[0]
+
+    # For 2D frequency plots, accept flexible section formats and normalize:
+    # - (min, max)              -> ((min, max), (min, max))
+    # - (min1, max1, min2, max2) -> ((min1, max1), (min2, max2))
+    if dimension == "2d" and section is not None and isinstance(section, (list, tuple)):
+        try:
+            if len(section) == 2 and not isinstance(section[0], (list, tuple)):
+                section = (
+                    (float(section[0]), float(section[1])),
+                    (float(section[0]), float(section[1])),
+                )
+            elif len(section) == 4 and not isinstance(section[0], (list, tuple)):
+                section = (
+                    (float(section[0]), float(section[1])),
+                    (float(section[2]), float(section[3])),
+                )
+            # else: assume already in the shape ((a,b),(c,d))
+        except Exception:
+            # On any parsing issue, drop the section to avoid plotting errors
+            section = None
     time_components = list(components)
     spectral_components = list(components)
 
