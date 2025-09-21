@@ -350,6 +350,10 @@ def _matrix_ODE_paper_2atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     L[idx_22, idx_32] = 1j * E_RWA_minus * sim_oqs.system.dipole_op[3, 2]
     L[idx_22, idx_20] = -1j * E_RWA_minus * sim_oqs.system.dipole_op[2, 0]
 
-    L[idx_33, :] = -L[idx_00, :] - L[idx_11, :] - L[idx_22, :]
+    # Check for NaN/inf values before computing L[idx_33, :]
+    L_sum = L[idx_00, :] + L[idx_11, :] + L[idx_22, :]
+    # Replace NaN/inf with zeros to avoid propagation
+    L_sum = np.nan_to_num(L_sum, nan=0.0, posinf=0.0, neginf=0.0)
+    L[idx_33, :] = -L_sum
 
     return Qobj(L, dims=[[[size], [size]], [[size], [size]]])

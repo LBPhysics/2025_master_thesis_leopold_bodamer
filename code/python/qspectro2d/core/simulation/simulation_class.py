@@ -222,7 +222,9 @@ class SimulationModuleOQS:
         P_wij = power_spectrum_func_paper(w_ij, **args)
         """
         P_wij = self.bath.power_spectrum(w_ij)
-        return np.sin(2 * self.sb_coupling.theta) ** 2 * P_wij
+        result = np.sin(2 * self.sb_coupling.theta) ** 2 * P_wij
+        # Handle NaN/inf values
+        return np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
 
     def time_dep_paper_Gamma_ij(self, i: int, j: int, t: float) -> float:
         """
@@ -247,36 +249,43 @@ class SimulationModuleOQS:
         P_0 = power_spectrum_func_paper(0, **args)
         """
         P_0 = self.bath.power_spectrum(0)
+        P_0 = np.nan_to_num(P_0, nan=0.0, posinf=0.0, neginf=0.0)  # Handle NaN/inf
+
         Gamma_t_ab = 2 * np.cos(2 * self.sb_coupling.theta) ** 2 * P_0  # tilde
         Gamma_t_a0 = (1 - 0.5 * np.sin(2 * self.sb_coupling.theta) ** 2) * P_0
         Gamma_11 = self.time_dep_paper_gamma_ij(2, 1, t)
         Gamma_22 = self.time_dep_paper_gamma_ij(1, 2, t)
         Gamma_abar_0 = 2 * P_0
         Gamma_abar_a = Gamma_abar_0  # holds for dimer
+
+        result = 0.0
         if i == 1:
             if j == 0:
-                return Gamma_t_a0 + 0.5 * self.time_dep_paper_gamma_ij(2, i, t)
+                result = Gamma_t_a0 + 0.5 * self.time_dep_paper_gamma_ij(2, i, t)
             elif j == 1:
-                return Gamma_11
+                result = Gamma_11
             elif j == 2:
-                return Gamma_t_ab + 0.5 * (
-                    self.time_dep_paper_gamma_ij(i, j, t) + self.time_dep_paper_gamma_ij(j, i, t)
-                )
-        if i == 2:
+                gamma_ij = self.time_dep_paper_gamma_ij(i, j, t)
+                gamma_ji = self.time_dep_paper_gamma_ij(j, i, t)
+                result = Gamma_t_ab + 0.5 * (gamma_ij + gamma_ji)
+        elif i == 2:
             if j == 0:
-                return Gamma_t_a0 + 0.5 * self.time_dep_paper_gamma_ij(1, i, t)
+                result = Gamma_t_a0 + 0.5 * self.time_dep_paper_gamma_ij(1, i, t)
             elif j == 1:
-                return Gamma_t_ab + 0.5 * (
-                    self.time_dep_paper_gamma_ij(i, j, t) + self.time_dep_paper_gamma_ij(j, i, t)
-                )
+                gamma_ij = self.time_dep_paper_gamma_ij(i, j, t)
+                gamma_ji = self.time_dep_paper_gamma_ij(j, i, t)
+                result = Gamma_t_ab + 0.5 * (gamma_ij + gamma_ji)
             elif j == 2:
-                return Gamma_22
+                result = Gamma_22
         elif i == 3:
             if j == 0:
-                return Gamma_abar_0
+                result = Gamma_abar_0
             elif j == 1:
-                return Gamma_abar_a + 0.5 * (self.time_dep_paper_gamma_ij(2, j, t))
+                result = Gamma_abar_a + 0.5 * (self.time_dep_paper_gamma_ij(2, j, t))
             elif j == 2:
-                return Gamma_abar_a + 0.5 * (self.time_dep_paper_gamma_ij(1, j, t))
+                result = Gamma_abar_a + 0.5 * (self.time_dep_paper_gamma_ij(1, j, t))
         else:
             raise ValueError("Invalid indices for i and j.")
+
+        # Handle NaN/inf values in the final result
+        return np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
