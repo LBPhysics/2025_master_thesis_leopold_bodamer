@@ -25,7 +25,7 @@ from pathlib import Path
 
 
 def _slurm_script_text(
-    *, job_name: str, n_batches: int, batch_idx: int, simulation_type: str
+    *, job_name: str, n_batches: int, batch_idx: int, simulation_type: str, logs_subdir: str
 ) -> str:
     """Render the SLURM script text for a single batch index.
 
@@ -42,8 +42,8 @@ def _slurm_script_text(
 
     return f"""#!/bin/bash
 #SBATCH --job-name={job_name}
-#SBATCH --output=logs/%x.out
-#SBATCH --error=logs/%x.err
+#SBATCH --output={logs_subdir}/%x.out
+#SBATCH --error={logs_subdir}/%x.err
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=2G
 #SBATCH --time=0-02:00:00
@@ -53,10 +53,10 @@ python ../../calc_datas.py --simulation_type {simulation_type} --n_batches {n_ba
 """
 
 
-def _ensure_dirs(job_dir: Path) -> None:
-    """Create the batching directory and its logs subdirectory if missing."""
+def _ensure_dirs(job_dir: Path, logs_subdir: str) -> None:
+    """Create the batching directory and the given logs subdirectory if missing."""
     job_dir.mkdir(parents=True, exist_ok=True)
-    logs_dir = job_dir / "logs"
+    logs_dir = job_dir / logs_subdir
     logs_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -111,20 +111,23 @@ def main() -> None:
 
     scripts_dir = Path(__file__).resolve().parent  # directory containing this script
 
-    # Create a unique job directory under scripts_dir/batch_jobs
+    # Create a fixed job directory under scripts_dir/batch_jobs (only logs dir will be unique)
     job_root = scripts_dir / "batch_jobs"
     sim_type = str(args.simulation_type).lower()
     base_name = f"{sim_type}_{n_batches}batches"
     job_dir = job_root / base_name
-    suffix = 0
-    while job_dir.exists():
-        suffix += 1
-        job_dir = job_root / f"{base_name}_{suffix}"
 
-    _ensure_dirs(job_dir)
+    # Determine a unique logs subdirectory name within job_dir
+    logs_subdir = "logs"
+    suffix = 0
+    while (job_dir / logs_subdir).exists():
+        suffix += 1
+        logs_subdir = f"logs_{suffix}"
+
+    _ensure_dirs(job_dir, logs_subdir)
 
     action_verb = "Generating" if args.generate_only else "Creating and submitting"
-    print(f"{action_verb} {n_batches} SLURM jobs in {job_dir} ...")
+    print(f"{action_verb} {n_batches} SLURM jobs in {job_dir} (logs -> {logs_subdir}) ...")
 
     for batch_idx in range(n_batches):
         job_name = f"{sim_type}_b{batch_idx:03d}_of_{n_batches:03d}"
@@ -136,6 +139,7 @@ def main() -> None:
             n_batches=n_batches,
             batch_idx=batch_idx,
             simulation_type=sim_type,
+            logs_subdir=logs_subdir,
         )
         script_path.write_text(content, encoding="utf-8")
 

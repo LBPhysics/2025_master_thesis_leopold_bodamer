@@ -273,20 +273,22 @@ def compute_2d_fft_wavenumber(
     datas: List[np.ndarray],
     signal_types: List[str] = ["rephasing"],
 ) -> tuple[np.ndarray, np.ndarray, List[np.ndarray], List[str]]:
-    """Compute 2D FFT S(w_coh, T_wait, w_det) = ∫ E(t_coh, T_wait, t_det) e^{-i w_det t_det -i w_coh t_coh} dt_det dt_coh
+    """Compute 2D FFT S(w_coh, T_wait, w_det) = ∫ E(t_coh, T_wait, t_det) e^{SIGN_DET i w_det t_det + SIGN_COH i w_coh t_coh} dt_det dt_coh
+    The sign depends on how each pulse interacts with the system / which freq component couples
+    - Rephasing: SIGN_DET = -1, SIGN_COH = +1
+    - otherwise I put: SIGN_DET = -1, SIGN_COH = -1
 
     Parameters
     ----------
-    t_dets : np.ndarray Detection time axis (N_t_det,)
-    t_cohs : np.ndarray Coherence time axis (N_t_coh,)
+    t_dets : Detection time (N_t_det,)
+    t_cohs : Coherence time (N_t_coh,)
     datas : List[np.ndarray]
-        2D arrays with shape (N_t_coh, N_t_det)
-        data for the requested signal_types. For absorptive spectra, pass both components
-        [rephasing, nonrephasing].
+        shape (N_t_coh, N_t_det)
+        datas for the requested signal_types.
+        For absorptive: real((S_re + S_nr)/2)
     signal_types : List[str], default=["rephasing"]
         List of signal labels corresponding one-to-one with `datas`.
         Allowed normalized values per entry: "rephasing" or "nonrephasing".
-        For absorptive: provide signal_types=["rephasing", "nonrephasing"].
 
     Returns
     -------
@@ -297,13 +299,6 @@ def compute_2d_fft_wavenumber(
             [rephasing?, nonrephasing?, absorptive?, average?] (fftshifted, scaled).
         labels : List[str]
             Labels corresponding to each spectrum entry.
-
-    Notes
-    -----
-    - The FFT convention follows two successive FFTs (axis=0 then axis=1) with flips
-      depending on the signal_type. Results are scaled by dt_coh*dt_det and fftshifted.
-    - Absorptive spectrum is computed as real((S_re + S_nr)/2) when both components
-      are provided.
     """
     dt_coh = t_cohs[1] - t_cohs[0]
     dt_det = t_dets[1] - t_dets[0]
@@ -317,18 +312,16 @@ def compute_2d_fft_wavenumber(
             raise ValueError(f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes")
 
     def _fft2(arr: np.ndarray, signal_type: str) -> np.ndarray:
-        tmp_local = np.fft.fft(arr, axis=0)
-        tmp_local = np.fft.fft(tmp_local, axis=1)
+        # TODO potentially change this
         sig = signal_type.lower()
         if sig == "rephasing":  # flip coh -> +
-            spec = np.flip(tmp_local, axis=0)
-        elif sig == "nonrephasing":  # flip both -> +
-            spec = np.flip(np.flip(tmp_local, axis=0), axis=1)
-        elif sig == "average":  # no change
-            spec = tmp_local
+            tmp_local = np.fft.ifft(arr, axis=0)
+            spec = np.fft.fft(tmp_local, axis=1)
+            spec *= N_coh  # Compensate for np.fft.ifft normalization (divides by N_coh)
         else:
-            # Unknown tag: treat as no-flip 'normal' FFT
-            spec = tmp_local
+            # nonrephasing / average / Unknown tag: treat as no-flip 'normal' FFT
+            tmp_local = np.fft.fft(arr, axis=0)
+            spec = np.fft.fft(tmp_local, axis=1)
         return spec * (dt_coh * dt_det)
 
     if not datas:
