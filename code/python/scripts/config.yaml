@@ -36,8 +36,8 @@ bath:
   coupling: 0.01   # actually in terms of frequency
 
 config:
-  solver: ME
-  signal_types: [nonrephasing, rephasing, average]
+  solver: Paper_eqs
+  signal_types: [nonrephasing, rephasing]
 
 window:
   t_det_max: 100.0

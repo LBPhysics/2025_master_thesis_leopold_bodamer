@@ -380,14 +380,13 @@ def main():
         type=int,
         nargs=2,
         default=(1, 10),
-        metavar=("DET", "COH"),
-        help="Zero-padding factors for (t_det, t_coh) before FFT (0 0 disables)",
+        help="Zero-padding factors for (<0, >t_max) before FFT (1 1 disables)",
     )
     parser.add_argument(
         "--section",
         type=float,
         nargs="+",
-        default=(1, 2),
+        default=(1.5, 1.7),
         help="Frequency window: 1D -> two floats (min max), 2D -> four floats (min max min max)",
     )
 
