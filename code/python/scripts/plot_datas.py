@@ -162,15 +162,6 @@ def _plot_components(
                             **md,
                         )
                     )
-                    # Add metadata text box to time-domain plots
-                    try:
-                        if hasattr(fig, "axes") and fig.axes:
-                            add_text_box(
-                                ax=fig.axes[0], kwargs={**md, "domain": domain, "component": comp}
-                            )
-                    except Exception as e:
-                        # Optional embellishment; log and continue
-                        print(f"   ⚠️  Text box failed for {st}: {e}")
                     base_name = generate_unique_plot_filename(
                         system=system, sim_config=sim_config, domain=domain, component=comp
                     )
