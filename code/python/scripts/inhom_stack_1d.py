@@ -28,7 +28,33 @@ def _collect_group_files(anchor: Path) -> List[Path]:
 
     The anchor must be a path to a single `_data.npz` file from an inhomogeneous 1D run.
     """
-    base = load_simulation_data(anchor)
+    try:
+        base = load_simulation_data(anchor)
+    except Exception as e:
+        print(f"❌ Anchor file is corrupted: {anchor}")
+        print(f"    Error: {e}")
+        print("🔍 Searching for valid files in the same directory...")
+
+        # Try to find any valid file in the same directory to get the group_id
+        dir_path = Path(anchor).parent
+        all_npz = list(dir_path.glob("*_data.npz"))
+
+        for p in all_npz:
+            if str(p).endswith("_inhom_avg_data.npz"):
+                continue
+            try:
+                temp_data = load_simulation_data(p)
+                if temp_data.get("inhom_enabled", False):
+                    print(f"✅ Found valid anchor file: {p}")
+                    base = temp_data
+                    break
+            except Exception:
+                continue
+        else:
+            raise FileNotFoundError(
+                "No valid inhomogeneous files found in directory to determine group_id"
+            )
+
     group_id = base.get("inhom_group_id")
     if group_id is None:
         raise ValueError("Missing inhom_group_id in anchor file metadata.")
@@ -66,22 +92,51 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
     files = _collect_group_files(Path(abs_path))
 
     # Load first to get axes and metadata
-    first = load_simulation_data(files[0])
+    first = None
+    first_file_idx = 0
+
+    # Find the first loadable file for metadata
+    while first is None and first_file_idx < len(files):
+        try:
+            first = load_simulation_data(files[first_file_idx])
+        except Exception as e:
+            print(f"⚠️  Skipping corrupted file during metadata loading: {files[first_file_idx]}")
+            print(f"    Error: {e}")
+            first_file_idx += 1
+
+    if first is None:
+        raise FileNotFoundError("No valid files found for averaging")
+
     t_det = np.asarray(first["t_det"], dtype=float)
     signal_types: List[str] = list(map(str, first["signal_types"]))
 
     # Collect arrays per type
     stacks: dict[str, List[np.ndarray]] = {k: [] for k in signal_types}
+    valid_files = []
+
     for f in files:
-        d = load_simulation_data(f)
-        # sanity: axes must match shape
-        if not np.allclose(d["t_det"], t_det):
-            raise ValueError(f"Mismatched t_det axis in {f}")
-        for k in signal_types:
-            arr = np.asarray(d[k])
-            if arr.shape != (t_det.size,):
-                raise ValueError(f"Unexpected array shape for {k} in {f}: {arr.shape}")
-            stacks[k].append(arr)
+        try:
+            d = load_simulation_data(f)
+            # sanity: axes must match shape
+            if not np.allclose(d["t_det"], t_det):
+                print(f"⚠️  Skipping file with mismatched t_det axis: {f}")
+                continue
+            for k in signal_types:
+                arr = np.asarray(d[k])
+                if arr.shape != (t_det.size,):
+                    print(f"⚠️  Skipping file with unexpected array shape for {k}: {f}")
+                    continue
+                stacks[k].append(arr)
+            valid_files.append(f)
+        except Exception as e:
+            print(f"⚠️  Skipping corrupted file during averaging: {f}")
+            print(f"    Error: {e}")
+            continue
+
+    if not valid_files:
+        raise FileNotFoundError("No valid files found for averaging")
+
+    print(f"📊 Averaging {len(valid_files)} valid files out of {len(files)} total files")
 
     # Average
     averaged: List[np.ndarray] = []
@@ -96,11 +151,11 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
         "inhom_enabled": True,
         "inhom_averaged": True,
         "inhom_group_id": first.get("inhom_group_id"),
-        "inhom_n_files": len(files),
+        "inhom_n_files": len(valid_files),
     }
 
     # Use original module info to build save context
-    first_bundle = load_simulation_data(files[0])
+    first_bundle = load_simulation_data(valid_files[0])
 
     class _SimModuleStub:
         # Minimal stub to satisfy save_simulation_data interface
