@@ -17,7 +17,10 @@ from pathlib import Path
 from typing import List
 import numpy as np
 
-from qspectro2d.utils import load_simulation_data, save_data_file
+from qspectro2d.utils import (
+    load_simulation_data,
+    save_simulation_data,
+)
 
 
 def _collect_group_files(anchor: Path) -> List[Path]:
@@ -36,6 +39,9 @@ def _collect_group_files(anchor: Path) -> List[Path]:
     all_npz = list(dir_path.glob("*_data.npz"))
     matches: List[Path] = []
     for p in all_npz:
+        # Skip any already averaged outputs
+        if str(p).endswith("_inhom_avg_data.npz"):
+            continue
         try:
             d = load_simulation_data(p)
         except Exception:
@@ -82,7 +88,6 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
     metadata = {
         "signal_types": signal_types,
         "t_coh_value": float(first.get("t_coh_value", 0.0)),
-        "time_cut": float(first.get("time_cut", 0.0)),
         "inhom_enabled": True,
         "inhom_averaged": True,
         "inhom_group_id": first.get("inhom_group_id"),
@@ -90,12 +95,20 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
         "inhom_n_files": len(files),
     }
 
-    # Write averaged to a sibling file with suffix `_inhom_avg`
-    out_path = Path(str(files[0]).replace("_data.npz", "_inhom_avg_data.npz"))
-    if skip_if_exists and out_path.exists():
-        return out_path
+    # Use original module info to build save context
+    first_bundle = load_simulation_data(files[0])
 
-    save_data_file(out_path, metadata, averaged, t_det)
+    class _SimModuleStub:
+        # Minimal stub to satisfy save_simulation_data interface
+        def __init__(self, bundle: dict):
+            self.system = bundle.get("system")
+            self.bath = bundle.get("bath")
+            self.laser = bundle.get("laser")
+            self.simulation_config = bundle.get("sim_config")
+
+    sim_module_stub = _SimModuleStub(first_bundle)  # type: ignore[call-arg]
+
+    out_path = save_simulation_data(sim_module_stub, metadata, averaged, t_det)
     return out_path
 
 

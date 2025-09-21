@@ -152,9 +152,24 @@ def save_simulation_data(
     bath: "BosonicEnvironment" = sim_module.bath
     laser: "LaserPulseSequence" = sim_module.laser
 
-    # Generate unique filenames
+    # Generate unique base filename
     abs_base_path = generate_unique_data_filename(system, sim_config)
-    abs_data_path = Path(f"{abs_base_path}_data.npz")  # still legacy suffix pattern
+
+    # Append tags for averaged data variants (keeps plotting compatibility)
+    suffix_bits: list[str] = []
+    try:
+        if metadata.get("inhom_averaged") is True:
+            suffix_bits.append("inhom_avg")
+        if metadata.get("t_coh_averaged") is True:
+            suffix_bits.append("tcoh_avg")
+    except Exception:
+        # If metadata isn't a dict-like, ignore suffix additions
+        pass
+    if suffix_bits:
+        abs_base_path = f"{abs_base_path}_{'_'.join(suffix_bits)}"
+
+    # Compose final paths (legacy suffix pattern retained)
+    abs_data_path = Path(f"{abs_base_path}_data.npz")
     abs_info_path = Path(f"{abs_base_path}_info.pkl")
 
     # Save files
@@ -204,26 +219,38 @@ def load_info_file(abs_info_path: Path) -> dict:
     try:
         logger.debug("Loading info: %s", abs_info_path)
 
-        # 1. Try to load the file directly if it exists
+        # Try to load the file directly if it exists
         if abs_info_path.exists():
             with open(abs_info_path, "rb") as info_file:
                 info = pickle.load(info_file)
             logger.info("Loaded info: %s", abs_info_path)
             return info
+
+        # Gracefully handle absent info files (e.g., post-processed averaged data)
+        logger.warning("Info file not found; continuing without it: %s", abs_info_path)
+        return {}
     except Exception:
         logger.exception("Failed to load info: %s", abs_info_path)
         raise
 
 
-def load_simulation_data(abs_path: Path) -> dict:
-    """Load simulation data (new format only)."""
+def load_simulation_data(abs_path: Path | str) -> dict:
+    """Load simulation data bundle (new format only) from either a data or info file path.
+
+    Accepts a `str` or `Path`. Determines the paired file by suffix:
+    - If path ends with `_data.npz`, loads that and the corresponding `_info.pkl`.
+    - If path ends with `_info.pkl`, loads that and the corresponding `_data.npz`.
+    """
+    p = Path(abs_path)
+    s = str(p)
+
     # Determine the base path (without file extensions)
-    if abs_path.endswith("_data.npz"):
-        abs_data_path = Path(abs_path)
-        abs_info_path = Path(abs_path[:-9] + "_info.pkl")
-    elif abs_path.endswith("_info.pkl"):
-        abs_info_path = Path(abs_path)
-        abs_data_path = Path(abs_path[:-9] + "_data.npz")
+    if s.endswith("_data.npz"):
+        abs_data_path = p
+        abs_info_path = Path(s[:-9] + "_info.pkl")
+    elif s.endswith("_info.pkl"):
+        abs_info_path = p
+        abs_data_path = Path(s[:-9] + "_data.npz")
     else:
         raise ValueError("Path must end with '_data.npz' or '_info.pkl'")
 
@@ -231,7 +258,8 @@ def load_simulation_data(abs_path: Path) -> dict:
     data_dict = load_data_file(abs_data_path)
     info_dict = load_info_file(abs_info_path)
 
-    # Combine data and info into a single dictionary
+    # Combine data and info into a single dictionary (info may be empty if missing)
+    info_dict = info_dict or {}
     return {**data_dict, **info_dict}
 
 
