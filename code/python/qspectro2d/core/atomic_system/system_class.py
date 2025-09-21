@@ -39,11 +39,41 @@ class AtomicSystem:
         # Internal fs^-1 storage (single source of truth for dynamics)
         self._frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
         self._coupling_fs = convert_cm_to_fs(self.coupling_cm)
-        self._delta_fs = convert_cm_to_fs(self.delta_inhomogen_cm)
+        self.delta_inhomogen_fs = convert_cm_to_fs(self.delta_inhomogen_cm)
 
         # Always set cylindrical positions and compute isotropic couplings
         self.n_rings = self.n_atoms // self.n_chains
         self._setup_geometry_and_couplings()
+
+    @property
+    def frequencies_fs(self) -> np.ndarray:
+        """Return site frequencies in fs^-1."""
+        return self._frequencies_fs
+
+    @property
+    def frequencies_cm(self) -> np.ndarray:
+        """Return site frequencies in cm^-1."""
+        return np.asarray(self.frequencies_cm, dtype=float)
+
+    @property
+    def coupling_cm(self) -> float:
+        """Return coupling strength in cm^-1."""
+        return self.coupling_cm
+
+    @property
+    def coupling_fs(self) -> float:
+        """Return coupling strength in fs^-1."""
+        return self._coupling_fs
+
+    @property
+    def delta_inhomogen_fs(self) -> float:
+        """Return inhomogeneous broadening in fs^-1."""
+        return self.delta_inhomogen_fs
+
+    @property
+    def delta_inhomogen_cm(self) -> float:
+        """Return inhomogeneous broadening in cm^-1."""
+        return self.delta_inhomogen_cm
 
     def update_frequencies_cm(self, new_freqs: List[float]):
         if len(new_freqs) != self.n_atoms:
@@ -60,7 +90,7 @@ class AtomicSystem:
     def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
         """Update inhomogeneous broadening (cm^-1)."""
         self.delta_inhomogen_cm = new_delta_inhomogen_cm
-        self._delta_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
+        self.delta_inhomogen_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
         # Not strictly needed for operators, but keep consistency
         self.reset_cache()
 

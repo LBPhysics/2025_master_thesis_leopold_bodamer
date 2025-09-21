@@ -4,9 +4,9 @@ This script creates one SLURM script per batch index (0..n_batches-1)
 and, by default, submits them with ``sbatch``.
 
 Layout:
-- Scripts are generated under ``scripts_dir/batch_jobs/{n_batches}batching``
+- Scripts are generated under ``scripts_dir/batch_jobs/{n_batches}batches``
     where ``scripts_dir`` is the directory containing this file.
-- Logs are written to ``scripts_dir/batch_jobs/{n_batches}batching/logs/``
+- Logs are written to ``scripts_dir/batch_jobs/{n_batches}batches[/_i]/logs/``
     via Slurm's ``--output``/``--error`` options.
 
 Each job runs (from the batching directory):
@@ -100,15 +100,24 @@ def main() -> None:
     if n_batches <= 0:
         raise ValueError("--n_batches must be a positive integer")
 
-    scripts_dir = Path(__file__).resolve().parent  # scripts_dir containing calc_datas.py
-    job_dir = scripts_dir / "batch_jobs" / f"{n_batches}batching"
+    scripts_dir = Path(__file__).resolve().parent  # directory containing this script
+
+    # Create a unique job directory under scripts_dir/batch_jobs
+    job_root = scripts_dir / "batch_jobs"
+    base_name = f"{n_batches}batches"
+    job_dir = job_root / base_name
+    suffix = 0
+    while job_dir.exists():
+        suffix += 1
+        job_dir = job_root / f"{base_name}_{suffix}"
+
     _ensure_dirs(job_dir)
 
     action_verb = "Generating" if args.generate_only else "Creating and submitting"
     print(f"{action_verb} {n_batches} SLURM jobs in {job_dir} ...")
 
     for batch_idx in range(n_batches):
-        job_name = f"calc_datas_2d_b{batch_idx:03d}_of_{n_batches:03d}"
+        job_name = f"calc2d_b{batch_idx:03d}_of_{n_batches:03d}"
         script_name = f"slurm_{job_name}.slurm"
         script_path = job_dir / script_name
 
