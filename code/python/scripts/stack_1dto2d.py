@@ -151,6 +151,11 @@ def main() -> None:
     parser.add_argument(
         "--abs_path", type=str, required=True, help="Absolute path to the 1D results directory"
     )
+    parser.add_argument(
+        "--skip_if_exists",
+        action="store_true",
+        help="If the expected 2D output already exists, skip stacking and exit",
+    )
     args = parser.parse_args()
 
     sanitized = args.abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
@@ -165,6 +170,47 @@ def main() -> None:
         print("No files found; aborting.")
         sys.exit(1)
 
+    # Load the 1D bundle info once and re-use it for saving via save_simulation_data
+    first_data = files[0]
+    if str(first_data).endswith("_data.npz"):
+        first_info = Path(str(first_data)[:-9] + "_info.pkl")
+    else:
+        first_info = first_data.with_suffix(".pkl")
+
+    info = load_info_file(first_info)
+    if not info:
+        print(f"❌ Could not load info from {first_info}; cannot save 2D bundle.")
+        sys.exit(1)
+
+    # Prepare a minimal sim module stub with adjusted simulation_type for 2D naming
+    system = info["system"]
+    bath = info["bath"]
+    laser = info["laser"]
+    original_cfg = info["sim_config"]
+    sim_cfg_2d = copy.deepcopy(original_cfg)
+    # Ensure the directory naming routes to 2D location
+    if hasattr(sim_cfg_2d, "simulation_type"):
+        sim_cfg_2d.simulation_type = "2d"
+
+    # Compute expected output path to support skip_if_exists
+    # Mirror naming used by save_simulation_data: generate_unique_data_filename + suffixes
+    try:
+        from qspectro2d.utils.file_naming import generate_unique_data_filename
+
+        base_path = generate_unique_data_filename(system, sim_cfg_2d)
+        suffix_bits = ["tcoh_avg"]  # for 1d->2d stacking
+        predicted_base = f"{base_path}_{'_'.join(suffix_bits)}"
+        predicted_out = Path(f"{predicted_base}_data.npz")
+        if args.skip_if_exists and predicted_out.exists():
+            print(f"⏭️  Skipping: 2D dataset already exists: {predicted_out}")
+            print("Done.")
+            return
+    except Exception as e:
+        # Non-fatal: continue without skip optimization if prediction fails
+        if args.skip_if_exists:
+            print(f"⚠️  Could not predict output path for skip check: {e}")
+
+    # Proceed with loading/staking since we didn't early-return
     tcoh_vals, t_det, signal_types, per_sig_data = _load_entries(files)
     t_coh, stacked = _stack_to_2d(tcoh_vals, t_det, signal_types, per_sig_data)
 
@@ -227,28 +273,6 @@ def main() -> None:
             print(f"  t_coh(fs): [{fmt_vals(all_vals)}]")
         else:
             print("  (none)")
-
-    # Load the 1D bundle info once and re-use it for saving via save_simulation_data
-    first_data = files[0]
-    if str(first_data).endswith("_data.npz"):
-        first_info = Path(str(first_data)[:-9] + "_info.pkl")
-    else:
-        first_info = first_data.with_suffix(".pkl")
-
-    info = load_info_file(first_info)
-    if not info:
-        print(f"❌ Could not load info from {first_info}; cannot save 2D bundle.")
-        sys.exit(1)
-
-    # Prepare a minimal sim module stub with adjusted simulation_type for 2D naming
-    system = info["system"]
-    bath = info["bath"]
-    laser = info["laser"]
-    original_cfg = info["sim_config"]
-    sim_cfg_2d = copy.deepcopy(original_cfg)
-    # Ensure the directory naming routes to 2D location
-    if hasattr(sim_cfg_2d, "simulation_type"):
-        sim_cfg_2d.simulation_type = "2d"
 
     from qspectro2d.core import SimulationModuleOQS  # avoid circular import
 

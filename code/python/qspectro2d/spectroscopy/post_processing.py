@@ -311,21 +311,47 @@ def compute_2d_fft_wavenumber(
         if arr.shape != (N_coh, N_det):
             raise ValueError(f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes")
 
-    def _fft2(arr: np.ndarray, signal_type: str) -> np.ndarray:
-        # TODO potentially change this
+    def _fft2(arr: np.ndarray, signal_type: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Compute 2D transform and provide matching frequency axes with shifts.
+
+        Rules for axis shifting (requested):
+        - If transform along an axis uses np.fft.fft  -> use np.fft.fftshift on that axis array
+        - If transform along an axis uses np.fft.ifft -> use np.fft.ifftshift on that axis array
+
+        Returns
+        -------
+        (spec, freq_cohs_ax, freq_dets_ax)
+            spec : complex ndarray (N_coh, N_det)
+                2D spectrum scaled by (dt_coh * dt_det). No additional fftshift/ifftshift is
+                applied to the array itself here beyond the transforms above.
+            freq_cohs_ax : ndarray (N_coh,)
+                Frequency axis for coherence dimension (cycles/fs), shifted according to rule.
+            freq_dets_ax : ndarray (N_det,)
+                Frequency axis for detection dimension (cycles/fs), shifted according to rule.
+        """
+
         sig = signal_type.lower()
+
+        # Compute the 2D transform with chosen sign convention
         if sig == "rephasing":
+            # coh:  fft  (- sign), det: ifft (+ sign)
             tmp_local = np.fft.fft(arr, axis=0)
-            spec = (
-                np.fft.ifft(tmp_local, axis=1) * N_det
-            )  # Compensate for np.fft.ifft normalization (divides by N_det)
+            spec = np.fft.ifft(tmp_local, axis=1) * N_det  # ifft normalization compensation
+
+            # Axes: fft -> fftshift, ifft -> ifftshift
+            freq_cohs_ax = np.fft.fftshift(np.fft.fftfreq(N_coh, d=dt_coh))
+            freq_dets_ax = np.fft.ifftshift(np.fft.fftfreq(N_det, d=dt_det))
+
         else:
-            # nonrephasing / average / Unknown tag: treat as no-flip 'normal' FFT
-            tmp_local = (
-                np.fft.ifft(arr, axis=0) * N_coh
-            )  # Compensate for np.fft.ifft normalization (divides by N_coh)
+            # nonrephasing / average / unknown: ifft both (+, +)
+            tmp_local = np.fft.ifft(arr, axis=0) * N_coh  # ifft normalization compensation
             spec = np.fft.ifft(tmp_local, axis=1) * N_det
-        return spec * (dt_coh * dt_det)
+
+            # Axes: ifft -> ifftshift on both
+            freq_cohs_ax = np.fft.ifftshift(np.fft.fftfreq(N_coh, d=dt_coh))
+            freq_dets_ax = np.fft.ifftshift(np.fft.fftfreq(N_det, d=dt_det))
+
+        return spec * (dt_coh * dt_det), freq_cohs_ax, freq_dets_ax
 
     if not datas:
         raise ValueError("'datas' must contain at least one 2D array")
@@ -337,19 +363,20 @@ def compute_2d_fft_wavenumber(
     # Validate all arrays and compute individual spectra
     # Compute spectra dictionary by type for first occurrence
     S_by_type: dict[str, np.ndarray] = {}
+    axes_by_type: dict[str, tuple[np.ndarray, np.ndarray]] = {}
     for idx, (data, sig) in enumerate(zip(datas, signal_types)):
         _validate(data, f"datas[{idx}]")
         sig_norm = sig.lower()
         if sig_norm not in S_by_type:
-            S_by_type[sig_norm] = _fft2(data, sig_norm)
+            spec, f_coh_ax, f_det_ax = _fft2(data, sig_norm)
+            S_by_type[sig_norm] = spec
+            axes_by_type[sig_norm] = (f_coh_ax, f_det_ax)
 
     uniq = set(map(str.lower, signal_types))
 
-    # Frequency axes & shift
-    freq_cohs = np.fft.fftfreq(N_coh, d=dt_coh)
-    freq_dets = np.fft.fftfreq(N_det, d=dt_det)
-    freq_cohs = np.fft.fftshift(freq_cohs)
-    freq_dets = np.fft.fftshift(freq_dets)
+    # Frequency axes & shift (legacy behavior retained for public API)
+    freq_cohs = np.fft.fftshift(np.fft.fftfreq(N_coh, d=dt_coh))
+    freq_dets = np.fft.fftshift(np.fft.fftfreq(N_det, d=dt_det))
 
     nu_cohs = freq_cohs / 2.998 * 10
     nu_dets = freq_dets / 2.998 * 10
@@ -357,6 +384,7 @@ def compute_2d_fft_wavenumber(
     # Assemble outputs in deterministic order and fftshift each
     spectra_2d: List[np.ndarray] = []
     labels_2d: List[str] = []
+
     if "rephasing" in uniq and "rephasing" in S_by_type:
         spectra_2d.append(np.fft.fftshift(S_by_type["rephasing"], axes=(0, 1)))
         labels_2d.append("rephasing")
