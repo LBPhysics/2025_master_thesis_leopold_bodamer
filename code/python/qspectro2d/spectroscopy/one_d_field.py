@@ -128,8 +128,11 @@ def compute_polarization_over_window(
 
     if sim.simulation_config.rwa_sl:
         # States are stored in the rotating frame; convert back to lab for polarization
+        # Use RELATIVE times w.r.t. the start of the simulation window to avoid
+        # imprinting a t_coh-dependent global phase across traces.
+        window_rel = np.asarray(window) - float(res.times[0])
         window_states = from_rotating_frame_list(
-            window_states, window, sim.system.n_atoms, sim.laser.carrier_freq_fs
+            window_states, window_rel, sim.system.n_atoms, sim.laser.carrier_freq_fs
         )
 
     # Analytical polarization using positive-frequency part of dipole operator
@@ -157,11 +160,11 @@ def sim_with_only_pulses(
 def _compute_P_phi1_phi2(
     sim: SimulationModuleOQS, phi1: float, phi2: float
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Compute P_{phi1,phi2}(t_det) = P_total - Σ_i P_i for current phases.
+    """Compute third-order P_{phi1,phi2}(t_det) via inclusion–exclusion with probe phase fixed at 0.
 
+    Uses: P^(3) ≈ P_total - Σ_i P_i - Σ_{i<j} P_{ij}
     Returns (t_det, P_phi1_phi2(t_det)).
     """
-    # Work on copies to avoid permanently mutating `sim`
     sim_work = deepcopy(sim)
     sim_work.laser.pulse_phases = [phi1, phi2]
 
@@ -176,17 +179,23 @@ def _compute_P_phi1_phi2(
         _, P_i = compute_polarization_over_window(sim_i, t_det_actual)
         P_linear_sum += P_i
 
-    P_phi = P_total - P_linear_sum
+    # Two-pulse signals: pulses (i,j) active
+    P_two_sum = np.zeros_like(P_total, dtype=np.complex128)
+    n_p = len(sim_work.laser.pulses)
+    for i in range(n_p):
+        for j in range(i + 1, n_p):
+            sim_ij = sim_with_only_pulses(sim_work, [i, j])
+            _, P_ij = compute_polarization_over_window(sim_ij, t_det_actual)
+            P_two_sum += P_ij
+
+    P_phi = P_total - P_linear_sum - P_two_sum
     return t_det_a, P_phi
 
 
 def _worker_P_phi_pair(
     sim_template: SimulationModuleOQS, phi1: float, phi2: float
 ) -> Tuple[float, float, np.ndarray, np.ndarray]:
-    """Thread worker: compute (phi1, phi2, t_det, P_{phi1,phi2}).
-
-    A deep copy of the simulation is created per worker to avoid shared state.
-    """
+    """Process worker: compute (phi1, phi2, t_det, P_{phi1,phi2})."""
     sim_local = deepcopy(sim_template)
     t_det_a, P_phi = _compute_P_phi1_phi2(sim_local, phi1, phi2)
     return phi1, phi2, t_det_a, P_phi
@@ -197,7 +206,7 @@ def phase_cycle_component(
     P_grid: np.ndarray,
     *,
     lmn: Tuple[int, int, int] = (0, 0, 0),
-    phi_det: float = 0.0,  # default is overridden at call site using DETECTION_PHASE
+    phi_det: float = 0.0,
     normalize: bool = False,
 ) -> np.ndarray:
     """Extract P_{l,m,n}(t) from a grid P^3[phi1,phi2,t].
@@ -262,6 +271,8 @@ def parallel_compute_1d_e_comps(
     n_t = len(sim_oqs.t_det)
     sig_types = sim_oqs.simulation_config.signal_types
     phi_det_val = phi_det if phi_det is not None else float(DETECTION_PHASE)
+    if len(sim_oqs.laser.pulses) < 3:
+        raise ValueError("3 pulses (pump, pump, probe) are required.")
 
     # Optional time mask (keep length constant)
     # NOTE:
@@ -279,7 +290,7 @@ def parallel_compute_1d_e_comps(
         # Build mask over the local detection axis; negative cut -> all zeros
         t_mask = (sim_oqs.t_det <= cut_rel).astype(np.float64)
 
-    # Compute P_{phi1,phi2} grid once for this realization
+    # Compute P_{phi1,phi2} grid once for this realization (probe phase fixed to 0)
     P_grid = np.zeros((len(phases_eff), len(phases_eff), n_t), dtype=np.complex128)
     futures = []
     # Respect configured/SLURM CPU allocation to avoid oversubscription on HPC

@@ -167,6 +167,27 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
 
     sim_module_stub = _SimModuleStub(first_bundle)  # type: ignore[call-arg]
 
+    # If skip_if_exists, check whether an averaged file already exists for this group and t_coh.
+    # We detect existence by attempting to build the same base name the saver would create;
+    # since generate_unique_data_filename uses system+sim_config, we can't reconstruct it here.
+    # Instead, we look alongside input files for a sibling averaged file with the same directory
+    # and suffix pattern '*_inhom_avg_data.npz' and matching t_coh_value.
+    if skip_if_exists:
+        folder = Path(abs_path).parent
+        existing = list(folder.glob("*_inhom_avg_data.npz"))
+        for p in existing:
+            try:
+                d = load_simulation_data(p)
+                if (
+                    d.get("inhom_averaged", False)
+                    and d.get("inhom_group_id") == metadata.get("inhom_group_id")
+                    and np.isclose(float(d.get("t_coh_value", 0.0)), float(metadata["t_coh_value"]))
+                ):
+                    print(f"⏭️  Averaged file already exists for this t_coh in folder: {p}")
+                    return p
+            except Exception:
+                continue
+
     out_path = save_simulation_data(sim_module_stub, metadata, averaged, t_det)
     return out_path
 

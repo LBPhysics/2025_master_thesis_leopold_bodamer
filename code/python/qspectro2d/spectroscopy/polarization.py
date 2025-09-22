@@ -9,8 +9,15 @@ from qutip import Qobj, ket2dm, expect
 def complex_polarization(
     dipole_op: Qobj, state: Union[Qobj, List[Qobj]]
 ) -> Union[complex, np.ndarray]:
-    """Return complex / analytical polarization(s) for state(s) given dipole operator.
-    -> extracts only the positive frequency part of the polarization.
+    """Return complex/analytical polarization(s) P^(+)(t) for given state(s).
+
+    Physics convention:
+    - The positive-frequency part of the dipole operator corresponds to the
+      lowering operator μ^(-) in the energy eigenbasis and carries the
+      exp(-i ω t) time dependence relevant for emitted fields.
+    - Therefore we project the dipole operator onto its strictly upper-triangular
+      part (k = -1), which selects matrix elements connecting higher to lower
+      energy states (|lower⟩⟨higher|).
 
     Accepts a single Qobj (ket or density matrix) or list of Qobj.
     """
@@ -47,8 +54,8 @@ def _single_qobj__complex_pol(dipole_op: Qobj, state: Qobj) -> complex:
         If state is not a ket or density matrix.
     """
     rho = ket2dm(state) if state.isket else state
-    N = dipole_op.shape[0]
-    # extract positive frequency part of dipole operator
+    # Positive-frequency part for this codebase's basis ordering corresponds to
+    # the strictly UPPER-triangular portion (i < j) in the energy eigenbasis.
     dipole_op_pos = Qobj(np.triu(dipole_op.full(), k=1), dims=dipole_op.dims)
 
     pol = expect(dipole_op_pos, rho)

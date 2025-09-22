@@ -84,7 +84,7 @@ class SimulationModuleOQS:
         lowering_op = self.system.to_eigenbasis(lowering_op)
         if self.simulation_config.rwa_sl:
             E_plus_RWA = e_pulses(t, self.laser)
-            return -(lowering_op.dag() * E_plus_RWA + lowering_op * np.conj(E_plus_RWA))
+            return -(lowering_op * E_plus_RWA + lowering_op.dag() * np.conj(E_plus_RWA))
         dipole_op = lowering_op + lowering_op.dag()
         E_plus = epsilon_pulses(t, self.laser)
         return -dipole_op * (E_plus + np.conj(E_plus))

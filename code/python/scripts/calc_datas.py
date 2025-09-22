@@ -69,6 +69,34 @@ def _compute_e_components_for_tcoh(
     return E_list
 
 
+def _make_inhom_group_id(sim_oqs: SimulationModuleOQS, n_inhom: int, delta_cm: float) -> str:
+    """Create a deterministic group id for inhomogeneous runs across batches.
+
+    Uses a UUID5 over a canonical string built from stable configuration fields.
+    This ensures separate batched runs with identical settings share the same id.
+    """
+    import uuid
+
+    sim_cfg = sim_oqs.simulation_config
+    freqs = np.asarray(sim_oqs.system.frequencies_cm, dtype=float)
+    sig_types = list(map(str, getattr(sim_cfg, "signal_types", [])))
+
+    canonical_fields = {
+        "system": sim_oqs.system.__class__.__name__,
+        "freqs": np.array2string(freqs, precision=8, separator=","),
+        "delta_cm": f"{float(delta_cm):.8g}",
+        "n_inhom": int(n_inhom),
+        "t_coh": f"{float(getattr(sim_cfg, 't_coh', 0.0)):.8g}",
+        "dt": str(getattr(sim_cfg, "dt", None)),
+        "t_dm": str(getattr(sim_cfg, "t_dm", None)),
+        "t_wait": str(getattr(sim_cfg, "t_wait", None)),
+        "signal_types": ",".join(sig_types),
+    }
+    canonical = "|".join(f"{k}={v}" for k, v in canonical_fields.items())
+    gid = uuid.uuid5(uuid.NAMESPACE_URL, canonical)
+    return str(gid)
+
+
 # ---------------------------------------------------------------------------
 # Execution modes
 # ---------------------------------------------------------------------------
@@ -117,10 +145,8 @@ def run_1d_mode(args) -> None:
                 f"📦 Batching: {batch_note}; total configs={n_inhom}; this job covers no indices (empty chunk)"
             )
 
-        # Stable group id to later stack-average this set
-        import uuid
-
-        inhom_group_id = str(uuid.uuid4())
+        # Stable, deterministic group id based on configuration (same across batches)
+        inhom_group_id = _make_inhom_group_id(sim_oqs, n_inhom=n_inhom, delta_cm=delta_cm)
         saved_paths: list[str] = []
         start_time = time.time()
         for idx in indices.tolist():
@@ -144,6 +170,9 @@ def run_1d_mode(args) -> None:
                 "inhom_enabled": True,
                 "inhom_group_id": inhom_group_id,
                 "inhom_averaged": False,
+                # Optional traceability helpers (not required by stacking)
+                "inhom_config_index": int(idx),
+                "inhom_total": int(n_inhom),
             }
             out_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
             saved_paths.append(str(out_path))

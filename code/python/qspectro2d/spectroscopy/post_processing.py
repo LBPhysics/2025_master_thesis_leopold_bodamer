@@ -208,8 +208,8 @@ def compute_1d_fft_wavenumber(
 
     def _fft1d(arr: np.ndarray) -> np.ndarray:
         """Compute 1D FFT with scaling and shift."""
-        spec = np.fft.fft(arr)
-        spec = np.fft.fftshift(spec)
+        spec = np.fft.ifft(arr)
+        spec = np.fft.ifftshift(spec)
         return spec * dt_det  # Scale by time step for consistency with 2D case
 
     if not datas:
@@ -260,7 +260,7 @@ def compute_1d_fft_wavenumber(
 
     # Generate frequency axis and shift
     freq_dets = np.fft.fftfreq(N_t_det, d=dt_det)
-    freq_dets = np.fft.fftshift(freq_dets)
+    freq_dets = np.fft.ifftshift(freq_dets)
 
     nu_dets = freq_dets / 2.998 * 10
 
@@ -314,14 +314,17 @@ def compute_2d_fft_wavenumber(
     def _fft2(arr: np.ndarray, signal_type: str) -> np.ndarray:
         # TODO potentially change this
         sig = signal_type.lower()
-        if sig == "rephasing":  # flip coh -> +
-            tmp_local = np.fft.ifft(arr, axis=0)
-            spec = np.fft.fft(tmp_local, axis=1)
-            spec *= N_coh  # Compensate for np.fft.ifft normalization (divides by N_coh)
+        if sig == "rephasing":
+            tmp_local = np.fft.fft(arr, axis=0)
+            spec = (
+                np.fft.ifft(tmp_local, axis=1) * N_det
+            )  # Compensate for np.fft.ifft normalization (divides by N_det)
         else:
             # nonrephasing / average / Unknown tag: treat as no-flip 'normal' FFT
-            tmp_local = np.fft.fft(arr, axis=0)
-            spec = np.fft.fft(tmp_local, axis=1)
+            tmp_local = (
+                np.fft.ifft(arr, axis=0) * N_coh
+            )  # Compensate for np.fft.ifft normalization (divides by N_coh)
+            spec = np.fft.ifft(tmp_local, axis=1) * N_det
         return spec * (dt_coh * dt_det)
 
     if not datas:
