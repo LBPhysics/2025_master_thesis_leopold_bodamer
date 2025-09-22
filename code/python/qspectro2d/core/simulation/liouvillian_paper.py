@@ -38,7 +38,7 @@ def _matrix_ODE_paper_1atom(t: float, sim_oqs: SimulationModuleOQS) -> Qobj:
     E_RWA_plus = e_pulses(t, pulse_seq)
     E_RWA_minus = np.conj(E_RWA_plus)
     mu = sim_oqs.system.dip_moments[0]  # dipole op looks the same in both bases
-    w0 = sim_oqs.system._frequencies_fs[0]
+    w0 = sim_oqs.system.frequencies_fs[0]
     wL = pulse_seq.carrier_freq_fs
     """
     from qspectro2d.core.bath_system.bath_fcts import bath_to_rates

@@ -3,7 +3,7 @@ Generate and (optionally) submit a SLURM job to plot data.
 
 Flow (kept simple to match the new stacking script):
     1) Normalize the provided path to the 1D results directory.
-    2) Invoke `stack_1dto2d.py --abs_path <1d_dir>` to build/update the 2D dataset.
+    2) Invoke `stack_times.py --abs_path <1d_dir>` to build/update the 2D dataset.
     3) Derive the 2D path deterministically and submit a job to run
        `plot_datas.py --abs_path <2d_data.npz>`.
 """
@@ -23,7 +23,9 @@ def _derive_1d_dir(abs_path: str) -> Path:
 
     Also sanitizes accidental newlines/carriage-returns or stray quotes from copy/paste.
     """
-    sanitized = abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    sanitized = (
+        abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    )
     p = Path(sanitized).expanduser().resolve()
     return p if p.is_dir() else p.parent
 
@@ -49,11 +51,11 @@ def ensure_2d_dataset(abs_path: str) -> Path:
     one_d_dir = _derive_1d_dir(abs_path)
 
     # Always run stacking (kept simple; idempotent and quick compared to compute)
-    cmd = ["python", "stack_1dto2d.py", "--abs_path", str(one_d_dir)]
+    cmd = ["python", "stack_times.py", "--abs_path", str(one_d_dir)]
     proc = run(cmd, cwd=SCRIPTS_DIR, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(
-            f"stack_1dto2d.py failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
+            f"stack_times.py failed:\nSTDOUT:\n{proc.stdout}\nSTDERR:\n{proc.stderr}"
         )
 
     # Try to parse the saved path from stdout
@@ -65,7 +67,9 @@ def ensure_2d_dataset(abs_path: str) -> Path:
 
     # Fallback: discover newest *_data.npz in the derived 2D directory
     two_d_dir = _derive_2d_dir(one_d_dir)
-    candidates = sorted(two_d_dir.glob("*_data.npz"), key=lambda p: p.stat().st_mtime, reverse=True)
+    candidates = sorted(
+        two_d_dir.glob("*_data.npz"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
     if candidates:
         return candidates[0]
     raise RuntimeError(

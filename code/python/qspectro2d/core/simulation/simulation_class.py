@@ -9,11 +9,11 @@ from qutip import Qobj, QobjEvo, ket2dm
 from typing import List, Tuple, Union
 from qutip import BosonicEnvironment
 
-from .sim_config import SimulationConfig
+from qspectro2d.core.simulation.sim_config import SimulationConfig
 from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.core.laser_system.laser_fcts import e_pulses, epsilon_pulses
-from qspectro2d.core.system_bath_class import SystemBathCoupling
+from qspectro2d.core.atom_bath_class import AtomBathCoupling
 
 
 @dataclass
@@ -24,11 +24,11 @@ class SimulationModuleOQS:
     laser: LaserPulseSequence
     bath: BosonicEnvironment
 
-    sb_coupling: SystemBathCoupling = field(init=False)
+    sb_coupling: AtomBathCoupling = field(init=False)
 
     def __post_init__(self) -> None:
         # TODO THEY COULD POTENTIALLY CHANGE AFTER CONSTRUCTION
-        self.sb_coupling = SystemBathCoupling(self.system, self.bath)
+        self.sb_coupling = AtomBathCoupling(self.system, self.bath)
 
     # --- Deferred solver-dependent initialization ---------------------------------
     @property

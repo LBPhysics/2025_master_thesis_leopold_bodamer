@@ -1,11 +1,10 @@
 # Pulse and LaserPulseSequence classes for structured pulse handling
 
 from dataclasses import dataclass, field  # for the class definiton
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional
 
 import numpy as np
-import json
-from qspectro2d.constants import convert_cm_to_fs, convert_fs_to_cm
+from qspectro2d.utils.constants import convert_cm_to_fs, convert_fs_to_cm
 
 # Default Gaussian active window size in multiples of FWHM that roughly
 # corresponds to ~1% envelope cutoff at the boundaries.
@@ -111,12 +110,6 @@ class LaserPulse:
             "pulse_freq_cm": self.pulse_freq_cm,
             "envelope_type": self.envelope_type,
         }
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "LaserPulse":
-        if "pulse_freq_cm" not in data:
-            raise KeyError("Missing required key 'pulse_freq_cm' (cm^-1).")
-        return cls(**data)
 
 
 @dataclass
@@ -325,18 +318,6 @@ class LaserPulseSequence:
             "E0": self.E0,
             "carrier_freq_cm": self.carrier_freq_cm,
         }
-
-    @staticmethod
-    def from_dict(data: dict) -> "LaserPulseSequence":
-        pulses = [LaserPulse.from_dict(d) for d in data["pulses"]]
-        return LaserPulseSequence(pulses=pulses)
-
-    def to_json(self, indent: int = 2) -> str:
-        return json.dumps(self.to_dict(), indent=indent)
-
-    @staticmethod
-    def from_json(json_str: str) -> "LaserPulseSequence":
-        return LaserPulseSequence.from_dict(json.loads(json_str))
 
 
 '''

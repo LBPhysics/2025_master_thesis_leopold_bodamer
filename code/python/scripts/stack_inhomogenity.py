@@ -1,7 +1,7 @@
 """Stack/average inhomogeneous 1D configurations produced by calc_datas.py.
 
 Usage:
-    python inhom_stack_1d.py --abs_path "<path to one _data.npz>" [--skip_if_exists]
+    python stack_inhomogenity.py --abs_path "<path to one _data.npz>" [--skip_if_exists]
 
 Given one file path from an inhomogeneous batch (same t_coh, same group id),
 this script finds all sibling files in the same directory tree with matching
@@ -17,71 +17,11 @@ from pathlib import Path
 from typing import List
 import numpy as np
 
-from qspectro2d.utils import (
+from qspectro2d import (
     load_simulation_data,
     save_simulation_data,
 )
-
-
-def _collect_group_files(anchor: Path) -> List[Path]:
-    """Find all files with the same inhom_group_id as `anchor` in its directory.
-
-    The anchor must be a path to a single `_data.npz` file from an inhomogeneous 1D run.
-    """
-    try:
-        base = load_simulation_data(anchor)
-    except Exception as e:
-        print(f"❌ Anchor file is corrupted: {anchor}")
-        print(f"    Error: {e}")
-        print("🔍 Searching for valid files in the same directory...")
-
-        # Try to find any valid file in the same directory to get the group_id
-        dir_path = Path(anchor).parent
-        all_npz = list(dir_path.glob("*_data.npz"))
-
-        for p in all_npz:
-            if str(p).endswith("_inhom_avg_data.npz"):
-                continue
-            try:
-                temp_data = load_simulation_data(p)
-                if temp_data.get("inhom_enabled", False):
-                    print(f"✅ Found valid anchor file: {p}")
-                    base = temp_data
-                    break
-            except Exception:
-                continue
-        else:
-            raise FileNotFoundError(
-                "No valid inhomogeneous files found in directory to determine group_id"
-            )
-
-    group_id = base.get("inhom_group_id")
-    if group_id is None:
-        raise ValueError("Missing inhom_group_id in anchor file metadata.")
-    # Keep t_coh constant if present (multiple coherence delays in same folder)
-    anchor_tcoh = base.get("t_coh_value", None)
-
-    dir_path = Path(anchor).parent
-    all_npz = list(dir_path.glob("*_data.npz"))
-    matches: List[Path] = []
-    for p in all_npz:
-        # Skip any already averaged outputs
-        if str(p).endswith("_inhom_avg_data.npz"):
-            continue
-        try:
-            d = load_simulation_data(p)
-        except Exception as e:
-            print(f"⚠️  Skipping corrupted file: {p}")
-            print(f"    Error: {e}")
-            continue
-        if d.get("inhom_enabled", False) and d.get("inhom_group_id") == group_id:
-            if anchor_tcoh is None or np.isclose(
-                float(d.get("t_coh_value", 0.0)), float(anchor_tcoh)
-            ):
-                matches.append(p)
-    if not matches:
-        raise FileNotFoundError("No matching inhomogeneous files found for group.")
-    return sorted(matches)
+from qspectro2d.utils.data_io import collect_group_files
 
 
 def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
@@ -89,7 +29,7 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
 
     Returns the path to the newly written averaged file.
     """
-    files = _collect_group_files(Path(abs_path))
+    files = collect_group_files(Path(abs_path))
 
     # Load first to get axes and metadata
     first = None
@@ -100,7 +40,9 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
         try:
             first = load_simulation_data(files[first_file_idx])
         except Exception as e:
-            print(f"⚠️  Skipping corrupted file during metadata loading: {files[first_file_idx]}")
+            print(
+                f"⚠️  Skipping corrupted file during metadata loading: {files[first_file_idx]}"
+            )
             print(f"    Error: {e}")
             first_file_idx += 1
 
@@ -136,7 +78,9 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
     if not valid_files:
         raise FileNotFoundError("No valid files found for averaging")
 
-    print(f"📊 Averaging {len(valid_files)} valid files out of {len(files)} total files")
+    print(
+        f"📊 Averaging {len(valid_files)} valid files out of {len(files)} total files"
+    )
 
     # Average
     averaged: List[np.ndarray] = []
@@ -181,9 +125,13 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
                 if (
                     d.get("inhom_averaged", False)
                     and d.get("inhom_group_id") == metadata.get("inhom_group_id")
-                    and np.isclose(float(d.get("t_coh_value", 0.0)), float(metadata["t_coh_value"]))
+                    and np.isclose(
+                        float(d.get("t_coh_value", 0.0)), float(metadata["t_coh_value"])
+                    )
                 ):
-                    print(f"⏭️  Averaged file already exists for this t_coh in folder: {p}")
+                    print(
+                        f"⏭️  Averaged file already exists for this t_coh in folder: {p}"
+                    )
                     return p
             except Exception:
                 continue
@@ -193,15 +141,23 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description="Average inhomogeneous 1D configs into one file.")
-    p.add_argument("--abs_path", type=str, required=True, help="Path to one *_data.npz file")
+    p = argparse.ArgumentParser(
+        description="Average inhomogeneous 1D configs into one file."
+    )
     p.add_argument(
-        "--skip_if_exists", action="store_true", help="Do not overwrite existing averaged file"
+        "--abs_path", type=str, required=True, help="Path to one *_data.npz file"
+    )
+    p.add_argument(
+        "--skip_if_exists",
+        action="store_true",
+        help="Do not overwrite existing averaged file",
     )
     args = p.parse_args()
 
     out = average_inhom_1d(Path(args.abs_path), skip_if_exists=args.skip_if_exists)
-    print(f"✅ Wrote averaged file: {out}")
+    print(f"Saved inhom-averaged dataset: {out}")
+    print("To plot the data, run:")
+    print(f"python plot_datas.py --abs_path {out}")
 
 
 if __name__ == "__main__":  # pragma: no cover

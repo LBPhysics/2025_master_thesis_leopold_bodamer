@@ -35,7 +35,7 @@ def _redfield_paper_1atom(sim_oqs: SimulationModuleOQS) -> Qobj:
     idx_10 = stacked_index(size, 1, 0)
     idx_11 = stacked_index(size, 1, 1)
 
-    w0 = sim_oqs.system._frequencies_fs[0]
+    w0 = sim_oqs.system.frequencies_fs[0]
     deph_rate_pure = bath_to_rates(sim_oqs.bath, mode="deph")  # TODO THIS IS NON-SENSE
     down_rate, up_rate = bath_to_rates(sim_oqs.bath, w0, mode="decay")  # TODO THIS IS NON-SENSE
     deph_rate_tot = deph_rate_pure + 0.5 * (down_rate + up_rate)

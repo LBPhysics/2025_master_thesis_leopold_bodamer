@@ -1,3 +1,4 @@
+# TODO rename this module
 """Compute 1D emitted electric field E_ks(t_det) via phase-cycled third-order polarization.
 
 This module provides a clean, focused API that mirrors the physics and flow you described:
@@ -22,15 +23,12 @@ from qutip import Qobj, Result, mesolve, brmesolve
 from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
 from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
 from qspectro2d.spectroscopy.polarization import complex_polarization
-from project_config.logging_setup import get_logger
 from qspectro2d.config.default_simulation_params import (
     PHASE_CYCLING_PHASES,
     COMPONENT_MAP,
     DETECTION_PHASE,
 )
 from qspectro2d.utils.units_and_rwa import from_rotating_frame_list
-
-logger = get_logger(__name__, level="INFO")
 
 
 __all__ = [

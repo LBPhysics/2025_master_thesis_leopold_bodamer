@@ -8,7 +8,7 @@ and reduces code duplication.
 
 import numpy as np
 import warnings
-from qspectro2d.constants import (
+from qspectro2d.utils.constants import (
     BOLTZMANN,
     convert_cm_to_fs,
 )
@@ -33,8 +33,6 @@ SOLVER_OPTIONS = {"nsteps": 200000, "atol": 1e-6, "rtol": 1e-4}
 # Validation thresholds for physics checks
 NEGATIVE_EIGVAL_THRESHOLD = -1e-3
 TRACE_TOLERANCE = 1e-6
-
-# physical constants imported from qspectro2d.constants
 
 # supported solvers and bath models
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs"]

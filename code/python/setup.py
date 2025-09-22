@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 # TODO bring up to date
 setup(
     name="qspectro2d",
-    version="0.1.0",
+    version="1.0",
     packages=find_packages(include=["qspectro2d", "qspectro2d.*", "project_config"]),
     python_requires=">=3.8",
     install_requires=[

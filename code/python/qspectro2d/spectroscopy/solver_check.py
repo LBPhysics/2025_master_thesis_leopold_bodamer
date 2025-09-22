@@ -1,5 +1,3 @@
-# TODO instead of complex checking use is_state(rho) from qutip
-# -*- coding: utf-8 -*-
 """
 Solver validation and diagnostics utilities.
 
@@ -13,7 +11,7 @@ from __future__ import annotations
 
 # STANDARD LIBRARY IMPORTS
 from copy import deepcopy
-from typing import List
+from typing import List, TYPE_CHECKING
 
 # THIRD-PARTY IMPORTS
 import numpy as np
@@ -21,16 +19,10 @@ from qutip import Qobj, Result
 
 # LOCAL IMPORTS
 from qspectro2d.core.simulation import SimulationModuleOQS
-from qspectro2d.utils import from_rotating_frame_list
-from project_config.logging_setup import get_logger
 from .one_d_field import compute_evolution
 
 
 __all__ = ["check_the_solver"]
-
-
-# LOGGING CONFIGURATION
-logger = get_logger(__name__, level=30)  # 30 = logging.WARNING
 
 
 def _validate_simulation_input(sim_oqs: SimulationModuleOQS) -> None:
@@ -49,32 +41,31 @@ def _validate_simulation_input(sim_oqs: SimulationModuleOQS) -> None:
 
 def _log_system_diagnostics(sim_oqs: SimulationModuleOQS) -> None:
     """Log diagnostic information about the quantum system."""
-    logger.info("=== SYSTEM DIAGNOSTICS ===")
+    print("=== SYSTEM DIAGNOSTICS ===")
     psi_ini = sim_oqs.system.psi_ini
-    logger.info(f"Initial state type: {type(psi_ini)}")
-    logger.info(f"Initial state shape: {psi_ini.shape}")
-    logger.info(f"Initial state is Hermitian: {psi_ini.isherm}")
-    logger.info(f"Initial state trace: {psi_ini.tr():.6f}")
+    print(
+        f"Initial state type, shape, is hermitian, trace: {type(psi_ini)}, {psi_ini.shape}, {psi_ini.isherm}, {psi_ini.tr():.6f}"
+    )
 
     if psi_ini.type == "oper":  # density matrix
         ini_eigvals = psi_ini.eigenenergies()
-        logger.info(
+        print(
             f"Initial eigenvalues range: [{ini_eigvals.min():.6f}, {ini_eigvals.max():.6f}]"
         )
-        logger.info(f"Initial min eigenvalue: {ini_eigvals.min():.10f}")
+        print(f"Initial min eigenvalue: {ini_eigvals.min():.10f}")
 
     # System Hamiltonian diagnostics
     try:
         if hasattr(sim_oqs, "evo_obj") and sim_oqs.evo_obj is not None:
             H_tot_t = sim_oqs.evo_obj
             if hasattr(H_tot_t, "dims"):
-                logger.info(f"Total Hamiltonian dims: {H_tot_t.dims}")
-            logger.info(f"Total Hamiltonian type: {type(H_tot_t)}")
+                print(f"Total Hamiltonian dims: {H_tot_t.dims}")
+            print(f"Total Hamiltonian type: {type(H_tot_t)}")
 
         if hasattr(sim_oqs, "decay_channels") and sim_oqs.decay_channels:
-            logger.info(f"Number of decay channels: {len(sim_oqs.decay_channels)}")
+            print(f"Number of decay channels: {len(sim_oqs.decay_channels)}")
     except Exception as e:
-        logger.warning(f"Could not analyze Hamiltonian: {e}")
+        print(f"Could not analyze Hamiltonian: {e}")
 
 
 def _check_density_matrix_properties(
@@ -100,15 +91,15 @@ def _check_density_matrix_properties(
 
         # Sample state analysis
         if index % check_interval == 0 or index < 5:
-            logger.info(
+            print(
                 f"State {index} (t={time:.3f}): trace={state.tr():.6f}, Hermitian={state.isherm}"
             )
 
         # Check Hermiticity
         if not state.isherm:
             error_messages.append(f"Density matrix is not Hermitian after t = {time}")
-            logger.error(f"Non-Hermitian density matrix at t = {time}")
-            logger.error(f"  State details: trace={state.tr():.6f}, shape={state.shape}")
+            print(f"Non-Hermitian density matrix at t = {time}")
+            print(f"  State details: trace={state.tr():.6f}, shape={state.shape}")
 
         # Check positive semidefiniteness
         eigvals = state.eigenenergies()
@@ -119,42 +110,43 @@ def _check_density_matrix_properties(
                 f"Density matrix is not positive semidefinite after t = {time}: "
                 f"The lowest eigenvalue is {min_eigval}"
             )
-            logger.error(f"NEGATIVE EIGENVALUE DETECTED:")
-            logger.error(f"  Time: {time:.6f}")
-            logger.error(f"  Min eigenvalue: {min_eigval:.12f}")
-            logger.error(f"  Threshold: {NEGATIVE_EIGVAL_THRESHOLD}")
-            logger.error(f"  All eigenvalues: {eigvals[:5]}...")
-            logger.error(f"  State trace: {state.tr():.10f}")
-            logger.error(f"  State index: {index}/{len(states)}")
+            print(f"NEGATIVE EIGENVALUE DETECTED:")
+            print(f"  Time: {time:.6f}")
+            print(f"  Min eigenvalue: {min_eigval:.12f}")
+            print(f"  Threshold: {NEGATIVE_EIGVAL_THRESHOLD}")
+            print(f"  All eigenvalues: {eigvals[:5]}...")
+            print(f"  State trace: {state.tr():.10f}")
+            print(f"  State index: {index}/{len(states)}")
 
             if index > 0:
                 prev_state = states[index - 1]
                 prev_eigvals = prev_state.eigenenergies()
-                logger.error(f"  Previous state min eigval: {prev_eigvals.min():.12f}")
-                logger.error(f"  Eigenvalue change: {min_eigval - prev_eigvals.min():.12f}")
+                print(f"  Previous state min eigval: {prev_eigvals.min():.12f}")
+                print(f"  Eigenvalue change: {min_eigval - prev_eigvals.min():.12f}")
 
             time_cut = time
 
         # Check trace preservation
         trace_val = state.tr()
+
         if not np.isclose(trace_val, 1.0, atol=TRACE_TOLERANCE):
             error_messages.append(
                 f"Density matrix is not trace-preserving after t = {time}: "
                 f"The trace is {trace_val}"
             )
-            logger.error(f"TRACE VIOLATION:")
-            logger.error(f"  Time: {time:.6f}")
-            logger.error(f"  Trace: {trace_val:.10f}")
-            logger.error(f"  Deviation from 1: {abs(trace_val - 1.0):.10f}")
-            logger.error(f"  Tolerance: {TRACE_TOLERANCE}")
+            print(f"TRACE VIOLATION:")
+            print(f"  Time: {time:.6f}")
+            print(f"  Trace: {trace_val:.10f}")
+            print(f"  Deviation from 1: {abs(trace_val - 1.0):.10f}")
+            print(f"  Tolerance: {TRACE_TOLERANCE}")
 
             time_cut = min(time_cut, time)
 
         # Break on first error for detailed analysis
         if error_messages:
-            logger.error("=== FIRST ERROR ANALYSIS ===")
-            logger.error(f"Stopping analysis at first error (state {index}, t={time:.6f})")
-            logger.error("Density matrix validation failed: " + "; ".join(error_messages))
+            print("=== FIRST ERROR ANALYSIS ===")
+            print(f"Stopping analysis at first error (state {index}, t={time:.6f})")
+            print("Density matrix validation failed: " + "; ".join(error_messages))
             break
 
     return error_messages, time_cut
@@ -195,7 +187,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     If RWA (Rotating Wave Approximation) is enabled, phase factors are applied to the states
     before validation to account for the rotating frame transformation.
     """
-    logger.info(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
+    print(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
     copy_sim_oqs = deepcopy(sim_oqs)
     t_max = 2 * sim_oqs.times_local[-1]
     dt = 10 * copy_sim_oqs.simulation_config.dt
@@ -205,11 +197,11 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
 
     # DETAILED SYSTEM DIAGNOSTICS
 
-    logger.info(f"=== SOLVER DIAGNOSTICS ===")
-    logger.info(f"Solver: {copy_sim_oqs.simulation_config.ode_solver}")
-    logger.info(f"Time range: t0={t0:.3f}, t_max={t_max:.3f}, dt={dt:.6f}")
-    logger.info(f"Number of time points: {len(times)}")
-    logger.info(f"RWA enabled: {getattr(copy_sim_oqs.simulation_config, 'rwa_sl', False)}")
+    print(f"=== SOLVER DIAGNOSTICS ===")
+    print(f"Solver: {copy_sim_oqs.simulation_config.ode_solver}")
+    print(f"Time range: t0={t0:.3f}, t_max={t_max:.3f}, dt={dt:.6f}")
+    print(f"Number of time points: {len(times)}")
+    print(f"RWA enabled: {getattr(copy_sim_oqs.simulation_config, 'rwa_sl', False)}")
 
     _log_system_diagnostics(copy_sim_oqs)
 
@@ -232,16 +224,21 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     if getattr(copy_sim_oqs.simulation_config, "rwa_sl", False):
         n_atoms = copy_sim_oqs.system.n_atoms
         omega_laser = copy_sim_oqs.laser.carrier_freq_fs
-        logger.info(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser}")
+        print(
+            f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser} [fs^-1]"
+        )
+        # Lazy import here to avoid triggering package-level imports during module import
+        from ..utils.units_and_rwa import from_rotating_frame_list
+
         states = from_rotating_frame_list(states, times, n_atoms, omega_laser)
 
     # Enhanced state checking with more diagnostics
-    logger.info("=== STATE-BY-STATE ANALYSIS ===")
+    print("=== STATE-BY-STATE ANALYSIS ===")
     error_messages, time_cut = _check_density_matrix_properties(states, times)
 
     if not error_messages:
-        logger.info("✅ Checks passed. DM remains Hermitian and positive.")
-        logger.info(f"Final state trace: {states[-1].tr():.6f}")
-        logger.info(f"Final state min eigenvalue: {states[-1].eigenenergies().min():.10f}")
+        print("✅ Checks passed. DM remains Hermitian and positive.")
+        print(f"Final state trace: {states[-1].tr():.6f}")
+        print(f"Final state min eigenvalue: {states[-1].eigenenergies().min():.10f}")
 
     return result, time_cut

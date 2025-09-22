@@ -31,9 +31,9 @@ from qspectro2d.spectroscopy.post_processing import (
     compute_1d_fft_wavenumber,
     compute_2d_fft_wavenumber,
 )
-from qspectro2d.utils import generate_unique_plot_filename
+from qspectro2d import generate_unique_plot_filename
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
-from qspectro2d.utils import load_simulation_data
+from qspectro2d import load_simulation_data
 
 from plotstyle import init_style, save_fig
 
@@ -42,7 +42,9 @@ init_style()
 
 
 # Suppress noisy but harmless warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, message="overflow encountered in exp"
+)
 
 
 # Helper to collect paths from save_fig (which may return a single path or a list of paths)
@@ -85,7 +87,9 @@ def _extend_and_fft(
     for i, (data, st) in enumerate(zip(datas, signal_types)):
         try:
             if dimension == "1d":
-                ext_t_det, ext_data = extend_time_axes(data=data, t_det=t_det, pad_t_det=extend_for)
+                ext_t_det, ext_data = extend_time_axes(
+                    data=data, t_det=t_det, pad_t_det=extend_for
+                )
                 extended_axes = ext_t_det
             else:
                 ext_t_det, ext_t_coh, ext_data = extend_time_axes(
@@ -163,7 +167,10 @@ def _plot_components(
                         )
                     )
                     base_name = generate_unique_plot_filename(
-                        system=system, sim_config=sim_config, domain=domain, component=comp
+                        system=system,
+                        sim_config=sim_config,
+                        domain=domain,
+                        component=comp,
                     )
                     # Append the freq-domain label to the filename for clear linkage
                     safe_label = str(st).replace(" ", "_")
@@ -199,7 +206,10 @@ def _plot_components(
                         )
                     )
                     base_name = generate_unique_plot_filename(
-                        system=system, sim_config=sim_config, domain=domain, component=comp
+                        system=system,
+                        sim_config=sim_config,
+                        domain=domain,
+                        component=comp,
                     )
                     safe_label = str(st).replace(" ", "_")
                     filename = f"{base_name}_{safe_label}"
@@ -253,7 +263,7 @@ def plot_data(
         missing_signals = [st for st, d in zip(signal_types, datas) if d is None]
         raise KeyError(f"Missing signal arrays for: {missing_signals}")
 
-    w0 = system._frequencies_fs[0]
+    w0 = system.frequencies_fs[0]
     bath_dict = extract_bath_parameters(bath_env, w0)
     laser_dict = {k: v for k, v in laser.to_dict().items() if k != "pulses"}
     meta = {**system.to_dict(), **bath_dict, **laser_dict, **sim_config.to_dict()}
@@ -334,7 +344,9 @@ def plot_data(
                 extend_for=extend_for,
                 dimension=dimension,
             )
-            axis_det_f, axis_coh_f = (freq_axes, None) if dimension == "1d" else freq_axes
+            axis_det_f, axis_coh_f = (
+                (freq_axes, None) if dimension == "1d" else freq_axes
+            )
             saved = _plot_components(
                 datas=freq_datas,
                 signal_types=kept_types,
@@ -399,7 +411,10 @@ def main():
             if len(args.section) == 2:
                 section = (args.section[0], args.section[1])
             elif len(args.section) == 4:
-                section = ((args.section[0], args.section[1]), (args.section[2], args.section[3]))
+                section = (
+                    (args.section[0], args.section[1]),
+                    (args.section[2], args.section[3]),
+                )
             else:
                 raise ValueError("--section expects 2 (1D) or 4 (2D) floats")
 
@@ -417,7 +432,9 @@ def main():
 
         try:
             is_2d = (
-                t_coh_axis is not None and hasattr(t_coh_axis, "__len__") and len(t_coh_axis) > 0
+                t_coh_axis is not None
+                and hasattr(t_coh_axis, "__len__")
+                and len(t_coh_axis) > 0
             )
         except Exception:
             is_2d = False
@@ -464,7 +481,8 @@ def main():
             sigs = [str(s) for s in sim_config.signal_types]
             datas = [loaded_data_and_info.get(s) for s in sigs]
             if datas and all(
-                isinstance(a, np.ndarray) and a.size > 0 and np.allclose(a, 0) for a in datas
+                isinstance(a, np.ndarray) and a.size > 0 and np.allclose(a, 0)
+                for a in datas
             ):
                 print("⚠️  All-zero time-domain signals detected.")
         except Exception:

@@ -70,9 +70,5 @@ class SimulationConfig:
     def to_dict(self) -> dict:
         return asdict(self)
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "SimulationConfig":  # type: ignore[name-defined]
-        return cls(**data)
-
     def __str__(self) -> str:  # pragma: no cover simple repr
         return self.summary()

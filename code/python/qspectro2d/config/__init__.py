@@ -21,7 +21,7 @@ from project_config.paths import (
 )
 
 from .default_simulation_params import validate_defaults  # physics-level sanity
-from qspectro2d.constants import HBAR, BOLTZMANN
+from ..utils.constants import HBAR, BOLTZMANN
 from .create_sim_obj import (
     load_simulation,
     get_max_workers,

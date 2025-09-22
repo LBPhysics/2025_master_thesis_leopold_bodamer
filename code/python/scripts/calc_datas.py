@@ -7,7 +7,7 @@ Two execution modes sharing the same underlying simulation object:
     2d mode:
         Treats every detection time value ``t_det`` as a coherence time point ``t_coh``
         and computes one 1D trace per point. Each processed ``t_coh`` produces an
-        individual file which can later be stacked into a 2D dataset using ``stack_1dto2d.py``.
+        individual file which can later be stacked into a 2D dataset using ``stack_times.py``.
 
 The resulting files are stored via ``save_simulation_data`` and contain
 metadata keys required by downstream stacking & plotting scripts:
@@ -34,12 +34,14 @@ import numpy as np
 from project_config.paths import SCRIPTS_DIR
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.spectroscopy.one_d_field import parallel_compute_1d_e_comps
-from qspectro2d.utils import save_simulation_data
+from qspectro2d import save_simulation_data
 from qspectro2d.config.create_sim_obj import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
 
 # Silence noisy but harmless warnings
-warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
+warnings.filterwarnings(
+    "ignore", category=RuntimeWarning, message="overflow encountered in exp"
+)
 warnings.filterwarnings(
     "ignore",
     category=FutureWarning,
@@ -69,7 +71,9 @@ def _compute_e_components_for_tcoh(
     return E_list
 
 
-def _make_inhom_group_id(sim_oqs: SimulationModuleOQS, n_inhom: int, delta_cm: float) -> str:
+def _make_inhom_group_id(
+    sim_oqs: SimulationModuleOQS, n_inhom: int, delta_cm: float
+) -> str:
     """Create a deterministic group id for inhomogeneous runs across batches.
 
     Uses a UUID5 over a canonical string built from stable configuration fields.
@@ -127,7 +131,9 @@ def run_1d_mode(args) -> None:
         else:
             chunks = np.array_split(np.arange(n_inhom), n_batches)
             if batch_idx < 0 or batch_idx >= len(chunks):
-                raise IndexError(f"batch_idx {batch_idx} out of range for n_batches={n_batches}")
+                raise IndexError(
+                    f"batch_idx {batch_idx} out of range for n_batches={n_batches}"
+                )
             indices = chunks[batch_idx]
             batch_note = f"batch {batch_idx+1}/{n_batches} (size={indices.size})"
 
@@ -146,7 +152,9 @@ def run_1d_mode(args) -> None:
             )
 
         # Stable, deterministic group id based on configuration (same across batches)
-        inhom_group_id = _make_inhom_group_id(sim_oqs, n_inhom=n_inhom, delta_cm=delta_cm)
+        inhom_group_id = _make_inhom_group_id(
+            sim_oqs, n_inhom=n_inhom, delta_cm=delta_cm
+        )
         saved_paths: list[str] = []
         start_time = time.time()
         for idx in indices.tolist():
@@ -159,7 +167,9 @@ def run_1d_mode(args) -> None:
                 f"\n--- inhom_config={idx+1}/{n_inhom}  t_coh={t_coh_val:.2f} fs ---\n"
                 f"    freqs_cm = {np.array2string(np.asarray(cfg_freqs), precision=2)}"
             )
-            E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
+            E_sigs = _compute_e_components_for_tcoh(
+                sim_oqs, t_coh_val, time_cut=time_cut
+            )
 
             # Persist dataset for this configuration
             metadata = {
@@ -174,7 +184,9 @@ def run_1d_mode(args) -> None:
                 "inhom_config_index": int(idx),
                 "inhom_total": int(n_inhom),
             }
-            out_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
+            out_path = save_simulation_data(
+                sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det
+            )
             saved_paths.append(str(out_path))
             print(f"    ✅ Saved {out_path}")
 
@@ -185,7 +197,7 @@ def run_1d_mode(args) -> None:
         if saved_paths:
             example = saved_paths[-1]
             print("\n🎯 Next step (average inhomogeneous configs):")
-            print(f"     python inhom_stack_1d.py --abs_path '{example}'")
+            print(f"     python stack_inhomogenity.py --abs_path '{example}'")
         else:
             print("ℹ️  No files saved.")
         return
@@ -269,7 +281,7 @@ def run_2d_mode(args) -> None:
         if n_batches == 1:
             print("\n🎯 Next steps:")
             print("  1. Stack per-t_coh files into a 2D dataset:")
-            print(f"     python stack_1dto2d.py --abs_path '{example}' --skip_if_exists")
+            print(f"     python stack_times.py --abs_path '{example}' --skip_if_exists")
             print("  2. Plot a single 1D file (example):")
             print(f"     python plot_datas.py --abs_path '{example}'")
         else:
@@ -302,7 +314,9 @@ def main() -> None:
         "--n_batches",
         type=int,
         default=1,
-        help=("Split the 2d run or 1d-inhom run into N batches (default: 1, i.e., no batching)"),
+        help=(
+            "Split the 2d run or 1d-inhom run into N batches (default: 1, i.e., no batching)"
+        ),
     )
     parser.add_argument(
         "--batch_idx",

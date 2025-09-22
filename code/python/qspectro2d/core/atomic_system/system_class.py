@@ -1,14 +1,13 @@
-# DEFINE THE SYSTEM PARAMETERS CLASS
+# this file defines the AtomicSystem class
 
 import numpy as np
-import json
 import math
 from dataclasses import dataclass, field
 from typing import Optional, List, Tuple
 from functools import cached_property
-from qutip import basis, ket2dm, Qobj
+from qutip import basis as qt_basis, ket2dm, Qobj
 
-from qspectro2d.constants import HBAR, convert_cm_to_fs, convert_fs_to_cm
+from qspectro2d.utils.constants import HBAR, convert_cm_to_fs, convert_fs_to_cm
 
 
 @dataclass
@@ -19,7 +18,7 @@ class AtomicSystem:
     frequencies_cm: List[float] = field(default_factory=lambda: [16000.0])  # in cm^-1
     dip_moments: List[float] = field(default_factory=lambda: [1.0])
     coupling_cm: float = 0.0
-    delta_inhomogen_cm: float = 0.0  # inhomogeneous broadening
+    delta_inhomogen_cm: float = 0.0
 
     # 1 = existing behaviour (ground + single exc manifold); 2 adds double manifold
     max_excitation: int = 1
@@ -27,51 +26,53 @@ class AtomicSystem:
     psi_ini: Optional[Qobj] = None  # initial state, default is ground state
 
     def __post_init__(self):
-        # Build basis
+        # build basis
         self._build_basis()
 
         # spectroscopy always starts in the ground state
-        self.psi_ini = ket2dm(self._basis[0])
+        self.psi_ini = ket2dm(self.basis[0])
 
         # store the initial frequencies in history
-        self._frequencies_cm_history = [self.frequencies_cm.copy()]
+        self.frequencies_cm_history = [self.frequencies_cm.copy()]
 
-        # Internal fs^-1 storage (single source of truth for dynamics)
-        self._frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
-        self._coupling_fs = convert_cm_to_fs(self.coupling_cm)
-        self._delta_inhomogen_fs = convert_cm_to_fs(self.delta_inhomogen_cm)
+        # internal fs^-1 storage (single source of truth for dynamics)
+        self.frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
+        self.coupling_fs = convert_cm_to_fs(self.coupling_cm)
+        self.delta_inhomogen_fs = convert_cm_to_fs(self.delta_inhomogen_cm)
 
-        # Always set cylindrical positions and compute isotropic couplings
+        # always set cylindrical positions and compute isotropic couplings
         self.n_rings = self.n_atoms // self.n_chains
         self._setup_geometry_and_couplings()
 
+    # CHECKED
     def update_frequencies_cm(self, new_freqs: List[float]):
         if len(new_freqs) != self.n_atoms:
             raise ValueError(f"Expected {self.n_atoms} frequencies, got {len(new_freqs)}")
 
         # Save current freqs before updating
-        self._frequencies_cm_history.append(new_freqs.copy())
+        self.frequencies_cm_history.append(new_freqs.copy())
         self.frequencies_cm = new_freqs.copy()
         # keep fs cache in sync
-        self._frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
+        self.frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
         # cached spectrum/operators depend on frequencies
         self.reset_cache()
 
+    # CHECKED
     def update_delta_inhomogen_cm(self, new_delta_inhomogen_cm: float) -> None:
         """Update inhomogeneous broadening (cm^-1)."""
         self.delta_inhomogen_cm = new_delta_inhomogen_cm
-        self._delta_inhomogen_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
-        # Not strictly needed for operators, but keep consistency
+        self.delta_inhomogen_fs = float(convert_cm_to_fs(self.delta_inhomogen_cm))
         self.reset_cache()
 
     def reset_cache(self) -> None:
         """Invalidate cached spectral quantities affected by parameter changes."""
         # delete cached_properties to force recompute on parameter changes
-        for key in ("eigenstates", "eigenbasis_transform"):
+        for key in ("eigenstates", "eigenbasis_transform", "hamiltonian", "coupling_op"):
             if key in self.__dict__:
                 del self.__dict__[key]
 
     # === CORE PARAMETERS ===
+    # CHECKED
     @cached_property
     def dimension(self):
         """Dimension of the Hilbert space (ground + single + double excitations)."""
@@ -93,53 +94,70 @@ class AtomicSystem:
               p runs from 1..N_pairs in lexicographic order over (i,j).
         """
         dim = self.dimension
-        self._basis = [basis(dim, i) for i in range(dim)]
+        self.basis = [qt_basis(dim, i) for i in range(dim)]
 
-    @property
+    @cached_property
     def hamiltonian(self) -> Qobj:
-        """Return Hamiltonian including up to two excitations (hard-core boson model / fock-basis).
+        """System Hamiltonian in the truncated exciton basis (ground + singles [+ doubles]).
 
-        H = Σ_i ħ ω_i a_i^† a_i +
-            Σ_{i<j} ħ (J_ij a_i^† a_j + h.c.)
-         , truncated to 1,2 excitations.
+        H = H_onsite + H_coupling
+        - On-site part adds ħ ω_i on |i><i| (singles) and ħ(ω_i+ω_j) on |i,j><i,j| (doubles).
+        - Coupling part is the number-conserving dipole-dipole hopping (see coupling_op).
 
-            Matrix elements:
-          - Diagonal singles: <i|H|i> = ħ ω_i
-          - Single-single off-diagonals: ħ J_ij (i≠j)
-          - Diagonal doubles: <ij|H|ij> = ħ (ω_i + ω_j)
-          - double-off-diagonal: <ik|H|ij> = J_jk
-            if states share exactly one site, e.g. |i,j> ↔ |i,k>, element = ħ J_jk
+        Frequencies are taken from the internal fs^-1 cache (self.frequencies_fs).
         """
         N = self.n_atoms
-        omegas = self._frequencies_fs
+        if N == 0:
+            return 0
 
-        # Helper lambdas for kets
-        def ket(idx: int):
-            return self._basis[idx]
+        # Start with a zero operator of correct dimension
+        H = ket2dm(self.basis[0]) * 0.0
 
-        H = 0
-        # Singles diagonal
-        for i in range(1, N + 1):
-            H += HBAR * omegas[i - 1] * ket(i) * ket(i).dag()
-        # Inter-site couplings (single manifold)
+        # On-site energies for single-excitation manifold
+        for i_site in range(1, N + 1):
+            omega_i = float(self.frequencies_fs[i_site - 1])
+            H += HBAR * omega_i * ket2dm(self.basis[i_site])
+
+        # On-site energies for double-excitation manifold (if enabled)
+        if self.max_excitation == 2 and N >= 2:
+            for i_site in range(1, N):
+                for j_site in range(i_site + 1, N + 1):
+                    # basis index (0-based) of |i,j>
+                    idx_d = pair_to_index(i_site, j_site, N) - 1
+                    omega_sum = float(
+                        self.frequencies_fs[i_site - 1] + self.frequencies_fs[j_site - 1]
+                    )
+                    H += HBAR * omega_sum * ket2dm(self.basis[idx_d])
+
+        # Add inter-site coupling (Hermitian by construction)
         H += self.coupling_op
 
-        if self.max_excitation == 1:
-            return H
-
-        # Double-excitation diagonal terms
-        for i in range(1, N):
-            for j in range(i + 1, N + 1):
-                idx = pair_to_index(i, j, N)
-                H += HBAR * (omegas[i - 1] + omegas[j - 1]) * ket2dm(ket(idx - 1))
         return H
+
+    # === INDEX HELPERS (1-based site indices) ===
+    def idx_ground(self) -> int:
+        """Index of ground state |g>."""
+        return 0
+
+    def idx_single(self, i: int) -> int:
+        """Index of single-excited state |i>, with 1 <= i <= N (1-based)."""
+        N = self.n_atoms
+        if not (1 <= i <= N):
+            raise ValueError(f"single index i must be in [1,{N}], got {i}")
+        return i
+
+    def idx_double(self, i: int, j: int) -> int:
+        """Index of double-excited state |i,j> (unordered pair), 1 <= i != j <= N.
+        Returns 0-based basis index suitable for self.basis[idx]."""
+        N = self.n_atoms
+        if not (1 <= i <= N and 1 <= j <= N and i != j):
+            raise ValueError(f"double indices must be distinct in [1,{N}], got (i,j)=({i},{j})")
+        a, b = (i, j) if i < j else (j, i)
+        return pair_to_index(a, b, N) - 1
 
     @cached_property
     def eigenstates(self) -> Tuple[np.ndarray, np.ndarray]:
-        """Eigenvalues & eigenstates (cached).
-
-        Invalidated when `update_frequencies_cm` is called.
-        """
+        """Eigenvalues & eigenstates (cached)."""
         return self.hamiltonian.eigenstates()
 
     @cached_property
@@ -164,7 +182,7 @@ class AtomicSystem:
         # Single-excitation lowering operator: sum_i μ_i |0><i|
         for i in range(1, self.n_atoms + 1):
             mu_i = self.dip_moments[i - 1]
-            lowering_op += mu_i * (self._basis[0] * self._basis[i].dag())
+            lowering_op += mu_i * (self.basis[0] * self.basis[i].dag())
 
         # max_excitation == 2: add terms connecting double -> single manifolds
         # |j><i,j| and |j><j,i| but only one ordering stored (i<j)
@@ -176,12 +194,12 @@ class AtomicSystem:
                     mu_i = self.dip_moments[i - 1]
                     mu_j = self.dip_moments[j - 1]
                     # Annihilating excitation on site i from |i,j> leaves |j>, and vice versa
-                    lowering_op += mu_i * (self._basis[j] * self._basis[idx - 1].dag())
-                    lowering_op += mu_j * (self._basis[i] * self._basis[idx - 1].dag())
+                    lowering_op += mu_i * (self.basis[j] * self.basis[idx - 1].dag())
+                    lowering_op += mu_j * (self.basis[i] * self.basis[idx - 1].dag())
 
         return lowering_op
 
-    @property
+    @property  # CHECKED
     def dipole_op(self) -> Qobj:
         """return the dipole operator in the canonical basis"""
         dip_op = self.lowering_op + self.lowering_op.dag()
@@ -201,7 +219,7 @@ class AtomicSystem:
         dim = self.dimension
 
         for i in range(dim):
-            N_op += self.excitation_number_from_index(i) * ket2dm(self._basis[i])
+            N_op += self.excitation_number_from_index(i) * ket2dm(self.basis[i])
 
         return N_op
 
@@ -217,57 +235,54 @@ class AtomicSystem:
         if N <= 1:
             return 0
 
-        # Use the isotropic coupling matrix (fs^-1)
-        J_matrix = self._coupling_matrix_fs
-        HJ = 0
+        J = self._coupling_matrix_fs  # fs^-1, symmetric with zero diagonal
 
-        # Singles excitation couplings
+        # Start with a zero operator of correct dimensions
+        HJ = ket2dm(self.basis[0]) * 0.0
+
+        # Single-excitation manifold: sum_{i<j} ħ J_ij (|i><j| + h.c.)
         for i in range(1, N + 1):
+            ki = self.basis[i]
             for j in range(i + 1, N + 1):
-                Jij = J_matrix[i - 1, j - 1]
+                Jij = J[i - 1, j - 1]
                 if np.isclose(Jij, 0.0):
                     continue
-                ket_i = self._basis[i]
-                ket_j = self._basis[j]
-                HJ += HBAR * Jij * (ket_i * ket_j.dag() + ket_j * ket_i.dag())
+                kj = self.basis[j]
+                HJ += HBAR * Jij * (ki * kj.dag() + kj * ki.dag())  # NOTE coupling has to be real
 
-        # double-excitation couplings
-        if self.max_excitation == 2 and N > 2:
-            visited_pairs = set()  # deduplicate symmetric connections
-
-            # Iterate over all double states |i,j>, i<j
+        # Double-excitation manifold: connect |i,j> <-> |i,k| with J_{j,k} and |i,j> <-> |k,j| with J_{i,k}
+        if self.max_excitation == 2 and N >= 3:
             for i in range(1, N):
                 for j in range(i + 1, N + 1):
-                    idx_ij = pair_to_index(i, j, N) - 1  # basis index of |i,j>
+                    idx_ij = pair_to_index(i, j, N) - 1
+                    ket_ij = self.basis[idx_ij]
 
-                    # Move one excitation along coupling graph (hard-core constraint)
                     for k in range(1, N + 1):
                         if k == i or k == j:
                             continue
 
-                        # |i,j> <-> |i,k> with amplitude J_{j,k}
-                        Jjk = J_matrix[j - 1, k - 1]
-                        if Jjk != 0.0:
+                        # Hop j -> k while keeping i (amplitude J_{j,k})
+                        Jij_val = J[j - 1, k - 1]
+                        if not np.isclose(Jij_val, 0.0):
                             a, b = (min(i, k), max(i, k))
                             idx_ik = pair_to_index(a, b, N) - 1
-                            key = (min(idx_ij, idx_ik), max(idx_ij, idx_ik))
-                            if key not in visited_pairs:
-                                ket_a = self._basis[idx_ij]
-                                ket_b = self._basis[idx_ik]
-                                HJ += HBAR * Jjk * (ket_a * ket_b.dag() + ket_b * ket_a.dag())
-                                visited_pairs.add(key)
+                            if idx_ij < idx_ik:  # add each undirected connection once
+                                ket_ik = self.basis[idx_ik]
+                                HJ += (
+                                    HBAR * Jij_val * (ket_ij * ket_ik.dag() + ket_ik * ket_ij.dag())
+                                )
 
-                        # |i,j> <-> |k,j> with amplitude J_{i,k}
-                        Jik = J_matrix[i - 1, k - 1]
-                        if Jik != 0.0:
+                        # Hop i -> k while keeping j (amplitude J_{i,k})
+                        Iik_val = J[i - 1, k - 1]
+                        if not np.isclose(Iik_val, 0.0):
                             a2, b2 = (min(k, j), max(k, j))
                             idx_kj = pair_to_index(a2, b2, N) - 1
-                            key2 = (min(idx_ij, idx_kj), max(idx_ij, idx_kj))
-                            if key2 not in visited_pairs:
-                                ket_a = self._basis[idx_ij]
-                                ket_b = self._basis[idx_kj]
-                                HJ += HBAR * Jik * (ket_a * ket_b.dag() + ket_b * ket_a.dag())
-                                visited_pairs.add(key2)
+                            if idx_ij < idx_kj:
+                                ket_kj = self.basis[idx_kj]
+                                HJ += (
+                                    HBAR * Iik_val * (ket_ij * ket_kj.dag() + ket_kj * ket_ij.dag())
+                                )
+
         return HJ
 
     # === GEOMETRY AND POSITIONS ===
@@ -316,10 +331,19 @@ class AtomicSystem:
     ) -> np.ndarray:  # TODO extend to vectorized dipoles
         """Compute isotropic J_ij = coupling * μ_i * μ_j / r^power."""
         N = self.n_atoms
-        pos = self._positions
         J = np.zeros((N, N), dtype=float)
-
-        base_coupling_fs = self._coupling_fs
+        base_coupling_fs = self.coupling_fs
+        if N == 2:
+            J[0, 1] = base_coupling_fs
+            J[1, 0] = base_coupling_fs
+            self._coupling_matrix_fs = J
+            # Invalidate operators that depend on couplings
+            if "coupling_op" in self.__dict__:
+                del self.__dict__["coupling_op"]
+            if "hamiltonian" in self.__dict__:
+                del self.__dict__["hamiltonian"]
+            return
+        pos = self._positions
 
         for i in range(N):
             for j in range(i + 1, N):
@@ -336,6 +360,11 @@ class AtomicSystem:
                 J[j, i] = coupling_ij
 
         self._coupling_matrix_fs = J
+        # Invalidate operators that depend on couplings
+        if "coupling_op" in self.__dict__:
+            del self.__dict__["coupling_op"]
+        if "hamiltonian" in self.__dict__:
+            del self.__dict__["hamiltonian"]
 
     def excitation_number_from_index(self, idx: int) -> int:
         if idx == 0:
@@ -350,16 +379,12 @@ class AtomicSystem:
         Also works for double states |i,j> -> returns |i,j><i,j|."""
         if i == 0:
             raise ValueError("indexing ground state -> use i elem 1,...,N+1")
-        op = ket2dm(self._basis[i])
+        op = ket2dm(self.basis[i])
         return op
 
     def omega_ij(self, i: int, j: int) -> float:
         """Return energy difference (frequency) between eigenstates i and j in fs^-1."""
         return self.eigenstates[0][i] - self.eigenstates[0][j]
-
-    def omega_ij_cm(self, i: int, j: int) -> float:
-        """Return energy difference (frequency) between eigenstates i and j in cm^-1."""
-        return float(convert_fs_to_cm(self.omega_ij(i, j)))
 
     def summary(self):
         lines = [
@@ -405,35 +430,6 @@ class AtomicSystem:
         }
         return d
 
-    def to_json(self):
-        """
-        Serialize the system parameters to a JSON string.
-
-        Only basic attributes are included: n_atoms, frequencies_cm, dip_moments, delta_inhomogen_cm, coupling_cm.
-        Quantum objects (Qobj) and computed properties (like Hamiltonians or eigenstates)
-        are not serialized and will be recomputed on deserialization.
-        """
-        return json.dumps(self.to_dict())
-
-    @classmethod
-    def from_dict(cls, d):
-        """
-        Create a AtomicSystem object from a dictionary of parameters.
-
-        Expects keys to match those produced by to_dict().
-        """
-        return cls(**d)
-
-    @classmethod
-    def from_json(cls, json_str):
-        """
-        Deserialize a JSON string into a AtomicSystem object.
-
-        Only reconstructs basic attributes. Complex internal states are recomputed on init.
-        """
-        d = json.loads(json_str)
-        return cls.from_dict(d)
-
 
 def pair_to_index(i: int, j: int, n: int) -> int:
     """0-based canonical index for |i,j> with i<j, given n atoms.
@@ -463,7 +459,7 @@ Not used
     def update_coupling_cm(self, new_coupling_cm: float) -> None:
         """Update base coupling (cm^-1) and refresh internal fs cache/coupling matrix."""
         self.coupling_cm = new_coupling_cm
-        self._coupling_fs = float(convert_cm_to_fs(self.coupling_cm))
+        self.coupling_fs = float(convert_cm_to_fs(self.coupling_cm))
         # Coupling affects J matrix and H; recompute couplings and reset caches
         self._compute_isotropic_couplings()
         self.reset_cache()

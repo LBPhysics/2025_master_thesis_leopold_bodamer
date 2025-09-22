@@ -1,7 +1,7 @@
 """Stack many 1D per-t_coh results into a single 2D dataset.
 
 Usage:
-  python stack_1dto2d.py --abs_path \
+  python stack_times.py --abs_path \
     "/home/<user>/Master_thesis/data/1d_spectroscopy/.../t_dm..._t_wait..._dt.../"
 
 Behavior:
@@ -28,31 +28,12 @@ from qspectro2d.utils.data_io import (
     load_data_file,
     load_info_file,
     save_simulation_data,
+    discover_1d_files,
+    derive_2d_folder,
 )
 
 
-def _discover_1d_files(folder: Path) -> List[Path]:
-    """Return sorted list of all *_data.npz files in the folder.
-
-    If any averaged files ("*_inhom_avg_data.npz") exist, prefer only those.
-    This avoids stacking raw per-config files with duplicate t_coh values.
-    """
-    if not folder.is_dir():
-        raise NotADirectoryError(f"Not a directory: {folder}")
-    candidates = sorted(folder.glob("*_data.npz"))
-    avgs = [p for p in candidates if str(p).endswith("_inhom_avg_data.npz")]
-    return avgs if avgs else candidates
-
-
-def _derive_2d_folder(from_1d_folder: Path) -> Path:
-    """Map 1D folder .../data/1d_spectroscopy/... -> .../data/2d_spectroscopy/..."""
-    parts = list(from_1d_folder.parts)
-    try:
-        idx = parts.index("1d_spectroscopy")
-    except ValueError as exc:
-        raise ValueError("The provided path must include '1d_spectroscopy'") from exc
-    parts[idx] = "2d_spectroscopy"
-    return Path(*parts)
+# Note: discover_1d_files and derive_2d_folder imported from data_io
 
 
 def _load_entries(
@@ -88,7 +69,9 @@ def _load_entries(
             t_det = d["t_det"]
         else:
             if d["t_det"].shape != t_det.shape or not np.allclose(d["t_det"], t_det):
-                raise ValueError(f"Inconsistent t_det across files; first={files[0]}, bad={fp}")
+                raise ValueError(
+                    f"Inconsistent t_det across files; first={files[0]}, bad={fp}"
+                )
 
         stypes = list(map(str, d["signal_types"]))
         if signal_types is None:
@@ -118,7 +101,7 @@ def _load_entries(
     if unique_count != len(tcoh_vals):
         raise ValueError(
             "Found duplicate t_coh_value entries. If this directory contains raw inhomogeneous "
-            "per-config files, run inhom_stack_1d.py first or point this script to the folder "
+            "per-config files, run stack_inhomogenity.py first or point this script to the folder "
             "containing only averaged files (_inhom_avg_data.npz)."
         )
 
@@ -147,9 +130,14 @@ def _stack_to_2d(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Stack 1D per-t_coh outputs into a 2D dataset.")
+    parser = argparse.ArgumentParser(
+        description="Stack 1D per-t_coh outputs into a 2D dataset."
+    )
     parser.add_argument(
-        "--abs_path", type=str, required=True, help="Absolute path to the 1D results directory"
+        "--abs_path",
+        type=str,
+        required=True,
+        help="Absolute path to the 1D results directory",
     )
     parser.add_argument(
         "--skip_if_exists",
@@ -158,13 +146,15 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    sanitized = args.abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    sanitized = (
+        args.abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    )
     in_dir = Path(sanitized).expanduser().resolve()
     print("=" * 80)
     print("STACK 1D -> 2D")
     print(f"Input directory: {in_dir}")
 
-    files = _discover_1d_files(in_dir)
+    files = discover_1d_files(in_dir)
     print(f"Found {len(files)} files to stack")
     if not files:
         print("No files found; aborting.")
@@ -267,7 +257,9 @@ def main() -> None:
         # Rows with only non-zero contributions in every signal
         all_idxs = idx_all[mask_all]
         all_vals = t_coh[mask_all]
-        print(f"Rows with only non-zero contributions in every signal (n={all_idxs.size}):")
+        print(
+            f"Rows with only non-zero contributions in every signal (n={all_idxs.size}):"
+        )
         if all_idxs.size:
             print(f"  indices: [{', '.join(map(str, all_idxs))}]")
             print(f"  t_coh(fs): [{fmt_vals(all_vals)}]")
@@ -295,7 +287,6 @@ def main() -> None:
     print(f"Saved 2D dataset: {out_path}")
     print(f"To plot the 2D data, run:")
     print(f"python plot_datas.py --abs_path {out_path}")
-    print("Done.")
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -15,18 +15,12 @@ from pathlib import Path
 from typing import Optional, List, TYPE_CHECKING
 from qutip import BosonicEnvironment
 
-### Project-specific imports
-from project_config.paths import DATA_DIR
-from project_config.logging_setup import get_logger
-
 # Type checking imports to avoid circular imports
 if TYPE_CHECKING:
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
     from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
 from qspectro2d.utils.file_naming import generate_unique_data_filename
-
-logger = get_logger(__name__)
 
 
 # data saving functions
@@ -75,20 +69,25 @@ def save_data_file(
         for i, data in enumerate(datas):
             sig_key = signal_types[i]
             if is_2d:
-                if not isinstance(data, np.ndarray) or data.shape != (len(t_coh), len(t_det)):
+                if not isinstance(data, np.ndarray) or data.shape != (
+                    len(t_coh),
+                    len(t_det),
+                ):
                     raise ValueError(
                         f"2D data must have shape (len(t_coh), len(t_det)) = ({len(t_coh)}, {len(t_det)})"
                     )
             else:
                 if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
-                    raise ValueError(f"1D data must have shape (len(t_det),) = ({len(t_det)},)")
+                    raise ValueError(
+                        f"1D data must have shape (len(t_det),) = ({len(t_det)},)"
+                    )
             payload[sig_key] = data
 
         # Single write
         np.savez_compressed(abs_data_path, **payload)
 
-    except Exception:
-        logger.exception("Failed to save data")
+    except Exception as e:
+        print(f"Failed to save data: {e}")
         raise
 
 
@@ -121,9 +120,9 @@ def save_info_file(
                 },
                 info_file,
             )
-        logger.info("Info saved: %s", abs_info_path)
-    except Exception:
-        logger.exception("Failed to save info")
+        print(f"Info saved: {abs_info_path}")
+    except Exception as e:
+        print(f"Failed to save info: {e}")
         raise
 
 
@@ -144,7 +143,7 @@ def save_simulation_data(
         t_coh (Optional[np.ndarray]): Coherence time axis for 2D data.
 
     Returns:
-        Path]: absolute path to DATA_DIR for the saved numpy data file and info file.
+        Path]: absolute path to data dir for the saved numpy data file and info file.
     """
 
     system: "AtomicSystem" = sim_module.system
@@ -172,7 +171,6 @@ def save_simulation_data(
     save_data_file(abs_data_path, metadata, datas, t_det, t_coh=t_coh)
     save_info_file(abs_info_path, system, bath, laser, sim_config)
 
-    # Return absolute path to DATA_DIR
     return abs_data_path
 
 
@@ -188,17 +186,17 @@ def load_data_file(abs_data_path: Path) -> dict:
         dict: Dictionary containing loaded numpy data arrays
     """
     try:
-        logger.debug("Loading data: %s", abs_data_path)
+        print(f"Loading data: {abs_data_path}")
 
         with np.load(abs_data_path, allow_pickle=True) as data_file:
             data_dict = {key: data_file[key] for key in data_file.files}
         # Enforce required key
         if "t_det" not in data_dict:
             raise KeyError("Missing 't_det' axis in data file (new format requirement)")
-        logger.info("Loaded data: %s", abs_data_path)
+        print(f"Loaded data: {abs_data_path}")
         return data_dict
-    except Exception:
-        logger.exception("Failed to load data: %s", abs_data_path)
+    except Exception as e:
+        print(f"Failed to load data: {abs_data_path}; error: {e}")
         raise
 
 
@@ -213,20 +211,20 @@ def load_info_file(abs_info_path: Path) -> dict:
         dict: Dictionary containing system parameters and data configuration
     """
     try:
-        logger.debug("Loading info: %s", abs_info_path)
+        print(f"Loading info: {abs_info_path}")
 
         # Try to load the file directly if it exists
         if abs_info_path.exists():
             with open(abs_info_path, "rb") as info_file:
                 info = pickle.load(info_file)
-            logger.info("Loaded info: %s", abs_info_path)
+            print(f"Loaded info: {abs_info_path}")
             return info
 
         # Gracefully handle absent info files (e.g., post-processed averaged data)
-        logger.warning("Info file not found; continuing without it: %s", abs_info_path)
+        print(f"Info file not found; continuing without it: {abs_info_path}")
         return {}
-    except Exception:
-        logger.exception("Failed to load info: %s", abs_info_path)
+    except Exception as e:
+        print(f"Failed to load info: {abs_info_path}; error: {e}")
         raise
 
 
@@ -250,7 +248,7 @@ def load_simulation_data(abs_path: Path | str) -> dict:
     else:
         raise ValueError("Path must end with '_data.npz' or '_info.pkl'")
 
-    logger.debug("Loading data bundle: %s", abs_path)
+    print(f"Loading data bundle: {abs_path}")
     data_dict = load_data_file(abs_data_path)
     info_dict = load_info_file(abs_info_path)
 
@@ -264,21 +262,21 @@ def list_available_files(abs_base_dir: Path) -> List[str]:
     List all available data files in a directory with their metadata without loading the full data.
 
     Args:
-        abs_base_dir: Base directory path absolute to DATA_DIR
+        abs_base_dir: Base directory path absolute to data dir
 
     Returns:
         List[str]: Sorted list of data/info file paths (strings)
     """
     if not abs_base_dir.is_dir():
-        logger.warning("Not a directory, using parent: %s", abs_base_dir)
+        print(f"Not a directory, using parent: {abs_base_dir}")
         abs_base_dir = abs_base_dir.parent
     if not abs_base_dir.exists():
         raise FileNotFoundError(f"Base directory does not exist: {abs_base_dir}")
 
-    logger.debug("Listing data files in: %s", abs_base_dir)
+    print(f"Listing data files in: {abs_base_dir}")
 
     # Find all data files recursively
-    logger.debug("Listing data files in: %s", abs_base_dir)
+    print(f"Listing data files in: {abs_base_dir}")
 
     # Find all data and info files recursively
     data_pattern = str(abs_base_dir / "**" / "*_data.npz")
@@ -292,12 +290,103 @@ def list_available_files(abs_base_dir: Path) -> List[str]:
     all_files.sort()
 
     if not all_files:
-        logger.warning("No data or info files found: %s", abs_base_dir)
+        print(f"No data or info files found: {abs_base_dir}")
         return []
 
     # Print summary
-    logger.info("Found %d files in %s", len(all_files), abs_base_dir)
+    print(f"Found {len(all_files)} files in {abs_base_dir}")
     for file_path in all_files:
-        logger.debug("file: %s", file_path)
+        print(f"file: {file_path}")
 
     return all_files
+
+
+# ---------------------------------------------------------------------------
+# Discovery and grouping helpers (shared by stacking scripts)
+# ---------------------------------------------------------------------------
+
+
+def discover_1d_files(folder: Path) -> List[Path]:
+    """Return sorted list of all *_data.npz files in the folder.
+
+    If any averaged files ("*_inhom_avg_data.npz") exist, prefer only those.
+    This avoids stacking raw per-config files with duplicate t_coh values.
+    """
+    if not folder.is_dir():
+        raise NotADirectoryError(f"Not a directory: {folder}")
+    candidates = sorted(folder.glob("*_data.npz"))
+    avgs = [p for p in candidates if str(p).endswith("_inhom_avg_data.npz")]
+    return avgs if avgs else candidates
+
+
+def derive_2d_folder(from_1d_folder: Path) -> Path:
+    """Map 1D folder .../data/1d_spectroscopy/... -> .../data/2d_spectroscopy/..."""
+    parts = list(from_1d_folder.parts)
+    try:
+        idx = parts.index("1d_spectroscopy")
+    except ValueError as exc:
+        raise ValueError("The provided path must include '1d_spectroscopy'") from exc
+    parts[idx] = "2d_spectroscopy"
+    return Path(*parts)
+
+
+def collect_group_files(anchor: Path) -> List[Path]:
+    """Find all files with the same inhom_group_id as `anchor` in its directory.
+
+    The anchor must be a path to a single `_data.npz` file from an inhomogeneous 1D run.
+    """
+    try:
+        base = load_simulation_data(anchor)
+    except Exception as e:
+        print(f"❌ Anchor file is corrupted: {anchor}")
+        print(f"    Error: {e}")
+        print("🔍 Searching for valid files in the same directory...")
+
+        # Try to find any valid file in the same directory to get the group_id
+        dir_path = Path(anchor).parent
+        all_npz = list(dir_path.glob("*_data.npz"))
+
+        base = None
+        for p in all_npz:
+            if str(p).endswith("_inhom_avg_data.npz"):
+                continue
+            try:
+                temp_data = load_simulation_data(p)
+                if temp_data.get("inhom_enabled", False):
+                    print(f"✅ Found valid anchor file: {p}")
+                    base = temp_data
+                    break
+            except Exception:
+                continue
+        if base is None:
+            raise FileNotFoundError(
+                "No valid inhomogeneous files found in directory to determine group_id"
+            )
+
+    group_id = base.get("inhom_group_id")
+    if group_id is None:
+        raise ValueError("Missing inhom_group_id in anchor file metadata.")
+    # Keep t_coh constant if present (multiple coherence delays in same folder)
+    anchor_tcoh = base.get("t_coh_value", None)
+
+    dir_path = Path(anchor).parent
+    all_npz = list(dir_path.glob("*_data.npz"))
+    matches: List[Path] = []
+    for p in all_npz:
+        # Skip any already averaged outputs
+        if str(p).endswith("_inhom_avg_data.npz"):
+            continue
+        try:
+            d = load_simulation_data(p)
+        except Exception as e:
+            print(f"⚠️  Skipping corrupted file: {p}")
+            print(f"    Error: {e}")
+            continue
+        if d.get("inhom_enabled", False) and d.get("inhom_group_id") == group_id:
+            if anchor_tcoh is None or np.isclose(
+                float(d.get("t_coh_value", 0.0)), float(anchor_tcoh)
+            ):
+                matches.append(p)
+    if not matches:
+        raise FileNotFoundError("No matching inhomogeneous files found for group.")
+    return sorted(matches)

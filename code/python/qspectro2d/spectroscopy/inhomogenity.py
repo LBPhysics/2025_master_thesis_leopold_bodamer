@@ -1,3 +1,6 @@
+# this module provides functions to handle inhomogeneous broadening
+# via Gaussian distributions characterized by FWHM and center frequencies.
+# NOTE AT the moment not used
 import numpy as np
 from typing import Union
 

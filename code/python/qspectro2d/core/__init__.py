@@ -13,12 +13,10 @@ with various bath models and pulse configurations.
 """
 
 # SYSTEM PARAMETERS
-
 from .atomic_system import AtomicSystem
 
 
 # BATH SYSTEMS
-
 from .bath_system import (
     spectral_density_func_drude_lorentz,
     spectral_density_func_ohmic,
@@ -30,7 +28,6 @@ from .bath_system import (
 
 
 # PULSE DEFINITIONS AND SEQUENCES
-
 from .laser_system import (
     LaserPulse,
     LaserPulseSequence,
@@ -42,7 +39,6 @@ from .laser_system import (
 
 
 # WHOLE MODULE CLASS AND specific Paper SOLVER FUNCTIONS
-
 from .simulation import (
     SimulationModuleOQS,
     SimulationConfig,

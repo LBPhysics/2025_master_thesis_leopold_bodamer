@@ -4,10 +4,9 @@ from qutip.utilities import n_thermal
 from qutip import BosonicEnvironment
 
 """
-
 This module contains functions for calculating spectral density and power spectrum
 for various types of bosonic baths, including Drude-Lorentz and ohmic baths.
-
+It mirrors the structure of the QuTip library's bath functions
 """
 
 

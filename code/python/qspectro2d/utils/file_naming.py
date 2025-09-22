@@ -5,11 +5,9 @@ This module provides functionality for generating standardized filenames
 and directory paths for simulation data and plots.
 """
 
-
-# IMPORTS
-
 from __future__ import annotations
 
+# IMPORTS
 from pathlib import Path
 from typing import Union, TYPE_CHECKING
 
@@ -19,9 +17,6 @@ if TYPE_CHECKING:
 
 ### Project-specific imports
 from project_config.paths import DATA_DIR, FIGURES_PYTHON_DIR, ensure_dirs
-from project_config.logging_setup import get_logger
-
-logger = get_logger(__name__)
 
 
 def _generate_base_filename(sim_config: SimulationConfig) -> str:
@@ -59,7 +54,9 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
         # Let's check all files in directory and filter manually
         try:
             all_files = list(path.iterdir())
-            existing_files = [f for f in all_files if f.is_file() and f.stem == candidate_name]
+            existing_files = [
+                f for f in all_files if f.is_file() and f.stem == candidate_name
+            ]
         except FileNotFoundError:
             # Directory doesn't exist yet
             existing_files = []
@@ -69,7 +66,8 @@ def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
             break
 
         # Files exist, try next candidate
-        logger.debug("Found %d existing files with name: %s", len(existing_files), candidate_name)
+        # Note: project-wide logging replaced with prints
+        print(f"Found {len(existing_files)} existing files with name: {candidate_name}")
         candidate_name = f"{base_name}_{counter}"
         counter += 1
 
