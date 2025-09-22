@@ -36,11 +36,11 @@ bath:
   coupling: 0.01   # actually in terms of frequency
 
 config:
-  solver: Paper_eqs
+  solver: ME
   signal_types: [nonrephasing, rephasing]
 
 window:
   t_det_max: 50.0
   t_wait: 0.0
   t_coh: 30.0
-  dt: 1.0
+  dt: 5.0

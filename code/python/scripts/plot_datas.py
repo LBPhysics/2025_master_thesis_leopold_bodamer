@@ -386,7 +386,7 @@ def main():
         "--section",
         type=float,
         nargs="+",
-        default=(1.5, 1.7),
+        default=(0, 2),
         help="Frequency window: 1D -> two floats (min max), 2D -> four floats (min max min max)",
     )
 
