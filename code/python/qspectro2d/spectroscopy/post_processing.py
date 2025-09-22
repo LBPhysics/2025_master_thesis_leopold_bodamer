@@ -312,44 +312,35 @@ def compute_2d_fft_wavenumber(
             raise ValueError(f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes")
 
     def _fft2(arr: np.ndarray, signal_type: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Compute 2D transform and provide matching frequency axes with shifts.
-
-        Rules for axis shifting (requested):
-        - If transform along an axis uses np.fft.fft  -> use np.fft.fftshift on that axis array
-        - If transform along an axis uses np.fft.ifft -> use np.fft.ifftshift on that axis array
+        """
+        Compute 2D transform and provide matching frequency axes.
 
         Returns
         -------
-        (spec, freq_cohs_ax, freq_dets_ax)
-            spec : complex ndarray (N_coh, N_det)
-                2D spectrum scaled by (dt_coh * dt_det). No additional fftshift/ifftshift is
-                applied to the array itself here beyond the transforms above.
-            freq_cohs_ax : ndarray (N_coh,)
-                Frequency axis for coherence dimension (cycles/fs), shifted according to rule.
-            freq_dets_ax : ndarray (N_det,)
-                Frequency axis for detection dimension (cycles/fs), shifted according to rule.
+        spec : complex ndarray (N_coh, N_det)
+            2D spectrum scaled by (dt_coh * dt_det).
+        freq_cohs_ax : ndarray (N_coh,)
+            Frequency axis for coherence dimension (cycles/fs), centered (fftshifted).
+        freq_dets_ax : ndarray (N_det,)
+            Frequency axis for detection dimension (cycles/fs), centered (fftshifted).
         """
 
         sig = signal_type.lower()
 
-        # Compute the 2D transform with chosen sign convention
         if sig == "rephasing":
-            # coh:  fft  (- sign), det: ifft (+ sign)
+            # coh: fft (- sign), det: ifft (+ sign)
             tmp_local = np.fft.fft(arr, axis=0)
-            spec = np.fft.ifft(tmp_local, axis=1) * N_det  # ifft normalization compensation
-
-            # Axes: fft -> fftshift, ifft -> ifftshift
-            freq_cohs_ax = np.fft.fftshift(np.fft.fftfreq(N_coh, d=dt_coh))
-            freq_dets_ax = np.fft.ifftshift(np.fft.fftfreq(N_det, d=dt_det))
-
-        else:
-            # nonrephasing / average / unknown: ifft both (+, +)
-            tmp_local = np.fft.ifft(arr, axis=0) * N_coh  # ifft normalization compensation
             spec = np.fft.ifft(tmp_local, axis=1) * N_det
 
-            # Axes: ifft -> ifftshift on both
-            freq_cohs_ax = np.fft.ifftshift(np.fft.fftfreq(N_coh, d=dt_coh))
-            freq_dets_ax = np.fft.ifftshift(np.fft.fftfreq(N_det, d=dt_det))
+        else:
+            # nonrephasing (+, +): ifft both
+            tmp_local = np.fft.ifft(arr, axis=0) * N_coh
+            spec = np.fft.ifft(tmp_local, axis=1) * N_det
+
+        # Always fftshift for plotting
+        spec = np.fft.fftshift(spec, axes=(0, 1))
+        freq_cohs_ax = np.fft.fftshift(np.fft.fftfreq(N_coh, d=dt_coh))
+        freq_dets_ax = np.fft.fftshift(np.fft.fftfreq(N_det, d=dt_det))
 
         return spec * (dt_coh * dt_det), freq_cohs_ax, freq_dets_ax
 

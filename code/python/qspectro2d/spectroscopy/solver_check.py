@@ -1,3 +1,4 @@
+# TODO instead of complex checking use is_state(rho) from qutip
 # -*- coding: utf-8 -*-
 """
 Solver validation and diagnostics utilities.

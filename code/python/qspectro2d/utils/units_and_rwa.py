@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
-from typing import Union, List, Sequence, Literal
+from typing import List
 from qutip import Qobj, expect
 
 __all__ = [
