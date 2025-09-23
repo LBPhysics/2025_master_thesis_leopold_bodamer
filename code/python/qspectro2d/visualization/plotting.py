@@ -4,8 +4,32 @@ import matplotlib.pyplot as plt
 from typing import Literal, Union, Tuple
 from matplotlib.axes import Axes
 
-from plotstyle import init_style, COLORS, LINE_STYLES
-from plotstyle.style import simplify_figure_text
+try:
+    # Optional external styling package. If unavailable, we provide local fallbacks.
+    from plotstyle import init_style, COLORS, LINE_STYLES  # type: ignore
+    from plotstyle.style import simplify_figure_text  # type: ignore
+except Exception:  # pragma: no cover - fallback path
+    def init_style():
+        """No-op style initializer when plotstyle is absent."""
+        pass
+
+    # Simple fallback palettes
+    COLORS = [
+        "C0",
+        "C1",
+        "C2",
+        "C3",
+        "C4",
+        "C5",
+        "C6",
+        "C7",
+        "C8",
+        "C9",
+    ]
+    LINE_STYLES = ["solid", "dashed", "dashdot", "dotted"]
+
+    def simplify_figure_text(ax=None):  # minimal compatibility shim
+        return ax
 
 from qspectro2d.core.laser_system.laser_fcts import (
     pulse_envelopes,

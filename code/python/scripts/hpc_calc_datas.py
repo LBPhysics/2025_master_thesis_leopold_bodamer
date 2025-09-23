@@ -4,9 +4,9 @@ This script creates one SLURM script per batch index (0..n_batches-1)
 and, by default, submits them with ``sbatch``.
 
 Layout:
-- Scripts are generated under ``scripts_dir/batch_jobs/{n_batches}batches``
-    where ``scripts_dir`` is the directory containing this file.
-- Logs are written to ``scripts_dir/batch_jobs/{n_batches}batches[/_i]/logs/``
+- Scripts are generated under ``SCRIPTS_DIR/batch_jobs/{n_batches}batches``
+    where ``SCRIPTS_DIR`` is the directory containing this file.
+- Logs are written to ``SCRIPTS_DIR/batch_jobs/{n_batches}batches[/_i]/logs/``
     via Slurm's ``--output``/``--error`` options.
 
 Each job runs (from the batching directory):
@@ -25,7 +25,12 @@ from pathlib import Path
 
 
 def _slurm_script_text(
-    *, job_name: str, n_batches: int, batch_idx: int, simulation_type: str, logs_subdir: str
+    *,
+    job_name: str,
+    n_batches: int,
+    batch_idx: int,
+    simulation_type: str,
+    logs_subdir: str,
 ) -> str:
     """Render the SLURM script text for a single batch index.
 
@@ -53,6 +58,7 @@ python ../../calc_datas.py --simulation_type {simulation_type} --n_batches {n_ba
 """
 
 
+# TODO also put these in utils or something like that
 def _ensure_dirs(job_dir: Path, logs_subdir: str) -> None:
     """Create the batching directory and the given logs subdirectory if missing."""
     job_dir.mkdir(parents=True, exist_ok=True)
@@ -67,7 +73,9 @@ def _submit_job(script_path: Path) -> str:
     """
     sbatch = shutil.which("sbatch")
     if sbatch is None:
-        raise RuntimeError("sbatch not found on PATH. Run this on your cluster login node.")
+        raise RuntimeError(
+            "sbatch not found on PATH. Run this on your cluster login node."
+        )
 
     # Submit from within the batching directory so relative log paths work.
     result = subprocess.run(
@@ -109,10 +117,10 @@ def main() -> None:
     if n_batches <= 0:
         raise ValueError("--n_batches must be a positive integer")
 
-    scripts_dir = Path(__file__).resolve().parent  # directory containing this script
+    from project_config import SCRIPTS_DIR
 
-    # Create a fixed job directory under scripts_dir/batch_jobs (only logs dir will be unique)
-    job_root = scripts_dir / "batch_jobs"
+    # Create a fixed job directory under SCRIPTS_DIR/batch_jobs (only logs dir will be unique)
+    job_root = SCRIPTS_DIR / "batch_jobs"
     sim_type = str(args.simulation_type).lower()
     base_name = f"{sim_type}_{n_batches}batches"
     job_dir = job_root / base_name
@@ -127,7 +135,9 @@ def main() -> None:
     _ensure_dirs(job_dir, logs_subdir)
 
     action_verb = "Generating" if args.generate_only else "Creating and submitting"
-    print(f"{action_verb} {n_batches} SLURM jobs in {job_dir} (logs -> {logs_subdir}) ...")
+    print(
+        f"{action_verb} {n_batches} SLURM jobs in {job_dir} (logs -> {logs_subdir}) ..."
+    )
 
     for batch_idx in range(n_batches):
         job_name = f"{sim_type}_b{batch_idx:03d}_of_{n_batches:03d}"

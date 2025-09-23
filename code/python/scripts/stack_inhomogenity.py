@@ -22,6 +22,7 @@ from qspectro2d import (
     save_simulation_data,
 )
 from qspectro2d.utils.data_io import collect_group_files
+from project_config.paths import DATA_DIR
 
 
 def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
@@ -136,7 +137,9 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
             except Exception:
                 continue
 
-    out_path = save_simulation_data(sim_module_stub, metadata, averaged, t_det)
+    out_path = save_simulation_data(
+        sim_module_stub, metadata, averaged, t_det, data_root=DATA_DIR
+    )
     return out_path
 
 

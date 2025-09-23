@@ -132,6 +132,8 @@ def save_simulation_data(
     datas: List[np.ndarray],
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
+    *,
+    data_root: Path | str,
 ) -> Path:
     """
     Save spectroscopy simulation data (numpy arrays) along with known axes in one file,
@@ -152,7 +154,9 @@ def save_simulation_data(
     laser: "LaserPulseSequence" = sim_module.laser
 
     # Generate unique base filename
-    abs_base_path = generate_unique_data_filename(system, sim_config)
+    abs_base_path = generate_unique_data_filename(
+        system, sim_config, data_root=data_root
+    )
 
     # Append tags for averaged data variants (keeps plotting compatibility)
     suffix_bits: list[str] = []

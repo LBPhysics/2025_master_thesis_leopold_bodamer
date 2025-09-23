@@ -15,9 +15,6 @@ if TYPE_CHECKING:
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
     from qspectro2d.core.simulation.sim_config import SimulationConfig
 
-### Project-specific imports
-from project_config.paths import DATA_DIR, FIGURES_PYTHON_DIR, ensure_dirs
-
 
 def _generate_base_filename(sim_config: SimulationConfig) -> str:
     sim_f = sim_config.to_dict()
@@ -135,6 +132,7 @@ def generate_unique_data_filename(
     system: AtomicSystem,
     sim_config: SimulationConfig,
     *,
+    data_root: Union[str, Path],
     ensure: bool = True,
 ) -> str:
     """Return unique base filename (without extension) for a run.
@@ -143,9 +141,9 @@ def generate_unique_data_filename(
     mappings for flexibility.
     """
     relative_path = generate_base_sub_dir(sim_config, system)
+    abs_path = Path(data_root) / relative_path
     if ensure:
-        ensure_dirs()
-    abs_path = DATA_DIR / relative_path
+        abs_path.mkdir(parents=True, exist_ok=True)
     base_name = _generate_base_filename(sim_config)
     return _generate_unique_filename(abs_path, base_name)
 
@@ -155,6 +153,9 @@ def generate_unique_plot_filename(
     sim_config: SimulationConfig,
     domain: str,
     component: str | None = None,
+    *,
+    figures_root: Union[str, Path],
+    ensure: bool = True,
 ) -> str:
     """
     Build a standardized filename for plots.
@@ -180,8 +181,9 @@ def generate_unique_plot_filename(
 
     # Start with basic structure
     relative_path = generate_base_sub_dir(sim_config, system)
-    ensure_dirs()
-    path = FIGURES_PYTHON_DIR / relative_path  # Caller may create as needed
+    path = Path(figures_root) / relative_path
+    if ensure:
+        path.mkdir(parents=True, exist_ok=True)
 
     base_name = _generate_base_filename(sim_config)
     base_name += f"_{domain}_domain"

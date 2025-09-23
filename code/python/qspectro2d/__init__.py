@@ -62,8 +62,6 @@ from .utils.data_io import (
 )
 from .utils import generate_unique_plot_filename
 
-# Configuration exports
-from .config import DATA_DIR, FIGURES_DIR
 
 # PUBLIC API - MOST COMMONLY USED
 __all__ = [
@@ -89,9 +87,6 @@ __all__ = [
     "load_simulation_data",
     # Plotting helpers
     "generate_unique_plot_filename",
-    # Configuration
-    "DATA_DIR",
-    "FIGURES_DIR",
 ]
 
 

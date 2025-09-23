@@ -11,7 +11,6 @@ Examples (Windows PowerShell):
 
 from __future__ import annotations
 
-from pathlib import Path
 import matplotlib.pyplot as plt
 from typing import Any, List, Optional, Sequence, Tuple, Dict, cast
 from qutip import BosonicEnvironment
@@ -36,6 +35,7 @@ from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d import load_simulation_data
 
 from plotstyle import init_style, save_fig
+from project_config.paths import FIGURES_PYTHON_DIR
 
 # Style is initialised once on import.
 init_style()
@@ -171,6 +171,7 @@ def _plot_components(
                         sim_config=sim_config,
                         domain=domain,
                         component=comp,
+                        figures_root=FIGURES_PYTHON_DIR,
                     )
                     # Append the freq-domain label to the filename for clear linkage
                     safe_label = str(st).replace(" ", "_")
@@ -210,6 +211,7 @@ def _plot_components(
                         sim_config=sim_config,
                         domain=domain,
                         component=comp,
+                        figures_root=FIGURES_PYTHON_DIR,
                     )
                     safe_label = str(st).replace(" ", "_")
                     filename = f"{base_name}_{safe_label}"

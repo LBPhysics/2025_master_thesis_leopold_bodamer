@@ -186,8 +186,9 @@ def main() -> None:
     # Mirror naming used by save_simulation_data: generate_unique_data_filename + suffixes
     try:
         from qspectro2d.utils.file_naming import generate_unique_data_filename
+        from project_config.paths import DATA_DIR
 
-        base_path = generate_unique_data_filename(system, sim_cfg_2d)
+        base_path = generate_unique_data_filename(system, sim_cfg_2d, data_root=DATA_DIR)
         suffix_bits = ["tcoh_avg"]  # for 1d->2d stacking
         predicted_base = f"{base_path}_{'_'.join(suffix_bits)}"
         predicted_out = Path(f"{predicted_base}_data.npz")
@@ -276,12 +277,15 @@ def main() -> None:
     }
     datas: List[np.ndarray] = [stacked[s] for s in signal_types]
 
+    from project_config.paths import DATA_DIR
+
     out_path = save_simulation_data(
         sim_module=sim_2d,
         metadata=metadata,
         datas=datas,
         t_det=t_det,
         t_coh=t_coh,
+        data_root=DATA_DIR,
     )
 
     print(f"Saved 2D dataset: {out_path}")

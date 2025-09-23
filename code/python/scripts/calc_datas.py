@@ -31,7 +31,7 @@ import time
 import warnings
 import numpy as np
 
-from project_config.paths import SCRIPTS_DIR
+from project_config.paths import SCRIPTS_DIR, DATA_DIR
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.spectroscopy.one_d_field import parallel_compute_1d_e_comps
 from qspectro2d import save_simulation_data
@@ -185,7 +185,7 @@ def run_1d_mode(args) -> None:
                 "inhom_total": int(n_inhom),
             }
             out_path = save_simulation_data(
-                sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det
+                sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR
             )
             saved_paths.append(str(out_path))
             print(f"    ✅ Saved {out_path}")
@@ -215,7 +215,9 @@ def run_1d_mode(args) -> None:
         "inhom_averaged": False,
         "t_coh_averaged": False,
     }
-    abs_data_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
+    abs_data_path = save_simulation_data(
+        sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR
+    )
 
     print(f"✅ Saved 1D result for t_coh={t_coh_val:.2f} fs.")
     print(f'\n🎯 To plot run: \npython plot_datas.py --abs_path "{abs_data_path}"')
@@ -270,7 +272,9 @@ def run_2d_mode(args) -> None:
             "t_coh_averaged": False,
             "inhom_averaged": False,
         }
-        out_path = save_simulation_data(sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det)
+        out_path = save_simulation_data(
+            sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR
+        )
         saved_paths.append(str(out_path))
         print(f"    ✅ Saved {out_path}")
 
