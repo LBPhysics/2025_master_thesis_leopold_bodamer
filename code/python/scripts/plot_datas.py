@@ -429,16 +429,15 @@ def main():
     try:
         # Parse section into internal structure: None | (a,b) | ((a,b),(c,d))
         section: Optional[Any] = None
-        if args.section is not None:
-            if len(args.section) == 2:
-                section = (args.section[0], args.section[1])
-            elif len(args.section) == 4:
-                section = (
-                    (args.section[0], args.section[1]),
-                    (args.section[2], args.section[3]),
-                )
-            else:
-                raise ValueError("--section expects 2 (1D) or 4 (2D) floats")
+        if len(args.section) == 2:
+            section = (args.section[0], args.section[1])
+        elif len(args.section) == 4:
+            section = (
+                (args.section[0], args.section[1]),
+                (args.section[2], args.section[3]),
+            )
+        else:
+            raise ValueError("--section expects 2 (1D) or 4 (2D) floats")
 
         # Plot selections (CLI flags)
         plot_time = bool(args.plot_time)

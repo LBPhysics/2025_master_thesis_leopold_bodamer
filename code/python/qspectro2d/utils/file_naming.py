@@ -177,7 +177,7 @@ def generate_unique_plot_filename(
     # Validate component if provided
     if component and component not in {"real", "img", "abs", "phase"}:
         raise ValueError(
-            f"Invalid component '{component}'. Expected one of 'real', 'imag', 'abs', 'phase'."
+            f"Invalid component '{component}'. Expected one of 'real', 'img', 'abs', 'phase'."
         )
 
     # Start with basic structure

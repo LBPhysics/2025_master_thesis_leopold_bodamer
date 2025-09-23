@@ -124,8 +124,6 @@ def plot_pulse_envelopes(
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
 
-    if created_fig:
-        plt.close(fig)
     simplify_figure_text(fig)
     return fig, ax
 
@@ -189,8 +187,6 @@ def plot_e_pulses(
     ax.set_title(r"RWA Electric Field Components")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    if created_fig:
-        plt.close(fig)
     simplify_figure_text(fig)
     return fig, ax
 
@@ -253,8 +249,7 @@ def plot_epsilon_pulses(
     ax.set_title(r"Full Electric Field with Carrier")
     if show_legend:
         ax.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    if created_fig:
-        plt.close(fig)
+
     simplify_figure_text(fig)
     return fig, ax
 
@@ -541,8 +536,7 @@ def plot_1d_el_field(
     add_text_box(ax=ax, kwargs=kwargs)
     fig.tight_layout()
     simplify_figure_text(fig)
-    if created_fig:
-        plt.close(fig)
+
     return fig
 
 
@@ -640,10 +634,7 @@ def plot_2d_el_field(
                 f"Warning: Cannot use TwoSlopeNorm with vmin={vmin}, vcenter={vcenter}, vmax={vmax}. Using default normalization."
             )
 
-    if domain == "freq":
-        cbarlabel = r"$\propto S_{\text{out}} / E_{0}$"
-    else:
-        cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
+    cbarlabel = r"$\propto S_{\text{out}} / E_{0}$"
 
     # GENERATE FIGURE
     created_fig = False
@@ -658,12 +649,7 @@ def plot_2d_el_field(
         data,  # data shape: [len(axis_coh), len(axis_det)]
         aspect="auto",
         cmap=colormap,
-        extent=[
-            axis_det[0],
-            axis_det[-1],  # X-axis: detection time
-            axis_coh[0],
-            axis_coh[-1],  # Y-axis: coherence time
-        ],
+        extent=[axis_det.min(), axis_det.max(), axis_coh.min(), axis_coh.max()],
         norm=norm,
         interpolation="bilinear",  # optional: "none" to avoid smoothing
     )
@@ -673,7 +659,7 @@ def plot_2d_el_field(
     cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
     # NOTE Add contour lines with different styles for positive and negative values
-    add_custom_contour_lines(axis_coh, axis_det, data, component)
+    add_custom_contour_lines(axis_det, axis_coh, data, component)
 
     # Improve overall plot appearance
     ax.set_title(title)
@@ -688,8 +674,6 @@ def plot_2d_el_field(
     """# Add a border around the plot for better visual definition plt.gca().spines["top"].set_visible(True); plt.gca().spines["bottom"].set_linewidth(1.5)"""
 
     simplify_figure_text(fig)
-    if created_fig:
-        plt.close(fig)  # keep figure open for further user modification if desired
     return fig
 
 
@@ -794,7 +778,7 @@ def _resolve_1d_labels_and_component(
         y_data = np.angle(data)
         base = f"\mathrm{{Arg}}[{function_symbol}({var_symbol})]"
     else:
-        raise ValueError("Component must be one of 'abs','real','imag','phase'.")
+        raise ValueError("Component must be one of 'abs','real','img','phase'.")
 
     label = f"${base}$"
     ylabel = label if component != "phase" else f"${base}$ [rad]"
