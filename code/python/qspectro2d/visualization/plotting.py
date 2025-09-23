@@ -553,6 +553,7 @@ def plot_2d_el_field(
     normalize: bool = True,
     ax: Union[Axes, None] = None,
     show_diagonal: bool = True,
+    smooth: bool = False,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
@@ -574,6 +575,9 @@ def plot_2d_el_field(
         Automatically set to True for "real", "img", and "phase" components.
     section : first tuple crops coh axis (coh_min, coh_max),
               second tuple crops det axis (det_min, det_max) to zoom into specific region.
+    smooth : bool, default False
+        If True, render with imshow(interpolation="bilinear") for a smooth look.
+        If False, use pcolormesh with shading="auto" for exact axis alignment.
     """
 
     # VALIDATE INPUT
@@ -645,16 +649,29 @@ def plot_2d_el_field(
     else:
         fig = ax.figure
 
-    # Create the pcolormesh plot for the 2D data
-    im_plot = ax.imshow(
-        data,  # data shape: [len(axis_coh), len(axis_det)]
-        aspect="auto",
-        cmap=colormap,
-        extent=[axis_det.min(), axis_det.max(), axis_coh.min(), axis_coh.max()],
-        origin="lower",  # ensure y increases upward to match contour coordinates
-        norm=norm,
-        interpolation="bilinear",  # optional: "none" to avoid smoothing
-    )
+    if smooth:
+        # Use imshow to enable bilinear (or other) interpolation; map data to axes via extent
+        im_plot = ax.imshow(
+            data,
+            aspect="auto",
+            cmap=colormap,
+            extent=[axis_det.min(), axis_det.max(), axis_coh.min(), axis_coh.max()],
+            origin="lower",
+            norm=norm,
+            interpolation="bilinear",
+        )
+    else:
+        # Create the pcolormesh plot for the 2D data (respects provided axes directly)
+        im_plot = ax.pcolormesh(
+            axis_det,
+            axis_coh,
+            data,  # shape: [len(axis_coh), len(axis_det)]
+            cmap=colormap,
+            norm=norm,
+            shading="auto",  # infer cell edges from centers; avoids off-by-one
+        )
+        # Ensure aspect is not distorted (matches previous imshow aspect="auto")
+        ax.set_aspect("auto")
     if use_custom_colormap:
         im_plot.set_clim(vmin=vmin, vmax=vmax)
 
