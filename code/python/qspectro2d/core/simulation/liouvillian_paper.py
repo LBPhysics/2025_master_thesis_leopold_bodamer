@@ -1,4 +1,4 @@
-# TODO the rates of this implementation are currently NOT time-dependent!!!
+# TODO the rates of this implementation are currently time-dependent BUT NOT WORKING!!!!
 
 """Paper-specific time dependent Liouvillian builders."""
 from __future__ import annotations

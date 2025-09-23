@@ -48,10 +48,18 @@ def ensure_2d_dataset(abs_path: str) -> Path:
     the stdout for a line like: "Saved 2D dataset: <abs_path>".
     As a fallback, we search the derived 2D directory for the newest "*_data.npz".
     """
+    # Accept both a single 1D data file or a directory containing them.
+    sanitized = (
+        abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
+    )
+    orig_path = Path(sanitized).expanduser().resolve()
     one_d_dir = _derive_1d_dir(abs_path)
 
     # Always run stacking (kept simple; idempotent and quick compared to compute)
-    cmd = ["python", "stack_times.py", "--abs_path", str(one_d_dir)]
+    # If a data file is provided, pass the file path to stack_times.py
+    # (it currently assumes in_dir is a file and uses parent()).
+    stack_arg = str(orig_path if orig_path.is_file() else one_d_dir)
+    cmd = ["python", "stack_times.py", "--abs_path", stack_arg]
     proc = run(cmd, cwd=SCRIPTS_DIR, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(
@@ -66,7 +74,8 @@ def ensure_2d_dataset(abs_path: str) -> Path:
             return saved_path
 
     # Fallback: discover newest *_data.npz in the derived 2D directory
-    two_d_dir = _derive_2d_dir(one_d_dir)
+    base_for_2d = orig_path.parent if orig_path.is_file() else one_d_dir
+    two_d_dir = _derive_2d_dir(base_for_2d)
     candidates = sorted(
         two_d_dir.glob("*_data.npz"), key=lambda p: p.stat().st_mtime, reverse=True
     )

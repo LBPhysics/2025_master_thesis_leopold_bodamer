@@ -99,9 +99,10 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
     n_chains = sys_f.get("n_chains")
     n_rings = sys_f.get("n_rings")
     if n_atoms > 2:
-        parts.append(f"N{n_atoms}({n_chains}x{n_rings})")
+        if n_chains is not None and n_rings is not None:
+            parts.append(f"{n_atoms}({n_chains}x{n_rings})_atoms")
     else:
-        parts.append(f"N{n_atoms}")
+        parts.append(f"{n_atoms}_atoms")
     # For inhomogeneous batches, avoid embedding per-run numeric parameters to keep a stable folder
     n_inhomogen = int(sim_f.get("n_inhomogen", 1) or 1)
     if n_inhomogen > 1:

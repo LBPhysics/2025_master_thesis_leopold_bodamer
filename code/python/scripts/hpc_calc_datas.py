@@ -2,8 +2,12 @@
 
 This script creates one SLURM script per batch index (0..n_batches-1)
 and, by default, submits them with ``sbatch``.
-
-Layout:
+Example usage:
+    for a 2d time plot
+    python hpc_calc_datas.py --n_batches 10 --sim_type 2d
+    for a 1d plot with averaged inhomogeneous broadening
+    python hpc_calc_datas.py --n_batches 5 --sim_type 1d
+    Layout:
 - Scripts are generated under ``SCRIPTS_DIR/batch_jobs/{n_batches}batches``
     where ``SCRIPTS_DIR`` is the directory containing this file.
 - Logs are written to ``SCRIPTS_DIR/batch_jobs/{n_batches}batches[/_i]/logs/``

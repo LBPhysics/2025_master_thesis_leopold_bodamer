@@ -7,12 +7,16 @@ Examples (Windows PowerShell):
     # Base path (no suffix) or an .npz file
     python plot_datas.py --abs_path "C:/path/to/data/run_001"
     python plot_datas.py --abs_path "C:/path/to/data/run_042.npz"
+    # Control zero-padding factor for FFT (1 disables, default 10)
+    python plot_datas.py --abs_path "C:/path/to/data/run_001" --extend 5
+    # Plot only time or frequency domain
+    python plot_datas.py --abs_path "C:/path/to/data/run_001" --no-freq OR --no-time
 """
 
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
-from typing import Any, List, Optional, Sequence, Tuple, Dict, cast
+from typing import Any, List, Optional, Sequence, Dict, cast
 from qutip import BosonicEnvironment
 import sys
 import argparse
@@ -33,8 +37,8 @@ from qspectro2d import generate_unique_plot_filename
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d import load_simulation_data
 
-from plotstyle import init_style, save_fig
 from project_config.paths import FIGURES_PYTHON_DIR
+from plotstyle import init_style, save_fig
 
 # Style is initialised once on import.
 init_style()
@@ -66,12 +70,8 @@ def _extend_and_fft(
     """
     # Extract inputs from loaded dict
     sim_config = loaded_data_and_info.get("sim_config")
-    if sim_config is None:
-        raise KeyError("'sim_config' missing in loaded_data_and_info")
     signal_types: Sequence[str] = sim_config.signal_types
     t_det = loaded_data_and_info.get("t_det")
-    if t_det is None:
-        raise KeyError("'t_det' missing in loaded_data_and_info")
     t_coh = loaded_data_and_info.get("t_coh") if dimension == "2d" else None
 
     datas: Sequence[Any] = [loaded_data_and_info.get(st) for st in signal_types]
@@ -245,10 +245,23 @@ def plot_data(
         missing_signals = [st for st, d in zip(signal_types, datas) if d is None]
         raise KeyError(f"Missing signal arrays for: {missing_signals}")
 
-    w0 = system.frequencies_fs[0]
-    bath_dict = extract_bath_parameters(bath_env, w0)
+    # get a nice dict of metadata for information
+    ode_solver = sim_config.ode_solver
+    if ode_solver == "BR" or ode_solver == "Paper_eqs":
+        w0 = system.frequencies_fs[0]
+        bath_dict = extract_bath_parameters(bath_env, w0)
+    else:
+        bath_dict = {
+            "deph_rate": 1 / 100,
+            "down_rate": 1 / 300,
+        }
+
+    sim_dict = sim_config.to_dict()  # NOTE hopefully not a problem later in plotting
+    # purge the sim_type from the sim_config dictionary, because we declare it later more specific in kept_types:
+    sim_dict.pop("sim_types", None)
+
     laser_dict = {k: v for k, v in laser.to_dict().items() if k != "pulses"}
-    meta = {**system.to_dict(), **bath_dict, **laser_dict, **sim_config.to_dict()}
+    meta = {**system.to_dict(), **bath_dict, **laser_dict, **sim_dict}
 
     # Announce plotting context
     print(f"➡️  Plotting: dimension={dimension}, signals={list(signal_types)}")
@@ -259,7 +272,7 @@ def plot_data(
     # ---- Config with defaults
     pad_factor = float(plot_config.get("extend_for", 1))
     section = plot_config.get("section")
-    components = ["real", "abs", "img", "phase"]  # default all
+    components = ["real", "abs", "img"]  # NOTE default phase is not important
     plot_time = bool(plot_config.get("plot_time_domain", True))
     plot_freq = bool(plot_config.get("plot_frequency_domain", True))
     if (
@@ -383,6 +396,34 @@ def main():
         help="Frequency window: 1D -> two floats (min max), 2D -> four floats (min max min max)",
     )
 
+    # Plot selection (both enabled by default)
+    parser.add_argument(
+        "--time",
+        dest="plot_time",
+        action="store_true",
+        default=True,
+        help="Plot time-domain data (default)",
+    )
+    parser.add_argument(
+        "--no-time",
+        dest="plot_time",
+        action="store_false",
+        help="Disable time-domain plotting",
+    )
+    parser.add_argument(
+        "--freq",
+        dest="plot_freq",
+        action="store_true",
+        default=True,
+        help="Plot frequency-domain data (default)",
+    )
+    parser.add_argument(
+        "--no-freq",
+        dest="plot_freq",
+        action="store_false",
+        help="Disable frequency-domain plotting",
+    )
+
     args = parser.parse_args()
 
     try:
@@ -399,8 +440,9 @@ def main():
             else:
                 raise ValueError("--section expects 2 (1D) or 4 (2D) floats")
 
-        plot_time = True
-        plot_freq = True
+        # Plot selections (CLI flags)
+        plot_time = bool(args.plot_time)
+        plot_freq = bool(args.plot_freq)
 
         all_saved: List[str] = []
         print(f"🔄 Loading: {args.abs_path}")

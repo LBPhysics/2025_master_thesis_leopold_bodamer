@@ -2,16 +2,12 @@
 atomic:
   n_atoms: 2
   frequencies_cm: [15640.0, 16360.0]
-  n_inhomogen: 1
-  delta_inhomogen_cm: 0.0
   dip_moments: [1.0, 1.0]
-  n_chains: 1
   max_excitation: 2
-  coupling_cm: 0.0
 
 laser:
   base_amplitude: 0.05
-  pulse_fwhm_fs: 15.0
+  pulse_fwhm_fs: 5.0
   carrier_freq_cm: 16000.0
   rwa_sl: true
 
@@ -23,7 +19,7 @@ bath:
 
 config:
   solver: ME
-  signal_types: [nonrephasing, rephasing]
+  signal_types: [rephasing]
 
 window:
   t_det_max: 50.0

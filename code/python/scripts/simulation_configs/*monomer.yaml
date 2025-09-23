@@ -20,7 +20,7 @@ bath:
 
 config:
   solver: ME
-  signal_types: [nonrephasing, rephasing]
+  signal_types: [rephasing]
 
 window:
   t_det_max: 50.0
