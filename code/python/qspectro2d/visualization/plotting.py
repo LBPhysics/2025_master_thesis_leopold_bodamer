@@ -484,7 +484,6 @@ def plot_1d_el_field(
     title: str | None = None,
     section: Union[tuple[float, float], None] = None,
     function_symbol: str = "S",
-    figsize: Tuple[float, float] = (6.5, 4.0),
     normalize: bool = False,
     ax: Union[Axes, None] = None,
     **kwargs: dict,
@@ -498,7 +497,7 @@ def plot_1d_el_field(
     """
     created_fig = False
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize)
+        fig, ax = plt.subplots()
         created_fig = True
     else:
         fig = ax.figure
@@ -549,10 +548,9 @@ def plot_2d_el_field(
     component: Literal["real", "img", "abs", "phase"] = "real",
     use_custom_colormap: bool = False,
     section: Union[list[tuple[float, float]], None] = None,
-    figsize: Tuple[float, float] = (7.0, 5.6),
     normalize: bool = True,
     ax: Union[Axes, None] = None,
-    show_diagonal: bool = True,
+    show_diagonal: bool = False,
     smooth: bool = False,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
@@ -644,7 +642,7 @@ def plot_2d_el_field(
     # GENERATE FIGURE
     created_fig = False
     if ax is None:
-        fig, ax = plt.subplots(figsize=figsize)
+        fig, ax = plt.subplots()
         created_fig = True
     else:
         fig = ax.figure
@@ -652,7 +650,7 @@ def plot_2d_el_field(
     if smooth:
         # Use imshow to enable bilinear (or other) interpolation; map data to axes via extent
         im_plot = ax.imshow(
-            data,
+            data,  # shape: [len(axis_coh), len(axis_det)]
             aspect="auto",
             cmap=colormap,
             extent=[axis_det.min(), axis_det.max(), axis_coh.min(), axis_coh.max()],
@@ -678,7 +676,7 @@ def plot_2d_el_field(
     cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
     # NOTE Add contour lines with different styles for positive and negative values
-    add_custom_contour_lines(axis_det, axis_coh, data, component)
+    # add_custom_contour_lines(axis_det, axis_coh, data, component)
 
     # Improve overall plot appearance
     ax.set_title(title)
