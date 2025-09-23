@@ -635,7 +635,6 @@ def plot_2d_el_field(
         # Center the colormap at zero for diverging data
         if vmin < vcenter < vmax:
             norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
-            im_plot.set_clim(vmin=vmin, vmax=vmax)
         else:
             print(
                 f"Warning: Cannot use TwoSlopeNorm with vmin={vmin}, vcenter={vcenter}, vmax={vmax}. Using default normalization."
@@ -668,6 +667,9 @@ def plot_2d_el_field(
         norm=norm,
         interpolation="bilinear",  # optional: "none" to avoid smoothing
     )
+    if use_custom_colormap:
+        im_plot.set_clim(vmin=vmin, vmax=vmax)
+
     cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
     # NOTE Add contour lines with different styles for positive and negative values
