@@ -552,6 +552,7 @@ def plot_2d_el_field(
     figsize: Tuple[float, float] = (7.0, 5.6),
     normalize: bool = True,
     ax: Union[Axes, None] = None,
+    show_diagonal: bool = True,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
@@ -666,6 +667,23 @@ def plot_2d_el_field(
     ax.set_title(title)
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
+
+    # Optional: draw diagonal x==y for convenience
+    if show_diagonal:
+        # Only draw over the overlapping range
+        x_min, x_max = axis_det.min(), axis_det.max()
+        y_min, y_max = axis_coh.min(), axis_coh.max()
+        d_min = max(x_min, y_min)
+        d_max = min(x_max, y_max)
+        if d_min < d_max:
+            ax.plot(
+                [d_min, d_max],
+                [d_min, d_max],
+                linestyle=":",
+                color="k",
+                linewidth=1.0,
+                alpha=0.8,
+            )
 
     # Add additional parameters as a text box if provided
     add_text_box(ax=ax, kwargs=kwargs)
@@ -851,8 +869,9 @@ def add_custom_contour_lines(
                 # Fallback: linearly spaced in [5%, 95%]
                 percents = np.linspace(0.05, 0.95, level_count)
 
-            positive_levels = percents * vmax
-            negative_levels = -percents * vmax
+            # Matplotlib requires levels strictly increasing
+            positive_levels = percents * vmax  # [0.05..0.95]*vmax ascending
+            negative_levels = -percents[::-1] * vmax  # [-0.95..-0.05]*vmax ascending
 
             ### Plot positive contours (solid lines)
             pos_contour = plt.contour(
