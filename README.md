@@ -34,7 +34,6 @@ master_thesis/
 ├── latex/               # LaTeX thesis files
 ├── figures/             # Generated figures
 ├── environment.yml      # Conda environment specification (single source of dependencies)
-├── code/python/pyproject.toml  # Packaging config for editable install
 └── README.md           # This file -> For package‑specific docs, see `code/python/README.md`.
 ```
 

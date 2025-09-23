@@ -31,6 +31,3 @@ dependencies:
     - -e ./code/python
     - -e ../plotstyle  # from my Matplotlib LaTeX repo 
     - tqdm                  # Progress bar for loops
-  - pre-commit            # Git hooks runner
-  - ruff                  # Fast linter and import sorter
-  - nbstripout            # Strip outputs from notebooks
