@@ -2,7 +2,7 @@
 
 Two execution modes sharing the same underlying simulation object:
     1d mode:
-        Processes a single coherence time (``t_coh`` from the *example.yaml <- marked with a *) and saves one file.
+        Processes a single coherence time (``t_coh`` from the _example.yaml <- marked with a leading underscore) and saves one file.
 
     2d mode:
         Treats every detection time value ``t_det`` as a coherence time point ``t_coh``
@@ -57,7 +57,7 @@ def _pick_config_yaml():
     """Pick a config YAML from scripts/simulation_configs.
 
     Preference order:
-    1) Any file whose name contains a literal '*' (user-marked)
+    1) Any file whose name starts with '_' (user-marked; Windows-safe)
     2) Otherwise, the first file in alphabetical order
     """
     sim_cfg_dir = SCRIPTS_DIR / "simulation_configs"
@@ -66,7 +66,8 @@ def _pick_config_yaml():
         raise FileNotFoundError(
             f"No .yaml config files found in {sim_cfg_dir}. Please add one."
         )
-    marked = [p for p in cfg_candidates if "*" in p.name]
+    # Prefer Windows-safe marker: leading underscore
+    marked = [p for p in cfg_candidates if p.name.startswith("_")]
     return marked[0] if marked else cfg_candidates[0]
 
 
@@ -122,7 +123,7 @@ def _make_inhom_group_id(
 # Execution modes
 # ---------------------------------------------------------------------------
 def run_1d_mode(args) -> None:
-    # Auto-pick YAML config (prefer '*' marked, else first sorted)
+    # Auto-pick YAML config (prefer '_' marked, else first sorted)
     config_path = _pick_config_yaml()
     print(f"🧩 Using config: {config_path.name}")
     sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
