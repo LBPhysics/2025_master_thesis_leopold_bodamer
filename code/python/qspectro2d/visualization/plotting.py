@@ -625,7 +625,8 @@ def plot_2d_el_field(
         use_custom_colormap = False
 
     if use_custom_colormap:
-        vmin, vmax = np.min(data), np.max(data)
+        vmax = np.max(np.abs(data))
+        vmin = -vmax
         vcenter = 0
 
         # Use the built-in 'RdBu_r' colormap - reversed to make red=positive, blue=negative
@@ -634,16 +635,11 @@ def plot_2d_el_field(
         # Center the colormap at zero for diverging data
         if vmin < vcenter < vmax:
             norm = TwoSlopeNorm(vmin=vmin, vcenter=vcenter, vmax=vmax)
+            im_plot.set_clim(vmin=vmin, vmax=vmax)
         else:
             print(
                 f"Warning: Cannot use TwoSlopeNorm with vmin={vmin}, vcenter={vcenter}, vmax={vmax}. Using default normalization."
             )
-        """ OTHERWISE
-        vmax = np.max(np.abs(data))
-        vmin = -vmax
-        norm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
-        im_plot.set_clim(vmin=vmin, vmax=vmax)
-        """
 
     if domain == "freq":
         cbarlabel = r"$\propto S_{\text{out}} / E_{0}$"
@@ -660,16 +656,22 @@ def plot_2d_el_field(
 
     # Create the pcolormesh plot for the 2D data
     im_plot = ax.imshow(
-        data[::-1, :],  # data shape: [len(axis_coh), len(axis_det)]
+        data,  # data shape: [len(axis_coh), len(axis_det)]
         aspect="auto",
         cmap=colormap,
+        extent=[
+            axis_det[0],
+            axis_det[-1],  # X-axis: detection time
+            axis_coh[0],
+            axis_coh[-1],  # Y-axis: coherence time
+        ],
         norm=norm,
         interpolation="bilinear",  # optional: "none" to avoid smoothing
     )
     cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
     # NOTE Add contour lines with different styles for positive and negative values
-    # add_custom_contour_lines(axis_coh, axis_det, data, component)
+    add_custom_contour_lines(axis_coh, axis_det, data, component)
 
     # Improve overall plot appearance
     ax.set_title(title)
@@ -876,7 +878,7 @@ def add_custom_contour_lines(
                 linestyles="dashed",
             )
 
-            ### Optional: Add contour labels to every other contour line
+            ### NOTE optional: Add contour labels to every other contour line
             # plt.clabel(pos_contour, inline=True, fontsize=8, fmt='%.2f', levels=positive_levels[::2])
             # plt.clabel(neg_contour, inline=True, fontsize=8, fmt='%.2f', levels=negative_levels[::2])
     else:
