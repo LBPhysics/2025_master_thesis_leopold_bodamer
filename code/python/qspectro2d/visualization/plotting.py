@@ -650,6 +650,7 @@ def plot_2d_el_field(
         aspect="auto",
         cmap=colormap,
         extent=[axis_det.min(), axis_det.max(), axis_coh.min(), axis_coh.max()],
+        origin="lower",  # ensure y increases upward to match contour coordinates
         norm=norm,
         interpolation="bilinear",  # optional: "none" to avoid smoothing
     )
@@ -818,7 +819,11 @@ def _domain_2d_labels(domain: str) -> Tuple[str, str, str, str]:
 
 
 def add_custom_contour_lines(
-    x: np.ndarray, y: np.ndarray, data: np.ndarray, component: str, level_count: int = 8
+    x: np.ndarray,
+    y: np.ndarray,
+    data: np.ndarray,
+    component: str,
+    level_count: int = 10,
 ) -> None:
     """
     Add custom contour lines to a 2D plot with different styles for positive/negative values.
@@ -828,7 +833,8 @@ def add_custom_contour_lines(
         y (np.ndarray): Y-axis coordinate array
         data (np.ndarray): 2D data array to contour
         component (str): Data component type ("real", "img", "phase", "abs")
-        level_count (int): Number of contour levels in each region (positive/negative)
+        level_count (int): Number of contour levels in each region (positive/negative).
+            If 10 (default), levels are placed at ±[5, 15, ..., 95]% of |max(data)|.
     """
     ### Add contour lines with different styles for positive and negative values
     if component in ("real", "img", "phase"):
@@ -838,8 +844,15 @@ def add_custom_contour_lines(
 
         ### Create evenly spaced levels for both positive and negative regions
         if vmax > 0:
-            positive_levels = np.linspace(0.05 * vmax, 0.95 * vmax, level_count)
-            negative_levels = np.linspace(0.95 * vmin, 0.05 * vmin, level_count)
+            # Use exact 10% steps by default: 5%, 15%, ..., 95%
+            if level_count == 10:
+                percents = np.arange(0.05, 1.0, 0.10)
+            else:
+                # Fallback: linearly spaced in [5%, 95%]
+                percents = np.linspace(0.05, 0.95, level_count)
+
+            positive_levels = percents * vmax
+            negative_levels = -percents * vmax
 
             ### Plot positive contours (solid lines)
             pos_contour = plt.contour(
