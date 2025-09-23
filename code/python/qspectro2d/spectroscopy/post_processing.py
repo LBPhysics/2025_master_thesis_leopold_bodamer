@@ -120,14 +120,22 @@ def compute_spectra(
     Based on the paper: https://doi.org/10.1063/5.0214023
 
     For each input data array:
-    - Detection (t) axis uses −i convention: S(ω_det) = ∫ E(t) e^{−i ω t} dt
-      implemented via FFT (no normalization scaling applied).
-    - If coherence axis is present (τ):
-      • nonrephasing:  S_NR(ω_coh, *) = ∫ E(τ, *) e^{−i ω τ} dτ  → FFT along τ
-      • rephasing:     S_R(ω_coh, *)  = ∫ E(τ, *) e^{+i ω τ} dτ  → IFFT along τ
+    - Along detection time, always use +i convention: S(w_det) = ∫ E(t) e^{+i w t} dt
+      (implemented via IFFT, no normalization scaling applied).
+    - If coherence axis is present:
+        - nonrephasing:  S_NR(w_coh, *) = ∫ E(t_coh, *) e^{-i w t} dt (FFT)
+        - rephasing/else: S_R(w_coh, *) = ∫ E(t_coh, *) e^{+i w t} dt (IFFT)
 
     Returns:
         (nu_cohs, nu_dets, datas_nu, signal_types_out)
+        - nu_cohs: frequency axis (cm^-1) for coherence (or None if t_coh is None)
+        - nu_dets: frequency axis (cm^-1) for detection
+        - datas_nu: list of spectra arrays in frequency domain
+        - signal_types_out: list of signal labels, aligned with datas_nu
+
+    Notes:
+        Frequency-to-wavenumber conversion follows the user's formula:
+            nu = np.fft.fftfreq(N, d=dt) / 2.998 * 10
     """
     if not datas:
         raise ValueError("datas must be a non-empty list of arrays")
@@ -146,14 +154,13 @@ def compute_spectra(
             )
         sig_types = list(signal_types)
 
-    # Detection axis frequency and wavenumber (shifted to monotonic ascending order)
+    # Detection axis frequency and wavenumber
     n_det = int(t_det.size)
     dt_det = float(np.median(np.diff(t_det))) if n_det > 1 else 1.0
     freq_dets = np.fft.fftfreq(n_det, d=dt_det)
-    nu_dets = np.fft.fftshift(freq_dets) / 2.998 * 10
+    nu_dets = freq_dets / 2.998 * 10
 
-    # Coherence axis frequency and wavenumber (optional, shifted)
-    nu_cohs: Optional[np.ndarray]
+    # Coherence axis frequency and wavenumber (optional)
     if t_coh is None:
         nu_cohs = None
     else:
@@ -162,7 +169,7 @@ def compute_spectra(
         n_coh = int(t_coh.size)
         dt_coh = float(np.median(np.diff(t_coh))) if n_coh > 1 else 1.0
         freq_cohs = np.fft.fftfreq(n_coh, d=dt_coh)
-        nu_cohs = np.fft.fftshift(freq_cohs) / 2.998 * 10
+        nu_cohs = freq_cohs / 2.998 * 10
 
     # Build spectra
     datas_nu: List[np.ndarray] = []
@@ -174,9 +181,7 @@ def compute_spectra(
                 raise ValueError(
                     f"datas[{idx}] must be 1D with length len(t_det) when t_coh is None"
                 )
-            # Detection axis uses e^{-i ω t} → FFT, then shift to match shifted axis
-            spec_det = np.fft.fft(arr, axis=0)
-            spec_det = np.fft.fftshift(spec_det, axes=0)
+            spec_det = np.fft.ifft(arr, axis=0)
             datas_nu.append(spec_det)
             out_types.append(stype)
             continue
@@ -188,8 +193,8 @@ def compute_spectra(
                 f"datas[{idx}] must be 2D with shape (len(t_coh), len(t_det))"
             )
 
-        # Detection axis (−i) via FFT along last axis
-        spec_2d = np.fft.fft(arr, axis=1)
+        # Detection axis (+i) via IFFT along last axis
+        spec_2d = np.fft.ifft(arr, axis=1)
 
         # Coherence axis sign depends on signal type
         if st_norm == "nonrephasing":
@@ -199,8 +204,6 @@ def compute_spectra(
             spec_2d = np.fft.ifft(spec_2d, axis=0)
             out_types.append("rephasing")
 
-        # Shift both axes to align with shifted frequency axes
-        spec_2d = np.fft.fftshift(spec_2d, axes=(0, 1))
         datas_nu.append(spec_2d)
 
     # NOTE Optional absorptive combination (commented per request)
@@ -208,6 +211,8 @@ def compute_spectra(
     #     have_r  = any(t.lower().startswith("rephasing") for t in out_types)
     #     have_nr = any(t.lower().startswith("nonrephasing") for t in out_types)
     #     if have_r and have_nr:
+    #         # Example: match by index or by separate provided lists;
+    #         # here we simply combine the first found pair.
     #         try:
     #             r_idx = next(i for i, t in enumerate(out_types) if t.startswith("rephasing"))
     #             nr_idx = next(i for i, t in enumerate(out_types) if t.startswith("nonrephasing"))
