@@ -9,6 +9,7 @@ try:
     from plotstyle import init_style, COLORS, LINE_STYLES  # type: ignore
     from plotstyle.style import simplify_figure_text  # type: ignore
 except Exception:  # pragma: no cover - fallback path
+
     def init_style():
         """No-op style initializer when plotstyle is absent."""
         pass
@@ -30,6 +31,7 @@ except Exception:  # pragma: no cover - fallback path
 
     def simplify_figure_text(ax=None):  # minimal compatibility shim
         return ax
+
 
 from qspectro2d.core.laser_system.laser_fcts import (
     pulse_envelopes,
@@ -129,7 +131,9 @@ def plot_pulse_envelopes(
 
 
 # TODO delete not used
-def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True):
+def plot_e_pulses(
+    times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, show_legend=True
+):
     """
     Plot the RWA electric field (envelope only) over time for N pulses using LaserPulseSequence.
 
@@ -255,7 +259,9 @@ def plot_epsilon_pulses(
     return fig, ax
 
 
-def plot_all_pulse_components(times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)):
+def plot_all_pulse_components(
+    times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)
+):
     """
     Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
 
@@ -324,7 +330,9 @@ def plot_example_evo(
     E_total = np.array([field_func(t, pulse_seq) / E0 for t in times_plot])
 
     # Create plot with appropriate size
-    fig, axes = plt.subplots(len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True)
+    fig, axes = plt.subplots(
+        len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True
+    )
 
     # Plot electric field
     axes[0].plot(
@@ -458,7 +466,9 @@ def plot_example_polarization(
     # Combine legends from both axes
     lines1, labels1 = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc="center left", bbox_to_anchor=(1, 0.5))
+    ax1.legend(
+        lines1 + lines2, labels1 + labels2, loc="center left", bbox_to_anchor=(1, 0.5)
+    )
 
     ax1.set_title(title)
 
@@ -501,7 +511,9 @@ def plot_1d_el_field(
     # CROP + NORMALIZE
 
     if section is not None:
-        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section, axis=0)
+        axis_det, data = crop_nd_data_along_axis(
+            axis_det, data, section=section, axis=0
+        )
     if normalize:
         max_abs = np.abs(data).max()
         if max_abs == 0:
@@ -597,7 +609,11 @@ def plot_2d_el_field(
 
     # VALIDATE INPUT
 
-    if data.ndim != 2 or data.shape[0] != len(axis_coh) or data.shape[1] != len(axis_det):
+    if (
+        data.ndim != 2
+        or data.shape[0] != len(axis_coh)
+        or data.shape[1] != len(axis_det)
+    ):
         raise ValueError(
             f"Data shape {data.shape} does not match axis_det ({len(axis_det)}) and axis_coh ({len(axis_coh)}) dimensions."
         )
@@ -618,8 +634,12 @@ def plot_2d_el_field(
 
     if section is not None:
         # expect list[(coh_min, coh_max),(det_min, det_max)]
-        axis_coh, data = crop_nd_data_along_axis(axis_coh, data, section=section[0], axis=0)
-        axis_det, data = crop_nd_data_along_axis(axis_det, data, section=section[1], axis=1)
+        axis_coh, data = crop_nd_data_along_axis(
+            axis_coh, data, section=section[0], axis=0
+        )
+        axis_det, data = crop_nd_data_along_axis(
+            axis_det, data, section=section[1], axis=1
+        )
     if normalize:
         max_abs = np.abs(data).max()
         if max_abs == 0:
@@ -635,9 +655,25 @@ def plot_2d_el_field(
     if axis_det[0] > axis_det[-1]:
         axis_det = axis_det[::-1]
         data = data[:, ::-1]
+        print(
+            "Warning: axis_det was descending, flipped to ascending for correct plotting.",
+            flush=True,
+        )
+        print(
+            "Warning: axis_det was descending, flipped to ascending for correct plotting.",
+            flush=True,
+        )
     if axis_coh[0] > axis_coh[-1]:
         axis_coh = axis_coh[::-1]
         data = data[::-1, :]
+        print(
+            "Warning: axis_coh was descending, flipped to ascending for correct plotting.",
+            flush=True,
+        )
+        print(
+            "Warning: axis_coh was descending, flipped to ascending for correct plotting.",
+            flush=True,
+        )
 
     # SET PLOT LABELS AND COLORMAP
 
@@ -686,7 +722,6 @@ def plot_2d_el_field(
     im_plot = ax.imshow(
         data,  # data shape: [len(axis_coh), len(axis_det)]
         aspect="auto",
-        origin="lower",  # origin at bottom-left
         cmap=colormap,
         norm=norm,
         extent=[
