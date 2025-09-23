@@ -9,11 +9,10 @@ from qutip import Qobj, QobjEvo, ket2dm
 from typing import List, Tuple, Union
 from qutip import BosonicEnvironment
 
-from qspectro2d.core.simulation.sim_config import SimulationConfig
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
-from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-from qspectro2d.core.laser_system.laser_fcts import e_pulses, epsilon_pulses
-from qspectro2d.core.atom_bath_class import AtomBathCoupling
+from .sim_config import SimulationConfig
+from ..atomic_system import AtomicSystem
+from ..laser_system import e_pulses, epsilon_pulses, LaserPulseSequence
+from ..atom_bath_class import AtomBathCoupling
 
 
 @dataclass
@@ -118,10 +117,14 @@ class SimulationModuleOQS:
         dim = sys.dimension
         if dim > 1:
             # |g><e| for all  for e (1, ..., n_atoms)
-            ops.append(sum(eigenstates[0] * eigenstates[e].dag() for e in range(1, dim)))
+            ops.append(
+                sum(eigenstates[0] * eigenstates[e].dag() for e in range(1, dim))
+            )
         if dim > n + 1:
             # |g><f| for f (n_atoms+1, ..., dim)
-            ops.append(sum(eigenstates[0] * eigenstates[f].dag() for f in range(n + 1, dim)))
+            ops.append(
+                sum(eigenstates[0] * eigenstates[f].dag() for f in range(n + 1, dim))
+            )
             # |e><f| for e (1, ..., n_atoms) and f (n_atoms+1, ..., dim)
             ops.append(
                 sum(

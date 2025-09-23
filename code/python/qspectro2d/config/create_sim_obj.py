@@ -26,8 +26,8 @@ from typing import Any, Mapping, Optional
 from qutip import OhmicEnvironment
 import yaml
 
-from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
-from qspectro2d.config import default_simulation_params as dflt
+from ..core.simulation.simulation_class import SimulationModuleOQS
+from . import default_simulation_params as dflt
 
 __all__ = ["load_simulation", "create_base_sim_oqs", "get_max_workers"]
 
@@ -95,7 +95,9 @@ def load_simulation(
     freqs_cm = list(atomic_cfg.get("frequencies_cm", dflt.FREQUENCIES_CM))
     dip_moments = list(atomic_cfg.get("dip_moments", dflt.DIP_MOMENTS))
     coupling_cm = float(atomic_cfg.get("coupling_cm", dflt.COUPLING_CM))
-    delta_inhomogen_cm = float(atomic_cfg.get("delta_inhomogen_cm", dflt.DELTA_INHOMOGEN_CM))
+    delta_inhomogen_cm = float(
+        atomic_cfg.get("delta_inhomogen_cm", dflt.DELTA_INHOMOGEN_CM)
+    )
     max_excitation = int(atomic_cfg.get("max_excitation", dflt.MAX_EXCITATION))
 
     atomic_system = AtomicSystem(
@@ -161,10 +163,13 @@ def load_simulation(
     n_phases = int(config_cfg.get("n_phases", dflt.N_PHASES))
     ode_solver = str(config_cfg.get("solver", dflt.ODE_SOLVER))
     signal_types = list(config_cfg.get("signal_types", dflt.SIGNAL_TYPES))
-    simulation_type = str(config_cfg.get("simulation_type", dflt.SIMULATION_TYPE))
+    sim_type = str(config_cfg.get("sim_type", dflt.SIM_TYPE))
     n_inhomogen = int(atomic_cfg.get("n_inhomogen", dflt.N_INHOMOGEN))
     max_workers = get_max_workers()
-    print(f"🔧 Configured to use max_workers={max_workers} for parallel tasks.", flush=True)
+    print(
+        f"🔧 Configured to use max_workers={max_workers} for parallel tasks.",
+        flush=True,
+    )
 
     # -----------------
     # VALIDATION (physics-level) BEFORE FINAL ASSEMBLY
@@ -198,7 +203,7 @@ def load_simulation(
             "coupling_cm": coupling_cm,
             "delta_inhomogen_cm": delta_inhomogen_cm,
             "solver_options": dflt.SOLVER_OPTIONS,  # TODO add those to the sim_config class
-            "simulation_type": simulation_type,  # factory defaults (could expose later)
+            "sim_type": sim_type,  # factory defaults (could expose later)
             "max_workers": max_workers,
         }
         dflt.validate(params)
@@ -213,7 +218,7 @@ def load_simulation(
         n_phases=n_phases,
         n_inhomogen=n_inhomogen,
         signal_types=signal_types,
-        simulation_type=simulation_type,
+        sim_type=sim_type,
         max_workers=max_workers,
     )
 

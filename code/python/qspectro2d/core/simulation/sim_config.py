@@ -33,7 +33,7 @@ class SimulationConfig:
     n_inhomogen: int = 1
 
     max_workers: int = 1
-    simulation_type: str = "1d"
+    sim_type: str = "1d"
     signal_types: List[str] = field(default_factory=lambda: ["rephasing"])
 
     def __post_init__(self) -> None:  # noqa: D401
@@ -50,7 +50,7 @@ class SimulationConfig:
         return (
             "SimulationConfig Summary:\n"
             "-------------------------------\n"
-            f"{self.simulation_type} ELECTRONIC SPECTROSCOPY SIMULATION\n"
+            f"{self.sim_type} ELECTRONIC SPECTROSCOPY SIMULATION\n"
             f"Signal Type        : {self.signal_types}\n"
             "Time Parameters:\n"
             f"Coherence Time     : {self.t_coh} fs\n"

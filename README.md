@@ -43,7 +43,8 @@ master_thesis/
 This section explains the core end‑to‑end flow used by both 1D and 2D spectroscopy simulations. It clarifies how the modular pieces you refactored interact.
 
 1. Configure Inputs
-    - update the config.yaml file to get desired simulation parameters. This contains keys like:
+    - create a *your_sim.yaml based on the template.yaml file to get desired simulation parameters.
+    This is an example file in the SCRIPTS / simulation_configs folder which explains all possible parameters. The * indicates that this file will be used to run the simulation.
 
 2. Run the Simulation (with suitable cli params)
     - Either on a HPC -> run the hpc_calc_datas.py file

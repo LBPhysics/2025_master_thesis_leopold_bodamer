@@ -49,11 +49,7 @@ from .core import (
 )
 
 # Spectroscopy exports
-from .spectroscopy import (
-    complex_polarization,
-    compute_1d_fft_wavenumber,
-    compute_2d_fft_wavenumber,
-)
+from .spectroscopy import extend_time_domain_data, compute_spectra
 
 # Data management utilities
 from .utils.data_io import (
@@ -80,8 +76,8 @@ __all__ = [
     # High-level simulation functions
     "complex_polarization",
     # Post-processing
-    "compute_1d_fft_wavenumber",
-    "compute_2d_fft_wavenumber",
+    "extend_time_domain_data",
+    "compute_spectra",
     # Data management
     "save_simulation_data",
     "load_simulation_data",

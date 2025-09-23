@@ -33,9 +33,6 @@ from qspectro2d.utils.data_io import (
 )
 
 
-# Note: discover_1d_files and derive_2d_folder imported from data_io
-
-
 def _load_entries(
     files: List[Path],
 ) -> Tuple[List[float], np.ndarray, List[str], Dict[str, List[np.ndarray]]]:
@@ -154,7 +151,7 @@ def main() -> None:
     print("STACK 1D -> 2D")
     print(f"Input directory: {in_dir}")
 
-    files = discover_1d_files(in_dir)
+    files = discover_1d_files(in_dir.parent)  # since in_dir is a data file
     print(f"Found {len(files)} files to stack")
     if not files:
         print("No files found; aborting.")
@@ -172,15 +169,15 @@ def main() -> None:
         print(f"❌ Could not load info from {first_info}; cannot save 2D bundle.")
         sys.exit(1)
 
-    # Prepare a minimal sim module stub with adjusted simulation_type for 2D naming
+    # Prepare a minimal sim module stub with adjusted sim_type for 2D naming
     system = info["system"]
     bath = info["bath"]
     laser = info["laser"]
     original_cfg = info["sim_config"]
     sim_cfg_2d = copy.deepcopy(original_cfg)
     # Ensure the directory naming routes to 2D location
-    if hasattr(sim_cfg_2d, "simulation_type"):
-        sim_cfg_2d.simulation_type = "2d"
+    if hasattr(sim_cfg_2d, "sim_type"):
+        sim_cfg_2d.sim_type = "2d"
 
     # Compute expected output path to support skip_if_exists
     # Mirror naming used by save_simulation_data: generate_unique_data_filename + suffixes
@@ -188,7 +185,9 @@ def main() -> None:
         from qspectro2d.utils.file_naming import generate_unique_data_filename
         from project_config.paths import DATA_DIR
 
-        base_path = generate_unique_data_filename(system, sim_cfg_2d, data_root=DATA_DIR)
+        base_path = generate_unique_data_filename(
+            system, sim_cfg_2d, data_root=DATA_DIR
+        )
         suffix_bits = ["tcoh_avg"]  # for 1d->2d stacking
         predicted_base = f"{base_path}_{'_'.join(suffix_bits)}"
         predicted_out = Path(f"{predicted_base}_data.npz")
@@ -235,15 +234,6 @@ def main() -> None:
         idx_all = np.arange(n_rows)
         print("-" * 80)
         print(f"Processed coherence values (n={n_rows}):")
-        print(f"  indices: [{', '.join(map(str, idx_all))}]")
-        print(f"  t_coh(fs): [{fmt_vals(t_coh)}]")
-
-        # Rows with any non-zero contribution
-        any_idxs = idx_all[mask_any]
-        any_vals = t_coh[mask_any]
-        print(f"Rows with any non-zero contribution (n={any_idxs.size}):")
-        print(f"  indices: [{', '.join(map(str, any_idxs))}]")
-        print(f"  t_coh(fs): [{fmt_vals(any_vals)}]")
 
         # Rows entirely zero across all signals
         zero_idxs = idx_all[mask_all_zero]
@@ -252,18 +242,6 @@ def main() -> None:
         if zero_idxs.size:
             print(f"  indices: [{', '.join(map(str, zero_idxs))}]")
             print(f"  t_coh(fs): [{fmt_vals(zero_vals)}]")
-        else:
-            print("  (none)")
-
-        # Rows with only non-zero contributions in every signal
-        all_idxs = idx_all[mask_all]
-        all_vals = t_coh[mask_all]
-        print(
-            f"Rows with only non-zero contributions in every signal (n={all_idxs.size}):"
-        )
-        if all_idxs.size:
-            print(f"  indices: [{', '.join(map(str, all_idxs))}]")
-            print(f"  t_coh(fs): [{fmt_vals(all_vals)}]")
         else:
             print("  (none)")
 
@@ -289,6 +267,7 @@ def main() -> None:
     )
 
     print(f"Saved 2D dataset: {out_path}")
+    print("=" * 80)
     print(f"To plot the 2D data, run:")
     print(f"python plot_datas.py --abs_path {out_path}")
 

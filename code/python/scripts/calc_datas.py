@@ -2,7 +2,7 @@
 
 Two execution modes sharing the same underlying simulation object:
     1d mode:
-        Processes a single coherence time (``t_coh`` from the config) and saves one file.
+        Processes a single coherence time (``t_coh`` from the *example.yaml <- marked with a *) and saves one file.
 
     2d mode:
         Treats every detection time value ``t_det`` as a coherence time point ``t_coh``
@@ -17,11 +17,11 @@ metadata keys required by downstream stacking & plotting scripts:
     - t_coh_averaged (always False here)
 
 Examples:
-    python calc_datas.py --simulation_type 1d
-    python calc_datas.py --simulation_type 1d --n_batches 8 --batch_idx 2
-    python calc_datas.py --simulation_type 2d
+    python calc_datas.py --sim_type 1d
+    python calc_datas.py --sim_type 1d --n_batches 8 --batch_idx 2
+    python calc_datas.py --sim_type 2d
     # 2D in batches (N batches, pick batch i)
-    python calc_datas.py --simulation_type 2d --n_batches 8 --batch_idx 0
+    python calc_datas.py --sim_type 2d --n_batches 8 --batch_idx 0
 """
 
 from __future__ import annotations
@@ -53,6 +53,23 @@ warnings.filterwarnings(
 # ---------------------------------------------------------------------------
 # Helper function
 # ---------------------------------------------------------------------------
+def _pick_config_yaml():
+    """Pick a config YAML from scripts/simulation_configs.
+
+    Preference order:
+    1) Any file whose name contains a literal '*' (user-marked)
+    2) Otherwise, the first file in alphabetical order
+    """
+    sim_cfg_dir = SCRIPTS_DIR / "simulation_configs"
+    cfg_candidates = sorted(sim_cfg_dir.glob("*.yaml"))
+    if not cfg_candidates:
+        raise FileNotFoundError(
+            f"No .yaml config files found in {sim_cfg_dir}. Please add one."
+        )
+    marked = [p for p in cfg_candidates if "*" in p.name]
+    return marked[0] if marked else cfg_candidates[0]
+
+
 def _compute_e_components_for_tcoh(
     sim_oqs: SimulationModuleOQS, t_coh_val: float, *, time_cut: float
 ) -> list[np.ndarray]:
@@ -105,7 +122,9 @@ def _make_inhom_group_id(
 # Execution modes
 # ---------------------------------------------------------------------------
 def run_1d_mode(args) -> None:
-    config_path = SCRIPTS_DIR / "config.yaml"
+    # Auto-pick YAML config (prefer '*' marked, else first sorted)
+    config_path = _pick_config_yaml()
+    print(f"🧩 Using config: {config_path.name}")
     sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
 
     t_coh_val = float(sim_oqs.simulation_config.t_coh)
@@ -224,7 +243,9 @@ def run_1d_mode(args) -> None:
 
 
 def run_2d_mode(args) -> None:
-    config_path = SCRIPTS_DIR / "config.yaml"
+    # Auto-pick YAML config (prefer '*' marked, else first sorted)
+    config_path = _pick_config_yaml()
+    print(f"🧩 Using config: {config_path.name}")
     sim_oqs, time_cut = create_base_sim_oqs(config_path=config_path)
     sim_cfg = sim_oqs.simulation_config
     print("🎯 Running 2D mode (iterate over t_det as t_coh)")
@@ -303,11 +324,11 @@ def main() -> None:
         description="Run 1D or multi-t_coh (2d-style) spectroscopy simulations (no inhomogeneity).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            """Examples:\n  python calc_datas.py --simulation_type 1d\n  python calc_datas.py --simulation_type 2d\n  python calc_datas.py --simulation_type 2d --n_batches 8 --batch_idx 0"""
+            """Examples:\n  python calc_datas.py --sim_type 1d\n  python calc_datas.py --sim_type 2d\n  python calc_datas.py --sim_type 2d --n_batches 8 --batch_idx 0"""
         ),
     )
     parser.add_argument(
-        "--simulation_type",
+        "--sim_type",
         type=str,
         default="1d",
         choices=["1d", "2d"],
@@ -332,9 +353,9 @@ def main() -> None:
 
     print("=" * 80)
     print("SPECTROSCOPY SIMULATION")
-    print(f"Mode: {args.simulation_type}")
+    print(f"Mode: {args.sim_type}")
 
-    if args.simulation_type == "1d":
+    if args.sim_type == "1d":
         run_1d_mode(args)
     else:  # 2d
         run_2d_mode(args)

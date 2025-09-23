@@ -31,9 +31,8 @@ from .inhomogenity import (
 
 # POST-PROCESSING FUNCTIONS
 from .post_processing import (
-    extend_time_axes,
-    compute_1d_fft_wavenumber,
-    compute_2d_fft_wavenumber,
+    extend_time_domain_data,
+    compute_spectra,
 )
 
 
@@ -48,7 +47,6 @@ __all__ = [
     "normalized_gauss",
     "sample_from_gaussian",
     # Post-processing
-    "extend_time_axes",
-    "compute_1d_fft_wavenumber",
-    "compute_2d_fft_wavenumber",
+    "extend_time_domain_data",
+    "compute_spectra",
 ]

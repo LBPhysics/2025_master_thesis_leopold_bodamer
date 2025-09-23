@@ -10,7 +10,7 @@ Layout:
     via Slurm's ``--output``/``--error`` options.
 
 Each job runs (from the batching directory):
-    python ../../calc_datas.py --simulation_type {sim_type} --n_batches {n_batches} --batch_idx {batch_idx}
+    python ../../calc_datas.py --sim_type {sim_type} --n_batches {n_batches} --batch_idx {batch_idx}
 
 Notes:
 - Mail notifications are included ONLY for the first and last batch indices.
@@ -29,7 +29,7 @@ def _slurm_script_text(
     job_name: str,
     n_batches: int,
     batch_idx: int,
-    simulation_type: str,
+    sim_type: str,
     logs_subdir: str,
 ) -> str:
     """Render the SLURM script text for a single batch index.
@@ -54,7 +54,7 @@ def _slurm_script_text(
 #SBATCH --time=0-02:00:00
 {mail_lines}
 
-python ../../calc_datas.py --simulation_type {simulation_type} --n_batches {n_batches} --batch_idx {batch_idx}
+python ../../calc_datas.py --sim_type {sim_type} --n_batches {n_batches} --batch_idx {batch_idx}
 """
 
 
@@ -105,7 +105,7 @@ def main() -> None:
         help="Only generate the .slurm scripts without submitting via sbatch.",
     )
     parser.add_argument(
-        "--simulation_type",
+        "--sim_type",
         type=str,
         default="2d",
         choices=["1d", "2d"],
@@ -121,7 +121,7 @@ def main() -> None:
 
     # Create a fixed job directory under SCRIPTS_DIR/batch_jobs (only logs dir will be unique)
     job_root = SCRIPTS_DIR / "batch_jobs"
-    sim_type = str(args.simulation_type).lower()
+    sim_type = str(args.sim_type).lower()
     base_name = f"{sim_type}_{n_batches}batches"
     job_dir = job_root / base_name
 
@@ -148,7 +148,7 @@ def main() -> None:
             job_name=job_name,
             n_batches=n_batches,
             batch_idx=batch_idx,
-            simulation_type=sim_type,
+            sim_type=sim_type,
             logs_subdir=logs_subdir,
         )
         script_path.write_text(content, encoding="utf-8")

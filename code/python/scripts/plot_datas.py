@@ -23,13 +23,12 @@ import warnings
 from qspectro2d.visualization.plotting import (
     plot_1d_el_field,
     plot_2d_el_field,
-    add_text_box,
 )
 from qspectro2d.spectroscopy.post_processing import (
-    extend_time_axes,
-    compute_1d_fft_wavenumber,
-    compute_2d_fft_wavenumber,
+    extend_time_domain_data,
+    compute_spectra,
 )
+
 from qspectro2d import generate_unique_plot_filename
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d import load_simulation_data
@@ -58,13 +57,12 @@ def _collect_saved_paths(accumulator: List[str], saved: Any) -> None:
 
 def _extend_and_fft(
     loaded_data_and_info: Dict[str, Any],
-    extend_for: Tuple[int, int],
+    pad_factor: float,
     dimension: str,
 ):
-    """Pad (time) axes then compute FFTs.
+    """Zero-pad in time (positive direction) and compute spectra.
 
     Returns (freq_axes, data_freq, freq_labels).
-    Failed signals are skipped but reported; at least one must survive.
     """
     # Extract inputs from loaded dict
     sim_config = loaded_data_and_info.get("sim_config")
@@ -81,43 +79,25 @@ def _extend_and_fft(
         missing_signals = [st for st, d in zip(signal_types, datas) if d is None]
         raise KeyError(f"Missing signal arrays for: {missing_signals}")
 
-    kept_data: list[Any] = []
-    kept_types: list[str] = []
-    extended_axes: Any = None
-    for i, (data, st) in enumerate(zip(datas, signal_types)):
-        try:
-            if dimension == "1d":
-                ext_t_det, ext_data = extend_time_axes(
-                    data=data, t_det=t_det, pad_t_det=extend_for
-                )
-                extended_axes = ext_t_det
-            else:
-                ext_t_det, ext_t_coh, ext_data = extend_time_axes(
-                    data=data,
-                    t_det=t_det,
-                    t_coh=t_coh,
-                    pad_t_det=extend_for,
-                    pad_t_coh=extend_for,
-                )
-                extended_axes = (ext_t_det, ext_t_coh)
-            kept_data.append(ext_data)
-            kept_types.append(st)
-            print(f"   ✅ FFT prep {i+1}/{len(datas)} {st}")
-        except Exception as e:  # pragma: no cover (defensive)
-            print(f"   ❌ Skip {st}: {e}")
-    if not kept_data:
-        raise ValueError("All signals failed during extension.")
-    if dimension == "1d":
-        nu_det, freq_datas, freq_labels = compute_1d_fft_wavenumber(
-            extended_axes, kept_data, signal_types=kept_types
-        )
-        freq_axes = nu_det
-    else:
-        nu_det, nu_coh, freq_datas, freq_labels = compute_2d_fft_wavenumber(
-            extended_axes[0], extended_axes[1], kept_data, signal_types=kept_types
-        )
-        freq_axes = (nu_det, nu_coh)
-    return freq_axes, freq_datas, freq_labels
+    # Positive-direction multiplicative pad (1 disables)
+    pad_factor = max(1.0, float(pad_factor))
+
+    # Extend all signals at once
+    ext_datas, ext_t_det, ext_t_coh = extend_time_domain_data(
+        list(datas),
+        np.asarray(t_det),
+        np.asarray(t_coh) if t_coh is not None else None,
+        pad=pad_factor,
+    )
+
+    # Compute spectra with requested sign conventions
+    nu_cohs, nu_dets, datas_nu, out_types = compute_spectra(
+        ext_datas, list(signal_types), ext_t_det, ext_t_coh
+    )
+
+    # Keep detection axis first in tuple
+    freq_axes = (nu_dets, nu_cohs) if nu_cohs is not None else nu_dets
+    return freq_axes, datas_nu, out_types
 
 
 def _plot_components(
@@ -277,7 +257,7 @@ def plot_data(
         print(f"   t_coh: n={len(t_coh)} range=[{t_coh[0]:.2f},{t_coh[-1]:.2f}] fs")
 
     # ---- Config with defaults
-    extend_for = plot_config.get("extend_for", (0, 0))
+    pad_factor = float(plot_config.get("extend_for", 1))
     section = plot_config.get("section")
     components = ["real", "abs", "img", "phase"]  # default all
     plot_time = bool(plot_config.get("plot_time_domain", True))
@@ -339,11 +319,11 @@ def plot_data(
 
     # ---- Frequency domain
     if plot_freq:
-        print(f"📊 Frequency domain ... (extend={extend_for})")
+        print(f"📊 Frequency domain ... (extend={pad_factor})")
         try:
             freq_axes, freq_datas, kept_types = _extend_and_fft(
                 loaded_data_and_info=loaded_data_and_info,
-                extend_for=extend_for,
+                pad_factor=pad_factor,
                 dimension=dimension,
             )
             axis_det_f, axis_coh_f = (
@@ -391,16 +371,15 @@ def main():
 
     parser.add_argument(
         "--extend",
-        type=int,
-        nargs=2,
-        default=(1, 10),
-        help="Zero-padding factors for (<0, >t_max) before FFT (1 1 disables)",
+        type=float,
+        default=10.0,
+        help="Zero-padding factor for (>t_max) before FFT (1 disables)",
     )
     parser.add_argument(
         "--section",
         type=float,
         nargs="+",
-        default=(0, 2),
+        default=(1.5, 1.7),
         help="Frequency window: 1D -> two floats (min max), 2D -> four floats (min max min max)",
     )
 
@@ -493,7 +472,7 @@ def main():
         saved = plot_data(
             loaded_data_and_info=loaded_data_and_info,
             plot_config={
-                "extend_for": tuple(args.extend),
+                "extend_for": float(args.extend),
                 "section": eff_section,
                 "plot_time_domain": plot_time,
                 "plot_frequency_domain": plot_freq,

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field  # for the class definiton
 from typing import List, Tuple, Optional
 
 import numpy as np
-from qspectro2d.utils.constants import convert_cm_to_fs, convert_fs_to_cm
+from ...utils.constants import convert_cm_to_fs, convert_fs_to_cm
 
 # Default Gaussian active window size in multiples of FWHM that roughly
 # corresponds to ~1% envelope cutoff at the boundaries.
@@ -52,7 +52,9 @@ class LaserPulse:
         """
         if self.envelope_type == "gaussian":
             # Use extended active window (≈1% cutoff) defined by active_time_range (± n_fwhm * FWHM)
-            self._t_start, self._t_end = self.active_time_range  # uses DEFAULT_ACTIVE_WINDOW_NFWHM
+            self._t_start, self._t_end = (
+                self.active_time_range
+            )  # uses DEFAULT_ACTIVE_WINDOW_NFWHM
             self._sigma = self.pulse_fwhm_fs / (2 * np.sqrt(2 * np.log(2)))
             # Baseline value chosen at EXTENDED window edge (edge_span), not at FWHM, so
             # envelope retains smooth tails between ±FWHM and ±edge_span.
@@ -276,7 +278,9 @@ class LaserPulseSequence:
             phases = [0.0] * n_pulses
 
         if not (len(relative_E0s) == len(phases) == n_pulses):
-            raise ValueError("Lengths of pulse_delays, relative_E0s, and phases must match")
+            raise ValueError(
+                "Lengths of pulse_delays, relative_E0s, and phases must match"
+            )
 
         peak_times = np.insert(np.cumsum(pulse_delays), 0, 0.0)
 

@@ -8,7 +8,7 @@ and reduces code duplication.
 
 import numpy as np
 import warnings
-from qspectro2d.utils.constants import (
+from ..utils.constants import (
     BOLTZMANN,
     convert_cm_to_fs,
 )
@@ -38,7 +38,7 @@ TRACE_TOLERANCE = 1e-6
 SUPPORTED_SOLVERS = ["ME", "BR", "Paper_eqs"]
 SUPPORTED_BATHS = ["ohmic"]  # , "dl"
 SUPPORTED_ENVELOPES = ["gaussian", "cos2"]
-SUPPORTED_SIMULATION_TYPES = ["1d", "2d"]
+SUPPORTED_SIM_TYPES = ["1d", "2d"]
 
 
 # === ATOMIC SYSTEM DEFAULTS ===
@@ -64,7 +64,7 @@ RWA_SL = True
 # === SIMULATION DEFAULTS ===
 ODE_SOLVER = "BR"  # ODE solver to use
 N_PHASES = 4  # Number of phase cycles for the simulation
-SIMULATION_TYPE = "1d"
+SIM_TYPE = "1d"
 SOLVER_OPTIONS = {
     "nsteps": 200000,
     "atol": 1e-6,
@@ -112,7 +112,7 @@ def validate(params: dict) -> None:
     coupling_cm = params.get("coupling_cm", COUPLING_CM)
     delta_inhomogen_cm = params.get("delta_inhomogen_cm", DELTA_INHOMOGEN_CM)
     solver_options = params.get("solver_options", SOLVER_OPTIONS)
-    simulation_type = params.get("simulation_type", SIMULATION_TYPE)
+    sim_type = params.get("sim_type", SIM_TYPE)
     max_workers = params.get("max_workers", 1)
     # Time/grid parameters
     t_det_max = params.get("t_det_max", T_DET_MAX)
@@ -154,7 +154,9 @@ def validate(params: dict) -> None:
     if base_amplitude <= 0:
         raise ValueError("base_amplitude must be > 0")
     if envelope_type not in SUPPORTED_ENVELOPES:
-        raise ValueError(f"envelope_type '{envelope_type}' not in {SUPPORTED_ENVELOPES}")
+        raise ValueError(
+            f"envelope_type '{envelope_type}' not in {SUPPORTED_ENVELOPES}"
+        )
 
     # Atomic coupling / broadening checks
     if coupling_cm < 0:
@@ -172,10 +174,14 @@ def validate(params: dict) -> None:
 
     # Validate atomic system consistency
     if len(frequencies_cm) != n_atoms:
-        raise ValueError(f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})")
+        raise ValueError(
+            f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})"
+        )
 
     if len(dip_moments) != n_atoms:
-        raise ValueError(f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})")
+        raise ValueError(
+            f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})"
+        )
 
     # Validate positive values
     if bath_temp <= 0:
@@ -206,7 +212,9 @@ def validate(params: dict) -> None:
 
     # Validate relative amplitudes
     if len(relative_e0s) != 3:
-        raise ValueError("RELATIVE_E0S must have exactly 3 elements (3-pulse assumption)")
+        raise ValueError(
+            "RELATIVE_E0S must have exactly 3 elements (3-pulse assumption)"
+        )
     if any(a <= 0 for a in relative_e0s):
         raise ValueError("All RELATIVE_E0S entries must be > 0")
     # Optional heuristic: last should be probe (smaller or equal)
@@ -231,15 +239,17 @@ def validate(params: dict) -> None:
         raise TypeError("solver_options must be a dict")
 
     # Simulation type / workers
-    if simulation_type not in SUPPORTED_SIMULATION_TYPES:
-        raise ValueError(f"simulation_type '{simulation_type}' not in {SUPPORTED_SIMULATION_TYPES}")
+    if sim_type not in SUPPORTED_SIM_TYPES:
+        raise ValueError(f"sim_type '{sim_type}' not in {SUPPORTED_SIM_TYPES}")
     if max_workers <= 0:
         raise ValueError("max_workers must be >= 1")
 
     if rwa_sl:
         freqs_array = np.array(frequencies_cm)
         max_detuning = np.max(np.abs(freqs_array - carrier_freq_cm))
-        rel_detuning = max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
+        rel_detuning = (
+            max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
+        )
         if rel_detuning > 1e-2:
             print(
                 f"WARNING: RWA probably not valid, since relative detuning: {rel_detuning} is too large",

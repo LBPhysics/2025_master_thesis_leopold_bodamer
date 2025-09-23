@@ -1,8 +1,9 @@
 # TODO potentially Replace hard‑coded deph_rate and down_rate with rates computed from bath.power_spectrum(self.system.omega_ij(...)), and add thermal raising where applicable
 from dataclasses import dataclass
 import numpy as np
-from qspectro2d.core.atomic_system.system_class import AtomicSystem
 from qutip import BosonicEnvironment
+
+from .atomic_system import AtomicSystem
 
 
 @dataclass
@@ -202,12 +203,16 @@ class AtomBathCoupling:
             elif j == 1:
                 return Gamma_11
             elif j == 2:
-                return Gamma_t_ab + 0.5 * (self.paper_gamma_ij(i, j) + self.paper_gamma_ij(j, i))
+                return Gamma_t_ab + 0.5 * (
+                    self.paper_gamma_ij(i, j) + self.paper_gamma_ij(j, i)
+                )
         if i == 2:
             if j == 0:
                 return Gamma_t_a0 + 0.5 * self.paper_gamma_ij(1, i)
             elif j == 1:
-                return Gamma_t_ab + 0.5 * (self.paper_gamma_ij(i, j) + self.paper_gamma_ij(j, i))
+                return Gamma_t_ab + 0.5 * (
+                    self.paper_gamma_ij(i, j) + self.paper_gamma_ij(j, i)
+                )
             elif j == 2:
                 return Gamma_22
         elif i == 3:

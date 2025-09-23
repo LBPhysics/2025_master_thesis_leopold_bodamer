@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 from functools import cached_property
 from qutip import basis as qt_basis, ket2dm, Qobj
 
-from qspectro2d.utils.constants import HBAR, convert_cm_to_fs, convert_fs_to_cm
+from ...utils.constants import HBAR, convert_cm_to_fs, convert_fs_to_cm
 
 
 @dataclass
@@ -36,7 +36,9 @@ class AtomicSystem:
         self.frequencies_cm_history = [self.frequencies_cm.copy()]
 
         # internal fs^-1 storage (single source of truth for dynamics)
-        self.frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
+        self.frequencies_fs = np.asarray(
+            convert_cm_to_fs(self.frequencies_cm), dtype=float
+        )
         self.coupling_fs = convert_cm_to_fs(self.coupling_cm)
         self.delta_inhomogen_fs = convert_cm_to_fs(self.delta_inhomogen_cm)
 
@@ -47,13 +49,17 @@ class AtomicSystem:
     # CHECKED
     def update_frequencies_cm(self, new_freqs: List[float]):
         if len(new_freqs) != self.n_atoms:
-            raise ValueError(f"Expected {self.n_atoms} frequencies, got {len(new_freqs)}")
+            raise ValueError(
+                f"Expected {self.n_atoms} frequencies, got {len(new_freqs)}"
+            )
 
         # Save current freqs before updating
         self.frequencies_cm_history.append(new_freqs.copy())
         self.frequencies_cm = new_freqs.copy()
         # keep fs cache in sync
-        self.frequencies_fs = np.asarray(convert_cm_to_fs(self.frequencies_cm), dtype=float)
+        self.frequencies_fs = np.asarray(
+            convert_cm_to_fs(self.frequencies_cm), dtype=float
+        )
         # cached spectrum/operators depend on frequencies
         self.reset_cache()
 
@@ -67,7 +73,12 @@ class AtomicSystem:
     def reset_cache(self) -> None:
         """Invalidate cached spectral quantities affected by parameter changes."""
         # delete cached_properties to force recompute on parameter changes
-        for key in ("eigenstates", "eigenbasis_transform", "hamiltonian", "coupling_op"):
+        for key in (
+            "eigenstates",
+            "eigenbasis_transform",
+            "hamiltonian",
+            "coupling_op",
+        ):
             if key in self.__dict__:
                 del self.__dict__[key]
 
@@ -125,7 +136,8 @@ class AtomicSystem:
                     # basis index (0-based) of |i,j>
                     idx_d = pair_to_index(i_site, j_site, N) - 1
                     omega_sum = float(
-                        self.frequencies_fs[i_site - 1] + self.frequencies_fs[j_site - 1]
+                        self.frequencies_fs[i_site - 1]
+                        + self.frequencies_fs[j_site - 1]
                     )
                     H += HBAR * omega_sum * ket2dm(self.basis[idx_d])
 
@@ -151,7 +163,9 @@ class AtomicSystem:
         Returns 0-based basis index suitable for self.basis[idx]."""
         N = self.n_atoms
         if not (1 <= i <= N and 1 <= j <= N and i != j):
-            raise ValueError(f"double indices must be distinct in [1,{N}], got (i,j)=({i},{j})")
+            raise ValueError(
+                f"double indices must be distinct in [1,{N}], got (i,j)=({i},{j})"
+            )
         a, b = (i, j) if i < j else (j, i)
         return pair_to_index(a, b, N) - 1
 
@@ -248,7 +262,9 @@ class AtomicSystem:
                 if np.isclose(Jij, 0.0):
                     continue
                 kj = self.basis[j]
-                HJ += HBAR * Jij * (ki * kj.dag() + kj * ki.dag())  # NOTE coupling has to be real
+                HJ += (
+                    HBAR * Jij * (ki * kj.dag() + kj * ki.dag())
+                )  # NOTE coupling has to be real
 
         # Double-excitation manifold: connect |i,j> <-> |i,k| with J_{j,k} and |i,j> <-> |k,j| with J_{i,k}
         if self.max_excitation == 2 and N >= 3:
@@ -269,7 +285,9 @@ class AtomicSystem:
                             if idx_ij < idx_ik:  # add each undirected connection once
                                 ket_ik = self.basis[idx_ik]
                                 HJ += (
-                                    HBAR * Jij_val * (ket_ij * ket_ik.dag() + ket_ik * ket_ij.dag())
+                                    HBAR
+                                    * Jij_val
+                                    * (ket_ij * ket_ik.dag() + ket_ik * ket_ij.dag())
                                 )
 
                         # Hop i -> k while keeping j (amplitude J_{i,k})
@@ -280,7 +298,9 @@ class AtomicSystem:
                             if idx_ij < idx_kj:
                                 ket_kj = self.basis[idx_kj]
                                 HJ += (
-                                    HBAR * Iik_val * (ket_ij * ket_kj.dag() + ket_kj * ket_ij.dag())
+                                    HBAR
+                                    * Iik_val
+                                    * (ket_ij * ket_kj.dag() + ket_kj * ket_ij.dag())
                                 )
 
         return HJ
@@ -296,7 +316,9 @@ class AtomicSystem:
         self._set_cylindrical_positions()
         self._compute_isotropic_couplings()
 
-    def _set_cylindrical_positions(self, distance: float = 1.0):  # TODO this could be parameterized
+    def _set_cylindrical_positions(
+        self, distance: float = 1.0
+    ):  # TODO this could be parameterized
         """Set cylindrical atom positions."""
         n_rings = self.n_rings
         n_chains = self.n_chains
@@ -354,7 +376,10 @@ class AtomicSystem:
 
                 # Isotropic coupling with dipole product
                 coupling_ij = (
-                    base_coupling_fs * self.dip_moments[i] * self.dip_moments[j] / (r**power)
+                    base_coupling_fs
+                    * self.dip_moments[i]
+                    * self.dip_moments[j]
+                    / (r**power)
                 )
                 J[i, j] = coupling_ij
                 J[j, i] = coupling_ij
@@ -403,7 +428,9 @@ class AtomicSystem:
             lines.append(f"    {'coupling':<20}: {self.coupling_cm} cm^-1")
             lines.append(f"    {'delta':<20}: {self.delta_inhomogen_cm} cm^-1")
         elif self.n_atoms > 2 and self.n_rings is not None:
-            lines.append(f"    {'n_rings':<20}: {self.n_rings} (n_chains = {self.n_chains})")
+            lines.append(
+                f"    {'n_rings':<20}: {self.n_rings} (n_chains = {self.n_chains})"
+            )
             lines.append(f"    {'positions shape':<20}: {self._positions.shape}")
             lines.append(f"    {'coupling matrix (cm^-1)':<20}:")
             lines.append(str(self.coupling_matrix_cm))

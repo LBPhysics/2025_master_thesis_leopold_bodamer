@@ -1,402 +1,225 @@
-# TODO redo this module
-from typing import List
-from qspectro2d.core.laser_system.laser_fcts import *
+"""Concise post-processing utilities for extending time-domain data."""
+
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+
 import numpy as np
 
 
-# ##########################
-# functions for post-processing and plotting
-# ##########################
-def extend_time_axes(
-    data: np.ndarray,
+__all__ = [
+    "extend_time_domain_data",
+    "compute_spectra",
+]
+
+
+def _extend_axis(axis: np.ndarray, new_len: int) -> np.ndarray:
+    """Extend a strictly increasing 1D axis to ``new_len`` in + direction."""
+    if axis.ndim != 1:
+        raise ValueError("axis must be 1D")
+    n_old = int(axis.size)
+    n_new = int(new_len)
+    if n_new <= n_old:
+        return axis.copy()
+    if n_old == 0:
+        raise ValueError("axis must have at least one element")
+
+    if n_old == 1:
+        last = float(axis[-1])
+        extra = np.full(n_new - n_old, last, dtype=float)
+        return np.concatenate([axis.astype(float, copy=True), extra])
+
+    diffs = np.diff(axis)
+    if not np.all(diffs > 0):
+        raise ValueError("axis must be strictly increasing")
+    dt = float(np.median(diffs))
+    last = float(axis[-1])
+    extra_n = n_new - n_old
+    cont = last + dt * np.arange(1, extra_n + 1, dtype=float)
+    return np.concatenate([axis.astype(float, copy=True), cont])
+
+
+def extend_time_domain_data(
+    datas: List[np.ndarray],
     t_det: np.ndarray,
-    t_coh: np.ndarray = None,
-    pad_t_det: tuple[float, float] = (1, 1),
-    pad_t_coh: tuple[float, float] = (1, 1),
-) -> tuple[np.ndarray, np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray]:
+    t_coh: Optional[np.ndarray] = None,
+    *,
+    pad: float = 1.0,
+) -> Tuple[List[np.ndarray], np.ndarray, Optional[np.ndarray]]:
+    """Extend axes by ceil(pad * N) and zero-pad data on the positive side.
+
+    - 1D (t_coh is None): data shape (N_det,), extend det-axis only.
+    - 2D (t_coh provided): data shape (N_coh, N_det), extend both axes.
     """
-    Extend time axes by padding for both 1D and 2D spectroscopy data.
-
-    This function handles both 1D and 2D cases automatically based on input dimensions.
-    For 1D: extends t_det axis only. For 2D: extends both t_coh and t_det axes.
-    The padding is specified as multipliers, where values >= 1 indicate how much
-    to extend each axis. Data types are preserved during the operation.
-
-    Parameters
-    ----------
-    data : np.ndarray
-        Spectroscopy data array.
-        - 1D case: Shape (N_t_det,) - data along t_det axis
-        - 2D case: Shape (N_t_coh, N_t_det) - data along (t_coh, t_det) axes
-    t_det : np.ndarray
-        Time axis for detection. Shape: (N_t_det,)
-    t_coh : np.ndarray, optional
-        Time axis for coherence. Shape: (N_t_coh,). Required for 2D data.
-    pad_t_det : tuple[float, float], default=(1, 1)
-        Padding multipliers for t_det axis as (before, after).
-        Values >= 1, where 1 means no padding, 2 means add original length, etc.
-    pad_t_coh : tuple[float, float], default=(1, 1)
-        Padding multipliers for t_coh axis as (before, after).
-        Only used for 2D data. Values >= 1.
-
-    Returns
-    -------
-    For 1D data:
-        tuple[np.ndarray, np.ndarray]
-            extended_t_det : np.ndarray
-                Extended time axis for detection.
-            padded_data : np.ndarray
-                Zero-padded data array.
-
-    For 2D data:
-        tuple[np.ndarray, np.ndarray, np.ndarray]
-            extended_t_det : np.ndarray
-                Extended time axis for detection.
-            extended_t_coh : np.ndarray
-                Extended time axis for coherence.
-            padded_data : np.ndarray
-                Zero-padded data array.
-
-    Raises
-    ------
-    ValueError
-        If any padding multiplier is < 1, or if 2D data provided without t_coh.
-
-    Examples
-    --------
-    # 1D case
-    >>> t_det = np.linspace(0, 100, 51)  # 0 to 100 fs, 51 points
-    >>> data_1d = np.random.rand(51)
-    >>> ext_t_det, ext_data = extend_time_axes(data_1d, t_det, pad_t_det=(1, 2))
-    >>> # Result: t_det axis doubled after
-
-    # 2D case
-    >>> t_det = np.linspace(0, 100, 51)  # 0 to 100 fs, 51 points
-    >>> t_coh = np.linspace(0, 50, 26)  # 0 to 50 fs, 26 points
-    >>> data_2d = np.random.rand(26, 51)
-    >>> ext_t_det, ext_t_coh, ext_data = extend_time_axes(
-    ...     data_2d, t_det, t_coh, pad_t_det=(1, 3), pad_t_coh=(2, 2)
-    ... )
-    >>> # Result: t_coh axis doubled on both sides, t_det axis tripled after
-    """
-    # Validate input multipliers
-    if any(val < 1 for val in pad_t_det + pad_t_coh):
-        raise ValueError("All padding multipliers must be >= 1")
-
-    # Determine if we're dealing with 1D or 2D data
-    is_2d = data.ndim == 2
-
-    if is_2d:
-        if t_coh is None:
-            raise ValueError("t_coh must be provided for 2D data")
-
-        # 2D case: data shape is (N_t_coh, N_t_det)
-        original_t_coh_points, original_t_points = data.shape
-
-        # Convert multipliers to actual padding values
-        pad_t_coh_actual = (
-            int((pad_t_coh[0] - 1) * original_t_coh_points),
-            int((pad_t_coh[1] - 1) * original_t_coh_points),
-        )
-        pad_t_actual = (
-            int((pad_t_det[0] - 1) * original_t_points),
-            int((pad_t_det[1] - 1) * original_t_points),
-        )
-
-        # Pad the data array (rows=t_coh, cols=t_det)
-        padded_data = np.pad(
-            data, (pad_t_coh_actual, pad_t_actual), mode="constant", constant_values=0
-        )
-
-        # Compute steps
-        dt_det = t_det[1] - t_det[0]
-        dt_coh = t_coh[1] - t_coh[0]
-
-        # Extend axes
-        extended_t_det = np.linspace(
-            t_det[0] - pad_t_actual[0] * dt_det,
-            t_det[-1] + pad_t_actual[1] * dt_det,
-            padded_data.shape[1],
-        )
-        extended_t_coh = np.linspace(
-            t_coh[0] - pad_t_coh_actual[0] * dt_coh,
-            t_coh[-1] + pad_t_coh_actual[1] * dt_coh,
-            padded_data.shape[0],
-        )
-
-        return extended_t_det, extended_t_coh, padded_data
-
-    else:
-        # 1D case: data shape is (N_t_det,)
-        original_t_points = data.shape[0]
-
-        # Convert multipliers to actual padding values
-        pad_t_actual = (
-            int((pad_t_det[0] - 1) * original_t_points),
-            int((pad_t_det[1] - 1) * original_t_points),
-        )
-
-        # Pad the data array
-        padded_data = np.pad(data, pad_t_actual, mode="constant", constant_values=0)
-
-        # Compute step
-        dt_det = t_det[1] - t_det[0]
-
-        # Extend axis
-        extended_t_det = np.linspace(
-            t_det[0] - pad_t_actual[0] * dt_det,
-            t_det[-1] + pad_t_actual[1] * dt_det,
-            padded_data.shape[0],
-        )
-
-        return extended_t_det, padded_data
-
-
-def compute_1d_fft_wavenumber(
-    t_dets: np.ndarray,
-    datas: List[np.ndarray],
-    signal_types: List[str] = ["rephasing"],
-) -> tuple[np.ndarray, List[np.ndarray], List[str]]:
-    """
-    S(T_wait, w_det) = ∫ E(T_wait, t_det) e^{-i w_det t_det} dt_det
-    Compute 1D FFT of spectroscopy data and convert frequency axis to wavenumber units.
-
-    This function performs a 1D FFT on the input data and converts the
-    resulting frequency axis from cycles/fs to wavenumber units (10^4 cm⁻¹). The
-    implementation follows the same convention as the 2D case using full FFT with fftshift.
-
-    Parameters
-    ----------
-    t_dets : np.ndarray
-        Time axis for detection (t_det) in femtoseconds. Shape: (N_t_det,)
-    datas : List[np.ndarray] (N_t_det,) time-domain E-field signal components
-        data for the requested signal_types. For absorptive spectra, pass both components
-        [rephasing, nonrephasing].
-    signal_types : List[str], default=["rephasing"]
-        List of signal labels corresponding one-to-one with `datas`.
-        Allowed normalized values per entry: "rephasing" or "nonrephasing".
-        For absorptive: provide signal_types=["rephasing", "nonrephasing"].
-
-    Returns
-    -------
-    tuple[np.ndarray, List[np.ndarray], List[str]]
-        nu_dets : np.ndarray
-        spectra : List[np.ndarray]
-            List of 1D FFT spectra in frequency space (fftshifted), scaled by dt_det.
-            Contains entries for requested components in deterministic order:
-            [rephasing?, nonrephasing?, absorptive?, average?].
-        labels : List[str]
-            Labels corresponding to each spectrum entry (e.g., 'rephasing', 'absorptive').
-
-    Notes
-    -----
-    - Conversion factor 2.998 * 10 converts from cycles/fs to 10^4 cm⁻¹:
-      * Speed of light c ≈ 2.998 × 10^8 m/s = 2.998 × 10^-4 cm/fs
-      * Wavenumber = frequency / c, scaled by 10^4
-    - Results are fftshifted to center zero frequency
-    - Absorptive spectrum is computed as real((S_re + S_nr)/2) when both components
-      are provided.
-    """
-    # Calculate sampling parameters
-    dt_det = t_dets[1] - t_dets[0]  # Sampling interval in fs
-    N_t_det = len(t_dets)
-
-    def _validate(arr: np.ndarray, label: str):
-        if arr.ndim != 1:
-            raise ValueError(f"{label} must be 1D (N_t_det,)")
-        if arr.shape != (N_t_det,):
-            raise ValueError(f"{label} shape {arr.shape} != ({N_t_det},) from provided t_dets axis")
-
-    def _fft1d(arr: np.ndarray) -> np.ndarray:
-        """Compute 1D FFT with scaling and shift."""
-        spec = np.fft.ifft(arr)
-        spec = np.fft.ifftshift(spec)
-        return spec * dt_det  # Scale by time step for consistency with 2D case
-
+    if pad < 1.0:
+        raise ValueError("pad must be >= 1.0 for extension-only padding")
     if not datas:
-        raise ValueError("'datas' must contain at least one 1D array")
-    if len(datas) != len(signal_types):
-        raise ValueError(
-            f"Length mismatch: len(datas)={len(datas)} vs len(signal_types)={len(signal_types)}"
-        )
+        raise ValueError("datas must be a non-empty list of arrays")
+    if t_det.ndim != 1:
+        raise ValueError("t_det must be a 1D array")
 
-    # Validate all arrays and compute individual spectra
-    # Compute spectra dictionary by type for first occurrence
-    S_by_type: dict[str, np.ndarray] = {}
-    for idx, (data, sig) in enumerate(zip(datas, signal_types)):
-        _validate(data, f"datas[{idx}]")
-        sig_norm = sig.lower()
-        if sig_norm not in ("rephasing", "nonrephasing", "average"):
-            # Allow unknown tags but still compute their FFT and store under the raw name
-            S_by_type.setdefault(sig_norm, _fft1d(data))
-            continue
-        if sig_norm not in S_by_type:
-            S_by_type[sig_norm] = _fft1d(data)
+    n_det = int(t_det.size)
+    n_det_ext = int(np.ceil(pad * n_det))
 
-    uniq = set(map(str.lower, signal_types))
+    if t_coh is None:
+        extended_t_det = _extend_axis(t_det, n_det_ext)
+        extended_datas = []
+        for idx, arr in enumerate(datas):
+            if arr.ndim != 1:
+                raise ValueError(f"datas[{idx}] must be 1D when t_coh is None")
+            if arr.shape[0] != n_det:
+                raise ValueError(
+                    f"datas[{idx}] length {arr.shape[0]} does not match t_det length {n_det}"
+                )
+            extra = n_det_ext - n_det
+            if extra <= 0:
+                extended_datas.append(arr.copy())
+                continue
+            pad_width = (0, extra)
+            padded = np.pad(arr, pad_width, mode="constant", constant_values=0)
+            extended_datas.append(padded)
 
-    # Assemble outputs in deterministic order
-    spectra: List[np.ndarray] = []
-    labels: List[str] = []
-    if "rephasing" in uniq and "rephasing" in S_by_type:
-        spectra.append(S_by_type["rephasing"])
-        labels.append("rephasing")
-    if "nonrephasing" in uniq and "nonrephasing" in S_by_type:
-        spectra.append(S_by_type["nonrephasing"])
-        labels.append("nonrephasing")
-    if ("rephasing" in uniq and "nonrephasing" in uniq) and (
-        "rephasing" in S_by_type and "nonrephasing" in S_by_type
-    ):
-        spectra.append(np.real((S_by_type["rephasing"] + S_by_type["nonrephasing"]) / 2.0))
-        labels.append("absorptive")
-    if "average" in uniq and "average" in S_by_type:
-        spectra.append(S_by_type["average"])
-        labels.append("average")
+        return extended_datas, extended_t_det, None
 
-    # Include any additional custom tags (not one of the above) if present
-    for k, v in S_by_type.items():
-        if k not in ("rephasing", "nonrephasing", "average"):
-            spectra.append(v)
-            labels.append(k)
+    if t_coh.ndim != 1:
+        raise ValueError("t_coh must be a 1D array when provided")
 
-    # Generate frequency axis and shift
-    freq_dets = np.fft.fftfreq(N_t_det, d=dt_det)
-    freq_dets = np.fft.ifftshift(freq_dets)
+    n_coh = int(t_coh.size)
+    n_coh_ext = int(np.ceil(pad * n_coh))
 
-    nu_dets = freq_dets / 2.998 * 10
+    extended_t_det = _extend_axis(t_det, n_det_ext)
+    extended_t_coh = _extend_axis(t_coh, n_coh_ext)
 
-    return nu_dets, spectra, labels
-
-
-def compute_2d_fft_wavenumber(
-    t_dets: np.ndarray,
-    t_cohs: np.ndarray,
-    datas: List[np.ndarray],
-    signal_types: List[str] = ["rephasing"],
-) -> tuple[np.ndarray, np.ndarray, List[np.ndarray], List[str]]:
-    """Compute 2D FFT S(w_coh, T_wait, w_det) = ∫ E(t_coh, T_wait, t_det) e^{SIGN_DET i w_det t_det + SIGN_COH i w_coh t_coh} dt_det dt_coh
-    The sign depends on how each pulse interacts with the system / which freq component couples
-    - Rephasing: SIGN_DET = -1, SIGN_COH = +1
-    - otherwise I put: SIGN_DET = -1, SIGN_COH = -1
-
-    Parameters
-    ----------
-    t_dets : Detection time (N_t_det,)
-    t_cohs : Coherence time (N_t_coh,)
-    datas : List[np.ndarray]
-        shape (N_t_coh, N_t_det)
-        datas for the requested signal_types.
-        For absorptive: real((S_re + S_nr)/2)
-    signal_types : List[str], default=["rephasing"]
-        List of signal labels corresponding one-to-one with `datas`.
-        Allowed normalized values per entry: "rephasing" or "nonrephasing".
-
-    Returns
-    -------
-    (nu_dets, nu_cohs, spectra, labels)
-        nu_dets, nu_cohs : np.ndarray (wavenumber axis, 10^4 cm^-1)
-        spectra : List[np.ndarray]
-            List of complex spectra with shape (N_t_coh, N_t_det) in deterministic order:
-            [rephasing?, nonrephasing?, absorptive?, average?] (fftshifted, scaled).
-        labels : List[str]
-            Labels corresponding to each spectrum entry.
-    """
-    dt_coh = t_cohs[1] - t_cohs[0]
-    dt_det = t_dets[1] - t_dets[0]
-    N_coh = len(t_cohs)
-    N_det = len(t_dets)
-
-    def _validate(arr: np.ndarray, label: str):
+    extended_datas: List[np.ndarray] = []
+    for idx, arr in enumerate(datas):
         if arr.ndim != 2:
-            raise ValueError(f"{label} must be 2D (N_t_coh, N_t_det)")
-        if arr.shape != (N_coh, N_det):
-            raise ValueError(f"{label} shape {arr.shape} != ({N_coh}, {N_det}) from provided axes")
+            raise ValueError(f"datas[{idx}] must be 2D when t_coh is provided")
+        if arr.shape != (n_coh, n_det):
+            raise ValueError(
+                f"datas[{idx}] shape {arr.shape} does not match (len(t_coh), len(t_det)) = {(n_coh, n_det)}"
+            )
+        extra_c = n_coh_ext - n_coh
+        extra_d = n_det_ext - n_det
+        if extra_c <= 0 and extra_d <= 0:
+            extended_datas.append(arr.copy())
+            continue
+        pad_width = ((0, max(0, extra_c)), (0, max(0, extra_d)))
+        padded = np.pad(arr, pad_width, mode="constant", constant_values=0)
+        extended_datas.append(padded)
 
-    def _fft2(arr: np.ndarray, signal_type: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Compute 2D transform and provide matching frequency axes.
+    return extended_datas, extended_t_det, extended_t_coh
 
-        Returns
-        -------
-        spec : complex ndarray (N_coh, N_det)
-            2D spectrum scaled by (dt_coh * dt_det).
-        freq_cohs_ax : ndarray (N_coh,)
-            Frequency axis for coherence dimension (cycles/fs), centered (fftshifted).
-        freq_dets_ax : ndarray (N_det,)
-            Frequency axis for detection dimension (cycles/fs), centered (fftshifted).
-        """
 
-        sig = signal_type.lower()
+def compute_spectra(
+    datas: List[np.ndarray],
+    signal_types: List[str] = ["rephasing"],
+    t_det: np.ndarray = None,
+    t_coh: Optional[np.ndarray] = None,
+) -> Tuple[Optional[np.ndarray], np.ndarray, List[np.ndarray], List[str]]:
+    """Compute spectra along detection (and optional coherence) axes.
+    Based on the paper: https://doi.org/10.1063/5.0214023
 
-        if sig == "rephasing":
-            # coh: fft (- sign), det: ifft (+ sign)
-            tmp_local = np.fft.fft(arr, axis=0)
-            spec = np.fft.ifft(tmp_local, axis=1) * N_det
+    For each input data array:
+    - Along detection time, always use +i convention: S(w_det) = ∫ E(t) e^{+i w t} dt
+      (implemented via IFFT, no normalization scaling applied).
+    - If coherence axis is present:
+        - nonrephasing:  S_NR(w_coh, *) = ∫ E(t_coh, *) e^{-i w t} dt (FFT)
+        - rephasing/else: S_R(w_coh, *) = ∫ E(t_coh, *) e^{+i w t} dt (IFFT)
 
-        else:
-            # nonrephasing (+, +): ifft both
-            tmp_local = np.fft.ifft(arr, axis=0) * N_coh
-            spec = np.fft.ifft(tmp_local, axis=1) * N_det
+    Returns:
+        (nu_cohs, nu_dets, datas_nu, signal_types_out)
+        - nu_cohs: frequency axis (cm^-1) for coherence (or None if t_coh is None)
+        - nu_dets: frequency axis (cm^-1) for detection
+        - datas_nu: list of spectra arrays in frequency domain
+        - signal_types_out: list of signal labels, aligned with datas_nu
 
-        # Always fftshift for plotting
-        spec = np.fft.fftshift(spec, axes=(0, 1))
-        freq_cohs_ax = np.fft.fftshift(np.fft.fftfreq(N_coh, d=dt_coh))
-        freq_dets_ax = np.fft.fftshift(np.fft.fftfreq(N_det, d=dt_det))
-
-        return spec * (dt_coh * dt_det), freq_cohs_ax, freq_dets_ax
-
+    Notes:
+        Frequency-to-wavenumber conversion follows the user's formula:
+            nu = np.fft.fftfreq(N, d=dt) / 2.998 * 10
+    """
     if not datas:
-        raise ValueError("'datas' must contain at least one 2D array")
-    if len(datas) != len(signal_types):
-        raise ValueError(
-            f"Length mismatch: len(datas)={len(datas)} vs len(signal_types)={len(signal_types)}"
-        )
+        raise ValueError("datas must be a non-empty list of arrays")
+    if t_det is None:
+        raise ValueError("t_det must be provided")
+    if t_det.ndim != 1:
+        raise ValueError("t_det must be a 1D array")
 
-    # Validate all arrays and compute individual spectra
-    # Compute spectra dictionary by type for first occurrence
-    S_by_type: dict[str, np.ndarray] = {}
-    axes_by_type: dict[str, tuple[np.ndarray, np.ndarray]] = {}
-    for idx, (data, sig) in enumerate(zip(datas, signal_types)):
-        _validate(data, f"datas[{idx}]")
-        sig_norm = sig.lower()
-        if sig_norm not in S_by_type:
-            spec, f_coh_ax, f_det_ax = _fft2(data, sig_norm)
-            S_by_type[sig_norm] = spec
-            axes_by_type[sig_norm] = (f_coh_ax, f_det_ax)
+    # Normalize signal types to length of datas.
+    if len(signal_types) == 1 and len(datas) > 1:
+        sig_types = [signal_types[0]] * len(datas)
+    else:
+        if len(signal_types) != len(datas):
+            raise ValueError(
+                "signal_types must have same length as datas or be a single entry"
+            )
+        sig_types = list(signal_types)
 
-    uniq = set(map(str.lower, signal_types))
-
-    # Frequency axes & shift (legacy behavior retained for public API)
-    freq_cohs = np.fft.fftshift(np.fft.fftfreq(N_coh, d=dt_coh))
-    freq_dets = np.fft.fftshift(np.fft.fftfreq(N_det, d=dt_det))
-
-    nu_cohs = freq_cohs / 2.998 * 10
+    # Detection axis frequency and wavenumber
+    n_det = int(t_det.size)
+    dt_det = float(np.median(np.diff(t_det))) if n_det > 1 else 1.0
+    freq_dets = np.fft.fftfreq(n_det, d=dt_det)
     nu_dets = freq_dets / 2.998 * 10
 
-    # Assemble outputs in deterministic order and fftshift each
-    spectra_2d: List[np.ndarray] = []
-    labels_2d: List[str] = []
+    # Coherence axis frequency and wavenumber (optional)
+    if t_coh is None:
+        nu_cohs = None
+    else:
+        if t_coh.ndim != 1:
+            raise ValueError("t_coh must be 1D when provided")
+        n_coh = int(t_coh.size)
+        dt_coh = float(np.median(np.diff(t_coh))) if n_coh > 1 else 1.0
+        freq_cohs = np.fft.fftfreq(n_coh, d=dt_coh)
+        nu_cohs = freq_cohs / 2.998 * 10
 
-    if "rephasing" in uniq and "rephasing" in S_by_type:
-        spectra_2d.append(np.fft.fftshift(S_by_type["rephasing"], axes=(0, 1)))
-        labels_2d.append("rephasing")
-    if "nonrephasing" in uniq and "nonrephasing" in S_by_type:
-        spectra_2d.append(np.fft.fftshift(S_by_type["nonrephasing"], axes=(0, 1)))
-        labels_2d.append("nonrephasing")
-    if ("rephasing" in uniq and "nonrephasing" in uniq) and (
-        "rephasing" in S_by_type and "nonrephasing" in S_by_type
-    ):
-        absorptive = np.real((S_by_type["rephasing"] + S_by_type["nonrephasing"]) / 2.0)
-        spectra_2d.append(np.fft.fftshift(absorptive, axes=(0, 1)))
-        labels_2d.append("absorptive")
-    if "average" in uniq and "average" in S_by_type:
-        spectra_2d.append(np.fft.fftshift(S_by_type["average"], axes=(0, 1)))
-        labels_2d.append("average")
+    # Build spectra
+    datas_nu: List[np.ndarray] = []
+    out_types: List[str] = []
+    for idx, (arr, stype) in enumerate(zip(datas, sig_types)):
+        st_norm = str(stype).strip().lower()
+        if t_coh is None:
+            if arr.ndim != 1 or arr.shape[0] != n_det:
+                raise ValueError(
+                    f"datas[{idx}] must be 1D with length len(t_det) when t_coh is None"
+                )
+            spec_det = np.fft.ifft(arr, axis=0)
+            datas_nu.append(spec_det)
+            out_types.append(stype)
+            continue
 
-    # Include any additional custom tags (not one of the above) if present
-    for k, v in S_by_type.items():
-        if k not in ("rephasing", "nonrephasing", "average"):
-            spectra_2d.append(np.fft.fftshift(v, axes=(0, 1)))
-            labels_2d.append(k)
+        # 2D case: (N_coh, N_det)
+        n_coh = int(t_coh.size)
+        if arr.ndim != 2 or arr.shape != (n_coh, n_det):
+            raise ValueError(
+                f"datas[{idx}] must be 2D with shape (len(t_coh), len(t_det))"
+            )
 
-    return nu_dets, nu_cohs, spectra_2d, labels_2d
+        # Detection axis (+i) via IFFT along last axis
+        spec_2d = np.fft.ifft(arr, axis=1)
+
+        # Coherence axis sign depends on signal type
+        if st_norm == "nonrephasing":
+            spec_2d = np.fft.fft(spec_2d, axis=0)
+            out_types.append("nonrephasing")
+        else:
+            spec_2d = np.fft.ifft(spec_2d, axis=0)
+            out_types.append("rephasing")
+
+        datas_nu.append(spec_2d)
+
+    # NOTE Optional absorptive combination (commented per request)
+    # if t_coh is not None:
+    #     have_r  = any(t.lower().startswith("rephasing") for t in out_types)
+    #     have_nr = any(t.lower().startswith("nonrephasing") for t in out_types)
+    #     if have_r and have_nr:
+    #         # Example: match by index or by separate provided lists;
+    #         # here we simply combine the first found pair.
+    #         try:
+    #             r_idx = next(i for i, t in enumerate(out_types) if t.startswith("rephasing"))
+    #             nr_idx = next(i for i, t in enumerate(out_types) if t.startswith("nonrephasing"))
+    #             absorptive = np.real(datas_nu[r_idx] + datas_nu[nr_idx])
+    #             datas_nu.append(absorptive)
+    #             out_types.append("absorptive")
+    #         except StopIteration:
+    #             pass
+
+    return nu_cohs, nu_dets, datas_nu, out_types

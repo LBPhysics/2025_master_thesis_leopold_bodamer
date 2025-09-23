@@ -1,9 +1,8 @@
 from __future__ import annotations
-from typing import Union, TYPE_CHECKING
+from typing import Union
 import numpy as np
 
-if TYPE_CHECKING:
-    from qspectro2d.core.laser_system.laser_class import LaserPulse, LaserPulseSequence
+from .laser_class import LaserPulse, LaserPulseSequence
 
 
 __all__ = [

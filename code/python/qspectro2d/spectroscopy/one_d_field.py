@@ -20,10 +20,10 @@ import numpy as np
 from copy import deepcopy
 from qutip import Qobj, Result, mesolve, brmesolve
 
-from qspectro2d.core.simulation.simulation_class import SimulationModuleOQS
-from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-from qspectro2d.spectroscopy.polarization import complex_polarization
-from qspectro2d.config.default_simulation_params import (
+from .polarization import complex_polarization
+from ..core.simulation.simulation_class import SimulationModuleOQS
+from ..core.laser_system.laser_class import LaserPulseSequence
+from ..config.default_simulation_params import (
     PHASE_CYCLING_PHASES,
     COMPONENT_MAP,
     DETECTION_PHASE,
@@ -283,8 +283,12 @@ def parallel_compute_1d_e_comps(
     #   start of the detection window so all t_coh share the same usable span.
     t_mask = None
     if time_cut is not None and np.isfinite(time_cut):
-        t0_det = float(sim_oqs.simulation_config.t_coh + sim_oqs.simulation_config.t_wait)
-        cut_rel = float(time_cut) - t0_det  # cutoff measured from start of detection window
+        t0_det = float(
+            sim_oqs.simulation_config.t_coh + sim_oqs.simulation_config.t_wait
+        )
+        cut_rel = (
+            float(time_cut) - t0_det
+        )  # cutoff measured from start of detection window
         # Build mask over the local detection axis; negative cut -> all zeros
         t_mask = (sim_oqs.t_det <= cut_rel).astype(np.float64)
 
@@ -296,7 +300,9 @@ def parallel_compute_1d_e_comps(
     with ProcessPoolExecutor(max_workers=max_workers) as ex:
         for phi1 in phases_eff:
             for phi2 in phases_eff:
-                futures.append(ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2))
+                futures.append(
+                    ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2)
+                )
         temp_results: Dict[Tuple[float, float], np.ndarray] = {}
         for fut in as_completed(futures):
             phi1_v, phi2_v, _, P_phi = fut.result()

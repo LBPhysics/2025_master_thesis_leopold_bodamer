@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 def _generate_base_filename(sim_config: SimulationConfig) -> str:
     sim_f = sim_config.to_dict()
     parts: list[str] = []
-    if sim_f["simulation_type"] == "1d":
+    if sim_f["sim_type"] == "1d":
         t_coh_val = sim_f.get("t_coh")
         if t_coh_val is not None:
             parts.append(f"t_coh_{round(float(t_coh_val), 2)}")
@@ -92,7 +92,7 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
     sim_f = sim_config.to_dict()
     sys_f = system.to_dict()
 
-    parts.append(f"{sim_f['simulation_type']}_spectroscopy")
+    parts.append(f"{sim_f['sim_type']}_spectroscopy")
 
     # Add system details
     n_atoms = sys_f.get("n_atoms")

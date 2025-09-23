@@ -18,7 +18,7 @@ import numpy as np
 from qutip import Qobj, Result
 
 # LOCAL IMPORTS
-from qspectro2d.core.simulation import SimulationModuleOQS
+from ..core.simulation import SimulationModuleOQS
 from .one_d_field import compute_evolution
 
 
@@ -90,10 +90,10 @@ def _check_density_matrix_properties(
         time = times[index]
 
         # Sample state analysis
-        if index % check_interval == 0 or index < 5:
-            print(
-                f"State {index} (t={time:.3f}): trace={state.tr():.6f}, Hermitian={state.isherm}"
-            )
+        # if index % check_interval == 0 or index < 5:
+        #    print(
+        #        f"State {index} (t={time:.3f}): trace={state.tr():.6f}, Hermitian={state.isherm}"
+        #    )
 
         # Check Hermiticity
         if not state.isherm:
@@ -187,7 +187,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
     If RWA (Rotating Wave Approximation) is enabled, phase factors are applied to the states
     before validation to account for the rotating frame transformation.
     """
-    print(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
+    # print(f"Checking '{sim_oqs.simulation_config.ode_solver}' solver")
     copy_sim_oqs = deepcopy(sim_oqs)
     t_max = 2 * sim_oqs.times_local[-1]
     dt = 10 * copy_sim_oqs.simulation_config.dt
