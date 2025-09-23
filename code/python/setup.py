@@ -1,20 +1,13 @@
 from setuptools import setup, find_packages
 
-# TODO bring up to date
+# Provide only the local project utilities (project_config) from this repo.
+# The qspectro2d package is now installed from the external submodule.
 setup(
-    name="qspectro2d",
-    version="1.0",
-    packages=find_packages(include=["qspectro2d", "qspectro2d.*", "project_config"]),
+    name="project-config-tools",
+    version="0.1.0",
+    packages=find_packages(include=["project_config", "project_config.*"]),
     python_requires=">=3.8",
-    install_requires=[
-        "numpy>=1.20.0",
-        "scipy>=1.7.0",
-        "matplotlib>=3.5.0",
-        "qutip>=4.7.0",
-        "psutil>=5.8.0",
-        "pickle-mixin>=1.0.2",
-        "joblib>=1.1.0",
-    ],
+    install_requires=[],
     author="Leopold Bodamer",
-    description="Quantum 2D Electronic Spectroscopy simulation package",
+    description="Local project configuration utilities (paths, helpers)",
 )

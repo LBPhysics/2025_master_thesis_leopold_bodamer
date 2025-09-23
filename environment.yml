@@ -27,7 +27,8 @@ dependencies:
   - black>=22.0.0  # code formatter (extras not supported in conda specs)
   - mpmath
   - pytest>=7.0.0
+  - tqdm>=4.64.0            # Progress bar for loops
   - pip:
-    - -e ./code/python
-    - -e ../plotstyle  # from my Matplotlib LaTeX repo 
-    - tqdm                  # Progress bar for loops
+    - -e ./code/python            # installs project_config (local project utils)
+    - -e ./external/qspectro2d    # qspectro2d package (submodule)
+    - -e ./external/plotstyle     # plotting style (submodule)
