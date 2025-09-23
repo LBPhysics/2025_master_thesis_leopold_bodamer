@@ -556,59 +556,32 @@ def plot_2d_el_field(
     use_custom_colormap: bool = False,
     section: Union[list[tuple[float, float]], None] = None,
     figsize: Tuple[float, float] = (7.0, 5.6),
-    normalize: bool = False,
+    normalize: bool = True,
     ax: Union[Axes, None] = None,
     **kwargs: dict,
 ) -> Union[plt.Figure, None]:
     """
-    Create a color plot of 2D electric field data for positive x and y values.
-
-    This function plots 2D spectroscopic data where x represents detection time,
-    y represents coherence time, and the data represents polarization expectation values.
+    Create a color plot of 2D electric field data for spectroscopy.
 
     Parameters
     ----------
-    axis_det : np.ndarray
-        1D array representing x grid (time/frequency values).
-    axis_coh : np.ndarray
-        1D array representing y grid (time/frequency values).
-    data : np.ndarray
-        2D complex array with shape (len(axis_coh), len(axis_det)).
+    axis_det : 1D array representing x grid (time/frequency values).
+    axis_coh : 1D array representing y grid (time/frequency values).
+    data : 2D complex array with shape (len(axis_coh), len(axis_det)).
     t_wait : float, default np.inf
         Waiting time T (fs) to include in plot title and filename. If np.inf,
         no waiting time is displayed.
     domain : {"time", "freq"}, default "time"
-        Domain of the data. "time" for time-domain plots (fs), "freq" for
-        frequency-domain plots (10^4 cm^-1).
+        for frequency-domain plots (10^4 cm^-1).
     component : {"real", "img", "abs", "phase"}, default "real"
-        Component of complex data to plot. Used for both title and data processing.
     use_custom_colormap : bool, default False
         If True, uses custom red-white-blue colormap centered at zero.
         Automatically set to True for "real", "img", and "phase" components.
     section : first tuple crops coh axis (coh_min, coh_max),
               second tuple crops det axis (det_min, det_max) to zoom into specific region.
-
-    Returns
-    -------
-    matplotlib.figure.Figure or None
-        The generated figure object, or None if an error occurs.
-
-    Raises
-    ------
-    ValueError
-        If array dimensions mismatch, data is all zeros,
-        invalid domain/component values, or output_dir doesn't exist when saving.
-
-    Examples
-    --------
-    >>> x = np.linspace(0, 100, 50)
-    >>> y = np.linspace(0, 50, 25)
-    >>> data = np.random.complex128((25, 50))
-    >>> plot_2d_el_field(x, y, data, domain="time", component="real")
     """
 
     # VALIDATE INPUT
-
     if (
         data.ndim != 2
         or data.shape[0] != len(axis_coh)
@@ -618,20 +591,9 @@ def plot_2d_el_field(
             f"Data shape {data.shape} does not match axis_det ({len(axis_det)}) and axis_coh ({len(axis_coh)}) dimensions."
         )
 
-    import warnings
-
-    if len(axis_det) == 0 or len(axis_coh) == 0 or data.size == 0:
-        warnings.warn(
-            f"Empty arrays in plot_2d_el_field: axis_det={axis_det.shape}, axis_coh={axis_coh.shape}, data={data.shape}"
-        )
-
-    # Convert axes to real (robust against minor numerical complex drift)
-    axis_det = np.real(axis_det)
-    axis_coh = np.real(axis_coh)
     data = np.asarray(data, dtype=np.complex128)
 
     # SECTION CROPPING
-
     if section is not None:
         # expect list[(coh_min, coh_max),(det_min, det_max)]
         axis_coh, data = crop_nd_data_along_axis(
@@ -640,43 +602,14 @@ def plot_2d_el_field(
         axis_det, data = crop_nd_data_along_axis(
             axis_det, data, section=section[1], axis=1
         )
+    # NORMALIZE
     if normalize:
         max_abs = np.abs(data).max()
         if max_abs == 0:
             raise ValueError("Data array is all zeros, cannot normalize.")
         data = data / max_abs
 
-    # ENSURE MONOTONIC AXES ORIENTATIONS MATCH DATA
-
-    # imshow with an extent assumes the first element of each axis maps to the
-    # lower-left corner (when origin='lower'). If axes are descending, flip data
-    # along that axis and sort the axis to be ascending so diagonal features
-    # remain along y=x and no 90° rotation occurs.
-    if axis_det[0] > axis_det[-1]:
-        axis_det = axis_det[::-1]
-        data = data[:, ::-1]
-        print(
-            "Warning: axis_det was descending, flipped to ascending for correct plotting.",
-            flush=True,
-        )
-        print(
-            "Warning: axis_det was descending, flipped to ascending for correct plotting.",
-            flush=True,
-        )
-    if axis_coh[0] > axis_coh[-1]:
-        axis_coh = axis_coh[::-1]
-        data = data[::-1, :]
-        print(
-            "Warning: axis_coh was descending, flipped to ascending for correct plotting.",
-            flush=True,
-        )
-        print(
-            "Warning: axis_coh was descending, flipped to ascending for correct plotting.",
-            flush=True,
-        )
-
     # SET PLOT LABELS AND COLORMAP
-
     data, title_base = _component_2d_data(data=data, component=component)
     colormap, x_title, y_title, domain_suffix = _domain_2d_labels(domain=domain)
     title = title_base + domain_suffix
@@ -684,7 +617,6 @@ def plot_2d_el_field(
         title += rf"$\ (T = {t_wait:.2f}\,\text{{fs}})$"
 
     # CUSTOM COLORMAP FOR ZERO-CENTERED DATA
-
     norm = None
     # For real and imag data, use red-white-blue colormap by default
     if component in ("real", "img", "phase"):
@@ -693,8 +625,7 @@ def plot_2d_el_field(
         use_custom_colormap = False
 
     if use_custom_colormap:
-        vmax = np.max(np.abs(data))
-        vmin = -vmax
+        vmin, vmax = np.min(data), np.max(data)
         vcenter = 0
 
         # Use the built-in 'RdBu_r' colormap - reversed to make red=positive, blue=negative
@@ -707,34 +638,37 @@ def plot_2d_el_field(
             print(
                 f"Warning: Cannot use TwoSlopeNorm with vmin={vmin}, vcenter={vcenter}, vmax={vmax}. Using default normalization."
             )
+        """ OTHERWISE
+        vmax = np.max(np.abs(data))
+        vmin = -vmax
+        norm = TwoSlopeNorm(vmin=vmin, vcenter=0, vmax=vmax)
+        im_plot.set_clim(vmin=vmin, vmax=vmax)
+        """
 
-    cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
+    if domain == "freq":
+        cbarlabel = r"$\propto S_{\text{out}} / E_{0}$"
+    else:
+        cbarlabel = r"$\propto E_{\text{out}} / E_{0}$"
 
     # GENERATE FIGURE
-
     created_fig = False
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
         created_fig = True
     else:
         fig = ax.figure
+
     # Create the pcolormesh plot for the 2D data
     im_plot = ax.imshow(
         data,  # data shape: [len(axis_coh), len(axis_det)]
         aspect="auto",
         cmap=colormap,
         norm=norm,
-        extent=[
-            axis_det[0],
-            axis_det[-1],  # X-axis: detection time
-            axis_coh[0],
-            axis_coh[-1],  # Y-axis: coherence time
-        ],
         interpolation="bilinear",  # optional: "none" to avoid smoothing
     )
     cbar = fig.colorbar(im_plot, ax=ax, label=cbarlabel)
 
-    # Add contour lines with different styles for positive and negative values
+    # NOTE Add contour lines with different styles for positive and negative values
     # add_custom_contour_lines(axis_coh, axis_det, data, component)
 
     # Improve overall plot appearance
