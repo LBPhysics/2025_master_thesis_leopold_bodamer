@@ -1,0 +1,6 @@
+[submodule "external/qspectro2d"]
+	path = external/qspectro2d
+	url = /home/leopold/Projects/qspectro2d
+[submodule "external/plotstyle"]
+	path = external/plotstyle
+	url = /home/leopold/Projects/plotstyle
