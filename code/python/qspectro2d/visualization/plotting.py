@@ -660,7 +660,7 @@ def plot_2d_el_field(
 
     # Create the pcolormesh plot for the 2D data
     im_plot = ax.imshow(
-        data,  # data shape: [len(axis_coh), len(axis_det)]
+        data[::-1, :],  # data shape: [len(axis_coh), len(axis_det)]
         aspect="auto",
         cmap=colormap,
         norm=norm,
