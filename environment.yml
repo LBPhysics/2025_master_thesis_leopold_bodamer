@@ -30,5 +30,5 @@ dependencies:
   - tqdm>=4.64.0            # Progress bar for loops
   - pip:
       # External packages now installed directly from Git (no submodules cloned):
-      - qspectro2d @ git+https://github.com/LBPhysics/qspectro2d.git@main
-      - plotstyle @ git+https://github.com/LBPhysics/plotstyle.git@main
+      -e ./code/python/qspectro2d
+      -e ./code/python/plotstyle
