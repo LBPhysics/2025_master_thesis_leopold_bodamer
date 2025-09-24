@@ -15,11 +15,12 @@ from pathlib import Path
 import re
 from subprocess import run, CalledProcessError
 
-import sys
+import sys as _sys, pathlib as _pl
 
-# Add parent directory to sys.path to import paths
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from paths import SCRIPTS_DIR
+_code_dir = _pl.Path(__file__).resolve().parents[1]
+if str(_code_dir) not in _sys.path:
+    _sys.path.insert(0, str(_code_dir))
+from bootstrap_paths import SCRIPTS_DIR
 
 
 def _derive_1d_dir(abs_path: str) -> Path:

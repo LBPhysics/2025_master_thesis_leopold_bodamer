@@ -18,8 +18,8 @@ from __future__ import annotations
 import matplotlib.pyplot as plt
 from typing import Any, List, Optional, Sequence, Dict, cast
 from qutip import BosonicEnvironment
-import sys
 from pathlib import Path
+import sys
 import argparse
 import numpy as np
 import warnings
@@ -38,9 +38,12 @@ from qspectro2d import generate_unique_plot_filename
 from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d import load_simulation_data
 
-# Add parent directory to sys.path to import paths
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from paths import FIGURES_PYTHON_DIR
+import sys as _sys, pathlib as _pl
+
+_code_dir = _pl.Path(__file__).resolve().parents[1]
+if str(_code_dir) not in _sys.path:
+    _sys.path.insert(0, str(_code_dir))
+from bootstrap_paths import FIGURES_PYTHON_DIR
 
 from plotstyle import init_style, save_fig
 

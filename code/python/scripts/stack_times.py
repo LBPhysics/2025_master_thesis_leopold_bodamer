@@ -17,9 +17,9 @@ Keep it simple and readable.
 from __future__ import annotations
 
 import argparse
+import copy
 import sys
 from pathlib import Path
-import copy
 from typing import List, Dict, Any, Tuple
 
 import numpy as np
@@ -32,12 +32,12 @@ from qspectro2d.utils.data_io import (
 )
 
 
-import sys
-from pathlib import Path
+import sys as _sys, pathlib as _pl
 
-# Add parent directory to sys.path to import paths
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from paths import DATA_DIR
+_code_dir = _pl.Path(__file__).resolve().parents[1]
+if str(_code_dir) not in _sys.path:
+    _sys.path.insert(0, str(_code_dir))
+from bootstrap_paths import DATA_DIR
 
 
 def _load_entries(
@@ -271,7 +271,7 @@ def main() -> None:
 
     print(f"Saved 2D dataset: {out_path}")
     print("=" * 80)
-    print(f"To plot the 2D data, run:")
+    print(f"\n🎯 To plot the 2D data, run:")
     print(f"python plot_datas.py --abs_path {out_path}")
 
 

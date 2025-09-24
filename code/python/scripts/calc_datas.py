@@ -30,18 +30,18 @@ import argparse
 import time
 import warnings
 import numpy as np
-import sys
-from pathlib import Path
-
-# Add parent directory to sys.path to import paths
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from paths import SCRIPTS_DIR, DATA_DIR
-from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
+from qspectro2d.spectroscopy import sample_from_gaussian
 from qspectro2d.spectroscopy.one_d_field import parallel_compute_1d_e_comps
 from qspectro2d import save_simulation_data
 from qspectro2d.config.create_sim_obj import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
+
+import sys as _sys, pathlib as _pl
+
+_code_dir = _pl.Path(__file__).resolve().parents[1]
+if str(_code_dir) not in _sys.path:
+    _sys.path.insert(0, str(_code_dir))
+from bootstrap_paths import SCRIPTS_DIR, DATA_DIR
 
 # Silence noisy but harmless warnings
 warnings.filterwarnings(
@@ -257,7 +257,9 @@ def run_2d_mode(args) -> None:
     print("🎯 Running 2D mode (iterate over t_det as t_coh)")
 
     # Reuse detection times as coherence-axis grid
-    t_coh_vals = sim_oqs.t_det
+    t_coh_vals = sim_oqs.t_det[
+        ::10
+    ]  # NOTE only take every 10th value to check on local pc
     N_total = len(t_coh_vals)
 
     # Determine index subset for batching

@@ -1,36 +1,30 @@
 # Master Thesis: 2D Electronic Spectroscopy
 
-This repository contains the full simulation and plotting pipeline for 1D/2D electronic spectroscopy, built on top of QuTiP. It now uses lightweight Git-based installs for external helper packages instead of vendored submodules (smaller repo, simpler updates).
+This repository contains the full simulation, plotting, and thesis sources for 1D/2D electronic spectroscopy, built on top of QuTiP. It now follows a single monorepo model (Option A) with BOTH internal packages developed in-place (editable installs) for frictionless local ↔ HPC synchronization.
 
-## What this project uses
+## Monorepo components
 
-- Conda environment defined in `environment.yml` (single source of truth)
-- Local editable + remote packages installed via pip:
-    - `code/python` (editable) → installs `project_config` (paths, small helpers)
-    - `qspectro2d` (VCS) → simulation core, data I/O, spectroscopy API
-    - `plotstyle` (VCS) → Matplotlib + LaTeX style helpers
-- Core scientific stack: Python 3.11, NumPy, SciPy, Matplotlib, QuTiP, tqdm
-- CLI scripts in `code/python/scripts` to run/stack/plot and HPC helpers
-- Data written under `data/1d_spectroscopy` and `data/2d_spectroscopy`
-- Figures written under `figures/figures_from_python`
+- `code/python/qspectro2d` – simulation engine (package: `qspectro2d`)
+- `code/python/plotstyle` – figure styling utilities (package: `plotstyle`)
+- `code/python/scripts` – CLI scripts (HPC + local)
+- `latex/` – thesis LaTeX sources
+- `figures/` – generated figures
+- `environment.yml` – single consistent Conda environment (name: `thesis`)
 
-## Environment setup
+## Environment setup (local & HPC)
 
 Prerequisites: Miniconda or Anaconda.
 
 ```bash
 # From repo root
-conda env create -f environment.yml
-conda activate master_env
-
-# (Editable + VCS installs are done automatically by conda; if needed, re-run)
-pip install -e code/python \
-    'qspectro2d @ git+https://github.com/LBPhysics/qspectro2d.git@main' \
-    'plotstyle @ git+https://github.com/LBPhysics/plotstyle.git@main'
+conda env create -f environment.yml   # first time
+conda activate thesis
+# Later updates (after editing environment.yml):
+conda env update -f environment.yml --prune
 
 # Quick verification
 python - <<'PY'
-import qutip, qspectro2d, project_config, plotstyle
+import qutip, qspectro2d, plotstyle
 from qutip import basis
 print('OK:', qutip.__version__)
 print('OK:', getattr(qspectro2d, '__version__', ''))
@@ -45,16 +39,15 @@ PY
 Master_thesis/
 ├── code/
 │   └── python/
-│       ├── project_config/         # Local utils (paths etc.)
-│       └── scripts/                # CLI entry points (see below)
-├── external/                       # (No longer contains cloned submodules)
-├── data/
-│   ├── 1d_spectroscopy/            # Saved 1D results (per t_coh or per inhom config)
-│   └── 2d_spectroscopy/            # Stacked 2D results
+│       ├── qspectro2d/              # Core spectroscopy simulations (package)
+│       ├── plotstyle/               # Plot styling (package)
+│       ├── scripts/                 # HPC + local CLI scripts
+│       └── paths.py (legacy helpers, will be folded in later)
 ├── figures/
-│   └── figures_from_python/        # Saved figures
-├── latex/                          # Thesis sources
-├── environment.yml                 # Conda env spec
+│   └── figures_from_python/
+├── latex/
+├── environment.yml
+├── Makefile
 └── README.md
 ```
 
@@ -90,9 +83,21 @@ Notes
 - Scripts auto-detect data/figure locations via `project_config.paths`.
 - Saved files include metadata needed by stacking and plotting.
 
-## Troubleshooting
+## HPC workflow (simplified)
 
-- If imports fail, ensure the environment is active: `conda activate master_env`.
-- If packages are not importable, re-run installs:
-    `pip install -e code/python 'qspectro2d @ git+https://github.com/LBPhysics/qspectro2d.git@main' 'plotstyle @ git+https://github.com/LBPhysics/plotstyle.git@main'`.
+1. Local: develop, then `git add -u && git commit -m "msg" && git push`.
+2. HPC first time: clone repo, create env (see above).
+3. Subsequent runs:
+    ```bash
+    git pull --ff-only
+    conda activate thesis
+    conda env update -f environment.yml --prune  # only if deps changed
+    ```
+4. (Optional) For reproducibility, record commit hash manually:
+    ```bash
+    git rev-parse HEAD > COMMIT_HASH.txt
+    ```
+
+## Troubleshooting
+- To re-sync environment after dependency edits: `conda env update -f environment.yml --prune`.
 - For cluster usage, make sure `sbatch` is available on PATH before running the HPC helpers.

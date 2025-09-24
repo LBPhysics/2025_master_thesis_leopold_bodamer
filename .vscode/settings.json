@@ -97,9 +97,13 @@
     },
     // ---- Python Project Configuration ----
     // Use relative paths so they work on any machine.
+    "python.defaultInterpreterPath": "/home/leopold/miniconda3/envs/master_env/bin/python",
     "python.analysis.extraPaths": [
-        "${workspaceFolder}/code/python",
-        "${workspaceFolder}/code/python/scripts",
+        "${workspaceFolder}/code/python/qspectro2d",
+        "${workspaceFolder}/code/python/plotstyle",
+        "${workspaceFolder}/code/python/qspectro2d/qspectro2d",
+        "${workspaceFolder}/code/python/plotstyle/plotstyle",
+        "${workspaceFolder}/code/python/scripts"
     ],
     "python.analysis.diagnosticMode": "workspace",
     // ---- Hiding Build/Temporary Files from the Explorer ----

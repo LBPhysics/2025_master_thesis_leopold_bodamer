@@ -16,9 +16,6 @@ import argparse
 from pathlib import Path
 from typing import List
 import numpy as np
-import sys
-from pathlib import Path
-
 
 from qspectro2d import (
     load_simulation_data,
@@ -26,9 +23,12 @@ from qspectro2d import (
 )
 from qspectro2d.utils.data_io import collect_group_files
 
-# Add parent directory to sys.path to import paths
-sys.path.insert(0, str(Path(__file__).parent.parent))
-from paths import DATA_DIR
+import sys as _sys, pathlib as _pl
+
+_code_dir = _pl.Path(__file__).resolve().parents[1]
+if str(_code_dir) not in _sys.path:
+    _sys.path.insert(0, str(_code_dir))
+from bootstrap_paths import DATA_DIR
 
 
 def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
