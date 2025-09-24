@@ -29,8 +29,6 @@ dependencies:
   - pytest>=7.0.0
   - tqdm>=4.64.0            # Progress bar for loops
   - pip:
-      # Local editable install (project utilities)
-      - -e ./code/python            # installs project_config (local project utils)
       # External packages now installed directly from Git (no submodules cloned):
       - qspectro2d @ git+https://github.com/LBPhysics/qspectro2d.git@main
       - plotstyle @ git+https://github.com/LBPhysics/plotstyle.git@main

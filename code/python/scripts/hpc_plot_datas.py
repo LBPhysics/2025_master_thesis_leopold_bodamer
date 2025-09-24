@@ -15,7 +15,11 @@ from pathlib import Path
 import re
 from subprocess import run, CalledProcessError
 
-from project_config.paths import SCRIPTS_DIR
+import sys
+
+# Add parent directory to sys.path to import paths
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from paths import SCRIPTS_DIR
 
 
 def _derive_1d_dir(abs_path: str) -> Path:

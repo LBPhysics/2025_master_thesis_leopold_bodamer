@@ -98,15 +98,9 @@
     // ---- Python Project Configuration ----
     // Use relative paths so they work on any machine.
     "python.analysis.extraPaths": [
-        // Project local utils (installed editable as project_config_tools)
         "${workspaceFolder}/code/python",
         "${workspaceFolder}/code/python/scripts",
-        // Editable install sources inside the repo
-        "${workspaceFolder}/external/qspectro2d",
-        "${workspaceFolder}/external/plotstyle",
     ],
-    // Don’t hardcode interpreter paths; select the env via the Python: Select Interpreter UI
-    // "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
     "python.analysis.diagnosticMode": "workspace",
     // ---- Hiding Build/Temporary Files from the Explorer ----
     // This is crucial for keeping the project view clean for everyone.
@@ -280,8 +274,5 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
-    "explorerExclude.backup": {},
-    "python-envs.defaultEnvManager": "ms-python.python:conda",
-    "python-envs.defaultPackageManager": "ms-python.python:conda",
     "python-envs.pythonProjects": [],
 }

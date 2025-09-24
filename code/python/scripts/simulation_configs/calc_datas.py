@@ -30,8 +30,13 @@ import argparse
 import time
 import warnings
 import numpy as np
+import sys
+from pathlib import Path
 
-from project_config.paths import SCRIPTS_DIR, DATA_DIR
+# Add parent directory to sys.path to import paths
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from paths import SCRIPTS_DIR, DATA_DIR
 from qspectro2d.spectroscopy.inhomogenity import sample_from_gaussian
 from qspectro2d.spectroscopy.one_d_field import parallel_compute_1d_e_comps
 from qspectro2d import save_simulation_data

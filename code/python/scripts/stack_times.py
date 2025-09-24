@@ -29,8 +29,15 @@ from qspectro2d.utils.data_io import (
     load_info_file,
     save_simulation_data,
     discover_1d_files,
-    derive_2d_folder,
 )
+
+
+import sys
+from pathlib import Path
+
+# Add parent directory to sys.path to import paths
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from paths import DATA_DIR
 
 
 def _load_entries(
@@ -183,7 +190,6 @@ def main() -> None:
     # Mirror naming used by save_simulation_data: generate_unique_data_filename + suffixes
     try:
         from qspectro2d.utils.file_naming import generate_unique_data_filename
-        from project_config.paths import DATA_DIR
 
         base_path = generate_unique_data_filename(
             system, sim_cfg_2d, data_root=DATA_DIR
@@ -195,8 +201,7 @@ def main() -> None:
             print(f"⏭️  Skipping: 2D dataset already exists: {predicted_out}")
             print("Done.")
             return
-    except Exception as e:
-        # Non-fatal: continue without skip optimization if prediction fails
+    except Exception as e:  # pragma: no cover - prediction is best-effort
         if args.skip_if_exists:
             print(f"⚠️  Could not predict output path for skip check: {e}")
 
@@ -254,8 +259,6 @@ def main() -> None:
         "signal_types": list(signal_types),
     }
     datas: List[np.ndarray] = [stacked[s] for s in signal_types]
-
-    from project_config.paths import DATA_DIR
 
     out_path = save_simulation_data(
         sim_module=sim_2d,

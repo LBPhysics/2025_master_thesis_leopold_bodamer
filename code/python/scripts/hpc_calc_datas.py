@@ -26,6 +26,11 @@ import argparse
 import shutil
 import subprocess
 from pathlib import Path
+import sys
+
+# Add parent directory to sys.path to import paths
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from paths import SCRIPTS_DIR
 
 
 def _slurm_script_text(
@@ -120,8 +125,6 @@ def main() -> None:
     n_batches = int(args.n_batches)
     if n_batches <= 0:
         raise ValueError("--n_batches must be a positive integer")
-
-    from project_config import SCRIPTS_DIR
 
     # Create a fixed job directory under SCRIPTS_DIR/batch_jobs (only logs dir will be unique)
     job_root = SCRIPTS_DIR / "batch_jobs"
