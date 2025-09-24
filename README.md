@@ -1,14 +1,14 @@
 # Master Thesis: 2D Electronic Spectroscopy
 
-This repository contains the full simulation and plotting pipeline for 1D/2D electronic spectroscopy, built on top of QuTiP. It is organized as a single repo with local Python utilities and two local submodules used in editable mode.
+This repository contains the full simulation and plotting pipeline for 1D/2D electronic spectroscopy, built on top of QuTiP. It now uses lightweight Git-based installs for external helper packages instead of vendored submodules (smaller repo, simpler updates).
 
 ## What this project uses
 
 - Conda environment defined in `environment.yml` (single source of truth)
-- Local editable packages installed via pip:
-    - `code/python` → installs `project_config` (paths, small helpers)
-    - `external/qspectro2d` → installs `qspectro2d` (simulation core, data I/O, plotting API)
-    - `external/plotstyle` → installs `plotstyle` (Matplotlib style + save helpers)
+- Local editable + remote packages installed via pip:
+    - `code/python` (editable) → installs `project_config` (paths, small helpers)
+    - `qspectro2d` (VCS) → simulation core, data I/O, spectroscopy API
+    - `plotstyle` (VCS) → Matplotlib + LaTeX style helpers
 - Core scientific stack: Python 3.11, NumPy, SciPy, Matplotlib, QuTiP, tqdm
 - CLI scripts in `code/python/scripts` to run/stack/plot and HPC helpers
 - Data written under `data/1d_spectroscopy` and `data/2d_spectroscopy`
@@ -23,8 +23,10 @@ Prerequisites: Miniconda or Anaconda.
 conda env create -f environment.yml
 conda activate master_env
 
-# (Editable installs are done automatically by conda; if needed, re-run)
-pip install -e code/python -e external/qspectro2d -e external/plotstyle
+# (Editable + VCS installs are done automatically by conda; if needed, re-run)
+pip install -e code/python \
+    'qspectro2d @ git+https://github.com/LBPhysics/qspectro2d.git@main' \
+    'plotstyle @ git+https://github.com/LBPhysics/plotstyle.git@main'
 
 # Quick verification
 python - <<'PY'
@@ -45,9 +47,7 @@ Master_thesis/
 │   └── python/
 │       ├── project_config/         # Local utils (paths etc.)
 │       └── scripts/                # CLI entry points (see below)
-├── external/
-│   ├── qspectro2d/                 # Simulation package (installed editable)
-│   └── plotstyle/                  # Plotting styles (installed editable)
+├── external/                       # (No longer contains cloned submodules)
 ├── data/
 │   ├── 1d_spectroscopy/            # Saved 1D results (per t_coh or per inhom config)
 │   └── 2d_spectroscopy/            # Stacked 2D results
@@ -93,6 +93,6 @@ Notes
 ## Troubleshooting
 
 - If imports fail, ensure the environment is active: `conda activate master_env`.
-- If local packages are not importable, re-run editable installs:
-    `pip install -e code/python -e external/qspectro2d -e external/plotstyle`.
+- If packages are not importable, re-run installs:
+    `pip install -e code/python 'qspectro2d @ git+https://github.com/LBPhysics/qspectro2d.git@main' 'plotstyle @ git+https://github.com/LBPhysics/plotstyle.git@main'`.
 - For cluster usage, make sure `sbatch` is available on PATH before running the HPC helpers.

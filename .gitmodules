@@ -1,6 +1,0 @@
-[submodule "external/qspectro2d"]
-	path = external/qspectro2d
-	url = https://github.com/LBPhysics/qspectro2d.git
-[submodule "external/plotstyle"]
-	path = external/plotstyle
-	url = https://github.com/LBPhysics/plotstyle.git
