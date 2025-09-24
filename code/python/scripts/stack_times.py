@@ -32,12 +32,7 @@ from qspectro2d.utils.data_io import (
 )
 
 
-import sys as _sys, pathlib as _pl
-
-_code_dir = _pl.Path(__file__).resolve().parents[1]
-if str(_code_dir) not in _sys.path:
-    _sys.path.insert(0, str(_code_dir))
-from bootstrap_paths import DATA_DIR
+from my_project import DATA_DIR
 
 
 def _load_entries(

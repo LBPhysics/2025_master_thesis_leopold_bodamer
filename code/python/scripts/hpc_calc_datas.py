@@ -27,12 +27,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import sys as _sys, pathlib as _pl
-
-_code_dir = _pl.Path(__file__).resolve().parents[1]
-if str(_code_dir) not in _sys.path:
-    _sys.path.insert(0, str(_code_dir))
-from bootstrap_paths import SCRIPTS_DIR
+from ..project_paths import SCRIPTS_DIR
 
 
 def _slurm_script_text(
@@ -69,7 +64,6 @@ python ../../calc_datas.py --sim_type {sim_type} --n_batches {n_batches} --batch
 """
 
 
-# TODO also put these in utils or something like that
 def _ensure_dirs(job_dir: Path, logs_subdir: str) -> None:
     """Create the batching directory and the given logs subdirectory if missing."""
     job_dir.mkdir(parents=True, exist_ok=True)

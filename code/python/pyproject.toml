@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "my_project"
+version = "0.1.0"
+description = "Master thesis spectroscopy tooling"
+authors = [{name="Leopold Bodamer"}]
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+calc-datas = "my_project.scripts.calc_datas:main"
+stack-times = "my_project.scripts.stack_times:main"
+
+[tool.setuptools]
+packages = ["my_project"]
+
+[tool.setuptools.package-dir]
+my_project = "."

@@ -36,12 +36,8 @@ from qspectro2d import save_simulation_data
 from qspectro2d.config.create_sim_obj import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
 
-import sys as _sys, pathlib as _pl
+from my_project import DATA_DIR, SCRIPTS_DIR
 
-_code_dir = _pl.Path(__file__).resolve().parents[1]
-if str(_code_dir) not in _sys.path:
-    _sys.path.insert(0, str(_code_dir))
-from bootstrap_paths import SCRIPTS_DIR, DATA_DIR
 
 # Silence noisy but harmless warnings
 warnings.filterwarnings(

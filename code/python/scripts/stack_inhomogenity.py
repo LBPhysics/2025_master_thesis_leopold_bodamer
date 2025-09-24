@@ -23,12 +23,7 @@ from qspectro2d import (
 )
 from qspectro2d.utils.data_io import collect_group_files
 
-import sys as _sys, pathlib as _pl
-
-_code_dir = _pl.Path(__file__).resolve().parents[1]
-if str(_code_dir) not in _sys.path:
-    _sys.path.insert(0, str(_code_dir))
-from bootstrap_paths import DATA_DIR
+from ..project_paths import DATA_DIR
 
 
 def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:

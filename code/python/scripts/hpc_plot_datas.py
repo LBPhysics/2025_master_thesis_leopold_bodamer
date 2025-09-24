@@ -15,12 +15,7 @@ from pathlib import Path
 import re
 from subprocess import run, CalledProcessError
 
-import sys as _sys, pathlib as _pl
-
-_code_dir = _pl.Path(__file__).resolve().parents[1]
-if str(_code_dir) not in _sys.path:
-    _sys.path.insert(0, str(_code_dir))
-from bootstrap_paths import SCRIPTS_DIR
+from ..project_paths import SCRIPTS_DIR
 
 
 def _derive_1d_dir(abs_path: str) -> Path:
@@ -107,7 +102,7 @@ def create_plotting_script(
 #SBATCH --mem=200G
 #SBATCH --time=0-01:00:00
 #SBATCH --mail-type=END,FAIL
-#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # TODO CHANGE THE MAIL HERE
+#SBATCH --mail-user=leopold.bodamer@student.uni-tuebingen.de  # NOTE: CHANGE TO YOUR MAIL HERE
 
 # Load conda (adjust to your cluster if needed)
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
