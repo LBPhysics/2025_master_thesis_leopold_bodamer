@@ -36,13 +36,11 @@ from qspectro2d import save_simulation_data
 from qspectro2d.config.create_sim_obj import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
 
-from my_project import DATA_DIR, SCRIPTS_DIR
+from thesis_paths import DATA_DIR, SIM_CONFIGS_DIR
 
 
 # Silence noisy but harmless warnings
-warnings.filterwarnings(
-    "ignore", category=RuntimeWarning, message="overflow encountered in exp"
-)
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 warnings.filterwarnings(
     "ignore",
     category=FutureWarning,
@@ -61,11 +59,10 @@ def _pick_config_yaml():
     1) Any file whose name starts with '_' (user-marked; Windows-safe)
     2) Otherwise, the first file in alphabetical order
     """
-    sim_cfg_dir = SCRIPTS_DIR / "simulation_configs"
-    cfg_candidates = sorted(sim_cfg_dir.glob("*.yaml"))
+    cfg_candidates = sorted(SIM_CONFIGS_DIR.glob("*.yaml"))
     if not cfg_candidates:
         raise FileNotFoundError(
-            f"No .yaml config files found in {sim_cfg_dir}. Please add one."
+            f"No .yaml config files found in {SIM_CONFIGS_DIR}. Please add one."
         )
     # Prefer Windows-safe marker: leading underscore
     marked = [p for p in cfg_candidates if p.name.startswith("_")]
@@ -90,9 +87,7 @@ def _compute_e_components_for_tcoh(
     return E_list
 
 
-def _make_inhom_group_id(
-    sim_oqs: SimulationModuleOQS, n_inhom: int, delta_cm: float
-) -> str:
+def _make_inhom_group_id(sim_oqs: SimulationModuleOQS, n_inhom: int, delta_cm: float) -> str:
     """Create a deterministic group id for inhomogeneous runs across batches.
 
     Uses a UUID5 over a canonical string built from stable configuration fields.
@@ -152,9 +147,7 @@ def run_1d_mode(args) -> None:
         else:
             chunks = np.array_split(np.arange(n_inhom), n_batches)
             if batch_idx < 0 or batch_idx >= len(chunks):
-                raise IndexError(
-                    f"batch_idx {batch_idx} out of range for n_batches={n_batches}"
-                )
+                raise IndexError(f"batch_idx {batch_idx} out of range for n_batches={n_batches}")
             indices = chunks[batch_idx]
             batch_note = f"batch {batch_idx+1}/{n_batches} (size={indices.size})"
 
@@ -173,9 +166,7 @@ def run_1d_mode(args) -> None:
             )
 
         # Stable, deterministic group id based on configuration (same across batches)
-        inhom_group_id = _make_inhom_group_id(
-            sim_oqs, n_inhom=n_inhom, delta_cm=delta_cm
-        )
+        inhom_group_id = _make_inhom_group_id(sim_oqs, n_inhom=n_inhom, delta_cm=delta_cm)
         saved_paths: list[str] = []
         start_time = time.time()
         for idx in indices.tolist():
@@ -188,9 +179,7 @@ def run_1d_mode(args) -> None:
                 f"\n--- inhom_config={idx+1}/{n_inhom}  t_coh={t_coh_val:.2f} fs ---\n"
                 f"    freqs_cm = {np.array2string(np.asarray(cfg_freqs), precision=2)}"
             )
-            E_sigs = _compute_e_components_for_tcoh(
-                sim_oqs, t_coh_val, time_cut=time_cut
-            )
+            E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
 
             # Persist dataset for this configuration
             metadata = {
@@ -253,9 +242,7 @@ def run_2d_mode(args) -> None:
     print("🎯 Running 2D mode (iterate over t_det as t_coh)")
 
     # Reuse detection times as coherence-axis grid
-    t_coh_vals = sim_oqs.t_det[
-        ::10
-    ]  # NOTE only take every 10th value to check on local pc
+    t_coh_vals = sim_oqs.t_det[::10]  # NOTE only take every 10th value to check on local pc
     N_total = len(t_coh_vals)
 
     # Determine index subset for batching
@@ -343,9 +330,7 @@ def main() -> None:
         "--n_batches",
         type=int,
         default=1,
-        help=(
-            "Split the 2d run or 1d-inhom run into N batches (default: 1, i.e., no batching)"
-        ),
+        help=("Split the 2d run or 1d-inhom run into N batches (default: 1, i.e., no batching)"),
     )
     parser.add_argument(
         "--batch_idx",

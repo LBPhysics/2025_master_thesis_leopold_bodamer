@@ -32,7 +32,7 @@ from qspectro2d.utils.data_io import (
 )
 
 
-from my_project import DATA_DIR
+from thesis_paths import DATA_DIR
 
 
 def _load_entries(
@@ -68,9 +68,7 @@ def _load_entries(
             t_det = d["t_det"]
         else:
             if d["t_det"].shape != t_det.shape or not np.allclose(d["t_det"], t_det):
-                raise ValueError(
-                    f"Inconsistent t_det across files; first={files[0]}, bad={fp}"
-                )
+                raise ValueError(f"Inconsistent t_det across files; first={files[0]}, bad={fp}")
 
         stypes = list(map(str, d["signal_types"]))
         if signal_types is None:
@@ -129,9 +127,7 @@ def _stack_to_2d(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Stack 1D per-t_coh outputs into a 2D dataset."
-    )
+    parser = argparse.ArgumentParser(description="Stack 1D per-t_coh outputs into a 2D dataset.")
     parser.add_argument(
         "--abs_path",
         type=str,
@@ -145,9 +141,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    sanitized = (
-        args.abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
-    )
+    sanitized = args.abs_path.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
     in_dir = Path(sanitized).expanduser().resolve()
     print("=" * 80)
     print("STACK 1D -> 2D")
@@ -186,9 +180,7 @@ def main() -> None:
     try:
         from qspectro2d.utils.file_naming import generate_unique_data_filename
 
-        base_path = generate_unique_data_filename(
-            system, sim_cfg_2d, data_root=DATA_DIR
-        )
+        base_path = generate_unique_data_filename(system, sim_cfg_2d, data_root=DATA_DIR)
         suffix_bits = ["tcoh_avg"]  # for 1d->2d stacking
         predicted_base = f"{base_path}_{'_'.join(suffix_bits)}"
         predicted_out = Path(f"{predicted_base}_data.npz")

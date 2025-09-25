@@ -23,7 +23,7 @@ from qspectro2d import (
 )
 from qspectro2d.utils.data_io import collect_group_files
 
-from ..project_paths import DATA_DIR
+from thesis_paths import DATA_DIR
 
 
 def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
@@ -42,9 +42,7 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
         try:
             first = load_simulation_data(files[first_file_idx])
         except Exception as e:
-            print(
-                f"⚠️  Skipping corrupted file during metadata loading: {files[first_file_idx]}"
-            )
+            print(f"⚠️  Skipping corrupted file during metadata loading: {files[first_file_idx]}")
             print(f"    Error: {e}")
             first_file_idx += 1
 
@@ -80,9 +78,7 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
     if not valid_files:
         raise FileNotFoundError("No valid files found for averaging")
 
-    print(
-        f"📊 Averaging {len(valid_files)} valid files out of {len(files)} total files"
-    )
+    print(f"📊 Averaging {len(valid_files)} valid files out of {len(files)} total files")
 
     # Average
     averaged: List[np.ndarray] = []
@@ -127,30 +123,20 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
                 if (
                     d.get("inhom_averaged", False)
                     and d.get("inhom_group_id") == metadata.get("inhom_group_id")
-                    and np.isclose(
-                        float(d.get("t_coh_value", 0.0)), float(metadata["t_coh_value"])
-                    )
+                    and np.isclose(float(d.get("t_coh_value", 0.0)), float(metadata["t_coh_value"]))
                 ):
-                    print(
-                        f"⏭️  Averaged file already exists for this t_coh in folder: {p}"
-                    )
+                    print(f"⏭️  Averaged file already exists for this t_coh in folder: {p}")
                     return p
             except Exception:
                 continue
 
-    out_path = save_simulation_data(
-        sim_module_stub, metadata, averaged, t_det, data_root=DATA_DIR
-    )
+    out_path = save_simulation_data(sim_module_stub, metadata, averaged, t_det, data_root=DATA_DIR)
     return out_path
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(
-        description="Average inhomogeneous 1D configs into one file."
-    )
-    p.add_argument(
-        "--abs_path", type=str, required=True, help="Path to one *_data.npz file"
-    )
+    p = argparse.ArgumentParser(description="Average inhomogeneous 1D configs into one file.")
+    p.add_argument("--abs_path", type=str, required=True, help="Path to one *_data.npz file")
     p.add_argument(
         "--skip_if_exists",
         action="store_true",

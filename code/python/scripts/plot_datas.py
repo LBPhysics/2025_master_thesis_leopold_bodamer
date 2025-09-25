@@ -38,7 +38,7 @@ from qspectro2d.core.bath_system.bath_fcts import extract_bath_parameters
 from qspectro2d import load_simulation_data
 
 
-from my_project import FIGURES_PYTHON_DIR
+from thesis_paths import FIGURES_PYTHON_DIR
 
 from plotstyle import init_style, save_fig
 
@@ -46,9 +46,7 @@ init_style()
 
 
 # Suppress noisy but harmless warnings
-warnings.filterwarnings(
-    "ignore", category=RuntimeWarning, message="overflow encountered in exp"
-)
+warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 
 
 # Helper to collect paths from save_fig (which may return a single path or a list of paths)
@@ -340,9 +338,7 @@ def plot_data(
                 pad_factor=pad_factor,
                 dimension=dimension,
             )
-            axis_det_f, axis_coh_f = (
-                (freq_axes, None) if dimension == "1d" else freq_axes
-            )
+            axis_det_f, axis_coh_f = (freq_axes, None) if dimension == "1d" else freq_axes
             saved = _plot_components(
                 datas=freq_datas,
                 signal_types=kept_types,
@@ -455,9 +451,7 @@ def main():
 
         try:
             is_2d = (
-                t_coh_axis is not None
-                and hasattr(t_coh_axis, "__len__")
-                and len(t_coh_axis) > 0
+                t_coh_axis is not None and hasattr(t_coh_axis, "__len__") and len(t_coh_axis) > 0
             )
         except Exception:
             is_2d = False
@@ -504,8 +498,7 @@ def main():
             sigs = [str(s) for s in sim_config.signal_types]
             datas = [loaded_data_and_info.get(s) for s in sigs]
             if datas and all(
-                isinstance(a, np.ndarray) and a.size > 0 and np.allclose(a, 0)
-                for a in datas
+                isinstance(a, np.ndarray) and a.size > 0 and np.allclose(a, 0) for a in datas
             ):
                 print("⚠️  All-zero time-domain signals detected.")
         except Exception:

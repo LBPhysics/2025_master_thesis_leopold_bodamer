@@ -25,6 +25,6 @@ dependencies:
   - pytest>=7.0.0
   - pip:
       # Editable installs: ensure correct relative paths (leading './')
-      - -e ./code/python         # installs my_project package (pyproject.toml)
+      - -e ./code/python
       - -e ./code/python/qspectro2d
       - -e ./code/python/plotstyle
