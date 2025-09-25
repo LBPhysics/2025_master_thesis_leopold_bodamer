@@ -41,7 +41,7 @@ laser:
   base_amplitude: 0.05
 
   # Pulse full width at half maximum [fs] -> pulse is active for ~2*pulse_fwhm_fs
-  pulse_fwhm_fs: 150.0
+  pulse_fwhm_fs: 15.0
 
   # Pulse envelope type: 'gaussian / cos2' (supported)
   envelope_type: gaussian
@@ -50,7 +50,7 @@ laser:
   carrier_freq_cm: 16000.0
 
   # Apply rotating-wave approximation in Schrödinger–Liouville picture
-  rwa_sl: false
+  rwa_sl: true
 
 bath:
   # Bath spectral density type (e.g., 'ohmic')
@@ -74,7 +74,7 @@ config:
 
 window:
   # Maximum detection-time span [fs] -> determines frequency resolution, also t_coh range for 2D mode
-  t_det_max: 400.0
+  t_det_max: 600.0
 
   # Waiting time between 2.pump and probe [fs]
   t_wait: 1000.0
@@ -83,4 +83,4 @@ window:
   t_coh: 300.0
 
   # Time step [fs] < 0.2 to resolve fast dynamics /  spectral features around 16000 cm^-1
-  dt: 1.0
+  dt: 10.0

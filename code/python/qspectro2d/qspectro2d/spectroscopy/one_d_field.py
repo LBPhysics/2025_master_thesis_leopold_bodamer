@@ -14,7 +14,6 @@ Supports ME and BR solvers via the internals of SimulationModuleOQS.
 
 from __future__ import annotations
 
-from hmac import new
 from typing import List, Sequence, Tuple, Optional, Dict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
@@ -80,12 +79,28 @@ def compute_evolution(
     -----
     The evolution is computed using either mesolve (master equation) or brmesolve
     (Bloch-Redfield master equation) depending on the ode_solver setting.
+    Evolution starts from the beginning of the first pulse's active window and fills
+    vacant beginning slots with the initial state.
     """
     from qspectro2d.config.default_simulation_params import SOLVER_OPTIONS
 
     options: dict = SOLVER_OPTIONS
     if solver_options:
         options.update(solver_options)
+
+    # Get the starting point of the first pulse's active window
+    if sim_oqs.laser.pulses:
+        pulse_start_time = sim_oqs.laser.pulses[0].active_time_range[0]
+        print(f"Pulse start time: {pulse_start_time} fs")
+    else:
+        pulse_start_time = sim_oqs.times_local[0]  # fallback if no pulses
+
+    # Find the index in times_local that corresponds to pulse_start_time
+    times_array = np.asarray(sim_oqs.times_local)
+    start_idx = np.argmin(np.abs(times_array - pulse_start_time))
+
+    # Create modified time list starting from pulse active window
+    modified_times = times_array[start_idx:]
 
     ode_solver = sim_oqs.simulation_config.ode_solver
     if ode_solver == "BR":
@@ -94,7 +109,7 @@ def compute_evolution(
         res = brmesolve(
             H=sim_oqs.evo_obj,
             psi0=sim_oqs.system.psi_ini,
-            tlist=sim_oqs.times_local,
+            tlist=modified_times,
             a_ops=sim_oqs.decay_channels,
             options=options,
             # sec_cutoff=sec_cutoff,
@@ -103,10 +118,21 @@ def compute_evolution(
         res = mesolve(
             H=sim_oqs.evo_obj,
             rho0=sim_oqs.system.psi_ini,
-            tlist=sim_oqs.times_local,
+            tlist=modified_times,
             c_ops=sim_oqs.decay_channels,
             options=options,
         )
+
+    # Fill vacant beginning slots with initial state if needed
+    if start_idx > 0:
+        # Create states list with initial state for the vacant beginning slots
+        initial_states = [sim_oqs.system.psi_ini] * start_idx
+        if hasattr(res, "states") and res.states is not None:
+            res.states = initial_states + res.states
+
+        # Restore original time list
+        res.times = sim_oqs.times_local
+
     return res
 
 
@@ -239,7 +265,7 @@ def parallel_compute_1d_e_comps(
     lmn: Optional[Tuple[int, int, int]] = None,
     phi_det: Optional[float] = None,
     time_cut: Optional[float] = None,
-    parallel: bool = False,
+    parallel: bool = True,  # NOTE good for debugging: False
 ) -> List[np.ndarray]:
     """Compute 1D electric field components E_kS(t_det) with phase cycling only.
 

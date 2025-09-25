@@ -180,7 +180,7 @@ class SimulationModuleOQS:
         if hasattr(self, "_times_local_manual"):
             return self._times_local_manual
 
-        t0 = -2 * self.laser.pulse_fwhms[0]
+        t0 = -1 * self.laser.pulse_fwhms[0]
         cfg = self.simulation_config
         t_max_curr = cfg.t_coh + cfg.t_wait + cfg.t_det_max
         dt = cfg.dt
