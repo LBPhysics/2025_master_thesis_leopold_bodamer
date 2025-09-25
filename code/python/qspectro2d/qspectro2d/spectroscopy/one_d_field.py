@@ -149,7 +149,6 @@ def compute_polarization_over_window(
     return window, P_t
 
 
-'''
 def sim_with_only_pulses(
     sim: SimulationModuleOQS, active_indices: List[int]
 ) -> SimulationModuleOQS:
@@ -162,46 +161,6 @@ def sim_with_only_pulses(
     sim_i = deepcopy(sim)
     # Build a one-pulse sequence matching the i-th pulse timing and phase
     sim_i.laser.select_pulses(active_indices)
-    return sim_i
-'''
-
-
-def sim_with_only_pulses(
-    sim: SimulationModuleOQS, active_indices: List[int]
-) -> SimulationModuleOQS:
-    """Return a deep-copied sim where only pulses in active_indices are active (others have amplitude 0).
-
-    Notes:
-    - Deep-copy is used to avoid mutating the input and to be process/thread-safe.
-    - Phases and timings remain unchanged.
-    """
-    # --- 1. Physical copy of the simulation object (system, bath, config) ---
-    sim_i = deepcopy(sim)
-
-    # --- 2. Extract & deep‑copy selected pulse objects so that modifying the
-    #       subset sequence cannot retroactively change the parent simulation.
-    sel_raw = [sim.laser.pulses[i] for i in active_indices]
-    pulses: List[LaserPulse] = []
-    for k, p in enumerate(sel_raw):
-        p_new = deepcopy(p)
-        # Reindex sequentially (important for downstream logic that may assume
-        # pulse_index ordering starts at 0). Preserve original phase/amplitude.
-        p_new.pulse_index = k
-        pulses.append(p_new)
-
-    # --- 3. Renormalize peak times so the FIRST retained pulse sits at t=0 fs.
-    #       This prevents misalignment where the detection window (anchored at
-    #       t_coh + t_wait) starts AFTER the only active pulse, yielding a flat
-    #       ground‑state evolution (bug observed for single second/third pulses).
-    if pulses:
-        t0_shift = pulses[0].pulse_peak_time
-        for p in pulses:
-            p.pulse_peak_time -= t0_shift
-            if hasattr(p, "_recompute_envelope_support"):
-                p._recompute_envelope_support()
-
-    sim_i.laser = LaserPulseSequence(pulses=pulses)
-
     return sim_i
 
 

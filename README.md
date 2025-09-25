@@ -33,15 +33,6 @@ print('qutip basis dim:', psi.shape)
 PY
 ```
 
-
-## IF installation is done with pip or the vscode python extension, do the following after installation:
-
-```bash
-pip install -e ./code/python
-pip install -e ./code/python/qspectro2d
-pip install -e ./code/python/plotstyle
-pip install ruff black mypy
-```
 ## Project structure
 
 ```

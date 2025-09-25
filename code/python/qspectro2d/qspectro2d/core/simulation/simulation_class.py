@@ -83,14 +83,14 @@ class SimulationModuleOQS:
         if self.simulation_config.rwa_sl:
             E_plus_RWA = e_pulses(t, self.laser)
             H_int = -(lowering_op * E_plus_RWA + lowering_op.dag() * np.conj(E_plus_RWA))
-            if not np.isclose(H_int.norm(), 0):
-                print("|H_int_full| at t:", t, H_int.norm())
+            # if not np.isclose(H_int.norm(), 0):
+            #     print("|H_int_full| at t:", t, H_int.norm())
             return H_int
         dipole_op = lowering_op + lowering_op.dag()
         E_plus = epsilon_pulses(t, self.laser)
         H_int = -dipole_op * (E_plus + np.conj(E_plus))
-        if not np.isclose(H_int.norm(), 0):
-            print("|H_int_full| at t:", t, H_int.norm())
+        # if not np.isclose(H_int.norm(), 0):
+        #     print("|H_int_full| at t:", t, H_int.norm())
         return H_int
 
     def H_total_t(self, t: float) -> Qobj:

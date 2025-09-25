@@ -31,7 +31,7 @@ class LaserPulse:
     pulse_fwhm_fs: float  # [fs]
     pulse_amplitude: float
     pulse_freq_cm: float  # user supplied central frequency [cm^-1]
-    envelope_type: str = "cos2"
+    envelope_type: str = "gaussian"
 
     # internal cache (not part of __init__ signature)
     _pulse_freq_fs: float = field(init=False, repr=False)
@@ -124,8 +124,14 @@ class LaserPulseSequence:
         # Peak amplitude of the first pulse (E0)
         if not self.pulses:
             self._E0 = 0.0
+            self.carrier_freq_fs = None
         else:
+
             self._E0 = self.pulses[0].pulse_amplitude
+            """Common carrier frequency in fs^-1 if all pulses share the same value. Else None."""
+            first_fs = self.pulses[0].pulse_freq_fs
+            if all(np.isclose(p.pulse_freq_fs, first_fs) for p in self.pulses):
+                self.carrier_freq_fs = float(first_fs)
 
     @property
     def E0(self) -> float:
@@ -241,20 +247,6 @@ class LaserPulseSequence:
     @property
     def pulse_amplitudes(self) -> List[float]:
         return [p.pulse_amplitude for p in self.pulses]
-
-    @property
-    def carrier_freq_fs(self) -> Optional[float]:
-        """Common carrier frequency in fs^-1 if all pulses share the same value.
-
-        Returns None when pulses have different frequencies or sequence is empty.
-        Computed dynamically to avoid stale caches when frequencies change.
-        """
-        if not self.pulses:
-            return None
-        first_fs = self.pulses[0].pulse_freq_fs
-        if all(np.isclose(p.pulse_freq_fs, first_fs) for p in self.pulses):
-            return float(first_fs)
-        return None
 
     @property
     def carrier_freq_cm(self) -> Optional[float]:
