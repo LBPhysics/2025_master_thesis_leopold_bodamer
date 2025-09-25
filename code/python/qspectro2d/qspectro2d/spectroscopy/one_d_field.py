@@ -130,7 +130,7 @@ def compute_polarization_over_window(
     ]
     print("Length of non-ground state indices:", len(non_ground_state_indices))
     if len(non_ground_state_indices) != 0:
-        print("the first 10 states are:", res.states[:10])
+        print("found other states than ground state")
     else:
         print("no states other than ground state were stored")
     window_states = slice_states_to_window(res, window)

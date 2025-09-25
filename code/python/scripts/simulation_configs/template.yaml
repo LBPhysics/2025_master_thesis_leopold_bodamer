@@ -41,7 +41,7 @@ laser:
   base_amplitude: 0.05
 
   # Pulse full width at half maximum [fs] -> pulse is active for ~2*pulse_fwhm_fs
-  pulse_fwhm_fs: 50.0
+  pulse_fwhm_fs: 150.0
 
   # Pulse envelope type: 'gaussian / cos2' (supported)
   envelope_type: gaussian
@@ -50,7 +50,7 @@ laser:
   carrier_freq_cm: 16000.0
 
   # Apply rotating-wave approximation in Schrödinger–Liouville picture
-  rwa_sl: true
+  rwa_sl: false
 
 bath:
   # Bath spectral density type (e.g., 'ohmic')
@@ -67,7 +67,7 @@ bath:
 
 config:
   # Solver backend: options include 'ME' (Lindblad/Markovian), 'BR' (Bloch-Redfield),  'Paper_eqs' (which excplicitly use the equations of motion derived in the paper I and II), # TODO extend to'HEOM' (if available)
-  solver: Paper_eqs
+  solver: ME
 
   # Signal types to compute; common: ['nonrephasing', 'rephasing']
   signal_types: [rephasing]
