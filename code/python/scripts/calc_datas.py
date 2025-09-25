@@ -77,12 +77,7 @@ def _compute_e_components_for_tcoh(
     This mutates the simulation object to set the current ``t_coh`` and
     corresponding pulse delay, then evaluates the 1D field components.
     """
-    sim_cfg = sim_oqs.simulation_config
-    sim_cfg.t_coh = float(t_coh_val)
-    sim_oqs.reset_times_local()  # recompute local time axes
-    new_delays = sim_oqs.laser.pulse_delays
-    new_delays[0] = t_coh_val
-    sim_oqs.laser.pulse_delays = new_delays
+    sim_oqs.update_delays(t_coh=t_coh_val)
     E_list = parallel_compute_1d_e_comps(sim_oqs=sim_oqs, time_cut=time_cut)
     return E_list
 

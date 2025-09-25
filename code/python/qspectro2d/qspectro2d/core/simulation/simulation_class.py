@@ -77,20 +77,25 @@ class SimulationModuleOQS:
         return _matrix_ODE_paper(t, self)
 
     def H_int_sl(self, t: float) -> Qobj:
-        """Interaction Hamiltonian (-μ·E) with optional RWA."""
+        """
+        Interaction Hamiltonian:
+        With
+            H_int = -(σ- E⁺(t) + σ+ E⁻(t))
+            where   E⁺(t) = positive-frequency component of E(t), e.g. E * exp(-iφ)
+                    σ⁻ is THE LOWERING OPERATOR / also the positive frequency part of the dipole operator
+        Without RWA (full field):
+            H_int(t) = -[E⁺(t) + E⁻(t)] ⊗ (σ⁺ + σ⁻)
+                    = -E(t) (σ⁺ + σ⁻)
+        """
         lowering_op = self.system.lowering_op
         lowering_op = self.system.to_eigenbasis(lowering_op)
         if self.simulation_config.rwa_sl:
             E_plus_RWA = e_pulses(t, self.laser)
             H_int = -(lowering_op * E_plus_RWA + lowering_op.dag() * np.conj(E_plus_RWA))
-            # if not np.isclose(H_int.norm(), 0):
-            #     print("|H_int_full| at t:", t, H_int.norm())
             return H_int
         dipole_op = lowering_op + lowering_op.dag()
         E_plus = epsilon_pulses(t, self.laser)
         H_int = -dipole_op * (E_plus + np.conj(E_plus))
-        # if not np.isclose(H_int.norm(), 0):
-        #     print("|H_int_full| at t:", t, H_int.norm())
         return H_int
 
     def H_total_t(self, t: float) -> Qobj:
@@ -153,6 +158,23 @@ class SimulationModuleOQS:
         return strs
 
     # --- Time grids ----------------------------------------------------------------
+    def update_delays(self, t_coh: float = None, t_wait: float = None) -> None:
+        """Update laser pulse delays from current simulation config.
+        If t_coh or t_wait are not provided, keep existing values."""
+
+        if t_coh is not None:
+            self.simulation_config.t_coh = t_coh
+        else:
+            t_coh = self.simulation_config.t_coh
+
+        if t_wait is not None:
+            self.simulation_config.t_wait = t_wait
+        else:
+            t_wait = self.simulation_config.t_wait
+
+        self.laser.pulse_delays = [t_coh, t_wait]
+        self.reset_times_local()
+
     @property
     def times_local(self):
         if hasattr(self, "_times_local_manual"):
@@ -175,6 +197,7 @@ class SimulationModuleOQS:
     def reset_times_local(self):
         if hasattr(self, "_times_local_manual"):
             delattr(self, "_times_local_manual")
+        self.times_local  # Recompute based on config
 
     @cached_property
     def t_det(self):

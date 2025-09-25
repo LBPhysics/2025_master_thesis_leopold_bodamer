@@ -122,8 +122,6 @@ def compute_polarization_over_window(
     - Extracts complex/analytical polarization over the detection window only.
     """
     # Ensure we store states to extract polarization
-    # print currently active pulse indices:
-    print("Active pulse indices:", [i for i in sim.laser.pulse_indices])
     res: Result = compute_evolution(sim, store_states=store_states)
 
     # print length of state-indices that are NOT THE GROUND STATE
@@ -131,7 +129,10 @@ def compute_polarization_over_window(
         i for i, state in enumerate(res.states) if not (state == sim.system.psi_ini)
     ]
     print("Length of non-ground state indices:", len(non_ground_state_indices))
-
+    if len(non_ground_state_indices) != 0:
+        print("the first 10 states are:", res.states[:10])
+    else:
+        print("no states other than ground state were stored")
     window_states = slice_states_to_window(res, window)
 
     if sim.simulation_config.rwa_sl:
@@ -167,16 +168,20 @@ def sim_with_only_pulses(
 def _compute_P_phi1_phi2(
     sim: SimulationModuleOQS, phi1: float, phi2: float
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Compute third-order P_{phi1,phi2}(t_det) via inclusion–exclusion with probe phase fixed at 0.
+    """Compute third-order P_{phi1,phi2}(t_det) as P_total - Σ_i P_i with probe phase fixed at 0.
 
-    Uses: P^(3) ≈ P_total - Σ_i P_i - Σ_{i<j} P_{ij}
+    Uses: P^(3) ≈ P_total - Σ_i P_i
     Returns (t_det, P_phi1_phi2(t_det)).
     """
     sim_work = deepcopy(sim)
-    sim_work.laser.pulse_phases = [phi1, phi2]
+    sim_work.laser.pulse_phases = [
+        phi1,
+        phi2,
+    ]  # NOTE: last pulse phase fixed to the DETECTION_PHASE (0)
 
     # Total signal with all pulses
     t_det_actual = sim_work.t_det_actual
+    print("calculating P_phi1_phi2 x pulses:", sim_work.laser.pulse_indices)
     t_det_a, P_total = compute_polarization_over_window(sim_work, t_det_actual)
 
     # Linear signals: only pulse i active
@@ -186,16 +191,7 @@ def _compute_P_phi1_phi2(
         _, P_i = compute_polarization_over_window(sim_i, t_det_actual)
         P_linear_sum += P_i
 
-    # Two-pulse signals: pulses (i,j) active
-    P_two_sum = np.zeros_like(P_total, dtype=np.complex128)
-    n_p = len(sim_work.laser.pulses)
-    for i in range(n_p):
-        for j in range(i + 1, n_p):
-            sim_ij = sim_with_only_pulses(sim_work, [i, j])
-            _, P_ij = compute_polarization_over_window(sim_ij, t_det_actual)
-            P_two_sum += P_ij
-
-    P_phi = P_total - P_linear_sum - P_two_sum
+    P_phi = P_total - P_linear_sum
     return t_det_a, P_phi
 
 
@@ -243,6 +239,7 @@ def parallel_compute_1d_e_comps(
     lmn: Optional[Tuple[int, int, int]] = None,
     phi_det: Optional[float] = None,
     time_cut: Optional[float] = None,
+    parallel: bool = False,
 ) -> List[np.ndarray]:
     """Compute 1D electric field components E_kS(t_det) with phase cycling only.
 
@@ -302,19 +299,24 @@ def parallel_compute_1d_e_comps(
     futures = []
     # Respect configured/SLURM CPU allocation to avoid oversubscription on HPC
     max_workers = sim_oqs.simulation_config.max_workers
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for phi1 in phases_eff:
-            for phi2 in phases_eff:
-                futures.append(ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2))
-        temp_results: Dict[Tuple[float, float], np.ndarray] = {}
-        for fut in as_completed(futures):
-            phi1_v, phi2_v, _, P_phi = fut.result()
-            temp_results[(phi1_v, phi2_v)] = P_phi
+    if parallel:
+        with ProcessPoolExecutor(max_workers=max_workers) as ex:
+            for phi1 in phases_eff:
+                for phi2 in phases_eff:
+                    futures.append(ex.submit(_worker_P_phi_pair, deepcopy(sim_oqs), phi1, phi2))
+            temp_results: Dict[Tuple[float, float], np.ndarray] = {}
+            for fut in as_completed(futures):
+                phi1_v, phi2_v, _, P_phi = fut.result()
+                temp_results[(phi1_v, phi2_v)] = P_phi
 
-    for i, phi1 in enumerate(phases_eff):
-        for j, phi2 in enumerate(phases_eff):
-            P_grid[i, j, :] = temp_results[(phi1, phi2)]
-
+        for i, phi1 in enumerate(phases_eff):
+            for j, phi2 in enumerate(phases_eff):
+                P_grid[i, j, :] = temp_results[(phi1, phi2)]
+    else:
+        for i, phi1 in enumerate(phases_eff):
+            for j, phi2 in enumerate(phases_eff):
+                _, _, _, P_phi = _worker_P_phi_pair(deepcopy(sim_oqs), phi1, phi2)
+                P_grid[i, j, :] = P_phi
     # Extract components for this realization
     E_list: List[np.ndarray] = []
     for sig in sig_types:

@@ -36,7 +36,7 @@ class SimulationConfig:
     sim_type: str = "1d"
     signal_types: List[str] = field(default_factory=lambda: ["rephasing"])
 
-    def __post_init__(self) -> None:  # noqa: D401
+    def __post_init__(self) -> None:
         # Enforce RWA for Paper_eqs
         if self.ode_solver == "Paper_eqs" and not self.rwa_sl:
             warnings.warn(

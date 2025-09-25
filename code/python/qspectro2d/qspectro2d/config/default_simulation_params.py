@@ -66,9 +66,9 @@ ODE_SOLVER = "BR"  # ODE solver to use
 N_PHASES = 4  # Number of phase cycles for the simulation
 SIM_TYPE = "1d"
 SOLVER_OPTIONS = {
-    "nsteps": 200000,
-    "atol": 1e-6,
-    "rtol": 1e-4,
+    #    "nsteps": 200000,
+    #    "atol": 1e-6,
+    #    "rtol": 1e-4,
 }  # TODO can i also include redfield options here?
 
 # === BATH SYSTEM DEFAULTS ===
@@ -154,9 +154,7 @@ def validate(params: dict) -> None:
     if base_amplitude <= 0:
         raise ValueError("base_amplitude must be > 0")
     if envelope_type not in SUPPORTED_ENVELOPES:
-        raise ValueError(
-            f"envelope_type '{envelope_type}' not in {SUPPORTED_ENVELOPES}"
-        )
+        raise ValueError(f"envelope_type '{envelope_type}' not in {SUPPORTED_ENVELOPES}")
 
     # Atomic coupling / broadening checks
     if coupling_cm < 0:
@@ -174,14 +172,10 @@ def validate(params: dict) -> None:
 
     # Validate atomic system consistency
     if len(frequencies_cm) != n_atoms:
-        raise ValueError(
-            f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})"
-        )
+        raise ValueError(f"FREQUENCIES_CM length ({len(frequencies_cm)}) != N_ATOMS ({n_atoms})")
 
     if len(dip_moments) != n_atoms:
-        raise ValueError(
-            f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})"
-        )
+        raise ValueError(f"DIP_MOMENTS length ({len(dip_moments)}) != N_ATOMS ({n_atoms})")
 
     # Validate positive values
     if bath_temp <= 0:
@@ -212,9 +206,7 @@ def validate(params: dict) -> None:
 
     # Validate relative amplitudes
     if len(relative_e0s) != 3:
-        raise ValueError(
-            "RELATIVE_E0S must have exactly 3 elements (3-pulse assumption)"
-        )
+        raise ValueError("RELATIVE_E0S must have exactly 3 elements (3-pulse assumption)")
     if any(a <= 0 for a in relative_e0s):
         raise ValueError("All RELATIVE_E0S entries must be > 0")
     # Optional heuristic: last should be probe (smaller or equal)
@@ -247,9 +239,7 @@ def validate(params: dict) -> None:
     if rwa_sl:
         freqs_array = np.array(frequencies_cm)
         max_detuning = np.max(np.abs(freqs_array - carrier_freq_cm))
-        rel_detuning = (
-            max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
-        )
+        rel_detuning = max_detuning / carrier_freq_cm if carrier_freq_cm != 0 else np.inf
         if rel_detuning > 1e-2:
             print(
                 f"WARNING: RWA probably not valid, since relative detuning: {rel_detuning} is too large",

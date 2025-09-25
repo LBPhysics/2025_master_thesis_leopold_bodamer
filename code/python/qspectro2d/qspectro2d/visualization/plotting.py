@@ -14,7 +14,7 @@ from ..core.laser_system import (
 )
 
 
-from plotstyle import init_style, COLORS, LINE_STYLES, simplify_figure_text  # type: ignore
+from plotstyle import init_style, COLORS, LINE_STYLES, simplify_figure_text
 
 init_style()
 
@@ -37,10 +37,8 @@ def plot_pulse_envelopes(
     envelope = pulse_envelopes(times, pulse_seq)
 
     # Create figure and axis if not provided
-    created_fig = False
     if ax is None:
         fig, ax = plt.subplots()  # Plot combined envelope
-        created_fig = True
     else:
         fig = ax.figure
     ax.plot(
@@ -119,10 +117,8 @@ def plot_e_pulses(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None, sho
     E_field = np.array([e_pulses(t, pulse_seq) for t in times])
 
     # Create figure and axis if not provided
-    created_fig = False
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))  # Plot real and imaginary parts
-        created_fig = True
     else:
         fig = ax.figure
     ax.plot(
@@ -179,10 +175,8 @@ def plot_epsilon_pulses(
     """
     # Calculate the full electric field over time
     Epsilon_field = np.array([epsilon_pulses(t, pulse_seq) for t in times])
-    created_fig = False
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 6))
-        created_fig = True
     else:
         fig = ax.figure
     ax.plot(
@@ -225,20 +219,24 @@ def plot_epsilon_pulses(
     return fig, ax
 
 
-def plot_all_pulse_components(times: np.ndarray, pulse_seq: LaserPulseSequence, figsize=(15, 12)):
+def plot_all_pulse_components(times: np.ndarray, pulse_seq: LaserPulseSequence, ax=None):
     """
     Plot all pulse components: envelope, RWA field, and full field in a comprehensive figure.
 
     Parameters:
         times (np.ndarray): Array of time values.
         pulse_seq (LaserPulseSequence): LaserPulseSequence object containing pulses.
-        figsize (tuple): Figure size. Defaults to (15, 12).
+        ax (array-like of matplotlib.axes.Axes, optional): Array of axes objects to plot on. If None, creates new subplots.
 
     Returns:
         fig (matplotlib.figure.Figure): Figure object with all plots.
     """
-    # Create figure with subplots
-    fig, axes = plt.subplots(3, 1, figsize=figsize)
+    # Create figure with subplots if ax is None
+    if ax is None:
+        fig, axes = plt.subplots(3, 1, figsize=(15, 12))
+    else:
+        axes = ax
+        fig = axes[0].figure
 
     # Plot pulse envelope
     plot_pulse_envelopes(times, pulse_seq, ax=axes[0])
@@ -267,6 +265,7 @@ def plot_example_evo(
     pulse_seq: LaserPulseSequence,
     observable_strs: list[str],
     rwa_sl: bool = False,
+    ax=None,
     **kwargs: dict,
 ):
     """
@@ -279,6 +278,8 @@ def plot_example_evo(
         t_coh (float): Coherence time.
         t_wait (float): Waiting time.
         system: System object containing all relevant parameters.
+        rwa_sl (bool): Whether to use RWA or full field.
+        ax (array-like of matplotlib.axes.Axes, optional): Array of axes objects to plot on. If None, creates new subplots.
         **kwargs: Additional keyword arguments for annotation.
 
     Returns:
@@ -294,7 +295,11 @@ def plot_example_evo(
     E_total = np.array([field_func(t, pulse_seq) / E0 for t in times_plot])
 
     # Create plot with appropriate size
-    fig, axes = plt.subplots(len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True)
+    if ax is None:
+        fig, axes = plt.subplots(len(datas) + 1, 1, figsize=(14, 2 + 2 * len(datas)), sharex=True)
+    else:
+        axes = ax
+        fig = axes[0].figure
 
     # Plot electric field
     axes[0].plot(
@@ -372,10 +377,8 @@ def plot_1d_el_field(
     Normalization: optional (default True) to max absolute amplitude
     Cropping: optional via section=(min,max)
     """
-    created_fig = False
     if ax is None:
         fig, ax = plt.subplots()
-        created_fig = True
     else:
         fig = ax.figure
 
@@ -507,10 +510,8 @@ def plot_2d_el_field(
     cbarlabel = r"$\propto S_{\text{out}} / E_{0}$"
 
     # GENERATE FIGURE
-    created_fig = False
     if ax is None:
         fig, ax = plt.subplots()
-        created_fig = True
     else:
         fig = ax.figure
 
