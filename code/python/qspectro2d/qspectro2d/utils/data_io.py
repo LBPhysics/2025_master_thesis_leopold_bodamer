@@ -20,13 +20,13 @@ if TYPE_CHECKING:
     from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
     from qspectro2d.core.atomic_system.system_class import AtomicSystem
     from qspectro2d.core.simulation import SimulationConfig, SimulationModuleOQS
-from qspectro2d.utils.file_naming import generate_unique_data_filename
+from qspectro2d.utils.file_naming import generate_unique_data_filename, _generate_unique_filename
 
 
 # data saving functions
 def save_data_file(
     abs_data_path: Path,
-    metadata: Optional[dict],
+    metadata: dict,
     datas: List[np.ndarray],
     t_det: np.ndarray,
     t_coh: Optional[np.ndarray] = None,
@@ -151,26 +151,21 @@ def save_simulation_data(
     bath: "BosonicEnvironment" = sim_module.bath
     laser: "LaserPulseSequence" = sim_module.laser
 
-    # Generate unique base filename
-    abs_base_path = generate_unique_data_filename(system, sim_config, data_root=data_root)
+    # Deterministic non-enumerated base (no suffix yet)
+    abs_base_path = Path(generate_unique_data_filename(system, sim_config, data_root=data_root))
+    base_dir = abs_base_path.parent
+    base_stem = abs_base_path.name  # e.g. 1d_t_coh_33.3_inhom_000 (no _data suffix yet)
 
-    # Append tags for averaged data variants (keeps plotting compatibility)
-    suffix_bits: list[str] = []
-    if metadata.get("inhom_averaged") is True:
-        suffix_bits.append("inhom_avg")
-    if metadata.get("t_coh_averaged") is True:
-        suffix_bits.append("tcoh_avg")
-    if suffix_bits:
-        abs_base_path = f"{abs_base_path}_{'_'.join(suffix_bits)}"
+    # Enumerate on the full data stem so collisions create pattern base_data_1, base_data_2, ...
+    data_stem = f"{base_stem}_data"
+    unique_data_stem = Path(_generate_unique_filename(base_dir, data_stem)).name
+    abs_data_path = base_dir / f"{unique_data_stem}.npz"
+    # Derive matching info stem by swapping first occurrence of '_data' with '_info'
+    info_stem = unique_data_stem.replace("_data", "_info", 1)
+    abs_info_path = base_dir / f"{info_stem}.pkl"
 
-    # Compose final paths (legacy suffix pattern retained)
-    abs_data_path = Path(f"{abs_base_path}_data.npz")
-    abs_info_path = Path(f"{abs_base_path}_info.pkl")
-
-    # Save files
     save_data_file(abs_data_path, metadata, datas, t_det, t_coh=t_coh)
     save_info_file(abs_info_path, system, bath, laser, sim_config)
-
     return abs_data_path
 
 
@@ -229,26 +224,71 @@ def load_info_file(abs_info_path: Path) -> dict:
 
 
 def load_simulation_data(abs_path: Path | str) -> dict:
-    """Load simulation data bundle (new format only) from either a data or info file path.
+    """Load simulation data bundle from either a data or info file path.
 
-    Accepts a `str` or `Path`. Determines the paired file by suffix:
-    - If path ends with `_data.npz`, loads that and the corresponding `_info.pkl`.
-    - If path ends with `_info.pkl`, loads that and the corresponding `_data.npz`.
+    Supports both base and enumerated variants introduced by the auto-enumeration
+    logic in `save_simulation_data`.
+
+    Accepted patterns:
+      - ``..._data.npz``  <-> ``..._info.pkl``
+      - ``..._data_<n>.npz``  <-> ``..._info_<n>.pkl`` (enumerated pair)
+      - ``..._info.pkl`` or ``..._info_<n>.pkl`` (will infer the corresponding data file)
+
+    Args:
+        abs_path: Path to either the data (.npz) OR info (.pkl) file. Enumerated
+                  suffix (``_<n>``) is optional.
+    Returns:
+        dict with merged data + metadata (info) contents.
+    Raises:
+        FileNotFoundError / ValueError on malformed inputs.
     """
+    import re
+
     p = Path(abs_path)
     s = str(p)
 
-    # Determine the base path (without file extensions)
+    # Backward compatibility patterns:
+    # Old style enumeration: base_data_1.npz / base_info_1.pkl
+    old_data_enum = re.compile(r"(.*)_data_(\d+)\.npz$")
+    old_info_enum = re.compile(r"(.*)_info_(\d+)\.pkl$")
+    # New style enumeration (enumerate base before suffix): base_1_data.npz / base_1_info.pkl
+    new_data_enum = re.compile(r"(.*)_data\.npz$")  # handled by endswith first
+    # Generic enumerated base followed by _data: (base with optional _<n>)_data.npz
+    base_enum_data = re.compile(r"(.*)_data\.npz$")
+
     if s.endswith("_data.npz"):
+        # Non-enumerated base pair
         abs_data_path = p
         abs_info_path = Path(s[:-9] + "_info.pkl")
     elif s.endswith("_info.pkl"):
         abs_info_path = p
         abs_data_path = Path(s[:-9] + "_data.npz")
     else:
-        raise ValueError("Path must end with '_data.npz' or '_info.pkl'")
+        # Try old style enumeration first
+        m_data_old = old_data_enum.match(s)
+        m_info_old = old_info_enum.match(s)
+        if m_data_old:
+            base, idx = m_data_old.groups()
+            abs_data_path = p
+            abs_info_path = Path(f"{base}_info_{idx}.pkl")
+        elif m_info_old:
+            base, idx = m_info_old.groups()
+            abs_info_path = p
+            abs_data_path = Path(f"{base}_data_{idx}.npz")
+        else:
+            # New style: unique base already enumerated -> <base>_data / <base>_info
+            if s.endswith("_data.npz"):
+                abs_data_path = p
+                abs_info_path = Path(s[:-9] + "_info.pkl")
+            elif s.endswith("_info.pkl"):
+                abs_info_path = p
+                abs_data_path = Path(s[:-9] + "_data.npz")
+            else:
+                raise ValueError(
+                    "Unrecognized filename pattern. Expected '*_data.npz' or '*_info.pkl' (including enumerated base variants)."
+                )
 
-    print(f"Loading data bundle: {abs_path}")
+    print(f"Loading data bundle: {abs_data_path}")
     data_dict = load_data_file(abs_data_path)
     info_dict = load_info_file(abs_info_path)
 
@@ -309,13 +349,16 @@ def list_available_files(abs_base_dir: Path) -> List[str]:
 def discover_1d_files(folder: Path) -> List[Path]:
     """Return sorted list of all *_data.npz files in the folder.
 
-    If any averaged files ("*_inhom_avg_data.npz") exist, prefer only those.
-    This avoids stacking raw per-config files with duplicate t_coh values.
+    New naming scheme: averaged outputs carry an in-filename prefix segment
+    'inhom_avg' (e.g. '1d_inhom_avg_t_coh_50_inhom_000_data.npz').
+
+    If any averaged files are present we return only those, to avoid stacking
+    raw per-config files with duplicate t_coh values.
     """
     if not folder.is_dir():
         raise NotADirectoryError(f"Not a directory: {folder}")
     candidates = sorted(folder.glob("*_data.npz"))
-    avgs = [p for p in candidates if str(p).endswith("_inhom_avg_data.npz")]
+    avgs = [p for p in candidates if "/inhom_avg_" in str(p).replace("\\", "/")]
     return avgs if avgs else candidates
 
 
@@ -348,7 +391,7 @@ def collect_group_files(anchor: Path) -> List[Path]:
 
         base = None
         for p in all_npz:
-            if str(p).endswith("_inhom_avg_data.npz"):
+            if "/inhom_avg_" in str(p).replace("\\", "/"):
                 continue
             try:
                 temp_data = load_simulation_data(p)
@@ -373,8 +416,8 @@ def collect_group_files(anchor: Path) -> List[Path]:
     all_npz = list(dir_path.glob("*_data.npz"))
     matches: List[Path] = []
     for p in all_npz:
-        # Skip any already averaged outputs
-        if str(p).endswith("_inhom_avg_data.npz"):
+        # Skip any already averaged outputs (identified by 'inhom_avg' prefix segment)
+        if "/inhom_avg_" in str(p).replace("\\", "/"):
             continue
         try:
             d = load_simulation_data(p)

@@ -28,7 +28,7 @@ from ..config.default_simulation_params import (
     COMPONENT_MAP,
     DETECTION_PHASE,
 )
-from qspectro2d.utils.units_and_rwa import from_rotating_frame_list
+from qspectro2d.utils.rwa_utils import from_rotating_frame_list
 
 
 __all__ = [

@@ -13,8 +13,6 @@ The resulting files are stored via ``save_simulation_data`` and contain
 metadata keys required by downstream stacking & plotting scripts:
     - signal_types
     - t_coh_value
-    - inhom_averaged (always False here)
-    - t_coh_averaged (always False here)
 
 Examples:
     python calc_datas.py --sim_type 1d
@@ -82,34 +80,6 @@ def _compute_e_components_for_tcoh(
     return E_list
 
 
-def _make_inhom_group_id(sim_oqs: SimulationModuleOQS, n_inhom: int, delta_cm: float) -> str:
-    """Create a deterministic group id for inhomogeneous runs across batches.
-
-    Uses a UUID5 over a canonical string built from stable configuration fields.
-    This ensures separate batched runs with identical settings share the same id.
-    """
-    import uuid
-
-    sim_cfg = sim_oqs.simulation_config
-    freqs = np.asarray(sim_oqs.system.frequencies_cm, dtype=float)
-    sig_types = list(map(str, getattr(sim_cfg, "signal_types", [])))
-
-    canonical_fields = {
-        "system": sim_oqs.system.__class__.__name__,
-        "freqs": np.array2string(freqs, precision=8, separator=","),
-        "delta_cm": f"{float(delta_cm):.8g}",
-        "n_inhom": int(n_inhom),
-        "t_coh": f"{float(getattr(sim_cfg, 't_coh', 0.0)):.8g}",
-        "dt": str(getattr(sim_cfg, "dt", None)),
-        "t_dm": str(getattr(sim_cfg, "t_dm", None)),
-        "t_wait": str(getattr(sim_cfg, "t_wait", None)),
-        "signal_types": ",".join(sig_types),
-    }
-    canonical = "|".join(f"{k}={v}" for k, v in canonical_fields.items())
-    gid = uuid.uuid5(uuid.NAMESPACE_URL, canonical)
-    return str(gid)
-
-
 # ---------------------------------------------------------------------------
 # Execution modes
 # ---------------------------------------------------------------------------
@@ -122,16 +92,19 @@ def run_1d_mode(args) -> None:
     t_coh_val = float(sim_oqs.simulation_config.t_coh)
     sim_cfg = sim_oqs.simulation_config
 
-    # Inhomogeneous 1D handling: if requested samples > 1 and system has nonzero broadening
+    # Inhomogeneous 1D handling: only if (#samples > 1) AND (broadening > 0)
     n_inhom = sim_cfg.n_inhomogen
     delta_cm = sim_oqs.system.delta_inhomogen_cm
 
-    if n_inhom > 1:
+    if n_inhom > 1 and delta_cm > 0.0:
         # Sample site frequencies (cm^-1) for each configuration
         base_freqs_cm = np.asarray(sim_oqs.system.frequencies_cm, dtype=float)
         samples_cm = sample_from_gaussian(
             n_samples=n_inhom, fwhm=delta_cm, mu=base_freqs_cm
         )  # shape (n_inhom, n_sites)
+
+        # Single-source group id: if SimulationConfig already has one keep it
+        inhom_group_id = sim_cfg.inhom_group_id
 
         # Determine index subset for batching
         batch_idx: int = int(getattr(args, "batch_idx", 0))
@@ -160,8 +133,6 @@ def run_1d_mode(args) -> None:
                 f"📦 Batching: {batch_note}; total configs={n_inhom}; this job covers no indices (empty chunk)"
             )
 
-        # Stable, deterministic group id based on configuration (same across batches)
-        inhom_group_id = _make_inhom_group_id(sim_oqs, n_inhom=n_inhom, delta_cm=delta_cm)
         saved_paths: list[str] = []
         start_time = time.time()
         for idx in indices.tolist():
@@ -177,16 +148,15 @@ def run_1d_mode(args) -> None:
             E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
 
             # Persist dataset for this configuration
+            # Update config bookkeeping for this specific inhom configuration
+            sim_cfg.inhom_index = int(idx)
+
             metadata = {
                 "signal_types": sim_cfg.signal_types,
                 "t_coh_value": float(t_coh_val),
-                "t_coh_averaged": False,
-                # Inhom bookkeeping
-                "inhom_enabled": True,
-                "inhom_group_id": inhom_group_id,
-                "inhom_averaged": False,
-                # Optional traceability helpers (not required by stacking)
-                "inhom_config_index": int(idx),
+                "inhom_enabled": sim_cfg.inhom_enabled,
+                "inhom_group_id": sim_cfg.inhom_group_id,
+                "inhom_config_index": sim_cfg.inhom_index,
                 "inhom_total": int(n_inhom),
             }
             out_path = save_simulation_data(
@@ -213,12 +183,14 @@ def run_1d_mode(args) -> None:
     E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
 
     # Persist dataset
+    # Homogeneous / single config bookkeeping
+    sim_cfg.inhom_index = 0
     metadata = {
         "signal_types": sim_cfg.signal_types,
         "t_coh_value": float(t_coh_val),
-        "inhom_enabled": False,
-        "inhom_averaged": False,
-        "t_coh_averaged": False,
+        "inhom_enabled": sim_cfg.inhom_enabled,
+        "inhom_config_index": sim_cfg.inhom_index,
+        "inhom_total": 1,
     }
     abs_data_path = save_simulation_data(
         sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR
@@ -273,11 +245,16 @@ def run_2d_mode(args) -> None:
         E_sigs = _compute_e_components_for_tcoh(sim_oqs, t_coh_val, time_cut=time_cut)
 
         sim_cfg.t_coh = t_coh_val
+        sim_cfg.inhom_index = 0
+        sim_cfg.inhom_enabled = (
+            sim_cfg.inhom_enabled and sim_cfg.inhom_index > 0
+        )  # stays False for 2D loop here
         metadata = {
             "signal_types": sim_cfg.signal_types,
             "t_coh_value": float(t_coh_val),
-            "t_coh_averaged": False,
-            "inhom_averaged": False,
+            "inhom_enabled": sim_cfg.inhom_enabled,
+            "inhom_config_index": sim_cfg.inhom_index,
+            "inhom_total": sim_cfg.n_inhomogen,
         }
         out_path = save_simulation_data(
             sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR

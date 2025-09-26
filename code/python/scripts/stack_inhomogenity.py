@@ -22,6 +22,7 @@ from qspectro2d import (
     save_simulation_data,
 )
 from qspectro2d.utils.data_io import collect_group_files
+from qspectro2d.utils import generate_deterministic_data_base
 
 from thesis_paths import DATA_DIR
 
@@ -106,18 +107,31 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
             self.bath = bundle.get("bath")
             self.laser = bundle.get("laser")
             self.simulation_config = bundle.get("sim_config")
+            # Normalize config bookkeeping for averaged output:
+            cfg = self.simulation_config
+            # Use canonical index 0 for averaged file naming
+            cfg.inhom_index = 0
+            cfg.inhom_averaged = True
+            cfg.inhom_enabled = True
 
-    sim_module_stub = _SimModuleStub(first_bundle)
+    sim_inhom_stacked = _SimModuleStub(first_bundle)
 
     # If skip_if_exists, check whether an averaged file already exists for this group and t_coh.
     # We detect existence by attempting to build the same base name the saver would create;
     # since generate_unique_data_filename uses system+sim_config, we can't reconstruct it here.
     # Instead, we look alongside input files for a sibling averaged file with the same directory
-    # and suffix pattern '*_inhom_avg_data.npz' and matching t_coh_value.
+    # Using new naming scheme with 'inhom_avg' prefix in filename.
     if skip_if_exists:
-        folder = Path(abs_path).parent
-        existing = list(folder.glob("*_inhom_avg_data.npz"))
-        for p in existing:
+        # Build deterministic (non-enumerated) base for averaged output
+        det_base = generate_deterministic_data_base(
+            sim_inhom_stacked.system,
+            sim_inhom_stacked.simulation_config,
+            data_root=DATA_DIR,
+            ensure=True,
+        )
+        folder = det_base.parent
+        pattern = det_base.name + "*_data.npz"  # matches base_data.npz or base_1_data.npz etc.
+        for p in folder.glob(pattern):
             try:
                 d = load_simulation_data(p)
                 if (
@@ -130,7 +144,9 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
             except Exception:
                 continue
 
-    out_path = save_simulation_data(sim_module_stub, metadata, averaged, t_det, data_root=DATA_DIR)
+    out_path = save_simulation_data(
+        sim_inhom_stacked, metadata, averaged, t_det, data_root=DATA_DIR
+    )
     return out_path
 
 

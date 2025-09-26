@@ -99,7 +99,7 @@ def _load_entries(
         raise ValueError(
             "Found duplicate t_coh_value entries. If this directory contains raw inhomogeneous "
             "per-config files, run stack_inhomogenity.py first or point this script to the folder "
-            "containing only averaged files (_inhom_avg_data.npz)."
+            "containing only averaged files (with inhom_avg prefix)."
         )
 
     return tcoh_vals, t_det, signal_types, per_sig_data
@@ -170,27 +170,35 @@ def main() -> None:
     bath = info["bath"]
     laser = info["laser"]
     original_cfg = info["sim_config"]
-    sim_cfg_2d = copy.deepcopy(original_cfg)
+    cfg_coh_stacked = copy.deepcopy(original_cfg)
     # Ensure the directory naming routes to 2D location
-    if hasattr(sim_cfg_2d, "sim_type"):
-        sim_cfg_2d.sim_type = "2d"
+    cfg_coh_stacked.sim_type = "2d"
+    cfg_coh_stacked.t_coh = None
+    # Canonicalize inhom index for stacked dataset (avoid arbitrary index from any source 1D file)
+    cfg_coh_stacked.inhom_index = 0
 
     # Compute expected output path to support skip_if_exists
     # Mirror naming used by save_simulation_data: generate_unique_data_filename + suffixes
     try:
-        from qspectro2d.utils.file_naming import generate_unique_data_filename
+        from qspectro2d.utils import (
+            generate_deterministic_data_base,
+        )
 
-        base_path = generate_unique_data_filename(system, sim_cfg_2d, data_root=DATA_DIR)
-        suffix_bits = ["tcoh_avg"]  # for 1d->2d stacking
-        predicted_base = f"{base_path}_{'_'.join(suffix_bits)}"
-        predicted_out = Path(f"{predicted_base}_data.npz")
-        if args.skip_if_exists and predicted_out.exists():
-            print(f"⏭️  Skipping: 2D dataset already exists: {predicted_out}")
+        det_base = generate_deterministic_data_base(
+            system, cfg_coh_stacked, data_root=DATA_DIR
+        )  # pure stem
+        folder = det_base.parent
+        pattern = det_base.name + "*_data.npz"
+        existing = list(folder.glob(pattern))
+        if args.skip_if_exists and existing:
+            print(f"⏭️  Skipping: found existing 2D dataset(s):")
+            for e in existing:
+                print(f"  - {e.name}")
             print("Done.")
             return
-    except Exception as e:  # pragma: no cover - prediction is best-effort
+    except Exception as e:  # pragma: no cover
         if args.skip_if_exists:
-            print(f"⚠️  Could not predict output path for skip check: {e}")
+            print(f"⚠️  Skip-if-exists heuristic failed: {e}")
 
     # Proceed with loading/staking since we didn't early-return
     tcoh_vals, t_det, signal_types, per_sig_data = _load_entries(files)
@@ -239,16 +247,14 @@ def main() -> None:
 
     from qspectro2d.core import SimulationModuleOQS  # avoid circular import
 
-    sim_2d = SimulationModuleOQS(sim_cfg_2d, system, laser, bath)
+    sim_coh_stacked = SimulationModuleOQS(cfg_coh_stacked, system, laser, bath)
     metadata: Dict[str, Any] = {
-        "t_coh_averaged": True,
-        "inhom_averaged": False,
         "signal_types": list(signal_types),
     }
     datas: List[np.ndarray] = [stacked[s] for s in signal_types]
 
     out_path = save_simulation_data(
-        sim_module=sim_2d,
+        sim_module=sim_coh_stacked,
         metadata=metadata,
         datas=datas,
         t_det=t_det,

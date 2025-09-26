@@ -16,16 +16,33 @@ if TYPE_CHECKING:
     from qspectro2d.core.simulation.sim_config import SimulationConfig
 
 
-def _generate_base_filename(sim_config: SimulationConfig) -> str:
-    sim_f = sim_config.to_dict()
+def _generate_base_filename(sim_config: "SimulationConfig") -> str:
+    """Deterministic base filename including coherence time and inhom index.
+
+        1d_inhom_avg_t_coh_<value>_inhom_<idx>
+        2d_inhom_000
+        2d_inhom_avg
+
+        <value>: coherence time (fs), compact float (up to 6 significant digits)
+        <idx>  : zero-padded integer ("000" for homogeneous / averaged runs)
+
+    Uses the official ``SimulationConfig.inhom_index`` field introduced for
+    bookkeeping."""
+
     parts: list[str] = []
-    if sim_f["sim_type"] == "1d":
-        t_coh_val = sim_f.get("t_coh")
-        if t_coh_val is not None:
-            parts.append(f"t_coh_{round(float(t_coh_val), 2)}")
-    else:
-        parts.append("2d")
-    return "_".join(parts) or "run"
+    parts.append(sim_config.sim_type)
+    # Collect inhom averaged markers
+    if sim_config.inhom_averaged is True:
+        parts.append("inhom_avg")
+
+    t_coh_val = sim_config.t_coh
+    if t_coh_val is not None:
+        t_coh_part = f"t_coh_{float(t_coh_val):.6g}"  # removes trailing zeros if possible
+        parts.append(t_coh_part)
+
+    parts.append(f"inhom_{int(sim_config.inhom_index):03d}")
+    base = f"{'_'.join(parts)}"
+    return base
 
 
 def _generate_unique_filename(path: Union[str, Path], base_name: str) -> str:
@@ -104,6 +121,13 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
             parts.append(f"{n_atoms}({n_chains}x{n_rings})_atoms")
     else:
         parts.append(f"{n_atoms}_atoms")
+
+    # Add solver if available
+    parts.append(sim_f.get("ode_solver") or "solver?")
+
+    # Add RWA if available
+    parts.append("RWA" if sim_f.get("rwa_sl") else "noRWA")
+
     # For inhomogeneous batches, avoid embedding per-run numeric parameters to keep a stable folder
     n_inhomogen = int(sim_f.get("n_inhomogen", 1) or 1)
     if n_inhomogen > 1:
@@ -116,12 +140,6 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
         if coupling_cm and coupling_cm > 0:
             parts.append(f"{round(coupling_cm, 0)}cm")
 
-    # Add solver if available
-    parts.append(sim_f.get("ode_solver") or "solver?")
-
-    # Add RWA if available
-    parts.append("RWA" if sim_f.get("rwa_sl") else "noRWA")
-
     # Add time parameters
     parts.append(
         f"t_dm{sim_f.get('t_det_max', 'na')}_t_wait_{sim_f.get('t_wait', 'na')}_dt_{sim_f.get('dt', 'na')}"
@@ -130,24 +148,46 @@ def generate_base_sub_dir(sim_config: SimulationConfig, system: AtomicSystem) ->
     return Path(*parts)
 
 
-def generate_unique_data_filename(
-    system: AtomicSystem,
-    sim_config: SimulationConfig,
+def generate_deterministic_data_base(
+    system: "AtomicSystem",
+    sim_config: "SimulationConfig",
     *,
     data_root: Union[str, Path],
     ensure: bool = True,
-) -> str:
-    """Return unique base filename (without extension) for a run.
+) -> Path:
+    """Return deterministic (non-enumerated) base path (no extension).
 
-    Accepts either object instances (AtomicSystem / SimulationConfig) or dict-like
-    mappings for flexibility.
+    This is the pure mapping from (system, sim_config) -> directory/filename stem
+    without any collision resolution. Intended for tasks like discovery /
+    skip-if-exists that need to glob for all variants belonging to the same
+    logical parameter set.
     """
     relative_path = generate_base_sub_dir(sim_config, system)
     abs_path = Path(data_root) / relative_path
     if ensure:
         abs_path.mkdir(parents=True, exist_ok=True)
     base_name = _generate_base_filename(sim_config)
-    return _generate_unique_filename(abs_path, base_name)
+    return abs_path / base_name
+
+
+def generate_unique_data_filename(
+    system: "AtomicSystem",
+    sim_config: "SimulationConfig",
+    *,
+    data_root: Union[str, Path],
+    ensure: bool = True,
+) -> str:
+    """Return unique (possibly enumerated) base filename path (no extension).
+
+    If the deterministic stem exists already (any file with that stem), an
+    incrementing _<n> suffix is appended to the stem itself. The caller can
+    then append domain-specific suffixes like ``_data`` / ``_info``.
+    """
+    deterministic = generate_deterministic_data_base(
+        system, sim_config, data_root=data_root, ensure=ensure
+    )
+    unique = _generate_unique_filename(deterministic.parent, deterministic.name)
+    return unique
 
 
 def generate_unique_plot_filename(
@@ -187,8 +227,9 @@ def generate_unique_plot_filename(
     if ensure:
         path.mkdir(parents=True, exist_ok=True)
 
-    base_name = _generate_base_filename(sim_config)
-    base_name += f"_{domain}_domain"
+    # Mirror flipped ordering for averaged markers so plots group nicely
+    base_core = _generate_base_filename(sim_config)
+    base_name = f"{base_core}_{domain}_domain"
     if component:
         base_name += f"_{component}"
     filename = _generate_unique_filename(path, base_name)

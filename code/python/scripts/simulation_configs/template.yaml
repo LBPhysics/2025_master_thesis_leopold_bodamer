@@ -23,7 +23,7 @@ atomic:
   dip_moments: [1.0]
 
   # Number of inhomogeneous samples to compute (1 disables inhomogeneous averaging in this step)
-  n_inhomogen: 1
+  n_inhomogen: 100
 
   # Inhomogeneous Gaussian full width at half maximum (FWHM) in [cm^-1]
   # Used to sample site frequencies for inhomogeneous broadening

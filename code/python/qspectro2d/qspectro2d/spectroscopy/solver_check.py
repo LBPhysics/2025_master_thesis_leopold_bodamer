@@ -225,7 +225,7 @@ def check_the_solver(sim_oqs: SimulationModuleOQS) -> tuple[Result, float]:
         omega_laser = copy_sim_oqs.laser.carrier_freq_fs
         print(f"Applying RWA phase factors: n_atoms={n_atoms}, omega_laser={omega_laser} [fs^-1]")
         # Lazy import here to avoid triggering package-level imports during module import
-        from ..utils.units_and_rwa import from_rotating_frame_list
+        from ..utils.rwa_utils import from_rotating_frame_list
 
         states = from_rotating_frame_list(states, times, n_atoms, omega_laser)
 

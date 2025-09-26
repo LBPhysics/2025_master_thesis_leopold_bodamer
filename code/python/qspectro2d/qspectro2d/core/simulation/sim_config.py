@@ -32,6 +32,12 @@ class SimulationConfig:
     n_phases: int = 4
     n_inhomogen: int = 1
 
+    # Inhomogeneous handling / bookkeeping
+    inhom_enabled: bool = False  # True if current run loops over inhom configs
+    inhom_averaged: bool = False  # True if data represent an average over inhom configs
+    inhom_index: int = 0  # Current inhom configuration index (0 for homogeneous)
+    inhom_group_id: str | None = None  # Stable group id for batching/averaging
+
     max_workers: int = 1
     sim_type: str = "1d"
     signal_types: List[str] = field(default_factory=lambda: ["rephasing"])
@@ -63,6 +69,9 @@ class SimulationConfig:
             "-------------------------------\n"
             f"Phase Cycles       : {self.n_phases}\n"
             f"Inhom. Points      : {self.n_inhomogen}\n"
+            f"Inhom Enabled      : {self.inhom_enabled}\n"
+            f"Inhom Averaged     : {self.inhom_averaged}\n"
+            f"Inhom Index        : {self.inhom_index}\n"
             f"Max Workers        : {self.max_workers}\n"
             "-------------------------------\n"
         )

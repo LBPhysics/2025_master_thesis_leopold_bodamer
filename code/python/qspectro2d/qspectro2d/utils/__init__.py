@@ -13,6 +13,7 @@ from .file_naming import (
     generate_unique_data_filename,
     generate_unique_plot_filename,
     generate_base_sub_dir,
+    generate_deterministic_data_base,
 )
 from .data_io import (
     save_data_file,
@@ -23,7 +24,7 @@ from .data_io import (
     load_simulation_data,
     list_available_files,
 )
-from .units_and_rwa import (
+from .rwa_utils import (
     rotating_frame_unitary,
     to_rotating_frame_op,
     from_rotating_frame_op,
@@ -42,6 +43,7 @@ __all__ = [
     "generate_unique_data_filename",
     "generate_unique_plot_filename",
     "generate_base_sub_dir",
+    "generate_deterministic_data_base",
     # data I/O
     "save_data_file",
     "save_info_file",

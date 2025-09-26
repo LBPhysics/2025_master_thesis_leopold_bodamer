@@ -133,20 +133,10 @@ def save_fig(
     except Exception:
         # Reasonable fallback set
         supported_formats = {
-            "eps",
-            "jpeg",
             "jpg",
             "pdf",
-            "pgf",
             "png",
-            "ps",
-            "raw",
-            "rgba",
             "svg",
-            "svgz",
-            "tif",
-            "tiff",
-            "webp",
         }
 
     def _append_ext(p: Path, ext: str) -> Path:
