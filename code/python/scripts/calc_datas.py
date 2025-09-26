@@ -12,6 +12,7 @@ Two execution modes sharing the same underlying simulation object:
 The resulting files are stored via ``save_simulation_data`` and contain
 metadata keys required by downstream stacking & plotting scripts:
     - signal_types
+    - t_coh_value
 
 Examples:
     python calc_datas.py --sim_type 1d
@@ -151,6 +152,7 @@ def run_1d_mode(args) -> None:
 
             metadata = {
                 "signal_types": sim_cfg.signal_types,
+                "t_coh_value": t_coh_val,
                 "inhom_group_id": sim_cfg.inhom_group_id,
             }
             out_path = save_simulation_data(
@@ -181,6 +183,7 @@ def run_1d_mode(args) -> None:
     sim_cfg.inhom_index = 0
     metadata = {
         "signal_types": sim_cfg.signal_types,
+        "t_coh_value": t_coh_val,
         "inhom_group_id": sim_cfg.inhom_group_id,
     }
     abs_data_path = save_simulation_data(
@@ -200,7 +203,7 @@ def run_2d_mode(args) -> None:
     print("🎯 Running 2D mode (iterate over t_det as t_coh)")
 
     # Reuse detection times as coherence-axis grid
-    t_coh_vals = sim_oqs.t_det[::10]  # NOTE only take every 10th value to check on local pc
+    t_coh_vals = sim_oqs.t_det  # NOTE can only take every 10th value to check on local pc
     N_total = len(t_coh_vals)
 
     # Determine index subset for batching
@@ -242,6 +245,7 @@ def run_2d_mode(args) -> None:
         )  # stays False for 2D loop here
         metadata = {
             "signal_types": sim_cfg.signal_types,
+            "t_coh_value": t_coh_val,
             "inhom_group_id": sim_cfg.inhom_group_id,
         }
         out_path = save_simulation_data(

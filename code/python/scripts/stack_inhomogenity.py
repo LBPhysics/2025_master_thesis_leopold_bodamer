@@ -90,6 +90,7 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
     # Compose metadata for output
     metadata = {
         "signal_types": signal_types,
+        "t_coh_value": first.get("t_coh_value", None),
         "inhom_group_id": first.get("inhom_group_id", None),
     }
 
