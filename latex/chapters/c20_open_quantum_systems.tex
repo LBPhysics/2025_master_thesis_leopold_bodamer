@@ -582,17 +582,18 @@ A widely used phenomenological family is
 \end{equation}
 with dimensionless coupling $\gamma$, cutoff frequency $\omega_c$ and exponent $s$ distinguishing Ohmic ($s=1$), sub-Ohmic ($s<1$), and super-Ohmic ($s>1$) cases~\cite{weiss2012quantumdissipativesystems, lambertetal2024qutip5quantum}. The low-frequency linear scaling $J(\omega) \propto \omega$ (Ohmic) underpins frequency-independent damping in many coarse-grained models; the high-frequency cutoff enforces convergence of integrals such as Eq.~\eqref{eq:ho_correlator_final}.
 
-\begin{figure}[t]
-	\centering
-	\includegraphics[width=\textwidth]{bath_comparison_combined_0.010_100.00_100.000.png}
-	\caption{Comparison of representative bath models (Ohmic and Drude--Lorentz) showing spectral densities, associated power spectra, and time-domain correlation functions for coupling strength $\alpha = 0.1$, cutoff $\omega_c = 100$, and temperature $T=100$. Distinct spectral shapes map directly onto different relaxation and dephasing behaviors.}
-	\label{fig:bath_comparison}
-\end{figure}
-
-% also include a temperature dep. picture
-\begin{figure}
-	\centering
-	\includegraphics[width=\textwidth]{temperature_analysis_ohmic_bath.png}
-	\caption{Temperature dependence of the bath correlation function for an Ohmic bath with $\alpha = 1$ and cutoff $\omega_c = 100$. Higher temperatures increase the amplitude and decrease the correlation time, reflecting enhanced thermal fluctuations.}
-	\label{fig:bath_temperature_comparison}
-\end{figure}
+\iffalse
+	\begin{figure}[t]
+		\centering
+		\includegraphics[width=\textwidth]{bath_comparison_combined_0.010_100.00_100.000.png}
+		\caption{Comparison of representative bath models (Ohmic and Drude--Lorentz) showing spectral densities, associated power spectra, and time-domain correlation functions for coupling strength $\alpha = 0.1$, cutoff $\omega_c = 100$, and temperature $T=100$. Distinct spectral shapes map directly onto different relaxation and dephasing behaviors.}
+		\label{fig:bath_comparison}
+	\end{figure}
+	% also include a temperature dep. picture
+	\begin{figure}
+		\centering
+		\includegraphics[width=\textwidth]{temperature_analysis_ohmic_bath.png}
+		\caption{Temperature dependence of the bath correlation function for an Ohmic bath with $\alpha = 1$ and cutoff $\omega_c = 100$. Higher temperatures increase the amplitude and decrease the correlation time, reflecting enhanced thermal fluctuations.}
+		\label{fig:bath_temperature_comparison}
+	\end{figure}
+\fi
