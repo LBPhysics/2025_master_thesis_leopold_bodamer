@@ -51,6 +51,13 @@ Master_thesis/
 └── README.md
 ```
 
+# To only clone code, figures, environment.yml, README.md (no latex): Do a sparse checkout
+```bash
+git sparse-checkout init --cone
+ git sparse-checkout set --skip-checks code figures environment.yml README.md
+ ```
+
+
 ## Scripts and workflow
 
 All scripts live in `code/python/scripts` and are designed to compose:

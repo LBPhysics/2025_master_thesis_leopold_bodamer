@@ -138,8 +138,8 @@ def main() -> None:
     action_verb = "Generating" if args.generate_only else "Creating and submitting"
     print(f"{action_verb} {n_batches} SLURM jobs in {job_dir} (logs -> {logs_subdir}) ...")
 
-    for batch_idx in range(n_batches):
-        job_name = f"{sim_type}_b{batch_idx:03d}_of_{n_batches:03d}"
+    for batch_idx in range(n_batches):  # TODO also add the name of the config file to the job name
+        job_name = f"{sim_type}b{batch_idx:02d}of{n_batches:02d}"
         script_name = f"{job_name}.slurm"
         script_path = job_dir / script_name
 

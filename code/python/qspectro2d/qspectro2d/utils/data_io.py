@@ -78,9 +78,7 @@ def save_data_file(
                     )
             else:
                 if not isinstance(data, np.ndarray) or data.shape != (len(t_det),):
-                    raise ValueError(
-                        f"1D data must have shape (len(t_det),) = ({len(t_det)},)"
-                    )
+                    raise ValueError(f"1D data must have shape (len(t_det),) = ({len(t_det)},)")
             payload[sig_key] = data
 
         # Single write
@@ -154,9 +152,7 @@ def save_simulation_data(
     laser: "LaserPulseSequence" = sim_module.laser
 
     # Generate unique base filename
-    abs_base_path = generate_unique_data_filename(
-        system, sim_config, data_root=data_root
-    )
+    abs_base_path = generate_unique_data_filename(system, sim_config, data_root=data_root)
 
     # Append tags for averaged data variants (keeps plotting compatibility)
     suffix_bits: list[str] = []

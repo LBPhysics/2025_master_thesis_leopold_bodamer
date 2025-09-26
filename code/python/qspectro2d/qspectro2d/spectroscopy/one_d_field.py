@@ -91,7 +91,7 @@ def compute_evolution(
     # Get the starting point of the first pulse's active window
     if sim_oqs.laser.pulses:
         pulse_start_time = sim_oqs.laser.pulses[0].active_time_range[0]
-        print(f"Pulse start time: {pulse_start_time} fs")
+        # print(f"Pulse start time: {pulse_start_time} fs")
     else:
         pulse_start_time = sim_oqs.times_local[0]  # fallback if no pulses
 
@@ -154,11 +154,12 @@ def compute_polarization_over_window(
     non_ground_state_indices = [
         i for i, state in enumerate(res.states) if not (state == sim.system.psi_ini)
     ]
-    print("Length of non-ground state indices:", len(non_ground_state_indices))
+    """    print("Length of non-ground state indices:", len(non_ground_state_indices))
     if len(non_ground_state_indices) != 0:
         print("found other states than ground state")
     else:
         print("no states other than ground state were stored")
+    """
     window_states = slice_states_to_window(res, window)
 
     if sim.simulation_config.rwa_sl:

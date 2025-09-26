@@ -205,164 +205,6 @@ def _plot_components(
     return saved_paths
 
 
-def plot_data(
-    loaded_data_and_info: Dict[str, Any], plot_config: Dict[str, Any], dimension: str
-) -> List[str]:
-    """Plot time and/or frequency domain data for 1D / 2D simulations.
-
-    Parameters
-    ----------
-    loaded_data_and_info : dict
-        Dict produced by the new save/load workflow.
-    plot_config : dict
-        Keys (optional):
-            - plot_time_domain (bool)
-            - plot_frequency_domain (bool)
-            - components (list[str])
-            - extend_for (tuple[int,int])
-            - section (1D: (min,max) | 2D: ((min,max),(min,max)))
-            - verbose (bool)
-    dimension : str
-        '1d' or '2d'.
-    """
-    from qspectro2d.core.atomic_system.system_class import AtomicSystem
-    from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
-    from qspectro2d.core.simulation import SimulationConfig
-
-    # --- Required objects
-    system = cast(AtomicSystem, loaded_data_and_info.get("system"))
-    bath_env = cast(BosonicEnvironment, loaded_data_and_info.get("bath"))
-    laser = cast(LaserPulseSequence, loaded_data_and_info.get("laser"))
-    sim_config = cast(SimulationConfig, loaded_data_and_info.get("sim_config"))
-    t_det = loaded_data_and_info.get("t_det")
-    t_coh = loaded_data_and_info.get("t_coh") if dimension == "2d" else None
-    signal_types: Sequence[str] = sim_config.signal_types
-
-    # Collect raw data arrays
-    datas = [loaded_data_and_info.get(st) for st in signal_types]
-    if any(d is None for d in datas):
-        missing_signals = [st for st, d in zip(signal_types, datas) if d is None]
-        raise KeyError(f"Missing signal arrays for: {missing_signals}")
-
-    # get a nice dict of metadata for information
-    ode_solver = sim_config.ode_solver
-    if ode_solver == "BR" or ode_solver == "Paper_eqs":
-        w0 = system.frequencies_fs[0]
-        bath_dict = extract_bath_parameters(bath_env, w0)
-    else:
-        bath_dict = {
-            "deph_rate": 1 / 100,
-            "down_rate": 1 / 300,
-        }
-
-    sim_dict = sim_config.to_dict()  # NOTE hopefully not a problem later in plotting
-    # purge the sim_type from the sim_config dictionary, because we declare it later more specific in kept_types:
-    sim_dict.pop("sim_types", None)
-
-    laser_dict = {k: v for k, v in laser.to_dict().items() if k != "pulses"}
-    meta = {**system.to_dict(), **bath_dict, **laser_dict, **sim_dict}
-
-    # Announce plotting context
-    print(f"➡️  Plotting: dimension={dimension}, signals={list(signal_types)}")
-    print(f"   t_det: n={len(t_det)} range=[{t_det[0]:.2f},{t_det[-1]:.2f}] fs")
-    if dimension == "2d" and t_coh is not None:
-        print(f"   t_coh: n={len(t_coh)} range=[{t_coh[0]:.2f},{t_coh[-1]:.2f}] fs")
-
-    # ---- Config with defaults
-    pad_factor = float(plot_config.get("extend_for", 1))
-    section = plot_config.get("section")
-    components = ["real", "abs", "img"]  # NOTE default phase is not important
-    plot_time = bool(plot_config.get("plot_time_domain", True))
-    plot_freq = bool(plot_config.get("plot_frequency_domain", True))
-    if (
-        dimension == "1d"
-        and isinstance(section, (list, tuple))
-        and len(section) == 2
-        and isinstance(section[0], (list, tuple))
-    ):
-        # Provided as 2D section but we are 1D: take first window only
-        section = section[0]
-
-    # For 2D frequency plots, accept flexible section formats and normalize:
-    # - (min, max)              -> ((min, max), (min, max))
-    # - (min1, max1, min2, max2) -> ((min1, max1), (min2, max2))
-    if dimension == "2d" and section is not None and isinstance(section, (list, tuple)):
-        try:
-            if len(section) == 2 and not isinstance(section[0], (list, tuple)):
-                section = (
-                    (float(section[0]), float(section[1])),
-                    (float(section[0]), float(section[1])),
-                )
-            elif len(section) == 4 and not isinstance(section[0], (list, tuple)):
-                section = (
-                    (float(section[0]), float(section[1])),
-                    (float(section[2]), float(section[3])),
-                )
-            # else: assume already in the shape ((a,b),(c,d))
-        except Exception:
-            # On any parsing issue, drop the section to avoid plotting errors
-            section = None
-    time_components = list(components)
-    spectral_components = list(components)
-
-    # Choose plotting callable
-    plot_func = plot_1d_el_field if dimension == "1d" else plot_2d_el_field
-
-    # ---- Time domain
-    saved_all: List[str] = []
-    if plot_time:
-        print("📊 Time domain ...")
-        saved = _plot_components(
-            datas=datas,
-            signal_types=signal_types,
-            axis_det=t_det,
-            axis_coh=t_coh,
-            domain="time",
-            components=time_components,
-            plot_func=plot_func,
-            base_metadata=meta,
-            system=system,
-            sim_config=sim_config,
-            dimension=dimension,
-        )
-        saved_all.extend(saved)
-        for p in saved:
-            print(f"   💾 {p}")
-
-    # ---- Frequency domain
-    if plot_freq:
-        print(f"📊 Frequency domain ... (extend={pad_factor})")
-        try:
-            freq_axes, freq_datas, kept_types = _extend_and_fft(
-                loaded_data_and_info=loaded_data_and_info,
-                pad_factor=pad_factor,
-                dimension=dimension,
-            )
-            axis_det_f, axis_coh_f = (freq_axes, None) if dimension == "1d" else freq_axes
-            saved = _plot_components(
-                datas=freq_datas,
-                signal_types=kept_types,
-                axis_det=axis_det_f,
-                axis_coh=axis_coh_f,
-                domain="freq",
-                components=spectral_components,
-                plot_func=plot_func,
-                base_metadata=meta,
-                system=system,
-                sim_config=sim_config,
-                dimension=dimension,
-                section=section,
-            )
-            saved_all.extend(saved)
-            for p in saved:
-                print(f"   💾 {p}")
-        except Exception as e:  # pragma: no cover
-            print(f"❌ Frequency domain skipped: {e}")
-
-    plt.close("all")
-    return saved_all
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="Plot 1D or 2D electronic spectroscopy data (time/frequency domains)."
@@ -395,108 +237,79 @@ def main():
 
     # Plot selection (both enabled by default)
     parser.add_argument(
-        "--time",
-        dest="plot_time",
-        action="store_true",
-        default=True,
-        help="Plot time-domain data (default)",
-    )
-    parser.add_argument(
-        "--no-time",
+        "--no_time",
         dest="plot_time",
         action="store_false",
+        default=True,
         help="Disable time-domain plotting",
     )
     parser.add_argument(
-        "--freq",
-        dest="plot_freq",
-        action="store_true",
-        default=True,
-        help="Plot frequency-domain data (default)",
-    )
-    parser.add_argument(
-        "--no-freq",
+        "--no_freq",
         dest="plot_freq",
         action="store_false",
+        default=True,
         help="Disable frequency-domain plotting",
     )
 
     args = parser.parse_args()
 
     try:
-        # Parse section into internal structure: None | (a,b) | ((a,b),(c,d))
+        # Parse section from command line arguments
         section: Optional[Any] = None
         if len(args.section) == 2:
             section = (args.section[0], args.section[1])
         elif len(args.section) == 4:
-            section = (
-                (args.section[0], args.section[1]),
-                (args.section[2], args.section[3]),
-            )
+            section = (args.section[0], args.section[1], args.section[2], args.section[3])
         else:
-            raise ValueError("--section expects 2 (1D) or 4 (2D) floats")
+            raise ValueError("--section expects 2 (1D/2D) or 4 (2D) floats")
 
         # Plot selections (CLI flags)
         plot_time = bool(args.plot_time)
         plot_freq = bool(args.plot_freq)
 
-        all_saved: List[str] = []
         print(f"🔄 Loading: {args.abs_path}")
         loaded_data_and_info = load_simulation_data(abs_path=args.abs_path)
 
         # Quick probe to decide dimension and basic info
-        t_det_axis = loaded_data_and_info.get("t_det")
-        t_coh_axis = loaded_data_and_info.get("t_coh")
         sim_config = loaded_data_and_info["sim_config"]
+        is_2d = sim_config.sim_types == "2d"
+        dimension = "2d" if is_2d else "1d"
 
-        try:
-            is_2d = (
-                t_coh_axis is not None and hasattr(t_coh_axis, "__len__") and len(t_coh_axis) > 0
-            )
-        except Exception:
-            is_2d = False
+        # --- Plotting logic (formerly plot_data function) ---
+        from qspectro2d.core.atomic_system.system_class import AtomicSystem
+        from qspectro2d.core.laser_system.laser_class import LaserPulseSequence
+        from qspectro2d.core.simulation import SimulationConfig
 
-        # Axes info
-        try:
-            n_t_det = len(t_det_axis) if t_det_axis is not None else 0
-            det_rng = (
-                f"[{float(t_det_axis[0]):.2f},{float(t_det_axis[-1]):.2f}] fs"
-                if n_t_det > 0
-                else "[—]"
-            )
-        except Exception:
-            n_t_det, det_rng = 0, "[—]"
+        # Extract required objects
+        system = cast(AtomicSystem, loaded_data_and_info.get("system"))
+        bath_env = cast(BosonicEnvironment, loaded_data_and_info.get("bath"))
+        laser = cast(LaserPulseSequence, loaded_data_and_info.get("laser"))
+        sim_config = cast(SimulationConfig, loaded_data_and_info.get("sim_config"))
+        t_det = loaded_data_and_info.get("t_det")
+        t_coh = loaded_data_and_info.get("t_coh") if dimension == "2d" else None
+
+        # Print axes info
+        n_t_det = len(t_det) if t_det is not None else 0
+        det_rng = f"[{float(t_det[0]):.2f},{float(t_det[-1]):.2f}] fs" if n_t_det > 0 else "[—]"
         if is_2d:
-            try:
-                n_t_coh = len(t_coh_axis) if t_coh_axis is not None else 0
-                coh_rng = (
-                    f"[{float(t_coh_axis[0]):.2f},{float(t_coh_axis[-1]):.2f}] fs"
-                    if n_t_coh > 0
-                    else "[—]"
-                )
-            except Exception:
-                n_t_coh, coh_rng = 0, "[—]"
+            n_t_coh = len(t_coh) if t_coh is not None else 0
+            coh_rng = f"[{float(t_coh[0]):.2f},{float(t_coh[-1]):.2f}] fs" if n_t_coh > 0 else "[—]"
         else:
             n_t_coh, coh_rng = 0, "—"
         print(
             f"   Axes: t_det n={n_t_det} {det_rng}; t_coh n={n_t_coh if is_2d else '—'} {coh_rng if is_2d else ''}"
         )
 
-        # If 1D, do not use a 2D section tuple even if provided
-        eff_section = section
-        if (
-            not is_2d
-            and isinstance(section, tuple)
-            and len(section) == 2
-            and isinstance(section[0], tuple)
-        ):
-            # ((a,b),(c,d)) → (a,b)
-            eff_section = section[0]
+        signal_types: Sequence[str] = sim_config.signal_types
+
+        # Collect raw data arrays
+        datas = [loaded_data_and_info.get(st) for st in signal_types]
+        if any(d is None for d in datas):
+            missing_signals = [st for st, d in zip(signal_types, datas) if d is None]
+            raise KeyError(f"Missing signal arrays for: {missing_signals}")
 
         # Detect if time-domain signals are all-zero (informative warning only)
         try:
-            sigs = [str(s) for s in sim_config.signal_types]
-            datas = [loaded_data_and_info.get(s) for s in sigs]
             if datas and all(
                 isinstance(a, np.ndarray) and a.size > 0 and np.allclose(a, 0) for a in datas
             ):
@@ -504,17 +317,110 @@ def main():
         except Exception:
             pass
 
-        saved = plot_data(
-            loaded_data_and_info=loaded_data_and_info,
-            plot_config={
-                "extend_for": float(args.extend),
-                "section": eff_section,
-                "plot_time_domain": plot_time,
-                "plot_frequency_domain": plot_freq,
-            },
-            dimension="2d" if is_2d else "1d",
-        )
-        all_saved.extend(saved)
+        # Prepare metadata for plotting
+        ode_solver = sim_config.ode_solver
+        if ode_solver == "BR" or ode_solver == "Paper_eqs":
+            w0 = system.frequencies_fs[0]
+            bath_dict = extract_bath_parameters(bath_env, w0)
+        else:  # NOTE have to adjust if making ME also time-dep.
+            bath_dict = {
+                "deph_rate": 1 / 100,
+                "down_rate": 1 / 300,
+            }
+
+        sim_dict = sim_config.to_dict()
+        sim_dict.pop("signal_types", None)  # Remove to avoid duplication
+        laser_dict = {k: v for k, v in laser.to_dict().items() if k != "pulses"}
+        meta = {**system.to_dict(), **bath_dict, **laser_dict, **sim_dict}
+
+        # Announce plotting context
+        print(f"➡️  Plotting: dimension={dimension}, signals={list(signal_types)}")
+        print(f"   t_det: n={len(t_det)} range=[{t_det[0]:.2f},{t_det[-1]:.2f}] fs")
+        if dimension == "2d" and t_coh is not None:
+            print(f"   t_coh: n={len(t_coh)} range=[{t_coh[0]:.2f},{t_coh[-1]:.2f}] fs")
+
+        # Parse and normalize section formats
+        pad_factor = float(args.extend)
+        components = ["real", "abs", "img"]
+
+        # Normalize section format based on dimension
+        plot_section = None
+        if section is not None and isinstance(section, (list, tuple)):
+            try:
+                if len(section) == 2:
+                    if dimension == "1d":
+                        plot_section = (float(section[0]), float(section[1]))
+                    else:  # 2D: use same range for both axes
+                        plot_section = (
+                            (float(section[0]), float(section[1])),
+                            (float(section[0]), float(section[1])),
+                        )
+                elif len(section) == 4:
+                    if dimension == "1d":
+                        plot_section = (float(section[0]), float(section[1]))
+                    else:  # 2D: separate ranges for each axis
+                        plot_section = (
+                            (float(section[0]), float(section[1])),
+                            (float(section[2]), float(section[3])),
+                        )
+            except Exception:
+                plot_section = None
+
+        # Choose plotting function
+        plot_func = plot_1d_el_field if dimension == "1d" else plot_2d_el_field
+
+        # ---- Time domain plotting ----
+        all_saved: List[str] = []
+        if plot_time:
+            print("📊 Time domain ...")
+            saved = _plot_components(
+                datas=datas,
+                signal_types=signal_types,
+                axis_det=t_det,
+                axis_coh=t_coh,
+                domain="time",
+                components=components,
+                plot_func=plot_func,
+                base_metadata=meta,
+                system=system,
+                sim_config=sim_config,
+                dimension=dimension,
+            )
+            all_saved.extend(saved)
+            for p in saved:
+                print(f"   💾 {p}")
+
+        # ---- Frequency domain plotting ----
+        if plot_freq:
+            print(f"📊 Frequency domain ... (extend={pad_factor})")
+            try:
+                freq_axes, freq_datas, kept_types = _extend_and_fft(
+                    loaded_data_and_info=loaded_data_and_info,
+                    pad_factor=pad_factor,
+                    dimension=dimension,
+                )
+                axis_det_f, axis_coh_f = (freq_axes, None) if dimension == "1d" else freq_axes
+                saved = _plot_components(
+                    datas=freq_datas,
+                    signal_types=kept_types,
+                    axis_det=axis_det_f,
+                    axis_coh=axis_coh_f,
+                    domain="freq",
+                    components=components,
+                    plot_func=plot_func,
+                    base_metadata=meta,
+                    system=system,
+                    sim_config=sim_config,
+                    dimension=dimension,
+                    section=plot_section,
+                )
+                all_saved.extend(saved)
+                for p in saved:
+                    print(f"   💾 {p}")
+            except Exception as e:
+                print(f"❌ Frequency domain skipped: {e}")
+
+        plt.close("all")
 
         # Final summary
         print(f"✅ Done. Saved {len(all_saved)} file(s).")

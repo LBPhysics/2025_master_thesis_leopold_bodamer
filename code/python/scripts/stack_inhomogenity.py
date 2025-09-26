@@ -107,7 +107,7 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
             self.laser = bundle.get("laser")
             self.simulation_config = bundle.get("sim_config")
 
-    sim_module_stub = _SimModuleStub(first_bundle)  # type: ignore[call-arg]
+    sim_module_stub = _SimModuleStub(first_bundle)
 
     # If skip_if_exists, check whether an averaged file already exists for this group and t_coh.
     # We detect existence by attempting to build the same base name the saver would create;
@@ -146,9 +146,9 @@ def main() -> None:
 
     out = average_inhom_1d(Path(args.abs_path), skip_if_exists=args.skip_if_exists)
     print(f"Saved inhom-averaged dataset: {out}")
-    print("To plot the data, run:")
+    print(f"\n🎯 To plot the 1D data, run:")
     print(f"python plot_datas.py --abs_path {out}")
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     main()
