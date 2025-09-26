@@ -55,7 +55,7 @@ N_INHOMOGEN = 1  # 1 == no inhomogeneous broadening
 # === LASER SYSTEM DEFAULTS ===
 # TODO add N_PULSES -> 3 -< check that RELATIVE_E0S, phases has correct length (N_PULSES, N_PULSES-1)
 PULSE_FWHM_FS = 15.0 if N_ATOMS == 1 else 5.0  # Pulse FWHM in fs
-BASE_AMPLITUDE = 0.01  # -> such that for 1 atom the |exe| < 1 %
+BASE_AMPLITUDE = 0.01  # -> such that for 1 atom the |exe| < 1%
 ENVELOPE_TYPE = "gaussian"  # Type of pulse envelope # gaussian or cos2
 CARRIER_FREQ_CM = 16000.0  # np.mean(FREQUENCIES_CM)  # Carrier frequency of the laser
 RWA_SL = True
