@@ -272,7 +272,7 @@ def main():
 
         # Quick probe to decide dimension and basic info
         sim_config = loaded_data_and_info["sim_config"]
-        is_2d = sim_config.sim_types == "2d"
+        is_2d = sim_config.sim_type == "2d"
         dimension = "2d" if is_2d else "1d"
 
         # --- Plotting logic (formerly plot_data function) ---

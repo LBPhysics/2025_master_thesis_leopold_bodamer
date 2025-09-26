@@ -54,7 +54,7 @@ Master_thesis/
 # To only clone code, figures, environment.yml, README.md (no latex): Do a sparse checkout
 ```bash
 git sparse-checkout init --cone
- git sparse-checkout set --skip-checks code figures environment.yml README.md
+git sparse-checkout set --skip-checks code figures environment.yml README.md  {List of all files to be kept track of}
  ```
 
 
