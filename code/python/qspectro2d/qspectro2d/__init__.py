@@ -71,7 +71,6 @@ from .spectroscopy import (
     complex_polarization,
     compute_evolution,
     check_the_solver,
-    sim_with_only_pulses,
 )
 
 
@@ -98,7 +97,6 @@ __all__ = [
     "complex_polarization",
     "compute_evolution",
     "check_the_solver",
-    "sim_with_only_pulses",
     # Post-processing
     "extend_time_domain_data",
     "compute_spectra",
