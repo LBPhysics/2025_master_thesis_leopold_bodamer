@@ -103,8 +103,6 @@ def run_1d_mode(args) -> None:
             n_samples=n_inhom, fwhm=delta_cm, mu=base_freqs_cm
         )  # shape (n_inhom, n_sites)
 
-        # Single-source group id: if SimulationConfig already has one keep it
-
         # Determine index subset for batching
         batch_idx: int = int(getattr(args, "batch_idx", 0))
         n_batches: int = int(getattr(args, "n_batches", 1))
