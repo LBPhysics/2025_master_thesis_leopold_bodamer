@@ -528,6 +528,8 @@ code/python/config/local_*.py
 # Figure outputs from Python scripts
 #figures/figures_from_python/
 figures/figures_in_development_svg/
+code/python/scripts/batch_jobs/
+
 
 # Mathematica-specific
 code/mathematica/*.nb.bak
