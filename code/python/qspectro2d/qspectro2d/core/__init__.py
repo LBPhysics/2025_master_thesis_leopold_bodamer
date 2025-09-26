@@ -32,6 +32,7 @@ from .laser_system import (
     LaserPulse,
     LaserPulseSequence,
     # PULSE FIELD FUNCTIONS
+    single_pulse_envelope,
     pulse_envelopes,
     e_pulses,
     epsilon_pulses,
@@ -47,13 +48,17 @@ from .simulation import (
 
 
 # PUBLIC API
-
 __all__ = [
     # System configuration
     "AtomicSystem",
     # LaserPulse definitions
     "LaserPulse",
     "LaserPulseSequence",
+    # LaserPulse field functions
+    "single_pulse_envelope",
+    "pulse_envelopes",
+    "e_pulses",
+    "epsilon_pulses",
     # Environment system
     "spectral_density_func_drude_lorentz",
     "spectral_density_func_ohmic",
@@ -64,17 +69,10 @@ __all__ = [
     # Simulation module and configuration
     "SimulationModuleOQS",
     "SimulationConfig",
-    # LaserPulse field functions
-    "pulse_envelopes",
-    "e_pulses",
-    "epsilon_pulses",
     # Solver functions
     "matrix_ODE_paper",
 ]
 
 
 # VERSION INFO
-
-__version__ = "1.0.0"
 __author__ = "Leopold Bodamer"
-__email__ = ""

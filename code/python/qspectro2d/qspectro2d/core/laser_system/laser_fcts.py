@@ -6,6 +6,7 @@ from .laser_class import LaserPulse, LaserPulseSequence
 
 
 __all__ = [
+    "single_pulse_envelope",
     "pulse_envelopes",
     "e_pulses",
     "epsilon_pulses",

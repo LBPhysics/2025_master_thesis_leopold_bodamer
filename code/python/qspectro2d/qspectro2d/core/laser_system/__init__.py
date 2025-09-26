@@ -16,7 +16,6 @@ from .laser_class import (
 
 
 # PUBLIC API
-
 __all__ = [
     # functions
     "e_pulses",
@@ -30,7 +29,5 @@ __all__ = [
 
 
 # VERSION INFO
-
-__version__ = "1.0.0"
+__version__ = "1.0"
 __author__ = "Leopold Bodamer"
-__email__ = ""

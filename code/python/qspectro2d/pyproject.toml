@@ -12,9 +12,6 @@ authors = [
   {name = "Leopold Bodamer"}
 ]
 
-[project.urls]
-Repository = "https://github.com/LBPhysics/2025_master_thesis_leopold_bodamer"
-
 [tool.setuptools.packages.find]
 include = ["qspectro2d", "qspectro2d.*"]
 namespaces = false

@@ -13,17 +13,13 @@ with configurable coupling strengths and inhomogeneities.
 """
 
 # ATOMIC SYSTEM CLASS
-
 from .system_class import AtomicSystem
 
 
 # PUBLIC API
-
 __all__ = ["AtomicSystem"]
 
 
 # VERSION INFO
-
-__version__ = "1.0.0"
+__version__ = "1.0"
 __author__ = "Leopold Bodamer"
-__email__ = ""
