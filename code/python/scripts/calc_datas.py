@@ -12,7 +12,6 @@ Two execution modes sharing the same underlying simulation object:
 The resulting files are stored via ``save_simulation_data`` and contain
 metadata keys required by downstream stacking & plotting scripts:
     - signal_types
-    - t_coh_value
 
 Examples:
     python calc_datas.py --sim_type 1d
@@ -104,7 +103,6 @@ def run_1d_mode(args) -> None:
         )  # shape (n_inhom, n_sites)
 
         # Single-source group id: if SimulationConfig already has one keep it
-        inhom_group_id = sim_cfg.inhom_group_id
 
         # Determine index subset for batching
         batch_idx: int = int(getattr(args, "batch_idx", 0))
@@ -153,11 +151,7 @@ def run_1d_mode(args) -> None:
 
             metadata = {
                 "signal_types": sim_cfg.signal_types,
-                "t_coh_value": float(t_coh_val),
-                "inhom_enabled": sim_cfg.inhom_enabled,
                 "inhom_group_id": sim_cfg.inhom_group_id,
-                "inhom_config_index": sim_cfg.inhom_index,
-                "inhom_total": int(n_inhom),
             }
             out_path = save_simulation_data(
                 sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR
@@ -187,10 +181,7 @@ def run_1d_mode(args) -> None:
     sim_cfg.inhom_index = 0
     metadata = {
         "signal_types": sim_cfg.signal_types,
-        "t_coh_value": float(t_coh_val),
-        "inhom_enabled": sim_cfg.inhom_enabled,
-        "inhom_config_index": sim_cfg.inhom_index,
-        "inhom_total": 1,
+        "inhom_group_id": sim_cfg.inhom_group_id,
     }
     abs_data_path = save_simulation_data(
         sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR
@@ -251,10 +242,7 @@ def run_2d_mode(args) -> None:
         )  # stays False for 2D loop here
         metadata = {
             "signal_types": sim_cfg.signal_types,
-            "t_coh_value": float(t_coh_val),
-            "inhom_enabled": sim_cfg.inhom_enabled,
-            "inhom_config_index": sim_cfg.inhom_index,
-            "inhom_total": sim_cfg.n_inhomogen,
+            "inhom_group_id": sim_cfg.inhom_group_id,
         }
         out_path = save_simulation_data(
             sim_oqs, metadata, E_sigs, t_det=sim_oqs.t_det, data_root=DATA_DIR

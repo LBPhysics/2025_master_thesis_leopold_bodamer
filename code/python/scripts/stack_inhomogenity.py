@@ -90,11 +90,7 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
     # Compose metadata for output
     metadata = {
         "signal_types": signal_types,
-        "t_coh_value": float(first.get("t_coh_value", 0.0)),
-        "inhom_enabled": True,
-        "inhom_averaged": True,
-        "inhom_group_id": first.get("inhom_group_id"),
-        "inhom_n_files": len(valid_files),
+        "inhom_group_id": first.get("inhom_group_id", None),
     }
 
     # Use original module info to build save context
@@ -134,10 +130,8 @@ def average_inhom_1d(abs_path: Path, *, skip_if_exists: bool = False) -> Path:
         for p in folder.glob(pattern):
             try:
                 d = load_simulation_data(p)
-                if (
-                    d.get("inhom_averaged", False)
-                    and d.get("inhom_group_id") == metadata.get("inhom_group_id")
-                    and np.isclose(float(d.get("t_coh_value", 0.0)), float(metadata["t_coh_value"]))
+                if d.get("inhom_averaged", False) and d.get("inhom_group_id") == metadata.get(
+                    "inhom_group_id"
                 ):
                     print(f"⏭️  Averaged file already exists for this t_coh in folder: {p}")
                     return p

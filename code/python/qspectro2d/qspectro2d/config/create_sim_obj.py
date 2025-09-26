@@ -238,7 +238,7 @@ def load_simulation(
         max_workers=max_workers,
         inhom_enabled=inhom_enabled,
         inhom_index=0,
-        inhom_group_id=inhom_group_id if inhom_enabled else None,
+        inhom_group_id=inhom_group_id,
     )
 
     # -----------------
