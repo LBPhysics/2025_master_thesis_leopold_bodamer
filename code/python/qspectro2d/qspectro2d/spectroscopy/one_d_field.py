@@ -208,7 +208,6 @@ def _compute_P_phi1_phi2(
 
     # Total signal with all pulses
     t_det_actual = sim_work.t_det_actual
-    print("calculating P_phi1_phi2 x pulses:", sim_work.laser.pulse_indices)
     t_det_a, P_total = compute_polarization_over_window(sim_work, t_det_actual)
 
     # Linear signals: only pulse i active
