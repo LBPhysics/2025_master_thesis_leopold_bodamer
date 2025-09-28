@@ -10,7 +10,6 @@
 # My ignored files
 /figures/figures_from_python/
 /figures/tests
-latex/test/
 .idea/
 
 # Ignore Python cache files
@@ -43,7 +42,6 @@ wheels/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
-code/python/qspectro2d.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
@@ -144,7 +142,6 @@ dmypy.json
 
 # Data files
 data/
-/code/python/scripts/not_needed_scripts
 # Results and output directories
 
 # Temporary files
@@ -213,10 +210,6 @@ node_modules/
 *.dvi
 *.xdv
 *-converted-to.*
-# these rules might exclude image files for figures etc.
-# *.ps
-# *.eps
- *.pdf
 
 ## Bibliography auxiliary files (bibtex/biblatex/biber):
 *.bbl
@@ -500,26 +493,10 @@ TSWLatexianTemp*
 # Uncomment the next line to have this generated file ignored.
 #*Notes.bib
 latex/main.pdf
-README.md
-
-
-# Project-specific ignores
-# Master thesis specific data and outputs
-code/python/data/processed/*
-code/python/data/raw/*
-!code/python/data/processed/.gitkeep
-!code/python/data/raw/.gitkeep
-
-# Archive directory (if it contains old/experimental code)
-code/python/archive/
 
 # Notebook outputs and checkpoints
 code/python/notebooks/.ipynb_checkpoints/
 *.ipynb_checkpoints
-
-# Test outputs
-code/python/tests/output/
-code/python/tests/results/
 
 # Configuration files that might contain local paths
 code/python/config/local.py

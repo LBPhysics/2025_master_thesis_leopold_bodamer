@@ -28,7 +28,7 @@ from qspectro2d.utils.data_io import (
     load_data_file,
     load_info_file,
     save_simulation_data,
-    discover_1d_files,
+    discover_1d_data_files,
 )
 
 
@@ -147,7 +147,7 @@ def main() -> None:
     print("STACK 1D -> 2D")
     print(f"Input directory: {in_dir}")
 
-    files = discover_1d_files(in_dir.parent)  # since in_dir is a data file
+    files = discover_1d_data_files(in_dir.parent)  # since in_dir is a data file
     print(f"Found {len(files)} files to stack")
     if not files:
         print("No files found; aborting.")

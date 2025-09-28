@@ -65,9 +65,3 @@ python code/python/scripts/hpc_calc_datas.py --n_batches N --sim_type 2d
 ```
 
 Generated SLURM scripts store logs in `code/python/scripts/batch_jobs/`.
-
-## References
-- `code/python/README.md` – top-level CLI + path instructions
-- `code/python/qspectro2d/README.md` – detailed simulation docs and YAML schema
-- `code/python/plotstyle/README.md` – plotting style usage
-- `latex/` – thesis structure, chapter templates, bibliography

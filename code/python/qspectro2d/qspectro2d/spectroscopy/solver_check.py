@@ -19,7 +19,7 @@ from qutip import Qobj, Result
 
 # LOCAL IMPORTS
 from ..core.simulation import SimulationModuleOQS
-from .one_d_field import compute_evolution
+from .e_field_1d import compute_evolution
 
 
 __all__ = ["check_the_solver"]

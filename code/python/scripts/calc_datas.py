@@ -29,7 +29,7 @@ import time
 import warnings
 import numpy as np
 from qspectro2d.spectroscopy import sample_from_gaussian
-from qspectro2d.spectroscopy.one_d_field import parallel_compute_1d_e_comps
+from qspectro2d.spectroscopy.e_field_1d import parallel_compute_1d_e_comps
 from qspectro2d import save_simulation_data
 from qspectro2d.config.create_sim_obj import create_base_sim_oqs
 from qspectro2d.core.simulation import SimulationModuleOQS
@@ -165,8 +165,8 @@ def run_1d_mode(args) -> None:
         )
         if saved_paths:
             example = saved_paths[-1]
-            print("\n🎯 Next step (average inhomogeneous configs):")
-            print(f"     python stack_inhomogenity.py --abs_path '{example}'")
+            print("\n🎯 Next step (average inhomogeneous configs, afterwards plot):")
+            print(f"     python stack_inhomogenity.py --abs_path '{example}' --skip_if_exists")
         else:
             print("ℹ️  No files saved.")
         return
@@ -264,7 +264,7 @@ def run_2d_mode(args) -> None:
             print(f"     python plot_datas.py --abs_path '{example}'")
         else:
             print("\n🎯 Next step:")
-            print(f"     python hpc_plot_datas.py --abs_path '{example}'")
+            print(f"     python hpc_plot_datas.py --abs_path '{example}' --skip_if_exists")
     else:
         print("ℹ️  No files saved.")
 

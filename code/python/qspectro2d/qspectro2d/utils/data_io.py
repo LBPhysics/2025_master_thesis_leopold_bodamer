@@ -346,7 +346,7 @@ def list_available_files(abs_base_dir: Path) -> List[str]:
 # ---------------------------------------------------------------------------
 
 
-def discover_1d_files(folder: Path) -> List[Path]:
+def discover_1d_data_files(folder: Path) -> List[Path]:
     """Return sorted list of all *_data.npz files in the folder.
 
     New naming scheme: averaged outputs carry an in-filename prefix segment
