@@ -1,5 +1,5 @@
-// Master_thesis/.vscode/settings.json
-// These are the PROJECT settings for my master thesis repository.
+// 2025_master_thesis_latex_leopold_bodamer/.vscode/settings.json
+// These are the PROJECT settings for my LaTeX-only master thesis repository.
 {
     // ---- LaTeX Project Configuration ----
     "latex-workshop.latex.recipes": [
@@ -92,33 +92,16 @@
     "[bibtex]": {
         "editor.defaultFormatter": "James-Yu.latex-workshop"
     },
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter"
-    },
-    // ---- Python Project Configuration ----
-    // Use relative paths so they work on any machine.
-    "python.defaultInterpreterPath": "/home/leopold/miniconda3/envs/master_env/bin/python",
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}/code/python/qspectro2d",
-        "${workspaceFolder}/code/python/plotstyle",
-        "${workspaceFolder}/code/python/qspectro2d/qspectro2d",
-        "${workspaceFolder}/code/python/plotstyle/plotstyle",
-        "${workspaceFolder}/code/python/scripts"
-    ],
-    "python.analysis.diagnosticMode": "workspace",
     // ---- Hiding Build/Temporary Files from the Explorer ----
     // This is crucial for keeping the project view clean for everyone.
     "files.exclude": {
-        "**/__pycache__": true,
         "**/_minted*": true,
         "**/.DS_Store": true,
         "**/.git": true,
         "**/.gitattributes": true,
         "**/.hg": true,
-        "**/.ipynb_checkpoints": true,
         "**/.svn": true,
         "**/.texpadtmp": true,
-        "**/.venv": true,
         "**/*-concordance.tex": true,
         "**/*-gnuplottex-*": true,
         "**/*-tags.tex": true,
@@ -148,7 +131,6 @@
         "**/*.cut": true,
         "**/*.dpth": true,
         "**/*.dvi": true,
-        "**/*.egg-info": true,
         "**/*.el": true,
         "**/*.eledsec[1-9]": true,
         "**/*.eledsec[1-9][0-9]": true,
@@ -269,14 +251,4 @@
         "**/Thumbs.db": true,
         "**/TSWLatexianTemp*": true
     },
-    "python.testing.unittestArgs": [
-        "-v",
-        "-s",
-        ".",
-        "-p",
-        "*test.py"
-    ],
-    "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true,
-    "python-envs.pythonProjects": [],
 }

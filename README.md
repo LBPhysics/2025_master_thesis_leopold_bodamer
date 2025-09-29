@@ -1,67 +1,34 @@
-# Master Thesis – 2D Electronic Spectroscopy
+# Master Thesis – LaTeX Manuscript
 
-Central monorepo for the thesis: simulation code, plotting utilities, generated figures, and LaTeX manuscript sources. Everything lives in-place for smooth syncing between local development and HPC runs.
-
-## Contents at a glance
-- `code/python/qspectro2d` – spectroscopy simulation engine (see its README for detailed docs)
-- `code/python/plotstyle` – Matplotlib/LaTeX styling helpers
-- `code/python/README.md` – quick-start for path constants and CLI entry points
-- `latex/` – thesis manuscript
-- `figures/` – generated figures (Python + manual)
-- `environment.yml` – shared Conda env (`master_env`)
-
-## Getting started
-```bash
-git clone git@github.com:LBPhysics/Master_thesis.git
-cd Master_thesis
-conda env create -f environment.yml
-conda activate master_env
-```
-
-Verify the stack:
-```bash
-python - <<'PY'
-import qutip, qspectro2d, plotstyle
-print("QuTiP:", qutip.__version__)
-print("qspectro2d:", getattr(qspectro2d, "__version__", "dev"))
-PY
-```
+This repository now focuses exclusively on the written thesis: LaTeX sources, bibliography, and curated figures. The numerical codes and Python tooling previously bundled here have moved to dedicated project under: 
+https://github.com/LBPhysics/2025_master_thesis_python_leopold_bodamer.git
 
 ## Repository layout
 ```
 Master_thesis/
-├── code/
-│   └── python/
-│       ├── qspectro2d/        # simulation package
-│       ├── plotstyle/         # plotting style package
-│       ├── scripts/           # CLI + SLURM helpers + YAML configs
-│       └── README.md          # usage guide for thesis_paths & scripts
-├── data/                      # simulation outputs (generated)
-├── figures/                   # exported figures (generated)
-├── latex/                     # thesis text
-├── environment.yml            # Conda spec (env name: thesis)
-└── README.md                  # this overview
+├── figures/        # hand-drawn and exported graphics referenced in the text
+├── latex/          # thesis sources (chapters, style file, bibliography)
+├── .vscode/        # editor helpers for LaTeX workflows
+├── .gitignore      # LaTeX- and figure-specific ignores
+└── README.md       # this document
 ```
 
-Sparse checkout (code + figures only):
+## Building the thesis
+The LaTeX sources are set up for `latexmk`. From the repository root run:
+
 ```bash
-git sparse-checkout init --cone
-git sparse-checkout set --skip-checks code figures environment.yml README.md
+latexmk -pdf -shell-escape -cd latex/main.tex
 ```
 
-## Workflow summary
-1. **Configure** – Copy/edit a YAML under `code/python/scripts/simulation_configs/`.
-2. **Simulate** – Run `calc_datas --sim_type {1d,2d}` locally or via SLURM (`hpc_calc_datas.py` with n_batches).
-3. **Aggregate** – Stack inhomogeneous runs (`stack_inhomogenity.py`) and build 2D datasets (`stack_times`).
-4. **Plot** – Use `plot_datas.py` (or `hpc_plot_datas.py`) to create time/frequency figures; outputs land in `figures/figures_from_python/`.
-5. **Document** – Update LaTeX sources under `latex/` and reference generated figures.
+The command writes all auxiliary files alongside the sources and produces `latex/main.pdf`. Clean up with `latexmk -c -cd latex/main.tex` if you want to remove the generated intermediates.
 
-## HPC checklist
-```bash
-git pull --ff-only
-conda activate master_env
-conda env update -f environment.yml --prune   # only when dependencies changed
-python code/python/scripts/hpc_calc_datas.py --n_batches N --sim_type 2d
-```
+## Figures
+- `figures/figures_from_python/` collects figures exported from numerical experiments.
+- `figures/figures_in_development_svg/` contains editable SVG drafts.
 
-Generated SLURM scripts store logs in `code/python/scripts/batch_jobs/`.
+Feel free to add new figure subdirectories as the manuscript evolves; the `.gitignore` only filters temporary artefacts so final assets stay versioned.
+
+## Version control tips
+- Commit generated PDFs sparingly—`latex/main.pdf` is ignored so that the history stays light.
+- Keep auxiliary logs out of source control; `latexmk -c` is your friend before pushing.
+- Use branches for major chapter rewrites to keep reviews focused.
