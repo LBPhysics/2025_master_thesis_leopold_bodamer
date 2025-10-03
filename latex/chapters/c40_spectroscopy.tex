@@ -7,6 +7,10 @@
 
 \section{Fundamentals of Spectroscopy}
 \label{sec:spectroscopy_fundamentals}
+\todoidea{This chapter should serve as a solid foundation by emphasizing electronic transitions, nonlinear optics, coherence phenomena, and their relevance to complex (e.g., biological) systems.
+Vibrational and other spectroscopies are less relevant for this work, so they should be mentioned but not in detail.}
+
+
 
 \noindent Spectroscopy, in its broadest definition, is the study of the interaction between matter and electromagnetic radiation as a function of wavelength or frequency \cite{berman2011principleslaserspectroscopy, mukamel1995principlesnonlinearoptical}.
 This technique provides insights into the composition, structure, and dynamics of physical systems by examining how they absorb, emit, or scatter light. The fundamental principle underlying all spectroscopic methods is that each atom, molecule, or complex system has a unique set of energy levels, and transitions between these levels involve the absorption or emission of photons with specific energies \todoref{find better source}\cite{boyd2008chapter1nonlinear}.
@@ -229,6 +233,8 @@ Probing the electronic structure and looking at excited state dynamics will be m
 
 \begin{itemize}
 	\item \textbf{Rephasing signals} follow the phase-matching condition $\vec{k}_s = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$. During the evolution period between the first and second interactions, the phase accumulated due to different frequencies can be reversed during the period between the third interaction and signal emission. This leads to a photon echo effect.
+ 	This happens for an inhomogeneously broadened ensemble of systems, where different realizations of the system have different transition energies, while the laser pulses drive at constant frequency of $\omega_L$. As a result, some realizations dephase quicker than others. Some realizations should come back in phase around $t_{\text{det}} \approx t_{\text{coh}}$ which is exactly this photon echo.
+
 
 	\item \textbf{nonrephasing signals} satisfy $\vec{k}_s = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$. In this case, the phase evolution continues in the same direction, and no echo is formed.
 \end{itemize}
@@ -626,3 +632,82 @@ In this method, a short pump pulse excites the sample, and a subsequent probe pu
 
 	}
 \fi
+
+
+\todoidea{
+
+1. Things to Shorten
+Your chapter is quite detailed and covers a broad range of spectroscopy topics, which is good for breadth but risks diluting focus on electronic spectroscopy and 2DES. In a thesis context, shorten sections that are peripheral to your work (e.g., not directly tied to electronic transitions or nonlinear optics) or overly verbose, to keep the chapter concise (aim for ~20-30 pages if possible, depending on your formatting). Prioritize shortening where content could be referenced briefly or deferred to later chapters.
+
+Characterization of Electromagnetic Radiation (Subsec. 2.2): This is foundational but lengthy with equations and definitions (e.g., wavenumber vs. wavevector). Shorten by condensing the math (e.g., combine equations or reference them without full derivation) and focusing on relevance to spectroscopy. Keep key points like the distinction between wavenumber and wavevector, but cut redundant explanations (e.g., the "remark on re-emission" paragraph feels tangential).
+
+Classification of Spectroscopic Techniques (Subsec. 2.4): This section is broad and includes rotational/vibrational spectroscopy, which isn't central to your electronic focus. Shorten significantly—reduce examples to 1-2 sentences each and emphasize electronic spectroscopy as the bridge to your thesis. Remove or abbreviate the "energy hierarchy" discussion if it's covered elsewhere.
+
+Energy Dissipation After Absorption (Subsec. 2.5): Useful for open systems, but the detailed pathways (radiative vs. non-radiative) could be shortened. Keep the core idea of relaxation in open quantum systems but trim examples not tied to electronic excitations.
+
+Time Scales in Spectroscopy (Subsec. 2.6): This is a good overview, but shorten the list of time scales and examples. Focus on femtosecond-picosecond ranges relevant to electronic dynamics in biological systems (e.g., microtubules), and cut general chemistry/physics examples.
+
+Macroscopic Samples and Collective Dipolar Oscillations (Subsec. 2.7): Solid for linking to ensemble measurements, but shorten the mathematical derivation of macroscopic polarization. Keep the conceptual link to inhomogeneous broadening and dephasing, as it's key for open systems.
+
+Second-Order Nonlinear Processes (Subsec. 3.2): This is less central to 2DES (which is third-order). Shorten to a brief mention, emphasizing that your work focuses on third-order processes.
+
+Advanced Spectroscopic Methods (Sec. 5): The subsections on Multidimensional Infrared Spectroscopy, Coherent Raman Techniques, and Transient Absorption Spectroscopy are detailed but not directly aligned with electronic 2DES. Shorten or remove them entirely if they're not foundational—e.g., condense Transient Absorption to a paragraph, as it's related but not your core technique. If you keep any, tie them explicitly to electronic analogs.
+
+Heterodyne and Homodyne Detection (Subsec. 4.5): Good, but shorten the detailed equations and comparisons. Focus on why heterodyne is preferred for 2DES phase information.
+
+Applications of Photon Echo Spectroscopy (Subsec. 4.6): This is relevant, but shorten the list of applications. Emphasize biological systems (e.g., photosynthetic complexes as analogs to microtubules) and cut non-electronic examples.
+
+Commented-Out Sections (e.g., Multidimensional Spectroscopy in Structural Biology and Chemistry): These are extensive and seem like drafts. Shorten by integrating key points (e.g., 2D IR as a vibrational analog) into the 2D spectroscopy section, or remove if not essential. The "Summary and Outlook" is too broad—shorten to a brief conclusion linking to your thesis.
+
+Overall shortening goal: Reduce the chapter by ~20-30% by cutting verbose math, general examples, and non-electronic content. This will make it more focused on building toward 2DES and open systems.
+
+2. Regroup / Change Order
+The current order is mostly logical (fundamentals → nonlinear optics → photon echoes → advanced methods), but it could flow better to build directly toward your thesis's focus on electronic 2DES in open quantum systems. Reposition sections to create a clearer narrative: start with basics, escalate to nonlinear/electronic specifics, and end with 2D techniques and biological relevance. This improves coherence and reduces redundancy.
+
+Move "Classification of Spectroscopic Techniques" (Subsec. 2.4) Earlier: Place it right after "Basic Principles" (Subsec. 2.1) to quickly establish why electronic spectroscopy is key for your work. This sets the stage for the rest of the chapter.
+
+Group Nonlinear Optics Sections (Sec. 3) More Tightly: Keep "Linear vs. Nonlinear" first, but merge "Second-Order" and "Third-Order Nonlinear Processes" into one subsection ("Nonlinear Processes") to avoid fragmentation. Emphasize third-order processes early, as they're central to 2DES.
+
+Consolidate Phase-Matching and Phase Cycling (Sec. 3.4-3.6): These are related; combine "Wavevector Phase-Matching Conditions," "Phase-Matching in Four-Wave Mixing," "Rephasing and nonrephasing Signals," and "Phase Cycling" into a single section called "Phase-Matching and Signal Isolation in Nonlinear Spectroscopy." Within it, order as: general phase-matching → FWM specifics → rephasing/nonrephasing → phase cycling. This reduces repetition and builds toward 2D applications.
+
+Reorder Within Photon Echo Spectroscopy (Sec. 4): Start with "Principle of Photon Echo" (keep brief), then "Three-Pulse Photon Echo," and immediately follow with "Two-Dimensional Electronic Spectroscopy" (expand this as your core). Move "Heterodyne and Homodyne Detection" right after "Two-Dimensional Electronic Spectroscopy" to explain detection in the 2D context. End with "Applications," repositioned to emphasize biological systems.
+
+Move "Advanced Spectroscopic Methods" (Sec. 5) to the End: After the core 2D sections, use it as a brief "Related Techniques" section. If shortening removes much of it, integrate relevant parts (e.g., transient absorption as a 1D precursor to 2D) into the photon echo section.
+
+Integrate or Reposition Commented-Out Sections: Move key ideas from "Multidimensional Spectroscopy in Structural Biology and Chemistry" into "Applications of Photon Echo Spectroscopy" or a new subsection on "Biological Applications." This ties directly to microtubules. Place the "Summary and Outlook" as a true conclusion, shortened and focused on your thesis's trajectory.
+
+New Suggested Order:
+
+Fundamentals of Spectroscopy (Sec. 1) – Keep as intro.
+Basic Principles → Classification of Spectroscopic Techniques → Characterization of Electromagnetic Radiation → Energy Dissipation → Time Scales → Macroscopic Samples.
+Nonlinear Optics (Sec. 3) – Linear vs. Nonlinear → Nonlinear Processes → Consolidated Phase-Matching/Signal Isolation.
+Photon Echo Spectroscopy (Sec. 4) – Principle → Three-Pulse → Two-Dimensional Electronic Spectroscopy → Heterodyne/Homodyne → Applications (with biological emphasis).
+Advanced Spectroscopic Methods (Sec. 5) – Shortened, as a coda.
+This creates a logical progression: basics → nonlinear foundations → core 2D techniques → applications to your thesis.
+
+3. Improvements
+To make the chapter a stronger foundation, enhance clarity, relevance, and connections to your thesis. Focus on electronic spectroscopy, open quantum systems (e.g., dephasing, dissipation), and biological contexts (e.g., microtubules as complex open systems). Add transitions between sections for better flow.
+
+Add Thesis-Specific Emphasis: Throughout, weave in connections to open quantum systems (e.g., in "Energy Dissipation," link to Lindblad operators or bath interactions). In "Two-Dimensional Electronic Spectroscopy," explicitly state how 2DES reveals couplings and dynamics in systems like microtubules. Add a forward-looking paragraph in the intro/outro noting how this chapter sets up your modeling work.
+
+Improve Mathematical Rigor and Clarity: Equations are good, but add brief explanations of their relevance (e.g., after Eq. 2.1, note how it applies to electronic transitions). For complex sections like phase cycling, use more figures or diagrams (you already have a TODO for one). Ensure notation consistency (e.g., use 
+𝜔
+ω for angular frequency uniformly).
+
+Enhance Biological Relevance: In "Applications," expand on exciton dynamics in photosynthetic systems as analogs to microtubule coherence. Add a subsection or paragraph on "Towards Biological Systems" at the end, discussing how 2DES can probe quantum effects in cytoskeletal structures.
+
+Strengthen References and Citations: You have many TODOs for refs—prioritize adding them, especially for 2DES and open systems (e.g., cite Mukamel for nonlinear optics, and papers on biological 2DES). Ensure citations align with your thesis's scope.
+
+Improve Flow and Language: Add transitional sentences (e.g., "Building on these fundamentals, we now explore nonlinear optics..."). Use active voice and concise language. Fix minor issues like inconsistent capitalization (e.g., "Rephasing" vs. "rephasing").
+
+Add Figures and Examples: You have a TODO for a figure in phase cycling—add it. Include simple examples (e.g., a toy model of electronic transitions in a two-level system) to illustrate points.
+
+Ensure Conciseness with Depth: After shortening, add depth where needed (e.g., in 2D spectroscopy, briefly discuss how open systems affect lineshapes via inhomogeneous broadening).
+
+Overall Cohesion: End with a strong conclusion summarizing how these principles underpin your thesis's modeling of microtubules. This reinforces the chapter as a foundation.
+
+Implementing these changes will make the chapter more focused, efficient, and directly supportive of your thesis. If you'd like me to help edit specific sections or provide LaTeX code snippets, let me know!
+
+
+
+}

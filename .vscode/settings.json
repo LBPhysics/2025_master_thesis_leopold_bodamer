@@ -78,16 +78,12 @@
     "latex-workshop.latex.autoBuild.run": "onFileChange",
     "latex-workshop.latex.autoClean.run": "onBuilt",
     "latex-workshop.latex.build.clearLog.everyRecipeStep.enabled": false,
-    // ---- LaTeX Formatting (enable latexindent) ----
-    "latex-workshop.formatting.latex": "latexindent",
-    // Absolute path to latexindent to avoid PATH resolution issues
-    "latex-workshop.latexindent.path": "/usr/bin/latexindent",
     // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
         "editor.defaultFormatter": "lenagain.latexindent",
         "editor.formatOnSave": true,
         "editor.wordWrap": "bounded",
-        "editor.wordWrapColumn": 80
+        "editor.wordWrapColumn": 100
     },
     "[bibtex]": {
         "editor.defaultFormatter": "James-Yu.latex-workshop"
