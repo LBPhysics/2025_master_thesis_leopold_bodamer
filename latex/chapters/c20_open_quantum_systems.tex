@@ -9,64 +9,69 @@
 \section{Introduction to Open Quantum Systems}
 \label{sec:introduction_open_quantum_systems}
 
-Any real-world quantum system is not perfectly isolated. Instead, it interacts with its surrounding environment. Unlike theoretical closed quantum systems that evolve unitarily according to the Schrödinger equation, open quantum systems experience non-unitary evolution due to their coupling with an external environment or reservoir.
-Whenever the system is driven out of equilibrium by external perturbations, this coupling makes the system relax back to equilibrium.
-\subsection{What are Open Quantum Systems?}
-Open quantum systems are quantum systems that interact with an external environment, often called a "bath," which typically has infinite degrees of freedom and is usually assumed to be in thermal equilibrium~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}. This interaction leads to several fundamental phenomena that distinguish open systems from isolated, closed quantum systems.
+Any real-world quantum system is not perfectly isolated. Instead, it interacts with its surrounding environment. This also happens in the most shielded experiments, at least to some degree. Unlike theoretical closed quantum systems that evolve unitarily according to the well known Schrödinger equation 
 
-A central effect is \textbf{decoherence}, where quantum superposition states lose their phase relationships due to entanglement with the environment (\textbf{dephasing}). As a result, pure quantum states evolve into classical statistical mixtures, and the system's ability to exhibit quantum interference is diminished. The characteristic time scale for this process, known as the \emph{coherence time}, is of utmost importance in experiments, especially in high-resolution spectroscopy, quantum information processing, and quantum optics. For example, in two-dimensional electronic spectroscopy, the coherence time determines the ability to resolve quantum beats and thus extract information about energy transfer pathways in complex molecular systems~\cite{mukamel1995principlesnonlinearoptical}.
-
-In addition to dephasing, the system-environment interaction leads to \textbf{dissipation} or \textbf{thermalization}, where energy is exchanged between the system and its surroundings, causing the system to relax toward a thermal state determined by the environment's temperature.
-
-Understanding and controlling these effects is crucial for the design of quantum technologies, such as quantum computers and sensors, where environmental noise can rapidly destroy fragile quantum states~\cite{laddetal2010quantumcomputers}.  \todoref{find better reference}.%schlosshauer2007decoherencebook?, 
-
-In summary, open quantum systems theory provides the framework to describe how quantum systems lose their "quantumness" and transition toward classical behavior due to unavoidable interactions with their environment.
-
-\subsection{Origins and Physical Motivation}
-
-Open quantum systems theory emerges naturally from the realization that perfect isolation of quantum systems is practically impossible; every quantum system in nature interacts with its environment to some degree. For instance, atoms are subject to electromagnetic field fluctuations (vacuum fluctuations)~\cite{breuerpetruccione2009theoryopenquantum}, quantum dots in solid-state environments couple to phonon baths~\cite{weiss2012quantumdissipativesystems}, and molecular systems interact with surrounding solvent molecules~\cite{mukamel1995principlesnonlinearoptical}. Quantum computers are particularly sensitive to environmental noise, which can rapidly destroy quantum coherence~\cite{laddetal2010quantumcomputers}, while biological quantum systems such as photosynthetic complexes operate in inherently noisy cellular environments.%~ \todoref{schlosshauer2007decoherencebook}. 
-These diverse scenarios all require a theoretical framework that accounts for the coexistence of quantum effects and environmental influences.
-
-
-\subsection{Theoretical Approaches}
-
-A variety of theoretical frameworks have been developed to describe the dynamics of open quantum systems, each with its own range of validity and underlying assumptions. The most important distinction among these approaches is whether they assume \textbf{Markovian} or \textbf{non-Markovian} dynamics.
-
-\subsubsection{Markovian vs. Non-Markovian Dynamics}
-\label{subsec:markovian_nonmarkovian}
+\begin{equation}
+	i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = H(t) |\psi(t)\rangle ,
+	\label{eq:SchrödingerEquation}
+\end{equation}
 
 \noindent
-\textbf{Markovian dynamics} assume that the environment has no memory: the future evolution of the system depends only on its present state, not on its past history. This is valid when the environmental correlation time is much shorter than the system's characteristic timescale. In contrast, \textbf{non-Markovian dynamics} account for memory effects, where the environment retains information about the system's past, leading to feedback and more complex evolution~\cite{breuerpetruccione2009theoryopenquantum, rivasetal2014quantumnonmarkovianitycharacterization}.
+open quantum systems experience non-unitary evolution due to their coupling with an external environment or reservoir.
+Whenever the system is driven by external perturbations, this coupling makes the system relax back to the equilibrium defined by this environment ~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}.
+Open quantum systems theory emerges naturally from this realization, that perfect isolation of a quantum systems is practically impossible. For instance, atoms are subject to electromagnetic field fluctuations (vacuum fluctuations)~\cite{breuerpetruccione2009theoryopenquantum}, quantum dots in solid-state environments couple to phonon baths~\cite{weiss2012quantumdissipativesystems}, and molecular systems interact with surrounding solvent molecules~\cite{mukamel1995principlesnonlinearoptical}. Quantum computers are particularly sensitive to environmental noise, which can rapidly destroy quantum coherence~\cite{laddetal2010quantumcomputers}, while biological quantum systems such as photosynthetic complexes operate in inherently noisy cellular environments. \todoref{schlosshauer2007decoherencebook}. 
+These diverse scenarios all require a theoretical framework that accounts for the coexistence of quantum effects and environmental influences.
+
+\subsection{Central concepts}
+The interaction with the environment leads to several fundamental phenomena that distinguish open systems from isolated, closed quantum systems.
+
+\noindent
+A central effect is \textbf{decoherence}, where quantum superposition states lose their phase relationships due to entanglement with the environment (\textbf{dephasing}). As a result, pure quantum states evolve into classical statistical mixtures, and the system's ability to exhibit quantum interference is diminished. The characteristic time scale for this process, known as the \emph{coherence time}, is of utmost importance in experiments, especially in high-resolution spectroscopy, quantum information processing, and quantum optics.
+
+\noindent
+In addition to dephasing, the system-environment interaction leads to \textbf{dissipation} or \textbf{thermalization}, where energy is exchanged between the system and its surroundings, causing the system to relax toward a thermal state determined by the environment's temperature.
+
+\noindent
+Understanding and controlling these effects is crucial for the design of quantum technologies, such as quantum computers and sensors, where environmental noise can rapidly destroy fragile quantum states~\cite{laddetal2010quantumcomputers}.  \todoref{find better ref schlosshauer2007decoherencebook}
+
+\noindent
+In summary, open quantum systems theory provides the framework to describe how quantum systems lose their "quantumness" and transition toward classical behavior due to unavoidable interactions with their environment.
+
 
 \subsubsection{Overview of Main Approaches}
+\label{subsec:overview_main_approaches_oqs}
+
+\noindent
+A variety of theoretical frameworks have been developed to describe the dynamics of open quantum systems, each with its own range of validity and underlying assumptions. Some are presented here:
+
+\noindent
+In \textbf{Markovian dynamics} it is assumed that the environment has no memory: the future of the system depends only on its present state. This is valid when the environmental correlation time is much shorter than the system's characteristic timescale \todoref{find reference}. 
+
+\todoidea{Maybe not needed:} 
+\noindent
+In contrast, in \textbf{non-Markovian dynamics} the memory effects of the environment are taken into account. The environment retains information about the system's past, leading to feedback and more complex evolution~\cite{breuerpetruccione2009theoryopenquantum, rivasetal2014quantumnonmarkovianitycharacterization}.
+\noindent
+In Time-convolutionless and Nakajima–Zwanzig master equations memory kernels describe such effects~\cite{breuerpetruccione2009theoryopenquantum, rivasetal2014quantumnonmarkovianitycharacterization}. The hierarchical equations of motion (HEOM) provide a numerically exact framework for strong coupling and non-Markovian, condensed-phase environments like liquids or solids~\cite{tanimura2020numericallyexactapproach}. This is the most computationally expensive method. Also Path-integral methods can be noted. They are based on the Feynman–Vernon influence functional and offer a non-perturbative route to non-Markovian dynamics~\cite{weiss2012quantumdissipativesystems}.
+
 
 \paragraph{Stochastic Approaches}
 
 \noindent
-Stochastic Schrödinger equations and quantum trajectories unravel master equations into individual pure state evolutions, clarifying measurement backaction and quantum jumps~\cite{vogtetal2013stochasticblochredfieldtheory, breuerpetruccione2009theoryopenquantum, carmichael1993opensystemsapproach}.
-
-\paragraph{Non-Markovian Approaches}
-
-\noindent
-Time-convolutionless and Nakajima–Zwanzig master equations introduce memory kernels to describe non-Markovian effects~\cite{breuerpetruccione2009theoryopenquantum, rivasetal2014quantumnonmarkovianitycharacterization}. The hierarchical equations of motion (HEOM) provide a numerically exact framework for strong coupling and non-Markovian, condensed-phase environments like liquids or solids~\cite{tanimura2020numericallyexactapproach}. This is the most computationally expensive method. Path-integral methods based on the Feynman–Vernon influence functional offer a non-perturbative route to non-Markovian dynamics~\cite{weiss2012quantumdissipativesystems}.
+Stochastic Schrödinger equations and quantum trajectories unravel master equations into individual pure state evolutions ~\cite{vogtetal2013stochasticblochredfieldtheory, breuerpetruccione2009theoryopenquantum, carmichael1993opensystemsapproach}. These methods are particularly useful for simulations, as the desired precision decides the number of trajectories needed.
 
 \paragraph{Master Equation Approaches}
 
 \noindent
-The Lindblad master equation (Markovian) gives a general form for completely positive, trace-preserving dynamics under the Markov approximation and is widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}. The Redfield equation (Markovian but not always CPTP) follows from a microscopic Born–Markov derivation, captures dissipation and dephasing, and does not guarantee complete positivity~\cite{redfield1965theoryrelaxationprocesses, rivasetal2014quantumnonmarkovianitycharacterization, lietal2018conceptsquantumnonmarkovianity}.
-\todoidea{explain why we choose the Redfield equation for this thesis ->  it represents the best compromise between accuracy and computational efficiency for our systems of interest.}
+The Lindblad master equation (Markovian) gives a general form for completely positive, trace-preserving dynamics under the Markov approximation and is widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}. 
+This thesis is focussed on using a more general master equation—the Redfield equation. It will be derived in the next section \ref{sec:Derivation_redfield_eq}.
 
 
 \subsection{The Redfield Equation: A Central Tool}
 
-\noindent
-Among the various master equation approaches to open quantum systems, the Redfield equation occupies a particularly important position due to its microscopic foundation and broad applicability~\cite{redfield1965theoryrelaxationprocesses, breuerpetruccione2009theoryopenquantum}.
-Unlike phenomenological approaches that introduce dissipation and dephasing \emph{ad hoc}, the Redfield formalism derives these effects directly from the microscopic Hamiltonian of the total system~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems} and
-relates them to environmental correlation functions or spectral densities.
 Originally developed by A.G. Redfield in 1957 and 1965 for nuclear magnetic resonance relaxation phenomena~\cite{redfield1965theoryrelaxationprocesses}, the Redfield equation describes the time evolution of the reduced density matrix of a quantum system weakly coupled to a thermal environment.
 
 \noindent
-However, it is important to note that the Redfield equation, while preserving trace and Hermiticity, does not guarantee complete positivity of the density matrix—a fundamental requirement for physical quantum states~\cite{rivasetal2010markovianmasterequations}. This limitation restricts its validity to the weak-coupling regime and requires careful analysis of its applicability in specific physical situations. In practice, the Redfield approach assumes weak system--environment coupling (Born, small $\alpha$) and a bath correlation time much shorter than system time scales (Markov).
+Unlike phenomenological approaches that introduce dissipation and dephasing \emph{ad hoc}, the Redfield equation relates them to environmental correlation functions or spectral densities ~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}.
 
 \noindent
 The following requirements must be fulfilled by the final derived Redfield equation:
@@ -77,9 +82,9 @@ The following requirements must be fulfilled by the final derived Redfield equat
 	\item The equation should be trace-preserving, meaning that $\mathrm{Tr}[\rho_S(t)] = \mathrm{Tr}[\rho_S(0)]$ for all times $t$.
 \end{enumerate}
 
-\noindent
-Unlike the Lindblad equation, the Redfield equation does not guarantee the complete positivity of the density matrix, which is a requirement for a physical state. Care must be taken when determining when the Redfield equation is useful. The equation will be valid in the weak coupling limit, meaning that the coupling strength in the interaction Hamiltonian fulfills $\alpha \ll 1$.
-
+It is important to note that the Redfield equation, while preserving trace and Hermiticity, does not guarantee complete positivity of the density matrix—a fundamental requirement for physical quantum states~\cite{rivasetal2010markovianmasterequations}. 
+So care must be taken when determining when the Redfield equation is useful ~\cite{redfield1965theoryrelaxationprocesses, rivasetal2014quantumnonmarkovianitycharacterization, lietal2018conceptsquantumnonmarkovianity}.
+\todoidea{explain why we choose the Redfield equation for this thesis, despite the limitations ->  it represents the best compromise between accuracy and computational efficiency for our systems of interest. -> Mostly used in biological systems and quantum chemistry}
 
 
 \noindent
@@ -93,12 +98,37 @@ In this section, we will derive the Redfield equation starting from the fundamen
 \label{sec:Derivation_redfield_eq}
 
 \noindent
-This derivation follows the approach presented in \cite{manzano2020shortintroductionlindblad} and can also be found in standard textbooks such as Breuer and Petruccione \cite{breuerpetruccione2009theoryopenquantum}.
+This derivation follows the approach presented in \cite{manzano2020shortintroductionlindblad} and can also be found in standard textbooks such as Breuer and Petruccione \cite{breuerpetruccione2009theoryopenquantum}. \todoidea{However here we will be more detailed and explicit in the steps.}
+
+\subsection{Mathematical Preliminaries}
+\label{subsec:preliminaries_tools}
+
+First we need a few mathematical tools and definitions that will be used in the derivation.
+\noindent
+\paragraph{Partial trace.}
+
+\noindent
+For a bipartite Hilbert space $\mathcal{H_A} \otimes \mathcal{H_B}$, the partial trace over $\mathcal{H_B}$ is the unique linear map $\mathrm{Tr}_B: \mathcal{B}_1(\mathcal{H_A} \otimes \mathcal{H_B}) \to \mathcal{B}_1(\mathcal{H_A})$ satisfying $\mathrm{Tr}[(\mathrm{Tr}_B X) A] = \mathrm{Tr}[X (A \otimes I_B)]$ for all $A \in \mathcal{B}(\mathcal{H_A})$, where $\mathcal{B}_1$ denotes trace-class operators. This ensures expectation values of local observables $A \otimes I_B$ are preserved. In an orthonormal basis $\{|b_i\rangle\}$ of $\mathcal{H_B}$, it acts as \cite{problemssolutionsquantum}:
+
+\begin{equation} \label{eq:ho_partial_trace_definition}
+	\mathrm{Tr}_B X = \sum_i (I_A \otimes \langle b_i|) \, X \, (I_A \otimes |b_i\rangle).
+\end{equation}
+
+\noindent
+With this definition thermal expectation values take the form
+
+\begin{equation} \label{eq:ho_expectation_value} \langle A \rangle = \mathrm{Tr}[\rho A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn}
+\end{equation}
+
+\begin{equation} \label{eq:ho_beta_definition}
+	\beta = \frac{1}{k_{\mathrm{B}} T}
+\end{equation}
+
 
 \subsection{Setup: System + Environment}
 
 \noindent
-We consider a quantum system of interest interacting with a larger environment. The total system Hilbert space $\mathcal{H}_T$ is the tensor product of the system Hilbert space $\mathcal{H}_S$ and the environment Hilbert space $\mathcal{H}_E$:
+We consider a quantum system of interest interacting with an environment, which has infinite degrees of freedom. The total Hilbert space $\mathcal{H}_T$ is the tensor product of the Hilbert of the system $\mathcal{H}_S$ and the one of the environment $\mathcal{H}_E$:
 
 \begin{equation}
 	\mathcal{H}_T = \mathcal{H}_S \otimes \mathcal{H}_E.
@@ -114,10 +144,14 @@ The evolution of the total system is governed by the Liouville–von Neumann equ
 \end{equation}
 
 \noindent
-where $\rho_T(t)$ is the density matrix of the total system, $H_T$ is the total Hamiltonian, and we use units where $\hbar = 1$.
+where $\rho_T(t)$ is the density matrix of the total system, $H_T$ is the total Hamiltonian, and we use units where $\hbar = 1$. This is the correspondence of the Schrödinger equation Eq.\eqref{eq:SchrödingerEquation} for more general classically mixed states 
+
+\begin{equation}
+	\rho = \sum_i p_i |\psi_i\rangle \langle \psi_i|, \quad p_i \geq 0, \quad \sum_i p_i = 1.
+\end{equation}
 
 \noindent
-The total Hamiltonian can be decomposed as:
+Without loss of generality, the total Hamiltonian $H_T \in \mathcal{B}(\mathcal{H}_T)$ can be decomposed as:
 
 \begin{equation}
 	H_T = H_S \otimes \mathds{1}_E + \mathds{1}_S \otimes H_E + \alpha H_I,
@@ -125,7 +159,7 @@ The total Hamiltonian can be decomposed as:
 \end{equation}
 
 \noindent
-where $H_S$ and $H_E$ act on $\mathcal{H}_S$ and $\mathcal{H}_E$, respectively, while $H_I$ acts on the composite space $\mathcal{H}_T$ (system--environment interaction). The dimensionless $\alpha$ is the coupling strength parameter.
+where $H_S$ and $H_E$ act on the individual Hilbert spaces $\mathcal{H}_S$ and $\mathcal{H}_E$, respectively, while $H_I$ acts on the composite space $\mathcal{H}_T$ (system--environment interaction). The dimensionless parameter $\alpha$ is the coupling strength parameter.
 
 \noindent The interaction Hamiltonian is typically written in the form:
 
@@ -135,7 +169,7 @@ where $H_S$ and $H_E$ act on $\mathcal{H}_S$ and $\mathcal{H}_E$, respectively, 
 \end{equation}
 
 \noindent
-where $S_i$ are system operators and $E_i$ are environment operators.
+where $S_i$ are system operators and $E_i$ are environment operators. These will be concretized later in Sec.~\ref{sec:harmonic_oscillator_bath_correlation_functions}.
 
 \subsection{Reduced Dynamics and Approximations}
 
@@ -463,123 +497,174 @@ which ensures that upward and downward transition rates obey Boltzmann ratios.
 
 \noindent
 Emission and absorption are both automatically included because $S_{ij}(\omega)$ contains positive- and negative-frequency components related by Eq.~\eqref{eq:kms_spectral_relation}. Positive frequencies ($\omega>0$) describe system energy loss (emission), while negative frequencies ($\omega<0$) describe system energy gain (absorption). Detailed balance follows immediately: the ratio of absorption to emission contributions at frequency $\omega>0$ is $e^{-\hbar \omega/(k_{\mathrm{B}}T)}$. For a single bosonic bath with scalar spectral density $J(\omega)$ (defined for $\omega>0$) one often writes the symmetrized spectrum
+
 \begin{equation}
 	S(\omega) = 2\pi J(|\omega|) \begin{cases} n_{\text{th}}(\omega)+1, & \omega>0, \\ n_{\text{th}}(|\omega|), & \omega<0, \end{cases}
 	\label{eq:bose_symmetric_spectrum}
 \end{equation}
+
+\noindent
 with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\hbar\omega/(k_{\mathrm{B}}T)}-1\big)^{-1}$, explicitly exhibiting stimulated plus spontaneous emission $(n_{\text{th}}+1)$ versus absorption $(n_{\text{th}})$~\cite{weiss2012quantumdissipativesystems}. This formulation makes clear how both processes and their thermal weighting emerge from a single function.
+
 
 %------------------------------------------------------------------------------
 % SECTION 4: Harmonic Oscillator Bath and Correlation Functions
 %------------------------------------------------------------------------------
-
 \section{Harmonic Oscillator Baths and Explicit Correlation Functions}
-\label{sec:harmonic_oscillator_bath_correlation_functions}
+\label{subsec:microscopic_bath_correlator}
+Also to do these explicit calculations, we will need the following mathematical result.
+\paragraph{Geometric series.}
+The infinite geometric series
 
-We now specialize the formal correlation functions introduced above to the paradigmatic and widely applicable case of a bosonic (harmonic oscillator) environment. Rather than opening a separate chapter, we integrate here the full derivation of thermal correlation functions, spectral density representations, and standard phenomenological models (Ohmic, sub-/super-Ohmic, Drude--Lorentz). This material corresponds to the (former) standalone chapter on bath correlation functions and harmonic oscillator environments.
-
-\subsection{Mathematical Preliminaries}
-\label{subsec:preliminaries_tools}
-Two simple infinite series and trace properties are repeatedly used. The infinite geometric series
 \begin{equation} \label{eq:ho_infinite_geometric_series}
 	S = a + ar + ar^2 + ar^3 + \dots = \sum_{n=0}^{\infty} ar^n,
 \end{equation}
-converges for $|r|<1$ to
+
+\noindent
+converges to
+
 \begin{equation} \label{eq:ho_geometric_series_sum}
-	S = \frac{a}{1-r}.
+	S = \frac{a}{1-r} \quad \text{for } |r|<1.
 \end{equation}
+
+\noindent
 Differentiating Eq.~\eqref{eq:ho_geometric_series_sum} with respect to $r$ gives
+
 \begin{equation} \label{eq:ho_derivation_geometric_sum}
 	\sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad |r|<1.
 \end{equation}
 
-For a bipartite Hilbert space $A\otimes B$ the partial trace over $B$ defines the reduced state of $A$:
-\begin{equation} \label{eq:ho_partial_trace}
-	\rho_A = \mathrm{Tr}_B[\rho_{AB}],
-\end{equation}
-with the action on a basis element given by
-\begin{equation} \label{eq:ho_partial_trace_definition}
-	\mathrm{Tr}_B\big[\,| a_i \rangle \langle a_j | \otimes | b_k \rangle \langle b_l |\,\big] = | a_i \rangle \langle a_j | \, \delta_{kl}.
-\end{equation}
-Thermal expectation values follow from
-\begin{equation} \label{eq:ho_expectation_value} \langle A \rangle = \mathrm{Tr}[\rho A] = \frac{1}{Z} \sum_n e^{-\beta E_n} A_{nn}
-\end{equation}
-\begin{equation} \label{eq:ho_beta_definition}
-	\beta = \frac{1}{k_{\mathrm{B}} T}
-\end{equation}
+
+
+\noindent
+We now specialize the formal correlation functions introduced above to the paradigmatic and widely applicable case of a bosonic (harmonic oscillator) environment. Rather than opening a separate chapter, we integrate here the full derivation of thermal correlation functions, spectral density representations, and standard phenomenological models (Ohmic, sub-/super-Ohmic, Drude--Lorentz). This material corresponds to the (former) standalone chapter on bath correlation functions and harmonic oscillator environments.
+
+
 \subsection{Bosonic Environment and Gibbs State}
 \label{subsec:bosonic_environment_gibbs}
+
+\noindent
 A bosonic bath is modeled as a (large) collection of independent harmonic oscillators in thermal equilibrium:
+
 \begin{equation} \label{eq:ho_gibbs_state}
 	\rho = \frac{e^{-\beta H}}{\mathrm{Tr}[e^{-\beta H}]}, \qquad H=\sum_k \hbar \omega_k \Big(b_k^{\dagger} b_k + \tfrac{1}{2}\Big), \qquad E_k = \hbar \omega_k (n_k + \tfrac{1}{2}),
 \end{equation}
+
+\noindent
 with $n_k = \langle b_k^{\dagger} b_k \rangle$ the occupation number.
+
 
 \subsection{Single Mode Partition Function and Occupation}
 \label{subsec:single_mode}
+
+\noindent
 For a single mode ($H=\hbar \omega b^{\dagger} b$) the thermal state reads
+
 \begin{equation} \label{eq:ho_single_mode_density_matrix}
 	\rho = \frac{e^{-\beta \hbar \omega b^{\dagger} b}}{Z},
 \end{equation}
+
+\noindent
 with partition function
+
 \begin{align} \label{eq:ho_partition_function}
 	Z & \equiv \mathrm{Tr}[e^{-\beta H}] = \sum_{m=0}^{\infty} e^{-\beta \hbar \omega (m+1/2)} = \frac{e^{-\beta \hbar \omega/2}}{1 - e^{-\beta \hbar \omega}}.
 \end{align}
+
+\noindent
 The Bose--Einstein average occupation number follows using Eq.~\eqref{eq:ho_derivation_geometric_sum}:
+
 \begin{align} \label{eq:ho_expectation_number_operator}
 	n & = \langle b^{\dagger} b \rangle_{\text{th}} = \frac{\sum_{m=0}^{\infty} m e^{-\beta \hbar \omega m}}{\sum_{m=0}^{\infty} e^{-\beta \hbar \omega m}} = \frac{e^{-\beta \hbar \omega}}{1-e^{-\beta \hbar \omega}} = \frac{1}{e^{\beta \hbar \omega}-1}.
 \end{align}
+
+\noindent
 For many modes the total partition function factorizes:
+
 \begin{equation} \label{eq:ho_generalized_partition_function}
 	Z_{\text{bath}} = \prod_k \frac{e^{-\beta \hbar \omega_k /2}}{1 - e^{-\beta \hbar \omega_k}}.
 \end{equation}
 
+
 \subsection{Microscopic Form of the Bath Correlator}
 \label{subsec:microscopic_bath_correlator}
+
+\noindent
 With linear system--bath coupling to oscillator displacements (Caldeira--Leggett model \cite{hagstrommorrison2011caldeiraleggettmodel}) we write
+
 \begin{equation} \label{eq:ho_bath_operator}
 	B = \sum_{n=1}^{\infty} c_n x_n, \qquad x_n = \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^{\dagger}).
 \end{equation}
+
+\noindent
 Time evolution gives
+
 \begin{align}
 	B(0)    & = \sum_{n} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^{\dagger}), \label{eq:ho_bath_operator_t0}                                                   \\
 	B(\tau) & = \sum_{n} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \Big(b_n e^{-i \omega_n \tau} + b_n^{\dagger} e^{i \omega_n \tau}\Big). \label{eq:ho_bath_operator_tau}
 \end{align}
+
+\noindent
 The thermal correlation function (single relevant bath operator case) is
+
 \begin{equation} \label{eq:ho_bath_correlator}
 	C(\tau) = \langle B(\tau) B(0) \rangle.
 \end{equation}
+
+\noindent
 Using $\langle b_n b_m^{\dagger} \rangle = \delta_{nm}(n_n+1)$ and $\langle b_n^{\dagger} b_m \rangle = \delta_{nm} n_n$ with $n_n$ given by Eq.~\eqref{eq:ho_expectation_number_operator}, we obtain
+
 \begin{equation} \label{eq:ho_correlator_result}
 	C(\tau) = \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \Big[(n_n+1) e^{-i \omega_n \tau} + n_n e^{i \omega_n \tau}\Big].
 \end{equation}
 
+
 \subsection{Spectral Density Representation}
 \label{subsec:ho_spectral_density}
+
+\noindent
 Introduce the (discrete) spectral density
+
 \begin{equation} \label{eq:ho_bath_spectral_density}
 	J(\omega) = \pi \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n),
 \end{equation}
+
+\noindent
 so Eq.~\eqref{eq:ho_correlator_result} becomes
+
 \begin{equation} \label{eq:ho_correlator_spectral_density}
 	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \Big[(n(\omega)+1)e^{-i \omega \tau} + n(\omega) e^{i \omega \tau}\Big],
 \end{equation}
+
+\noindent
 where $n(\omega)= (e^{\beta \hbar \omega}-1)^{-1}$.
+
 
 \subsection{Continuum Limit}
 \label{subsec:continuum_limit}
+
+\noindent
 In the macroscopic limit the mode set becomes dense; introducing a density of states $\rho(\omega)$ and form factor $g(\omega)$ yields $J(\omega)=\rho(\omega) g(\omega)^2$. Using symmetry relations one can recast Eq.~\eqref{eq:ho_correlator_spectral_density} in the standard form
+
 \begin{equation} \label{eq:ho_correlator_final}
 	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \left[ \coth\Big(\frac{\beta \hbar \omega}{2}\Big) \cos(\omega \tau) - i \sin(\omega \tau) \right],
 \end{equation}
+
+\noindent
 which separates purely dissipative (imaginary) and noise (real, symmetrized) parts.
+
 
 \subsection{Ohmic and Related Spectral Densities}
 \label{subsec:ohmic_spectral_density}
+
+\noindent
 A widely used phenomenological family is
+
 \begin{equation} \label{eq:ho_ohmic_spectral_density}
 	J(\omega) = \gamma \, \frac{\omega^{s}}{\omega_c^{s-1}} e^{-\omega/\omega_c},
 \end{equation}
+
+\noindent
 with dimensionless coupling $\gamma$, cutoff frequency $\omega_c$ and exponent $s$ distinguishing Ohmic ($s=1$), sub-Ohmic ($s<1$), and super-Ohmic ($s>1$) cases~\cite{weiss2012quantumdissipativesystems, lambertetal2024qutip5quantum}. The low-frequency linear scaling $J(\omega) \propto \omega$ (Ohmic) underpins frequency-independent damping in many coarse-grained models; the high-frequency cutoff enforces convergence of integrals such as Eq.~\eqref{eq:ho_correlator_final}.
 
 \iffalse

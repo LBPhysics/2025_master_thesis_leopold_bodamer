@@ -80,13 +80,8 @@
     "latex-workshop.latex.build.clearLog.everyRecipeStep.enabled": false,
     // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
-        "editor.defaultFormatter": "lenagain.latexindent",
-        "editor.formatOnSave": true,
         "editor.wordWrap": "bounded",
         "editor.wordWrapColumn": 100
-    },
-    "[bibtex]": {
-        "editor.defaultFormatter": "James-Yu.latex-workshop"
     },
     // ---- Hiding Build/Temporary Files from the Explorer ----
     // This is crucial for keeping the project view clean for everyone.
