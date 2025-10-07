@@ -78,6 +78,8 @@
     "latex-workshop.latex.autoBuild.run": "onFileChange",
     "latex-workshop.latex.autoClean.run": "onBuilt",
     "latex-workshop.latex.build.clearLog.everyRecipeStep.enabled": false,
+    "latex-workshop.formatting.latex": "tex-fmt",
+    "latex-workshop.formatting.tex-fmt.path": "/home/leopold/Projects/2025_master_thesis_latex_leopold_bodamer/.venv/bin/tex-fmt",
     // ---- Language-Specific Formatting Rules for Consistency ----
     "[latex]": {
         "editor.wordWrap": "bounded",

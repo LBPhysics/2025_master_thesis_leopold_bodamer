@@ -221,13 +221,14 @@
 % \newcommand{\univname}{\univone\\ \univtwo} % Alternative for both universities
 
 \NewDocumentCommand{\department}{m}{\newcommand{\deptname}{#1}}
-
 \NewDocumentCommand{\departmenttwo}{m}{\newcommand{\depttwo}{#1}}
 
 \NewDocumentCommand{\group}{m}{\newcommand{\groupname}{#1}}
-
 \NewDocumentCommand{\grouptwo}{m}{\newcommand{\grouptwoname}{#1}}
+
 \NewDocumentCommand{\faculty}{m}{\newcommand{\facname}{#1}}
+\NewDocumentCommand{\facultytwo}{m}{\newcommand{\factwoname}{#1}}
+
 \NewDocumentCommand{\subject}{m}{\newcommand{\subjectname}{#1}}
 \NewDocumentCommand{\keywords}{m}{\newcommand{\keywordnames}{#1}}
 
