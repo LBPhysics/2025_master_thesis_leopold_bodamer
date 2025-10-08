@@ -63,10 +63,11 @@ Stochastic Schrödinger equations and quantum trajectories unravel master equati
 
 \noindent
 The Lindblad master equation gives the most general form for completely positive, trace-preserving dynamics under the Born-Markov approximation and is widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}.
-This thesis is focussed on using a more general master equation—the Redfield equation. It will be derived in the next section \ref{sec:Derivation_redfield_eq}.
+This thesis is focussed on using a more general master equation—the Redfield equation. It will be derived in the next section \ref{subsec:Derivation_redfield_eq}.
 
 
-\subsection{The Redfield Equation: A Central Tool}
+\section{The Redfield Equation: A Central Tool}
+\label{sec:Redfield_eq}
 
 Originally developed by A.G. Redfield in 1957 and 1965 for nuclear magnetic resonance relaxation phenomena~\cite{redfield1965theoryrelaxationprocesses}, the Redfield equation describes the time evolution of the reduced density matrix of a quantum system weakly coupled to a thermal environment.
 
@@ -93,15 +94,14 @@ In this section, we will derive the Redfield equation starting from the fundamen
 %------------------------------------------------------------------------------
 %	SECTION 2: Derivation of the Redfield Equation
 %------------------------------------------------------------------------------
-
-\section{Derivation from Microscopic Dynamics}
-\label{sec:Derivation_redfield_eq}
+\subsection{Derivation from Microscopic Dynamics}
+\label{subsec:Derivation_redfield_eq}
 
 \noindent
 This derivation follows the approach presented in \cite{manzano2020shortintroductionlindblad} and can also be found in standard textbooks such as Breuer and Petruccione \cite{breuerpetruccione2009theoryopenquantum}. \todoidea{However here we will be more detailed and explicit in the steps.}
 
-\subsection{Mathematical Preliminaries}
-\label{subsec:preliminaries_tools}
+\subsubsection{Mathematical Preliminaries}
+\label{subsubsec:preliminaries_tools}
 
 First we need a few mathematical tools and definitions that will be used in the derivation.
 \noindent
@@ -242,7 +242,7 @@ which is now local in $\hat{\rho}_T(t)$ (but still retains an explicit upper int
 The exact equation of motion for $\rho(t)$ involves the full many-body dynamics of the environment, which is generally intractable. Thats why the next step is to trace out the environmental degrees of freedom.
 
 
-\subsection{Reduced Dynamics and Markovian Approximation}
+\subsection{Reduced Dynamics and Born-Markov Approximations}
 
 \noindent
 Since we are interested in the dynamics of the system alone, we define the reduced density matrix using the partial trace operation defined in Eq.~\eqref{eq:ho_partial_trace_definition}:
@@ -387,11 +387,6 @@ and thus finally obtain the desired form of the Redfield equation
 	\label{eq:Redfield_Equation_Non_Markovian}
 \end{align}
 
-\noindent
-For additionally having a stationary bath, $[H_E, \rho_E(0)]=0$, so in the interaction picture $\hat{\rho}_E(t)=\hat{\rho}_E(0)=\rho_E(0)$ the correlators depend only on the time difference $\tau= t - s$ since one operator, e.g. $\hat{E}_{i}$ can always be written as $\hat{E}_{i}(0) = e^{-i H_E t} \hat{E}_i(t) e^{+i H_E t}$. So here we have the useful condition:
-\begin{equation}
-	C^{*}_{ii'}(-\tau) = C_{ii'}(\tau).
-\end{equation}
 
 \vspace{1em}
 \noindent
@@ -416,6 +411,53 @@ Applying this rule to Eq.~\eqref{eq:Partial_Trace_Derivation} yields the \emph{t
 
 \noindent
 This step encapsulates the loss of memory: the generator now includes a very short time window $\tau_E$ where the system operators can be approximated as constant (frozen at time $\rho_S(t)$).
+
+
+%------------------------------------------------------------------------------
+%	SECTION 3: Environmental Correlation Functions and Spectral Properties  
+%------------------------------------------------------------------------------
+\section{Environmental Correlation Functions and Spectral Properties}
+\label{sec:environmental_correlation_functions}
+
+\noindent
+Having derived the Redfield equation, we now focus on a crucial ingredient: the characterization of the environment through its correlation functions and spectral densities, which encode how environmental fluctuations drive relaxation and dephasing~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}. These objects translate the abstract operator structure in Eq.~\eqref{eq:Redfield_Markov_TimeLocal} into calculable quantities and connect the microscopic bath model to experimentally accessible spectra.
+
+\noindent
+The bath correlation functions (defined by Eq.~\eqref{eq:Environment_Correlation_Function}) determine both the strength and characteristic time scales of the system--environment interaction and bridge quantum and classical noise descriptions. In what follows we show how they arise, state their properties, introduce their Fourier (spectral) representation, and explain how emission and absorption processes are simultaneously encoded.
+
+
+\noindent
+\todoidea{Already included? The function typically decays on the bath correlation time $\tau_E$, a prerequisite for the Markov approximation when $\tau_E$ is much shorter than the relevant system evolution time scales.}
+
+\noindent
+For additionally having a stationary bath, $[H_E, \rho_E(0)]=0$, so in the interaction picture $\hat{\rho}_E(t)=\hat{\rho}_E(0)=\rho_E(0)$ the correlators depend only on the time difference $\tau= t - s$ since one operator, e.g. $\hat{E}_{i}$ can always be written as $\hat{E}_{i}(0) = e^{-i H_E t} \hat{E}_i(t) e^{+i H_E t}$. So here we have the useful condition:
+\begin{equation}
+	C^{*}_{ii'}(-\tau) = C_{ii'}(\tau).
+\end{equation}
+
+
+\subsection{Spectral Density and Fourier Representation}
+\label{subsec:spectral_density_representation}
+
+\noindent
+For a stationary, thermal bath, where its state is given by the Gibbs state (see Sec.~\ref{subsec:bosonic_environment_gibbs}), the Kubo--Martin--Schwinger (KMS) in time domain  correlation function and its complex conjugate being related by a shift into the complex time plane:
+
+\begin{equation}
+	C_{ii'}(\tau) \equiv \langle \hat{E}_{i}(\tau) \hat{E}_{i'}(0) \rangle  =  \langle \hat{E}_{i}(0) \hat{E}_{i'}(\tau + i \beta) \rangle  \equiv C_{i'i}(+\tau + i \beta),
+	\label{eq:kms_time_relation}
+\end{equation}
+
+\noindent
+A short proof of this relation in the eigenbasis of the bath Hamiltonian is as follows:
+
+\begin{align}
+	C_{ii'}(\tau + i \beta) &= \mathrm{Tr}(\rho_\beta E_i E_{i'}(\tau + i \beta)) \notag \\
+	&= \frac{1}{Z} \sum_{m,n} e^{-\beta E_n} \langle n | E_i | m \rangle \langle m | E_{i'}(\tau + i \beta) | n \rangle \notag \\
+	&= \frac{1}{Z} \sum_{m,n} e^{-\beta E_n} e^{i(E_m - E_n)(\tau + i \beta)} (E_i)_{nm} (E_{i'})_{mn} \notag \\
+	&= \frac{1}{Z} \sum_{m,n} e^{-\beta E_m} e^{i(E_n - E_m)\tau} (E_{i'})_{nm} (E_i)_{mn} \notag \\
+	&= C_{i'i}(\tau).
+\end{align}
+
 
 
 \paragraph{Eigenoperator (frequency) decomposition.}
@@ -454,14 +496,29 @@ and the total Redfield equation reads
 \end{equation}
 
 \noindent
-Now we express the correlator in terms of the noise-power spectrum of the environment \cite{lambertetal2024qutip5quantum}.
+Now we express the correlator in frequency domain and define the noise-power spectrum of the environment \cite{lambertetal2024qutip5quantum}.
+
 \begin{equation}
 	\tilde{S}(\omega) \equiv \int_{-\infty}^{\infty} d\tau\, C(\tau)\, e^{+i \omega \tau},
 	\label{eq:Noise_Power_Spectrum}
 \end{equation}
+
+\noindent
 not to be confused with the system operators $S_i$.
+This quantity tells how much each frequency of the bath fluctuates and contributes to noise. 
+By the Wiener–Khinchin theorem (in the classical limit) it is real and positive, $\tilde{S}(\omega) \geq 0$ \todoref{find a source}\todoidea{also tells when this actually happens}.
+The KMS condition Eq. \eqref{eq:kms_time_relation} can now be translated to frequency domain, where it imposes the detailed-balance symmetry
+
+\begin{equation}
+	\tilde{S}(-\omega) = e^{-\hbar\omega/(k_{\mathrm{B}} T)} \tilde{S}(\omega),
+	\label{eq:kms_spectral_relation}
+\end{equation}
+
+\noindent
+which ensures that upward and downward transition rates obey Boltzmann ratios.
 
 
+\vspace{1em}
 \noindent
 The exact one-sided Fourier (Laplace-) transform of the bath correlation function can be split into the power spectrum and an energy shift $ \lambda(\omega)$ as
 
@@ -576,40 +633,6 @@ R_{abcd} &= -\frac{1}{2\hbar^{2}} \sum_{i} \Big\{
 \end{align}
 
 
-%------------------------------------------------------------------------------
-%	SECTION 3: Environmental Correlation Functions and Spectral Properties  
-%------------------------------------------------------------------------------
-\section{Environmental Correlation Functions and Spectral Properties}
-\label{sec:environmental_correlation_functions}
-
-\noindent
-Having derived the Redfield equation, we now focus on a crucial ingredient: the characterization of the environment through its correlation functions and spectral densities, which encode how environmental fluctuations drive relaxation and dephasing~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}. These objects translate the abstract operator structure in Eq.~\eqref{eq:Redfield_Markov_TimeLocal} into calculable quantities and connect the microscopic bath model to experimentally accessible spectra.
-
-\noindent
-The bath correlation functions determine both the strength and characteristic time scales of the system--environment interaction and bridge quantum and classical noise descriptions. In what follows we show how they arise, state their properties, introduce their Fourier (spectral) representation, and explain how emission and absorption processes are simultaneously encoded.
-
-
-\subsection{Bath Correlation Functions}
-\label{subsec:bath_correlation_functions}
-
-\noindent
-The environmental correlation functions entering Eq.~\eqref{eq:Redfield_Markov_TimeLocal} are defined (cf. Eq.~\eqref{eq:Environment_Correlation_Function}) by $C_{ii'}(\tau) = \mathrm{Tr}_E[\hat{E}_i(\tau) \hat{E}_j(0) \hat{\rho}_E(0)] = \langle \hat{E}_i(\tau) \hat{E}_j(0) \rangle_E$, where $\hat{\rho}_E(0)$ is usually a thermal state. For a stationary (equilibrium) bath, $C_{ii'}(\tau)$ depends only on the time difference $\tau$; Hermiticity implies $C_{ii'}^*(\tau)=C_{i'i}(-\tau)$; and the function typically decays on the bath correlation time $\tau_E$, a prerequisite for the Markov approximation when $\tau_E$ is much shorter than the relevant system evolution time scales.
-
-
-\subsection{Spectral Density and Fourier Representation}
-\label{subsec:spectral_density_representation}
-
-\noindent
-For a thermal bath, the Kubo--Martin--Schwinger (KMS) condition imposes the detailed-balance symmetry
-
-\begin{equation}
-	S_{ii'}(-\omega) = e^{-\hbar\omega/(k_{\mathrm{B}} T)} S_{i'i}(\omega),
-	\label{eq:kms_spectral_relation}
-\end{equation}
-
-\noindent
-which ensures that upward and downward transition rates obey Boltzmann ratios.
-
 \subsection{Physical Interpretation: Emission and Absorption Processes}
 \label{subsec:physical_emission_absorption}
 
@@ -630,7 +653,11 @@ with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\hbar\omega/(k_{
 %------------------------------------------------------------------------------
 \section{Harmonic Oscillator Baths and Explicit Correlation Functions}
 \label{sec:harmonic_oscillator_baths}
+
+\noindent
 Also to do these explicit calculations, we will need the following mathematical result.
+
+
 \paragraph{Geometric series.}
 The infinite geometric series
 

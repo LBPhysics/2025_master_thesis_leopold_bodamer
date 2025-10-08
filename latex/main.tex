@@ -68,7 +68,6 @@ toctotoc, 		      % add table of contents to the table of contents
 \pagestyle{plain}
 
 \input{chapters/c00_titlepage}
-\iffalse
 \input{chapters/c01_declaration}
 \input{chapters/c02_acknow_lists_abbrs_consts_symbls_dedication}
 %-------------------------------------------------------------------------------
@@ -76,9 +75,8 @@ toctotoc, 		      % add table of contents to the table of contents
 %-------------------------------------------------------------------------------
 \begin{abstract}
 	\addchaptertocentry{\abstractname}
-	This thesis investigates the application of two-dimensional photon-echo spectroscopy to model quantum systems, with a focus on open quantum system dynamics. We develop a comprehensive theoretical framework that combines the response-function formalism of nonlinear spectroscopy with master-equation approaches for open quantum systems. Starting from minimal reference models, including a single qubit and a four-level system formed by two coupled qubits, we validate our methods and apply the model to a system of $N$ qubits arranged on a cylindrical geometry, inspired by the structural motifs of microtubules. Our results demonstrate the capability of two-dimensional spectroscopy to probe coherence and energy transfer dynamics in these systems, providing insights into their quantum behavior and interactions with the environment. This work lays the groundwork for future experimental and theoretical studies in the field of quantum biology and quantum information science.
+	todoidea{This thesis investigates the application of two-dimensional photon-echo spectroscopy to model quantum systems, with a focus on open quantum system dynamics. We develop a comprehensive theoretical framework that combines the response-function formalism !NON-perturbatively! of nonlinear spectroscopy with master-equation approaches for open quantum systems (Qutip). Starting from minimal reference models, including a single qubit and a four-level system formed by two coupled qubits, we validate our methods and apply the model to a system of $N$ qubits arranged on a cylindrical geometry, inspired by the structural motifs of microtubules. Our results demonstrate the capability of two-dimensional spectroscopy to probe coherence and energy transfer dynamics in these systems, providing insights into their quantum behavior and interactions with the environment. This work lays the groundwork for future experimental and theoretical studies in the field of quantum biology and quantum information science.}
 \end{abstract}
-\fi
 
 %-------------------------------------------------------------------------------
 %	CONTENTS
@@ -90,10 +88,11 @@ toctotoc, 		      % add table of contents to the table of contents
 %\include{chapters/_template_chapter}
 \include{chapters/c10_introduction}
 \include{chapters/c20_open_quantum_systems}
-%\include{chapters/c30_numerical_implementation}
+\include{chapters/c30_numerical_implementation}
 \include{chapters/c40_spectroscopy}
-%\include{chapters/c50_model}
-%\include{chapters/todo_example}
+\include{chapters/c40_spectroscopy_copy}
+\include{chapters/c50_model}
+\include{chapters/todo_example}
 
 \iffalse
 	# comment out everything below this line

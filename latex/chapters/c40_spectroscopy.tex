@@ -7,13 +7,25 @@
 
 \section{Fundamentals of Spectroscopy}
 \label{sec:spectroscopy_fundamentals}
+
 \todoidea{This chapter should serve as a solid foundation by emphasizing electronic transitions, nonlinear optics, coherence phenomena, and their relevance to complex (e.g., biological) systems.
 Vibrational and other spectroscopies are less relevant for this work, so they should be mentioned but not in detail.}
+\todoidea{
+Brief motivation: Why spectroscopy is a powerful probe of quantum dynamics.
+
+Distinction between linear and nonlinear optical spectroscopy.
+
+Position of two-dimensional photon-echo spectroscopy (2D PES) within this landscape.
+
+What this chapter provides: the physical and mathematical tools needed for later modeling.
+}
 
 
+\noindent 
+Spectroscopy, in its broadest definition, is the study of the interaction between matter and electromagnetic radiation as a function of wavelength or frequency \cite{berman2011principleslaserspectroscopy, mukamel1995principlesnonlinearoptical}.
+It provides insights into the composition, structure, and dynamics of physical systems by examining how they absorb, emit, or scatter light. The fundamental principle underlying all spectroscopic methods is that each atom, molecule, or complex system has a unique set of energy levels, and transitions between these levels involve the absorption or emission of photons with specific energies \todoref{find better source}\cite{boyd2008chapter1nonlinear}. Thats why spectroscopy is a powerful probe of quantum dynamics.
 
-\noindent Spectroscopy, in its broadest definition, is the study of the interaction between matter and electromagnetic radiation as a function of wavelength or frequency \cite{berman2011principleslaserspectroscopy, mukamel1995principlesnonlinearoptical}.
-This technique provides insights into the composition, structure, and dynamics of physical systems by examining how they absorb, emit, or scatter light. The fundamental principle underlying all spectroscopic methods is that each atom, molecule, or complex system has a unique set of energy levels, and transitions between these levels involve the absorption or emission of photons with specific energies \todoref{find better source}\cite{boyd2008chapter1nonlinear}.
+
 
 \subsection{Basic Principles}
 \label{subsec:basic_principles}
@@ -25,153 +37,181 @@ This technique provides insights into the composition, structure, and dynamics o
 	\label{eq:planck_relation}
 \end{equation}
 
-\noindent where $h$ is Planck's constant and $c$ is the speed of light. The energy structure of matter can thus be probed by observing the spectrum of absorbed or emitted radiation.
+\noindent 
+where $h$ is Planck's constant and $c$ is the speed of light. The energy structure of matter can thus be probed by observing the spectrum of absorbed or emitted radiation.
+
+
 %-------------------------------------------------------------------------------
 %   NEW SUBSECTION: CHARACTERIZATION OF ELECTROMAGNETIC RADIATION
 %-------------------------------------------------------------------------------
-
 \subsection{Characterization of Electromagnetic Radiation}
 \label{subsec:em_radiation_characterization}
 
-\noindent A monochromatic plane electromagnetic wave in free space (vacuum) can be written as
+\noindent 
+A monochromatic electromagnetic plane-wave in free space (vacuum) can be written as
+
 \begin{equation}
 	E(\vec{r},t) = E_0 \cos(\vec{k} \cdot \vec{r} - \omega t + \phi)
 	\label{eq:plane_wave}
 \end{equation}
+
+\noindent 
 where $E_0$ is the (real) amplitude, $\phi$ a phase-kick, $\vec{k}$ the wavevector (spatial angular frequency), and $\omega$ the angular frequency of the wave.
 
+\noindent 
 The fundamental kinematic relations for propagation in vacuum are
+
 \begin{equation}
 	\omega = 2\pi\nu, \qquad |\vec{k}| = \frac{2\pi}{\lambda}, \qquad \lambda = \frac{c}{\nu} = \frac{2\pi c}{\omega}
 	\label{eq:wavelength_frequency_relation}
 \end{equation}
-with $\nu$ the (cycle) frequency in hertz (Hz), $\lambda$ the wavelength. In a material medium the phase velocity is $v_p = c/n(\nu)$ and $\lambda$ is replaced by $\lambda_n = v_p/\nu = \lambda/n(\nu)$, where $n(\nu)$ is the refractive index.
 
-\noindent Note that the \emph{magnitude of the wavevector } $k = 2\pi/\lambda$ (units m$^{-1}$), which appears explicitly in the plane wave phase $kz$ shall not be confused with the \emph{(spectroscopic) wavenumber} $\tilde{\nu}$, defined as
+\noindent 
+with $\nu$ the (cycle) frequency in hertz (Hz), $\lambda$ the wavelength. 
+%In a material medium the phase velocity is $v_p = c/n(\nu)$ and $\lambda$ is replaced by $\lambda_n = v_p/\nu = \lambda/n(\nu)$, where $n(\nu)$ is the refractive index.
+
+\noindent 
+Note that the \emph{magnitude of the wavevector } $k = 2\pi/\lambda$ (units m$^{-1}$), shall not be confused with the \emph{(spectroscopic) wavenumber} $\tilde{\nu}$, defined as
+
 \begin{equation}
 	\tilde{\nu} = \frac{1}{\lambda} \quad [\mathrm{cm}^{-1}].
 	\label{eq:wavenumber_definition}
 \end{equation}
 
-The energetic content of radiation can be expressed equivalently to \eqref{eq:planck_relation} using any of the variables above:
-\begin{equation}
-	E = \hbar\omega = h c \, \tilde{\nu}
-	\label{eq:energy_wavenumber_conversion}
-\end{equation}
-with $\hbar = h/2\pi$.
-
-\todoidea{put this somewhere else}
-
-
-%--- Spectral regions + energy dissipation addendum (Banwell) -----------------
-\paragraph{Spectral Regions and Notation}
-\noindent Spectral domains are commonly quoted in either wavelength $\lambda$ or wavenumber $\tilde{\nu}$ to avoid large powers of ten.
-For example most electronic transitions occur in the visible range $\lambda \sim 400$--$750\,\mathrm{nm}$, which corresponds to $\tilde{\nu} \sim 13333$--$25000\,\mathrm{cm}^{-1}$. On the other hand, vibrational transitions, for example in a molecule typically occur in the infrared range $\lambda \sim 2.5$--$25\,\mu\mathrm{m}$, which corresponds to $\tilde{\nu} \sim 4000$--$400\,\mathrm{cm}^{-1}$.
-
-\paragraph{Remark on Re-Emission}
-\noindent Following absorption, isotropic spontaneous re-emission (radiative relaxation) redistributes photon directions so that only a negligible fraction re-enters the forward detection solid angle, yielding a net attenuation of the incident beam. The corresponding emission (fluorescence / phosphorescence) spectra, arising from these radiative pathways, will be exploited later in this work for extracting dynamical information from heterodyne-detected emitted fields.
+This quantity is commonly used in spectroscopy to avoid large powers of ten. 
+Now to give a broad idea of where transitions that one would like to probe with spectroscopy lie, we can look at the typical energy scales of different types of transitions.
 
 \subsection{Classification of Spectroscopic Techniques}
-\label{subsec:spectroscopy_classification}
 
-\noindent Spectroscopic methods can be categorized based on various criteria:
-So far we have seen that the scattering aswell as the frequency of the electromagnetic radiation are important factors. The type of the transition: electronic, vibrational, rotational or nuclear and the number of photons involved in the process also define the exact technique used.
+\noindent
+Spectroscopy can be categorized by (i) the nature of the transition (rotational, vibrational, electronic, nuclear), (ii) the number of photons involved (linear vs.\ nonlinear), and (iii) the detection scheme (absorption, emission, or scattering). 
 
-\noindent Each spectroscopic technique provides different information about the system under study.
+\noindent
+(i):
 
-For instance, in rotational spectroscopy microwaves are used to reveal molecular geometry, where the rotational energy levels are quantized and transitions between them provide information about the moment of inertia and bond lengths.
+\noindent
+Different types of transitions are probed at distinct regions of the electromagnetic spectrum, reflecting the corresponding energy and time scales and providing fundamentally different information about the system of interest. 
 
-Also highly used in chemistry is vibrational spectroscopy, which elucidates bonding patterns.
+\noindent
+Ultrafast laser development has enabled femtosecond and even attosecond spectroscopy, allowing real-time tracking of electron motion and energy flow in complex systems.
 
-In electronic spectroscopy, visible light possesses sufficient energy to promote electronic transitions, moving electrons from occupied orbitals to higher-energy unoccupied states. Upon electronic excitation, molecules often exhibit fluorescence as electrons return to lower energy states. This electronic excitation forms the basis of photochemistry and photobiology.
-Probing the electronic structure and looking at excited state dynamics will be most important for this work.
+\noindent
+For example, rotational transitions lie in the microwave region. Here molecular geometry is revealed through quantized rotational energy levels. In vibrational spectroscopy, bonding patterns are measured within the infrared ($\lambda\!\sim\!2.5$–$25\,\mu\mathrm{m}$, $\tilde{\nu}\!\sim\!400$–$4000\,\mathrm{cm^{-1}}$) region of the spectrum. In this thesis electronic transitions between molecular orbitals will be probed with visible frequencies of  ($\lambda\!\sim\!400$–$750\,\mathrm{nm}$, $\tilde{\nu}\!\sim\!13{,}000$–$25{,}000\,\mathrm{cm^{-1}}$), enabling studies of excited-state structure and dynamics.
 
-\noindent This energy hierarchy demonstrates why spectroscopic techniques using different frequency ranges provide complementary information about molecular structure and dynamics. The systematic increase in photon energy enables probing of molecular systems from their lowest-energy rotational modes to high-energy electronic excitations and bond-breaking processes.
+\noindent
+This energetic hierarchy underlies the classification of spectroscopic techniques: higher photon energies probe faster and more localized motions.
+While timescales of Micro-milliseconds relate to  Chemical reactions and protein folding, Vibrational relaxation and rotational dynamics happen at picoseconds. Important for this thesis, electronic transitions and vibrational coherences occur at femtoseconds. Recent advances in attosecond spectroscopy now even allow probing real time electron dynamics within atoms and molecules \cite{rupprechtetal2025tracinglonglivedatomic}.
 
-%----------------------------------------------------------------------------------------
-%   NEW SUBSECTION: ENERGY DISSIPATION AFTER ABSORPTION
-%----------------------------------------------------------------------------------------
+\subsection{Energy Dissipation After Absorption alternative}
 
-\subsection{Energy Dissipation After Absorption}
-\label{subsec:energy_dissipation}
+\noindent
+After an interaction with a laser pulse, absorption of a photon, the excited molecule relax through two principal pathways:
+\textbf{Non-radiative relaxation:} Internal conversion and vibrational energy transfer to the environment convert excitation energy into heat. What will be more important for this thesis is \textbf{Radiative relaxation} where the ground state is populated again. The emitted photons that are typically isotropic and thus contribute little to the forward beam.
 
-\noindent After a molecule absorbs a photon of energy $E = h\nu$ its energy must be redistributed or released; otherwise continuous irradiation would rapidly saturate all accessible states. Experimentally, ordinary samples exhibit persistent absorption bands under prolonged illumination, demonstrating that excited molecules relax efficiently. Two principal classes of de-excitation pathways operate:
-\begin{itemize}
-	\item \textbf{Non-radiative (thermal) relaxation:} Collisional (vibrational) energy transfer to surrounding molecules leads to rapid conversion of excess internal energy into lattice / solvent kinetic energy (heating). This typically proceeds through intramolecular vibrational redistribution followed by intermolecular energy transfer.
-	\item \textbf{Radiative relaxation:} Spontaneous emission (fluorescence or phosphorescence, depending on spin manifold) returns population to lower electronic (and vibrational) states with emission of photons of characteristic frequencies. The emitted photons are (for an isotropic medium without cavity structuring) distributed nearly isotropically, so only a small solid angle fraction reaches a forward detector aligned with the incident collimated beam, yielding a net attenuation (absorption) of the directed beam intensity despite re-emission events.
-\end{itemize}
-
-\noindent Consequently, an absorption spectrum records the net loss from the incident mode; re-emitted photons largely populate other directions (or are spectrally shifted). The corresponding emission spectra (steady-state or time-resolved) provide complementary information on excited-state structure, relaxation cascades, and will play an important role in later parts of this work where emitted (heterodyne-detected) fields are analysed.
+\noindent
+Absorption spectra thus record the net loss of intensity from the incident mode, while emission spectra provide complementary information on excited-state structure and relaxation dynamics. Both will be central in later sections involving heterodyne detection of emitted fields. \todoref{find ref}
 
 
-\subsection{Time Scales in Spectroscopy}
-\label{subsec:time_scales}
 
-\noindent Different spectroscopic methods operate on different time scales, allowing the investigation of processes ranging from ultrafast electronic motions to slow conformational changes \cite{bogaczetal2025xrayabsorptionspectroscopy, fullerogilvie2015experimentalimplementationstwodimensional}:
 
-\begin{itemize}
-	\item Femtosecond (10$^{-15}$ s): Electronic transitions, vibrational coherences
-	\item Picosecond (10$^{-12}$ s): Vibrational relaxation, rotational motion
-	\item Nanosecond (10$^{-9}$ s): Fluorescence lifetimes, energy transfer
-	\item Microsecond to millisecond (10$^{-6}$ to 10$^{-3}$ s): Chemical reactions, protein folding
-\end{itemize}
+\todoidea{first explain the classical pertubative approach, then the one with the density matrix.}
 
-\noindent The development of ultrafast laser systems has revolutionized spectroscopy by allowing direct observation of molecular dynamics on femtosecond time scales, leading to the field of femtochemistry and ultrafast spectroscopy.
+\todoidea{Include chapter Light–Matter Interaction: From Dipole Approximation to Polarization, include:
+Hamiltonian of light–matter coupling (semi-classical field, dipole approximation).
+
+Interaction picture, rotating-wave approximation (introduce but defer justification).
+P = TrE{rho mu} (define macroscopic polarization as expectation value of dipole operator).
+Expansion in powers of the field -> linear and nonlinear responses.
+}
+\todoidea{Also include how to simulate laser pulses:
+
+Gaussian envelope, pulse trains.
+
+1) Time-domain field (carrier × envelope)
+
+Write the analytic (positive-frequency) field
+
+\begin{equation}
+E^{(+)}(\mathbf{r}, t) = E_0 f(t - t_0) \exp\left\{i\left[\mathbf{k} \cdot \mathbf{r} - \omega_0 (t - t_0) + \phi_{\mathrm{CE}}\right]\right\},
+\end{equation}
+
+and use $E = \Re\{E^{(+)}\}$. Here
+
+$f(t)$ = envelope (e.g. Gaussian $f(t) = \exp\left[-\frac{2\ln 2}{\tau_{\mathrm{FWHM}}^2} t^2\right]$),
+
+$\phi_{\mathrm{CE}}$ = carrier--envelope phase (relevant for few-cycle pulses),
+
+$E_0$ sets peak field (related to pulse energy via the mode area and duration).
+
+Bandwidth for a transform-limited Gaussian:
+
+$\Delta\omega_{\mathrm{FWHM}} \approx \frac{2\ln 2}{\tau_{\mathrm{FWHM}}}$ (time--bandwidth product $\Delta\nu \tau_{\mathrm{FWHM}} \approx 0.44$)
+
+}
 
 \subsection{Macroscopic Samples and Collective Dipolar Oscillations}
 \label{subsec:macroscopic_samples}
 
-\noindent When considering spectroscopic measurements on macroscopic samples, it is essential to understand how individual molecular responses combine to produce observable signals. In a typical spectroscopic experiment, the sample contains on the order of Avogadro's number ($\sim 10^{23}$) of molecules, each potentially acting as an oscillating electric dipole when interacting with electromagnetic radiation \cite{feynman1965feynmanlecturesphysics}.
+\noindent 
+When considering spectroscopic measurements on macroscopic samples, it is essential to understand how individual molecular responses combine to produce observable signals. In a typical spectroscopic experiment, the sample contains on the order of Avogadro's number ($\sim 10^{23}$) of molecules, each potentially acting as an oscillating electric dipole when interacting with electromagnetic radiation \cite{feynman1965feynmanlecturesphysics}.
 
-\noindent The collective behavior of these molecular dipoles determines the macroscopic polarization of the sample. When an external electromagnetic field is applied, individual molecules undergo dipole transitions, creating time-varying dipole moments. The coherent superposition of these individual dipolar oscillations produces a macroscopic polarization wave that can propagate through the medium and be detected experimentally.
-
-\noindent The macroscopic polarization $\vec{P}(\vec{r}, t)$ arises from the spatial and temporal averaging of microscopic dipole moments $\vec{\mu}_i(t)$ over the sample volume:
+\noindent 
+The collective behavior of these molecular dipoles determines the macroscopic polarization of the sample. When an external electromagnetic field is applied, individual molecules undergo dipole transitions, creating time-varying dipole moments $\vec{\mu}_i(t)$. The coherent superposition of these individual dipolar oscillations produces a macroscopic polarization wave $\vec{P}(\vec{r}, t)$ that can be detected experimentally
 
 \begin{equation}
-	\vec{P}(\vec{r}, t) = \frac{1}{V} \sum_{i} \vec{\mu}_i(t) \delta(\vec{r} - \vec{r}_i)
+	\vec{P}(\vec{r}, t) = \frac{1}{V} \sum_{i} \vec{\mu}_i(t) \delta(\vec{r} - \vec{r}_i).
 	\label{eq:macroscopic_polarization}
 \end{equation}
 
-\noindent where $V$ is the sample volume, $\vec{r}_i$ is the position of the $i$-th molecule, and the sum extends over all molecules in the interaction region. This macroscopic polarization acts as a source term in Maxwell's equations, generating the electromagnetic fields that constitute the spectroscopic signal.
+\noindent 
+where $V$ is the sample volume, $\vec{r}_i$ is the position of the $i$-th molecule, and the sum extends over all molecules in the interaction region. This polarization acts as a source term in Maxwell's equations, generating the electromagnetic fields that constitute the spectroscopic signal.
 
-\noindent The phase relationships between individual dipolar oscillations are crucial for understanding spectroscopic line shapes and signal intensities. In the case of inhomogeneously broadened systems, different molecules oscillate at slightly different frequencies due to variations in their local environment. The resulting dephasing of individual oscillators leads to the characteristic decay of macroscopic coherences observed in techniques such as photon echo spectroscopy \cite{mukamel1995principlesnonlinearoptical}.
+\noindent 
+The phase relationships between individual dipolar oscillations are crucial for understanding spectroscopic line shapes and signal intensities. In the case of inhomogeneously broadened systems, different molecules oscillate at slightly different frequencies due to variations in their local environment. The resulting dephasing of individual oscillators leads to the characteristic decay of macroscopic coherences observed in techniques such as photon echo spectroscopy \cite{mukamel1995principlesnonlinearoptical}.
 
-\noindent This collective dipolar response provides the fundamental link between microscopic quantum mechanical processes in individual molecules and the macroscopic electromagnetic fields measured in spectroscopic experiments. Understanding this connection is essential for the quantitative interpretation of spectroscopic data and the extraction of molecular-level information from ensemble measurements \cite{feynman1965feynmanlecturesphysics}.
 
 %----------------------------------------------------------------------------------------
 %	SECTION 2: NONLINEAR OPTICS
 %----------------------------------------------------------------------------------------
-
 \section{Nonlinear Optics}
 \label{sec:nonlinear_optics}
 
-\noindent Nonlinear optics deals with phenomena that occur when the response of a material to an applied optical field depends nonlinearly on the strength of the field \cite{boyd2008contents}. This nonlinearity becomes significant at high light intensities, such as those provided by pulsed lasers.
+\todoidea{Now that we know the most important quantity in spectroscopy, the polarization, we can discuss how it depends of the incident electric field. This leads to linear and nonlinear optics.}
+\todoidea{explain Response theory as the standard way to deal with this -> it is a perturbative approach -> mine is numerical and better cite leszczynskietal2017handbookcomputationalchemistry, the most modern one is loaizaetal2025nonlinearspectroscopygeneralized}
+\noindent 
+Nonlinear optics deals with phenomena that occur when the response of a material to an applied optical field depends nonlinearly on the strength of the field \cite{boyd2008contents}.
 
 \subsection{Linear vs. Nonlinear Optical Response}
 \label{subsec:linear_vs_nonlinear}
 
-\noindent In the linear regime, the induced polarization $\vec{P}$ in a material is directly proportional to the applied electric field $\vec{E}$:
+\noindent 
+In the linear regime, the induced polarization $\vec{P}$ in a material is directly proportional to the applied electric field $\vec{E}$:
 
 \begin{equation}
 	\vec{P} = \varepsilon_0 \chi^{(1)} \vec{E}
 	\label{eq:linear_polarization}
 \end{equation}
 
-\noindent where $\varepsilon_0$ is the vacuum permittivity and $\chi^{(1)}$ is the linear susceptibility tensor. This relationship describes phenomena such as refraction and absorption.
+\noindent 
+where $\varepsilon_0$ is the vacuum permittivity and $\chi^{(1)}$ is the linear susceptibility tensor. This relationship describes phenomena such as refraction and absorption.
 
-\noindent In the nonlinear regime, the polarization can be expressed as a power series in the electric field:
+\noindent 
+In the nonlinear regime, the polarization can be expressed as a power series in the electric field:
 
 \begin{equation}
 	\vec{P} = \varepsilon_0 (\chi^{(1)} \vec{E} + \chi^{(2)} \vec{E}^2 + \chi^{(3)} \vec{E}^3 + \ldots)
 	\label{eq:nonlinear_polarization}
 \end{equation}
 
-\noindent where $\chi^{(2)}$ and $\chi^{(3)}$ are the second- and third-order nonlinear susceptibility tensors, respectively. These higher-order terms give rise to a variety of nonlinear optical phenomena.
+\noindent 
+where $\chi^{(2)}$ and $\chi^{(3)}$ are the second- and third-order nonlinear susceptibility tensors, respectively. These higher-order terms give rise to a variety of nonlinear optical phenomena.
+
 
 \subsection{Second-Order Nonlinear Processes}
 \label{subsec:second_order}
 
-\noindent Second-order nonlinear processes, governed by the $\chi^{(2)}$ term, occur only in noncentrosymmetric materials, which lack inversion symmetry. Important second-order effects include:
+\noindent 
+Second-order nonlinear processes, governed by the $\chi^{(2)}$ term, occur only in noncentrosymmetric materials, which lack inversion symmetry. Important second-order effects include:
 
 \begin{itemize}
 	\item \textbf{Second Harmonic Generation (SHG):} Two photons of frequency $\omega$ combine to generate a photon of frequency $2\omega$.
@@ -180,10 +220,12 @@ Probing the electronic structure and looking at excited state dynamics will be m
 	\item \textbf{Optical Parametric Amplification (OPA):} A pump photon of frequency $\omega_p$ splits into signal ($\omega_s$) and idler ($\omega_i$) photons, such that $\omega_p = \omega_s + \omega_i$.
 \end{itemize}
 
+
 \subsection{Third-Order Nonlinear Processes}
 \label{subsec:third_order}
 
-\noindent Third-order nonlinear processes, governed by the $\chi^{(3)}$ term, can occur in all materials, regardless of symmetry. Key third-order effects include:
+\noindent 
+Third-order nonlinear processes, governed by the $\chi^{(3)}$ term, can occur in all materials, regardless of symmetry. Key third-order effects include:
 
 \begin{itemize}
 	\item \textbf{Third Harmonic Generation (THG):} Three photons combine to generate a photon of tripled frequency.
@@ -192,44 +234,55 @@ Probing the electronic structure and looking at excited state dynamics will be m
 	\item \textbf{Two-Photon Absorption (TPA):} Simultaneous absorption of two photons to excite a transition.
 \end{itemize}
 
-\noindent These third-order processes form the basis for many nonlinear spectroscopic techniques, including pump-probe spectroscopy, transient grating, and various multidimensional spectroscopies.
+\noindent 
+These third-order processes form the basis for many nonlinear spectroscopic techniques, including pump-probe spectroscopy, transient grating, and various multidimensional spectroscopies.
 
 
 \section{Wavevector Phase-Matching Conditions}
 \label{sec:phase_matching}
 
-\noindent Phase-matching is a crucial concept in nonlinear optics that determines the efficiency and directionality of nonlinear optical processes \cite{boyd2008contents},  \todoref{find ref Scheurer2001}. It ensures that the generated signal field constructively interferes throughout the interaction medium.
+\noindent 
+Phase-matching is a crucial concept in nonlinear optics that determines the efficiency and directionality of nonlinear optical processes \cite{boyd2008contents},  \todoref{find ref Scheurer2001}. It ensures that the generated signal field constructively interferes throughout the interaction medium.
+
 
 \subsection{Physical Meaning of Phase-Matching}
 \label{subsec:phase_matching_meaning}
 
-\noindent In nonlinear optical processes, multiple light waves interact within a material to generate new frequencies. For these processes to be efficient, the phase relationship between the interacting waves must be maintained throughout the propagation distance. This condition is known as phase-matching.
+\noindent 
+In nonlinear optical processes, multiple light waves interact within a material to generate new frequencies. For these processes to be efficient, the phase relationship between the interacting waves must be maintained throughout the propagation distance. This condition is known as phase-matching.
 
-\noindent Physically, phase-matching represents momentum conservation in the photon picture. For a general nonlinear process, the wavevector of the generated signal ($\vec{k}_s$) is determined by the vector sum of the input wavevectors:
+\noindent 
+Physically, phase-matching represents momentum conservation in the photon picture. For a general nonlinear process, the wavevector of the generated signal ($\vec{k}_s$) is determined by the vector sum of the input wavevectors:
 
 \begin{equation}
 	\vec{k}_s = \pm\vec{k}_1 \pm\vec{k}_2 \pm\vec{k}_3 \pm \ldots
 	\label{eq:phase_matching}
 \end{equation}
 
-\noindent The signs depend on whether the corresponding field acts as a "bra" ($-$) or a "ket" ($+$) in the quantum mechanical description, which corresponds to photon emission or absorption, respectively.
+\noindent 
+The signs depend on whether the corresponding field acts as a "bra" ($-$) or a "ket" ($+$) in the quantum mechanical description, which corresponds to photon emission or absorption, respectively.
+
 
 \subsection{Phase-Matching in Four-Wave Mixing}
 \label{subsec:fwm_phase_matching}
 
-\noindent Four-wave mixing (FWM) is a third-order nonlinear process that plays a central role in many spectroscopic techniques. In a typical FWM experiment, three input fields with wavevectors $\vec{k}_1$, $\vec{k}_2$, and $\vec{k}_3$ generate a signal in the direction $\vec{k}_s$ given by:
+\noindent 
+Four-wave mixing (FWM) is a third-order nonlinear process that plays a central role in many spectroscopic techniques. In a typical FWM experiment, three input fields with wavevectors $\vec{k}_1$, $\vec{k}_2$, and $\vec{k}_3$ generate a signal in the direction $\vec{k}_s$ given by:
 
 \begin{equation}
 	\vec{k}_s = \pm\vec{k}_1 \pm\vec{k}_2 \pm\vec{k}_3
 	\label{eq:fwm_phase_matching}
 \end{equation}
 
-\noindent Different combinations of signs correspond to different phase-matching conditions, leading to signals in different spatial directions. These distinct signal directions allow separation of various nonlinear optical processes.
+\noindent 
+Different combinations of signs correspond to different phase-matching conditions, leading to signals in different spatial directions. These distinct signal directions allow separation of various nonlinear optical processes.
+
 
 \subsection{Rephasing and nonrephasing Signals}
 \label{subsec:rephasing_nonrephasing}
 
-\noindent In the context of multidimensional spectroscopy, phase-matched signals are often classified into rephasing and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, jonas2003twodimensionalfemtosecondspectroscopy}:
+\noindent 
+In the context of multidimensional spectroscopy, phase-matched signals are often classified into rephasing and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, jonas2003twodimensionalfemtosecondspectroscopy}:
 
 \begin{itemize}
 	\item \textbf{Rephasing signals} follow the phase-matching condition $\vec{k}_s = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$. During the evolution period between the first and second interactions, the phase accumulated due to different frequencies can be reversed during the period between the third interaction and signal emission. This leads to a photon echo effect.
@@ -239,24 +292,30 @@ Probing the electronic structure and looking at excited state dynamics will be m
 	\item \textbf{nonrephasing signals} satisfy $\vec{k}_s = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$. In this case, the phase evolution continues in the same direction, and no echo is formed.
 \end{itemize}
 
-\noindent The combination of rephasing and nonrephasing signals provides comprehensive information about the system's energy structure and dynamics.
+\noindent 
+The combination of rephasing and nonrephasing signals provides comprehensive information about the system's energy structure and dynamics.
+
 
 \subsection{Phase Cycling in Nonlinear Spectroscopy}
 \label{subsec:phase_cycling}
 
-\noindent While phase-matching enables the spatial isolation of desired nonlinear signals, phase cycling provides an alternative or complementary approach by distinguishing signals based on their phase characteristics rather than their spatial propagation directions \todoref{find ref}%\cite{tan2008, yan2009}.
+\noindent 
+While phase-matching enables the spatial isolation of desired nonlinear signals, phase cycling provides an alternative or complementary approach by distinguishing signals based on their phase characteristics rather than their spatial propagation directions \todoref{find ref}%\cite{tan2008, yan2009}.
 This technique is particularly valuable in experiments where spatial isolation is impractical, such as in collinear beam geometries or when studying samples with significant scattering.
 
-\noindent In phase cycling, multiple measurements are taken with systematically varied phases of the excitation pulses. The desired nonlinear signals can then be extracted through appropriate linear combinations of these measurements. The fundamental principle relies on the fact that different nonlinear pathways respond distinctly to changes in the phases of the input fields.
+\noindent 
+In phase cycling, multiple measurements are taken with systematically varied phases of the excitation pulses. The desired nonlinear signals can then be extracted through appropriate linear combinations of these measurements. The fundamental principle relies on the fact that different nonlinear pathways respond distinctly to changes in the phases of the input fields.
 
-\noindent For a third-order signal generated by three excitation pulses with phases $\phi_1$, $\phi_2$, and $\phi_3$, the phase of the resulting signal depends on the specific pathway:
+\noindent 
+For a third-order signal generated by three excitation pulses with phases $\phi_1$, $\phi_2$, and $\phi_3$, the phase of the resulting signal depends on the specific pathway:
 
 \begin{equation}
 	\phi_s = \pm\phi_1 \pm\phi_2 \pm\phi_3
 	\label{eq:phase_cycling}
 \end{equation}
 
-\noindent By varying the input phases through a complete cycle (typically in steps of $\pi/2$) and applying discrete Fourier transform methods to the collected data, specific pathways can be isolated based on their unique phase dependencies.
+\noindent 
+By varying the input phases through a complete cycle (typically in steps of $\pi/2$) and applying discrete Fourier transform methods to the collected data, specific pathways can be isolated based on their unique phase dependencies.
 
 \begin{figure}[ht]
 	\centering
@@ -265,9 +324,11 @@ This technique is particularly valuable in experiments where spatial isolation i
 	\label{fig:phase_cycling_vs_matching}
 \end{figure}
 
-\noindent A common implementation is the 4-step phase cycling procedure, where each input pulse phase is cycled through values of $\{0, \pi/2, \pi, 3\pi/2\}$. For three-pulse experiments, this results in 64 possible phase combinations, although in practice, a reduced set is often sufficient to isolate signals of interest.
+\noindent 
+A common implementation is the 4-step phase cycling procedure, where each input pulse phase is cycled through values of $\{0, \pi/2, \pi, 3\pi/2\}$. For three-pulse experiments, this results in 64 possible phase combinations, although in practice, a reduced set is often sufficient to isolate signals of interest.
 
-\noindent Phase cycling offers several advantages:
+\noindent 
+Phase cycling offers several advantages:
 
 \begin{itemize}
 	\item It allows for simpler optical setups with collinear or partially collinear beam geometries
@@ -276,14 +337,18 @@ This technique is particularly valuable in experiments where spatial isolation i
 	\item It can be implemented in experimental setups where traditional phase-matching is challenging, such as in multidimensional infrared spectroscopy
 \end{itemize}
 
-\noindent In modern multidimensional spectroscopy, phase cycling is often combined with phase matching to achieve optimal signal isolation and background suppression \cite{huang-fuetal2024developmentphasecyclinginterfacespecific, tianetal2003femtosecondphasecoherenttwodimensional}.
+\noindent 
+In modern multidimensional spectroscopy, phase cycling is often combined with phase matching to achieve optimal signal isolation and background suppression \cite{huang-fuetal2024developmentphasecyclinginterfacespecific, tianetal2003femtosecondphasecoherenttwodimensional}.
+
 
 \subsection{Phase-Cycling Fourier Selection and Construction of Absorptive 2D Spectra}
 \label{subsec:phase_cycling_fourier_selection}
 
-\noindent The phase-cycling procedure provides an algebraic alternative (or complement) to spatial phase-matching (cf. Eqs.~\eqref{eq:phase_matching}, \eqref{eq:phase_cycling}) for isolating specific third-order Liouville pathways in four-wave mixing experiments \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, jonas2003twodimensionalfemtosecondspectroscopy, brixneretal2004phasestabilizedtwodimensionalelectronic, greenetal2024vibrationalcoherenceshalfbroadband}.
+\noindent 
+The phase-cycling procedure provides an algebraic alternative (or complement) to spatial phase-matching (cf. Eqs.~\eqref{eq:phase_matching}, \eqref{eq:phase_cycling}) for isolating specific third-order Liouville pathways in four-wave mixing experiments \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, jonas2003twodimensionalfemtosecondspectroscopy, brixneretal2004phasestabilizedtwodimensionalelectronic, greenetal2024vibrationalcoherenceshalfbroadband}.
 
-\noindent The nonlinear polarization induced by three incident pulses can be expressed as a Fourier series in the pulse phases $\phi_1, \phi_2, \phi_3$, and individual phase-matched components are isolated via an inverse Fourier transform:
+\noindent 
+The nonlinear polarization induced by three incident pulses can be expressed as a Fourier series in the pulse phases $\phi_1, \phi_2, \phi_3$, and individual phase-matched components are isolated via an inverse Fourier transform:
 \begin{equation}
 	P_{n_1,n_2,n_3}(t_{\text{coh}},T,t_{\text{det}}) =
 	\frac{1}{(2\pi)^3} \int_{0}^{2\pi} \!\! d\phi_1
@@ -294,28 +359,39 @@ This technique is particularly valuable in experiments where spatial isolation i
 	\label{eq:continuous_phase_cycling}
 \end{equation}
 
-\noindent The physically relevant phase-matching directions correspond to:
+\noindent 
+The physically relevant phase-matching directions correspond to:
+
 \begin{align}
 	\vec{k}_{\mathrm{R}}  & = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3,
 	                      & (n_1,n_2,n_3)                         & = (-1,+1,+1), \label{eq:rephasing_selection}    \\
 	\vec{k}_{\mathrm{NR}} & = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3,
 	                      & (n_1,n_2,n_3)                         & = (+1,-1,+1), \label{eq:nonrephasing_selection}
 \end{align}
+
+\noindent 
 yielding the rephasing (R) and nonrephasing (NR) contributions, respectively.
 
-\noindent The emitted field in a given phase-matching direction is proportional to the corresponding polarization:
+\noindent 
+The emitted field in a given phase-matching direction is proportional to the corresponding polarization:
+
 \begin{equation}
 	E_{k_s}(t_{\text{coh}},T,t_{\text{det}}) \propto i P_{\vec{k}_S}(t_{\text{coh}},T,t_{\text{det}}).
 	\label{eq:field_polarization_relation}
 \end{equation}
 
-\noindent The nonlinear polarization is measured (or computed) on a discrete three-dimensional grid of controlled carrier-envelope phases for this FWM experiment with three pulses:
+\noindent 
+The nonlinear polarization is measured (or computed) on a discrete three-dimensional grid of controlled carrier-envelope phases for this FWM experiment with three pulses:
+
 \begin{equation}
 	P(\phi_{1}, \phi_{2}, \phi_{3}; t_{\text{coh}}, T, t_{\text{det}}), \qquad
 	\phi_{1} = \frac{2\pi m}{M}, \; m=0,\dots,M-1,
 	\label{eq:phase_grid_definition}
 \end{equation}
+
+\noindent 
 with $M$ phase steps per pulse. A discrete triple Fourier transform over the phases yields the phase-resolved polarization components:
+
 \begin{equation}
 	P_{n_1 n_2 n_3}(t_{\text{coh}}, T, t)
 	=
@@ -326,14 +402,22 @@ with $M$ phase steps per pulse. A discrete triple Fourier transform over the pha
 	\label{eq:dft_phase_cycling}
 \end{equation}
 
-\noindent The (wavevector) phase-matched rephasing signal direction $\vec{k}_R = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$ (Eq.~\eqref{eq:fwm_phase_matching}) corresponds to selecting the Fourier index triple $(n_1,n_2,n_3)=(-1,+1,+1)$, while the nonrephasing direction $\vec{k}_{NR} = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$ corresponds to $(+1,-1,+1)$ \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. The electric field that is radiated by the sample is proportional to the polarization
+\noindent 
+The (wavevector) phase-matched rephasing signal direction $\vec{k}_R = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$ (Eq.~\eqref{eq:fwm_phase_matching}) corresponds to selecting the Fourier index triple $(n_1,n_2,n_3)=(-1,+1,+1)$, while the nonrephasing direction $\vec{k}_{NR} = +\vec{k}_1 - \vec{k}_2 + \vec{k}_3$ corresponds to $(+1,-1,+1)$ \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. The electric field that is radiated by the sample is proportional to the polarization
+
 \begin{equation}
 	E_{k_s}(t_{\text{coh}}, T, t_{\text{det}}) \propto i P_{-1,+1,+1}(t_{\text{coh}}, T, t_{\text{det}}).
 \end{equation}
+
+\noindent 
 This reflects propagation factors and (typically weak) frequency-dependent constants relating polarization to the emitted heterodyne-detected field \cite{mukamel1995principlesnonlinearoptical, greenetal2024vibrationalcoherenceshalfbroadband}.
 
+
 \paragraph{Time--Frequency Transforms.}
-\noindent After phase selection, the complex time-domain fields $E_{R}(t_{\text{coh}}, T, t_{\text{det}})$ and $E_{NR}(t_{\text{coh}}, T, t_{\text{det}})$ are Fourier transformed over the detection time $t_{\text{det}}$ and the coherence time $t_{\text{coh}}$ to construct the two-dimensional spectra (cf. Eq.~\eqref{eq:2des_signal}):
+
+\noindent 
+After phase selection, the complex time-domain fields $E_{R}(t_{\text{coh}}, T, t_{\text{det}})$ and $E_{NR}(t_{\text{coh}}, T, t_{\text{det}})$ are Fourier transformed over the detection time $t_{\text{det}}$ and the coherence time $t_{\text{coh}}$ to construct the two-dimensional spectra (cf. Eq.~\eqref{eq:2des_signal}):
+
 \begin{align}
 	S_{R}(\omega_{\text{coh}}, T, \omega_{\text{det}})
 	 & =
@@ -348,10 +432,15 @@ This reflects propagation factors and (typically weak) frequency-dependent const
 	E_{NR}(t_{\text{coh}}, T, t_{\text{det}}),
 	\label{eq:nonrephasing_transform}
 \end{align}
+
+\noindent 
 The opposite sign in the $t_{\text{coh}}$-exponent implements the standard convention distinguishing rephasing (photon-echo) and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. In discrete numerical implementations, Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform} are approximated by (shifted) fast Fourier transforms; care must be taken to (i) include the sampling factors, (ii) verify axis centering ($\omega=0$), and (iii) implement the $+i\omega_{\text{coh}} t_{\text{coh}}$ kernel for the rephasing branch (e.g. via complex conjugation tricks or inverse transforms) \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
 
 \paragraph{Global Phase and Absorptive Combination.}
-\noindent The experimentally measured (or simulated) complex spectra $S_{R}$ and $S_{NR}$ each carry unknown global phases (e.g. local oscillator offset). A relative phase $\varphi_g$ must be determined before constructing the absorptive (purely in-phase) 2D spectrum \cite{mukamel1995principlesnonlinearoptical, jonas2003twodimensionalfemtosecondspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. A common strategy is to optimize $\varphi_g$ so that the projection onto the detection axis reproduces an independently measured linear (or pump--probe) absorption spectrum or minimizes dispersive (derivative-like) features in selected slices:
+
+\noindent 
+The experimentally measured (or simulated) complex spectra $S_{R}$ and $S_{NR}$ each carry unknown global phases (e.g. local oscillator offset). A relative phase $\varphi_g$ must be determined before constructing the absorptive (purely in-phase) 2D spectrum \cite{mukamel1995principlesnonlinearoptical, jonas2003twodimensionalfemtosecondspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. A common strategy is to optimize $\varphi_g$ so that the projection onto the detection axis reproduces an independently measured linear (or pump--probe) absorption spectrum or minimizes dispersive (derivative-like) features in selected slices:
+
 \begin{equation}
 	S_{\text{abs}}(\omega_{\text{coh}}, T, \omega_{\text{det}})
 	=
@@ -360,6 +449,8 @@ The opposite sign in the $t_{\text{coh}}$-exponent implements the standard conve
 	\right\}.
 	\label{eq:absorptive_spectrum}
 \end{equation}
+
+\noindent 
 When phase referencing is stable (e.g. interferometric phase stabilization), $\varphi_g$ may be close to zero but still requires verification \cite{brixneretal2004phasestabilizedtwodimensionalelectronic, greenetal2024vibrationalcoherenceshalfbroadband}.
 The absorptive spectra is free from broadening refractive contributions \cite{fullerogilvie2015experimentalimplementationstwodimensional}.
 
@@ -367,17 +458,21 @@ The absorptive spectra is free from broadening refractive contributions \cite{fu
 \paragraph{Normalization and Practical Considerations.}
 \noindent (i) The $M^{-3}$ factor in Eq.~\eqref{eq:dft_phase_cycling} should be retained (or absorbed consistently) for quantitative comparisons. (ii); omission rescales amplitudes and can obscure quantitative lineshape analysis \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. (iii) Frequency axes must be aligned so that $\omega_{\text{coh}}$ for $S_{R}$ and $S_{NR}$ are defined with the same orientation before Eq.~\eqref{eq:absorptive_spectrum} is applied. (iv) Consistent sign conventions are essential; mixing conventions leads to mirrored or dispersive residual features \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
 
+
 \paragraph{Summary.}
-\noindent Phase-cycling Fourier selection (Eqs.~\eqref{eq:continuous_phase_cycling}, \eqref{eq:dft_phase_cycling}) cleanly isolates rephasing and nonrephasing field components (Eqs.~\eqref{eq:rephasing_selection}--\eqref{eq:nonrephasing_selection}) without relying solely on spatial separation. The emitted fields are proportional to the corresponding polarizations (Eq.~\eqref{eq:field_polarization_relation}). Subsequent bidimensional Fourier transforms with pathway-specific phase kernels (Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform}) and careful global phasing yield the absorptive 2D spectrum (Eq.~\eqref{eq:absorptive_spectrum}), which most directly reflects underlying transition energies, homogeneous/inhomogeneous broadening, and coherent couplings \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
+
+\noindent 
+Phase-cycling Fourier selection (Eqs.~\eqref{eq:continuous_phase_cycling}, \eqref{eq:dft_phase_cycling}) cleanly isolates rephasing and nonrephasing field components (Eqs.~\eqref{eq:rephasing_selection}--\eqref{eq:nonrephasing_selection}) without relying solely on spatial separation. The emitted fields are proportional to the corresponding polarizations (Eq.~\eqref{eq:field_polarization_relation}). Subsequent bidimensional Fourier transforms with pathway-specific phase kernels (Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform}) and careful global phasing yield the absorptive 2D spectrum (Eq.~\eqref{eq:absorptive_spectrum}), which most directly reflects underlying transition energies, homogeneous/inhomogeneous broadening, and coherent couplings \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
+
 
 %----------------------------------------------------------------------------------------
 %	SECTION 4: PHOTON ECHO SPECTROSCOPY
 %----------------------------------------------------------------------------------------
-
 \section{Photon Echo Spectroscopy}
 \label{sec:photon_echo}
 
-\noindent Photon echo spectroscopy is a powerful nonlinear optical technique used to eliminate inhomogeneous broadening and probe dynamic processes in complex systems \cite{hybletal1998twodimensionalelectronicspectroscopy, mukamel1995principlesnonlinearoptical}. It represents a time-domain analog of spectral hole-burning.
+\noindent 
+Photon echo spectroscopy is a powerful nonlinear optical technique used to eliminate inhomogeneous broadening and probe dynamic processes in complex systems \cite{hybletal1998twodimensionalelectronicspectroscopy, mukamel1995principlesnonlinearoptical}. It represents a time-domain analog of spectral hole-burning.
 
 \subsection{Principle of Photon Echo}
 \label{subsec:echo_principle}
@@ -663,8 +758,6 @@ Overall shortening goal: Reduce the chapter by ~20-30% by cutting verbose math, 
 
 2. Regroup / Change Order
 The current order is mostly logical (fundamentals → nonlinear optics → photon echoes → advanced methods), but it could flow better to build directly toward your thesis's focus on electronic 2DES in open quantum systems. Reposition sections to create a clearer narrative: start with basics, escalate to nonlinear/electronic specifics, and end with 2D techniques and biological relevance. This improves coherence and reduces redundancy.
-
-Move "Classification of Spectroscopic Techniques" (Subsec. 2.4) Earlier: Place it right after "Basic Principles" (Subsec. 2.1) to quickly establish why electronic spectroscopy is key for your work. This sets the stage for the rest of the chapter.
 
 Group Nonlinear Optics Sections (Sec. 3) More Tightly: Keep "Linear vs. Nonlinear" first, but merge "Second-Order" and "Third-Order Nonlinear Processes" into one subsection ("Nonlinear Processes") to avoid fragmentation. Emphasize third-order processes early, as they're central to 2DES.
 
