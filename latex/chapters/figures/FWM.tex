@@ -1,0 +1,108 @@
+% !TEX root = ../main.tex
+\begin{tikzpicture}[
+  scale=1.0, every node/.style={font=\small},
+  beam/.style={line width=1.2pt, -{Latex[length=2mm]}},
+  sigbeam/.style={line width=1.6pt, dashed, -{Latex[length=2mm]}},
+  optic/.style={draw, line width=0.6pt, fill=white},
+  bs/.style={optic, minimum width=6mm, minimum height=6mm, rotate=45},
+  aom/.style={optic, minimum width=8mm, minimum height=4mm, rounded corners=0.7mm},
+  lens/.style={draw, line width=0.6pt, ellipse, minimum width=2mm, minimum height=10mm},
+  mirror/.style={line width=1pt, rotate=45},
+  label/.style={anchor=west, inner sep=1pt}
+]
+
+% --- Source ---
+\node[optic, minimum width=11mm, minimum height=6mm] (laser) at (0,0) {Laser};
+\node[label] at (-0.1,0.6) {$\lambda\approx 800\,\mathrm{nm}$};
+
+% --- First beamsplitter to create LO and experiment arm ---
+\draw[beam, blue] (laser.east) -- ++(1.3,0) node[pos=0.55, above] {};
+\node[bs] (BS0) at (1.6,0) {};
+
+% Upwards = LO pick-off
+\draw[beam, blue] (BS0.north) -- ++(0,1.6) coordinate (lo_up);
+% Right = to experiment
+\draw[beam, blue] (BS0.east) -- ++(1.6,0) coordinate (preBS);
+
+% --- Split into k1 / k2 / k3 ---
+\node[bs] (BS1) at ($(preBS)+(1.0,0)$) {};
+\draw[beam, teal] (preBS) -- (BS1.west);
+
+% Up arm (k1)
+\draw[beam, teal] (BS1.north) -- ++(0,1.8) coordinate (k1a);
+\node[aom] (AOM1) at ($(k1a)+(0,0.0)$) {AOM $f_1$};
+\draw[beam, teal] (AOM1.north) -- ++(0,0.7) coordinate (k1b);
+\node[optic, rotate=0, minimum width=6mm, minimum height=3mm] (DL1) at ($(k1b)+(0,0.8)$) {$\Delta \tau$};
+\draw[beam, teal] (k1b) -- (DL1.south);
+\draw[beam, teal] (DL1.north) -- ++(0,0.9) coordinate (k1);
+
+% Right arm to BS2 (k2 and k3)
+\node[bs] (BS2) at ($(BS1.east)+(1.4,0)$) {};
+\draw[beam, orange] (BS1.east) -- (BS2.west);
+
+% Up from BS2 = k2
+\draw[beam, orange] (BS2.north) -- ++(0,1.8) coordinate (k2a);
+\node[aom] (AOM2) at ($(k2a)+(0,0.0)$) {AOM $f_2$};
+\draw[beam, orange] (AOM2.north) -- ++(0,0.7) coordinate (k2b);
+\node[optic, minimum width=6mm, minimum height=3mm] (FixedT) at ($(k2b)+(0,0.8)$) {$+T$};
+\draw[beam, orange] (k2b) -- (FixedT.south);
+\draw[beam, orange] (FixedT.north) -- ++(0,0.9) coordinate (k2);
+
+% Right from BS2 = k3
+\draw[beam, purple] (BS2.east) -- ++(1.6,0) coordinate (k3a);
+\node[aom] (AOM3) at ($(k3a)+(0,0)$) {AOM $f_3$};
+\draw[beam, purple] (AOM3.east) -- ++(1.2,0) coordinate (k3b);
+\node[optic, minimum width=6mm, minimum height=3mm] (DL3) at ($(k3b)+(0.8,0)$) {$\Delta t$};
+\draw[beam, purple] (k3b) -- (DL3.west);
+\draw[beam, purple] (DL3.east) -- ++(0.9,0) coordinate (k3);
+
+% --- Polarization control (compact icons) ---
+\node[optic, minimum width=6mm, minimum height=3mm] (pol1) at ($(k1)+(0.9,0)$) {HWP/QWP};
+\node[optic, minimum width=6mm, minimum height=3mm] (pol2) at ($(k2)+(0.9,0)$) {HWP/QWP};
+\node[optic, minimum width=6mm, minimum height=3mm] (pol3) at ($(k3)+(0.9,0)$) {HWP/QWP};
+
+% --- Focusing to sample (BOXCARS) ---
+\node[lens, rotate=90] (L1) at ($(pol1)+(1.3,0)$) {};
+\node[lens, rotate=90] (L2) at ($(pol2)+(1.3,0)$) {};
+\node[lens, rotate=0 ] (L3) at ($(pol3)+(1.3,0)$) {};
+
+% Arrange crossing at sample
+\coordinate (S) at ($(L2)+(2.0,0)$); % sample center
+\draw[beam, teal]   (pol1) -- (L1) -- ($(S)+(-0.4, 0.4)$);
+\draw[beam, orange] (pol2) -- (L2) -- ($(S)+(-0.4,-0.4)$);
+\draw[beam, purple] (pol3) -- (L3) -- ($(S)+(-0.6, 0.0)$);
+
+% Sample
+\draw[optic, fill=gray!10] ($(S)+(-0.2,-0.6)$) rectangle ($(S)+(0.2,0.6)$);
+\node at ($(S)+(0,0.85)$) {Sample};
+
+% Signal (k_s) leaves to the right (rephasing example)
+\draw[sigbeam, black] ($(S)+(0.2,0)$) -- ++(1.8,0) coordinate (ks);
+
+\node[label, anchor=south] at ($(S)+(0.0,-1.2)$) {$\mathbf{k}_s = -\mathbf{k}_1 + \mathbf{k}_2 + \mathbf{k}_3$};
+
+% --- LO path (from pick-off) ---
+\node[aom] (AOMlo) at ($(lo_up)+(0,0)$) {AOM $f_{\mathrm{LO}}$};
+\draw[beam, blue] (lo_up) -- (AOMlo.north);
+\draw[beam, blue] (AOMlo.south) -- ++(0,-0.6) |- ($(ks)+(0.9,0.6)$) coordinate (lo_in);
+
+% --- Interfere signal + LO, then spectrometer ---
+\node[bs] (BSd) at ($(ks)+(1.2,0)$) {};
+\draw[beam, blue] (lo_in) -- (BSd.west);
+\draw[sigbeam, black] (ks) -- (BSd.south);
+
+\draw[beam] (BSd.east) -- ++(1.2,0) node[optic, right, minimum width=10mm, minimum height=6mm] (Spec) {Spectrometer};
+\draw[beam] (Spec.east) -- ++(1.2,0) node[optic, right, minimum width=10mm, minimum height=6mm] {CCD};
+
+% --- Tiny timing inset ---
+\begin{scope}[xshift=2.0cm,yshift=-1.8cm]
+  \draw[-stealth] (0,0) -- (4.0,0);
+  \draw[beam, teal]   (0.6,0) -- +(0,0.6) node[above] {$k_1$};
+  \draw[beam, orange] (1.6,0) -- +(0,0.6) node[above] {$k_2$};
+  \draw[beam, purple] (3.0,0) -- +(0,0.6) node[above] {$k_3$};
+  \node at (1.1,-0.35) {$\tau$};
+  \node at (2.3,-0.35) {$T$};
+  \node at (3.5,-0.35) {$t$};
+\end{scope}
+
+\end{tikzpicture}
