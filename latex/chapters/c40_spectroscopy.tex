@@ -8,7 +8,7 @@
 \section{Fundamentals of Spectroscopy}
 \label{sec:spectroscopy_fundamentals}
 
-\todoidea{This chapter should serve as a foundation by emphasizing electronic transitions, nonlinear optics, coherence phenomena, and their relevance to complex (e.g., biological) systems.
+\todoidea{This chapter	 should serve as a foundation by emphasizing electronic transitions, nonlinear optics, coherence phenomena, and their relevance to complex (e.g., biological) systems.
 Vibrational and other spectroscopies are less relevant for this work, so they should be mentioned but not in detail.}
 \todoidea{
 Brief motivation: Why spectroscopy is a powerful probe of quantum dynamics.
@@ -151,7 +151,13 @@ where $V$ is the sample volume, $\vec{r}_i$ is the position of the $i$-th molecu
 The phase relationships between individual dipolar oscillations are crucial for understanding spectroscopic line shapes and signal intensities \todofix{why?} . 
 
 \todoidea{add the following to a different section / into the results}
-In the case of inhomogeneously broadened systems, different molecules oscillate at slightly different frequencies due to variations in their local environment. The resulting dephasing of individual oscillators leads to the characteristic decay of macroscopic coherences observed in techniques such as photon echo spectroscopy \cite{mukamel1995principlesnonlinearoptical}.
+In the case of inhomogeneously broadened systems\footnote{\todoidea{ALSO ADD: When the harmonic potential surfaces of the ground and the excited states are dis
+placed, the energy gap between the ground and the excited state will vary linearly
+ with the nuclear coordinate q. A uctuating coordinate due to thermal excitation of
+ the nuclear coordinates hence will give rise to a uctuating transition frequency. In
+ that sense the Brownian oscillator model is a more microscopic model, which speci¯es
+ the reason for a uctuating transition frequency \cite{hamm2005principlesnonlinearoptical} page 58
+}}, different molecules oscillate at slightly different frequencies due to variations in their local environment. The resulting dephasing of individual oscillators leads to the characteristic decay of macroscopic coherences observed in techniques such as photon echo spectroscopy \cite{mukamel1995principlesnonlinearoptical}.
 
 
 
@@ -187,14 +193,51 @@ Second-order nonlinear processes, governed by the $\chi^{(2)}$ term, occur only 
 
 \subsection{Third-Order Nonlinear Processes}
 \label{subsec:third_order}
+\todoidea{Add intuition for what the pulse phase kick does for delta pulses -> visual representation on bloch sphere like in \cite{grolletal2025fundamentalsheterodynewave} also the pulse area!! }
+\noindent
+\noindent
+To demonstrate the complexity of nonlinear spectroscopy, that in the third order component of the polarization Eq. \eqref{eq:nonlinear_polarization}
+
+\begin{equation}
+	\vec{P}^{(3)} = \varepsilon_0 \chi^{(3)} \vec{E} \cdot \vec{E} \cdot \vec{E},
+	\label{eq:third_order_polarization}
+\end{equation}
+
+each field $\vec{E}$ generally contains three field-interactions with different frequencies
+
+\begin{equation}
+\vec{E} = \vec{E}_1 e^{-i \omega_1 t} + \vec{E}_2 e^{-i \omega_2 t} + \vec{E}_3 e^{-i \omega_3 t} + \text{c.c.}.
+	\label{eq:explicit_e_field_third_order}
+\end{equation}
 
 \noindent
-Going to third-order, nonlinear processes can occur in all materials, regardless of symmetry \cite{hamm2005principlesnonlinearoptical}. Key third-order nonlinear processes include Third Harmonic Generation (THG), where three photons combine to generate a photon of tripled frequency; Nonlinear Refraction, where the refractive index depends on light intensity, known as the Kerr effect; and Two-Photon Absorption (TPA), which involves the simultaneous absorption of two photons to excite a transition.
+This means already the interacting field contains $?? = 44$ terms, each oscillating at different frequencies: 
+ 
+\begin{align}
+	\pm \omega_1, 
+	\pm \omega_2, 
+	\pm \omega_3, 
+	\pm 3 \omega_1, 
+	\pm 3 \omega_2, 
+	\pm 3 \omega_3, \\
+	\pm (\omega_1 + \omega_2 + \omega_3), 
+	\pm (\omega_2 + \omega_3 - \omega_1), 
+	\pm (\omega_1 - \omega_2 + \omega_3),\\
+	\pm (2 \omega_1 \pm \omega_2), 
+	\pm (2 \omega_1 \pm \omega_3), 
+	\pm (2 \omega_2 \pm \omega_1), 
+	\pm (2 \omega_2 \pm \omega_3), 
+	\pm (2 \omega_3 \pm \omega_2).
+\end{align}
+
+
+Third-order, nonlinear processes can occur in all materials, regardless of symmetry \cite{hamm2005principlesnonlinearoptical}. Key third-order nonlinear processes include Third Harmonic Generation (THG), where three photons combine to generate a photon of tripled frequency; Nonlinear Refraction, where the refractive index depends on light intensity, known as the Kerr effect; and Two-Photon Absorption (TPA), which involves the simultaneous absorption of two photons to excite a transition.
+
+\noindent
 The most important third-order process for this thesis is Four-Wave Mixing (FWM) \cite{boyd2008chapter6nonlinear}. Here, three incident and one generated photon interact in a way that satisfies energy conservation $\mathbf{k}_S = \mathbf{k}_1 + \mathbf{k}_2 + \mathbf{k}_3$ generating photon echo signals and allowing for 2D spectroscopy. This will be discussed in detail in the section \ref{sec:phase_matching}.
 
 \noindent
 Now that we have a understanding of nonlinear optics, we can discuss how to calculate the nonlinear polarization in practice. The standard way is to use response functions, which will be discussed in the next section.
-
 
 \section{Light matter interaction - Calculation of the Polarization}
 \label{sec:response_functions}
@@ -249,16 +292,9 @@ where the $i$-th response function is defined as
 
 \noindent
 and describes the system's response to $i$ interactions with the electric field.
+\todoidea{Mention, that the response function is only a function of the material under investigation \cite{mukamel for dummies}}  % TODO
 It was asumed that the interaction takes place at local times $t_i$, and the system is in a equilibrium state (the ground state) before the interaction, at time $t = - \infty$.
 It is crucial that the first $i-1$ pulses are inside nested comutators, that represent how these field-interaction drive the system out of equilibrium. The last operator then represents the emitted field and is measured by being traced over the environmental degrees of freedom.
-
-\todoref{fact check this:}
-Alternatively Eq. \eqref{eq:response_function_S} can be seen as the $i$-th functional derivative of the expectation value of the dipole operator with respect to the electric field \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy}
-
-\begin{equation}
-	S^{(i)}(t_i, \dots, t_1) = \frac{\delta \langle \hat{\mu}(t) \rangle}{\delta^i E(t_i) \cdots \delta E(t_1)}  \bigg|_{E=0}.
-	\label{eq:response_function}
-\end{equation}
 
 \noindent
 However this thesis will not go down the path of pertubative calculations, but will instead focus on a more microscopic approach.
@@ -267,7 +303,8 @@ Here first the total signal will be calculated, where all pulses are active, wel
 This way the third order signal can be calculated by 
 
 \begin{equation}
-	P^{(3)}(t) = P_{\text{total}}(t) - P^{(2)}(t) - P^{(1)}(t) - P^{(0)}(t)
+	P^{(3)}(t) = P_{\text{total}}(t) - P_{(2)}(t) - P_{(1)}(t) - P_{(0)}(t)
+	\label{eq:third_order_signal_numerical}
 \end{equation}
 
 \noindent
@@ -315,26 +352,26 @@ $\Delta\omega_{\mathrm{FWHM}} \approx \frac{2\ln 2}{\tau_{\mathrm{FWHM}}}$}
 
 \noindent There are two main detection schemes used, influencing sensitivity and the information content of the measurements: homodyne and heterodyne detection \cite{abramaviciusetal2009coherentmultidimensionaloptical}.
 
-\noindent In homodyne detection, the intensity of the emitted signal field is measured directly:
+\noindent
+Generally the signal that arrives at the detector is proportional to the intensity of the emitted electric field, which is then integrated over a period of time by the detector
 
 \begin{equation}
-	S_{\text{HOD}} \propto |E_{\text{S}}|^2 \propto |P^{(3)}|^2
-	\label{eq:homodyne}
+	S_{\text{det}} \propto \int I_{\text{det}}(t) \, dt.
+	\label{eq:signal_intensity}
 \end{equation}
 
-\noindent where $E_{\text{S}}$ is the signal electric field and $P^{(3)}$ is the third-order polarization. While experimentally simpler, homodyne detection measures only the signal intensity, losing phase information and it is more susceptible to noise at low signal levels \todoref{find ref}%\cite{abramaviciusetal2009coherentmultidimensionaloptical}.
+\noindent On the one hand in homodyne detection, the intensity of the emitted signal field is measured directly, so $ I_{\text{HOD}} \propto |E_{\text{S}}|^2 \propto |P^{(3)}|^2 $. While experimentally simpler, homodyne detection loses phase information and it is more susceptible to noise at low signal levels \todoref{find ref or delete}%\cite{abramaviciusetal2009coherentmultidimensionaloptical}.
 
-\noindent Heterodyne detection involves the interference of the signal field with a reference field (local oscillator, LO) of known amplitude and phase:
+\noindent On the other hand, heterodyne detection involves the interference of the signal field with a reference field, the so called local oscillator (LO) of known amplitude and phase:
 
 \begin{equation}
-	S_{\text{HET}} \propto |E_{\text{S}} + E_{\text{LO}}|^2 \approx 2\Re{(E_{\text{LO}}^*E_{\text{S}})} + |E_{\text{LO}}|^2 + |E_{\text{S}}|^2
+	I_{\text{HET}} \propto |E_{\text{S}} + E_{\text{LO}}|^2 \approx 2\Re{(E_{\text{LO}}^*E_{\text{S}})} + |E_{\text{LO}}|^2 + |E_{\text{S}}|^2
 	\label{eq:heterodyne}
 \end{equation}
 
-\noindent Since $|E_{\text{LO}}| \gg |E_{\text{S}}|$, the cross-term dominates, and the signal can be extracted by phase-cycling. Heterodyne provides both amplitude and phase information of the signal. The signal scales linearly with the third-order response \todoref{find ref} \todoidea{why is this good?} It also allows for a more direct connection to theoretical models. \todofix{also why?}
+\noindent Since $|E_{\text{LO}}| \gg |E_{\text{S}}|$, the cross-term dominates, and the signal can be extracted by phase-cycling. In contrast to homodyne detection, the heterodyned signal is not background-free but sits on an offset $\int E_{\text{LO}}(t)^2 \, dt$ which can be subtracted. Ideally, shaped pulses are used for the three input pulses and the local oscillator, yielding the response function directly: $\int E_{\text{LO}}(t) P^{(3)}(t) \, dt = S^{(3)}(t_3, t_2, t_1)$, without convolution complications, where $t_1$, $t_2$, $t_3$ are the directly controlled delays. This is exactly the analytically defined third-order response function in Eq. \eqref{eq:response_function_S}, making experimental data and simulations directly interpretable. This is the main strength of heterodyne detection \cite{mukamel1995principlesnonlinearoptical}. Also, it provides both amplitude and phase information of the signal. The signal scales linearly with the third-order response \todoref{find ref} \todoidea{why is this good?}
 
 \noindent In modern multidimensional spectroscopy, spectral interferometry—a form of heterodyne detection—is widely employed \cite{hybletal1998twodimensionalelectronicspectroscopy}. The signal field and a time-delayed reference pulse are spatially overlapped and spectrally resolved.
-
 
 \section{Wavevector Phase-Matching Conditions}
 \label{sec:phase_matching}
@@ -371,6 +408,8 @@ Different combinations of signs correspond to different phase-matching condition
 \noindent 
 To reduce the number of contributions to the third-order polarization, you can make three vital simplifications: 1.) strict time ordering of the pulses, 2.) the rotating wave approximation (RWA), and 3.) phase-matching \cite{hamm2005principlesnonlinearoptical,  % TODO delete the rest
 mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, jonas2003twodimensionalfemtosecondspectroscopy}.
+\todoidea{<- TODO: mention impulsive limit / delta pulses \cite{cho2009twodimensionalopticalspectroscopy}}
+
 For these assumptions, the only surviving terms in the third order polarization are the rephasing and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, jonas2003twodimensionalfemtosecondspectroscopy}.
 \textbf{Rephasing signal} follow the phase-matching condition $\vec{k}_s = -\vec{k}_1 + \vec{k}_2 + \vec{k}_3$. The first interaction creates a coherent superposition between ground and excited states, generated by a complex conjugate interaction of the "bra". The second pulse converts this coherence into a population, and the third pulse generates a new coherence that emits the signal. The phase accumulated due to different frequencies can be reversed during the period between the third interaction and signal emission. This leads to a photon echo effect at $t_{\text{det}} \approx t_{\text{coh}}$ where the dephased components rephase.
 This happens for an inhomogeneously broadened ensemble of systems, where different realizations of the system have different transition energies, while the laser pulses drive at constant frequency of $\omega_L$. As a result, some realizations dephase quicker than others. Some realizations should come back in phase around $t_{\text{det}} \approx t_{\text{coh}}$ which is exactly this photon echo.
@@ -445,6 +484,7 @@ The emitted field in a given phase-matching direction is proportional to the cor
 \paragraph{Time--Frequency Transforms.}
 
 \noindent 
+So again i want to emphasize that first, dime domain signals of the third order polarization are calculated using Eq. \eqref{eq:polarization_expectation_value}, Eq. \eqref{eq:third_order_signal_numerical} and then the desired phase-matched contributions are extracted using Eq. \eqref{eq:continuous_phase_cycling}. 
 After phase selection, the third order complex time-domain field $E_{k_S}(t_{\text{coh}}, T, t_{\text{det}})$ is Fourier transformed over the detection time $t_{\text{det}}$ and the coherence time $t_{\text{coh}}$ to construct the two-dimensional spectra (cf. Eq.~\eqref{eq:2des_signal}):
 
 \begin{align}
@@ -458,17 +498,14 @@ After phase selection, the third order complex time-domain field $E_{k_S}(t_{\te
 	 & =
 	\int dt_{\text{coh}} \int dt_{\text{det}} \;
 	e^{- i \omega_{\text{coh}} t_{\text{coh}}} e^{- i \omega_{\text{det}} t_{\text{det}}}
-	E_{NR}(t_{\text{coh}}, T, t_{\text{det}}),
+	E_{NR}(t_{\text{coh}}, T, t_{\text{det}}).
 	\label{eq:nonrephasing_transform}
 \end{align}
 
 \noindent 
-where $E(t_{\text{coh}}, T, t_{\text{det}})$ is the time-domain electrical signal field.
-
-\noindent 
 The opposite sign in the $t_{\text{coh}}$-exponent implements the standard convention distinguishing rephasing (photon-echo) and nonrephasing contributions \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}. In discrete numerical implementations, Eqs.~\eqref{eq:rephasing_transform}--\eqref{eq:nonrephasing_transform} are approximated by (shifted) fast Fourier transforms \cite{cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
 
-\paragraph{Global Phase and Absorptive Combination.}
+\paragraph{Absorptive Combination.}
 
 \noindent 
 The experimentally measured (or simulated) complex spectra $S_{R}$ and $S_{NR}$ can be combined to  construct the purely absorptive 2D spectrum \cite{mukamel1995principlesnonlinearoptical, jonas2003twodimensionalfemtosecondspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}
@@ -511,6 +548,8 @@ Recall that a complete 2D spectrum is built from repeated three-pulse sequences 
 
 \noindent The resulting 2D spectrum contains peaks along the diagonal ($\omega_{\text{coh}} = \omega_{\text{det}}$) corresponding to the linear absorption spectrum, while off-diagonal peaks reveal couplings and energy transfer between different states. The evolution of the 2D spectra with waiting time $T$ provides detailed information about energy transfer kinetics, spectral diffusion, and quantum coherence effects.
 
+\noindent In this sense, 2D spectroscopy is the ultimate nonlinear experiment within third-order spectroscopy, gathering the maximum information—what cannot be learned with 2D spectroscopy cannot be learned with any other third-order method. However, the response function $S^{(3)}(t_3, t_2, t_1)$ is a three-dimensional oscillating function that is complex and difficult to visualize. This is why heterodyne-detected photon echoes, pioneered by Wiersma in the mid-90s, were initially not considered useful.
+
 \subsection{Applications of Photon Echo Spectroscopy}
 \label{subsec:echo_applications}
 
@@ -542,4 +581,6 @@ Improve Flow and Language: Add transitional sentences (e.g., "Building on these 
 
 Add Figures and Examples: You have a TODO for a figure in phase cycling—add it. Include simple examples (e.g., a toy model of electronic transitions in a two-level system) to illustrate points.
 
-Overall Cohesion: End with a strong conclusion summarizing how these principles underpin your thesis's modeling of microtubules. This reinforces the chapter as a foundation.}
+Overall Cohesion: End with a strong conclusion summarizing how these principles underpin your thesis's modeling of microtubules. This reinforces the chapter as a foundation.
+
+}

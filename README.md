@@ -23,10 +23,7 @@ latexmk -pdf -shell-escape -cd latex/main.tex
 The command writes all auxiliary files alongside the sources and produces `latex/main.pdf`. Clean up with `latexmk -c -cd latex/main.tex` if you want to remove the generated intermediates.
 
 ## Figures
-- `figures/figures_from_python/` collects figures exported from numerical experiments.
-- `figures/figures_in_development_svg/` contains editable SVG drafts.
-
-Feel free to add new figure subdirectories as the manuscript evolves; the `.gitignore` only filters temporary artefacts so final assets stay versioned.
+- `figures/` contains editable SVG drafts.
 
 ## Version control tips
 - Commit generated PDFs sparingly—`latex/main.pdf` is ignored so that the history stays light.

@@ -1,218 +1,129 @@
 % !TEX root = ../main.tex
-\chapter{Numerical Implementation of Two-Dimensional Electronic Spectroscopy}
+\chapter{Numerical Implementation}
 \label{chap:numerical_implementation}
 
 \noindent
-This chapter presents the computational framework developed for simulating two-dimensional electronic spectroscopy (2DES) spectra of molecular systems. The implementation focuses on the technical aspects of quantum system evolution, pulse sequence generation, data processing, and visualization, providing a bridge between the theoretical framework established in previous chapters and practical computational methods.
+This chapter presents the computational framework developed for simulating one- and two-dimensional electronic spectroscopy of open quantum systems. The implementation is built around the \texttt{qspectro2d} Python package, which provides a modular, configuration-driven workflow that bridges the theoretical framework established in previous chapters with practical computational methods for investigating quantum coherence phenomena in complex molecular systems.
 
-\section{Overview of Simulation Architecture}
-\label{sec:simulation_architecture}
-
-\noindent
-The simulation framework follows a modular structure that separates quantum mechanical evolution from spectroscopic data processing. The general workflow consists of:
-
-\begin{enumerate}
-	\item Definition of quantum system parameters (energy levels, dipole moments, coupling strengths)
-	\item Generation of pulse sequences with specific time delays and phases
-	\item Evolution of the density matrix under pulse influences and environmental coupling
-	\item Calculation of the system's polarization response
-	\item Processing of time-domain data to obtain frequency-domain 2D spectra
-	\item Averaging over inhomogeneous distributions and phase cycling
-\end{enumerate}
+\section{Software Architecture and Design Philosophy}
+\label{sec:software_architecture}
 
 \noindent
-This modular approach enables systematic investigation of different physical parameters while maintaining computational efficiency through parallel processing capabilities.
-
-\section{Computing Two-Dimensional Polarization Response}
-\label{sec:computing_polarization}
+The \texttt{qspectro2d} package follows a modular design that separates concerns across distinct functional domains. The architecture enables efficiency through parallel processing and flexible configuration management. The core design is built around a \textbf{configuration-driven workflow} where YAML-based parameter specification decouples physical models from computational implementation. This approach ensures that \textbf{modular components} including atomic systems, laser pulses, environmental baths, and spectroscopic calculations remain independently configurable. The framework provides \textbf{scalable execution} with support for both local testing and high-performance computing (HPC) batch processing, complemented by \textbf{comprehensive post-processing} through automated workflows for averaging, Fourier transforms, and visualization.
 
 \noindent
-The core calculation computes the third-order polarization response by iterating through coherence times ($t_{\text{coh}}$) and detection times ($t_{\text{det}}$) for a given waiting time ($T_{\text{wait}}$):
+The package structure comprises five main submodules: \texttt{core} (fundamental system components), \texttt{spectroscopy} (calculation engines), \texttt{config} (parameter management), \texttt{utils} (data handling utilities), and \texttt{visualization} (plotting tools).
+
+\section{Configuration-Driven Simulation Workflow}
+\label{sec:configuration_workflow}
+
+\noindent
+The simulation framework employs YAML configuration files to specify all physical and computational parameters, enabling reproducible plotes. A typical configuration defines the \textbf{atomic system} through the number of atoms, transition frequencies, geometric arrangement, and inhomogeneous broadening parameters. \textbf{Laser parameters} encompass pulse amplitudes, durations, carrier frequencies, and rotating wave approximation settings, while \textbf{environmental coupling} is characterized by bath type (Ohmic, Drude-Lorentz), temperature, coupling strength, and cutoff frequencies. Finally, \textbf{computational settings} specify the ODE solver choice (Lindblad vs. Bloch-Redfield), signal types, and time windows.
+
+\noindent
+The workflow consists of three main execution phases: simulation (\texttt{calc\_datas.py}), post-processing (\texttt{process\_datas.py}), and visualization (\texttt{plot\_datas.py}). This separation enables efficient parameter studies where computationally expensive simulations are performed once, followed by rapid exploration of different analysis and visualization options.
+
+\section{Third-Order Polarization and Phase Cycling}
+\label{sec:third_order_polarization}
+
+\noindent
+In the numerical implementation, the electric field for multiple pulses is modeled following the formalism established in Chapter~\ref{chapter_spectroscopy}. The total electric field is expressed as
 
 \begin{equation}
-	\label{eq:polarization_third_order}
-	P^{(3)}(t_{\text{coh}}, T_{\text{wait}}, t_{\text{det}}) = \mathrm{Tr}[\hat{\mu} \cdot \hat{\rho}^{(3)}(t_{\text{coh}}, T_{\text{wait}}, t_{\text{det}})]
+	\vec{E}(\vec{r},t) = \sum_{m=1}^{3} \vec{E}_m(\vec{r},t) + \mathrm{c.c.},
+\end{equation}
+
+where c.c. denotes the complex conjugate, and
+
+\begin{equation}
+	\vec{E}_m(\vec{r},t) = \vec{\chi}_m E'_m(t - \tau_m) \exp(-i (\omega_m t + \varphi_m)),
+\end{equation}
+
+with frequency $\omega_m = 2\pi \nu_m$, wavevector $\vec{k}_m$, and electric field amplitude $\vec{\chi}_m$. The envelope $E'_m(t - \tau_m)$, centered at $\tau_m$, is assumed to be Gaussian with FWHM $\tau_p$
+
+\begin{equation}
+	E'_m(t - \tau_m) = \exp\left( -\frac{4 \ln 2 (t - \tau_m)^2}{\tau_p^2} \right).
 \end{equation}
 
 \noindent
-where $\hat{\mu}$ is the dipole operator and $\hat{\rho}^{(3)}$ is the third-order density matrix. This calculation implements the three-pulse sequence through sequential evolution steps:
+The core spectroscopic calculation implements phase-cycled third-order polarization measurement following the established four-wave mixing protocols detailed in Chapter~\ref{chapter_spectroscopy}, Section~\ref{subsec:phase_cycling}.
+\noindent
+The implementation computes individual third orderp olarization components by subtracting the phase-cycled individual signals from the total one:
+$P_{\phi_1,\phi_2}^{(3)}(t) = P_{\text{total}}(t) - \sum_i P_i(t)$, where $P_{\text{total}}$ includes all pulses and $P_i$ represents evolution with only pulse $i$ active. This approach enables isolation of the desired third-order response while automatically handling pulse overlap effects.
 
-\begin{enumerate}
-	\item Apply the first pulse with phase $\phi_0$ and evolve for coherence time $t_{\text{coh}}$
-	\item Apply the second pulse with phase $\phi_1$ and evolve for waiting time $T_{\text{wait}}$
-	\item Apply the third pulse with phase $\phi_2$ and measure response during detection time $t_{\text{det}}$
-\end{enumerate}
+\section{Open Quantum System Evolution}
+\label{sec:oqs_evolution}
 
 \noindent
-The temporal evolution utilizes either custom equations derived from literature or standard quantum dynamics solvers from the QuTiP \cite{lambertetal2024qutip5quantum} library, ensuring both flexibility and computational accuracy.
+The quantum system evolution is handled by the \texttt{SimulationModuleOQS} class, which provides a unified interface for different solver backends implementing the open quantum system dynamics developed in Chapter~\ref{chapter_open_quantum_systems}. The implementation supports both Lindblad master equation evolution (via QuTiP's \texttt{mesolve}) and Bloch-Redfield dynamics (\texttt{brmesolve}) with automatic handling of pulse overlap and time-dependent Hamiltonians.
 
-\section{Inhomogeneous Broadening Implementation}
+\noindent
+For time-dependent pulse sequences, the total Hamiltonian takes the form established in the spectroscopy theory (Chapter~\ref{chapter_spectroscopy}):
+
+\begin{equation}
+	\label{eq:time_dependent_hamiltonian}
+	H(t) = H_0 + \sum_{i} H_{\text{int},i}(t)
+\end{equation}
+
+\noindent
+where $H_0$ is the bare system Hamiltonian and $H_{\text{int},i}(t)$ represents the interaction with pulse $i$, following the light-matter interaction formalism detailed in Chapter~\ref{chapter_spectroscopy}. The solver automatically detects pulse overlap regions and constructs appropriate piecewise evolution operators, ensuring accurate treatment of multi-pulse sequences regardless of timing complexity.
+
+\section{Inhomogeneous Broadening and Statistical Averaging}
 \label{sec:inhomogeneous_broadening}
 
 \noindent
-To accurately model molecular systems, the simulation accounts for inhomogeneous broadening by averaging over a distribution of transition frequencies. The distribution follows a Gaussian profile:
+Real molecular systems exhibit inhomogeneous broadening due to environmental variations, as discussed in the spectroscopy fundamentals (Chapter~\ref{chapter_spectroscopy}). The implementation models this through Gaussian-distributed transition frequencies following the theoretical treatment:
 
 \begin{equation}
-	\label{eq:gaussian_distribution}
-	\sigma(E - E_0) = \frac{1}{\sigma_{\text{val}}\sqrt{2\pi}} \exp\left(-\frac{(E-E_0)^2}{2\sigma_{\text{val}}^2}\right)
+	\label{eq:gaussian_broadening}
+	\rho(\omega) = \frac{1}{\sigma\sqrt{2\pi}} \exp\left(-\frac{(\omega-\omega_0)^2}{2\sigma^2}\right)
 \end{equation}
 
 \noindent
-where $\sigma_{\text{val}} = \Delta/(2\sqrt{2\ln{2}})$ relates the standard deviation to the full width at half maximum $\Delta$.
+where $\sigma = \Delta_{\text{FWHM}}/(2\sqrt{2\ln 2})$ relates the standard deviation to the experimentally relevant full width at half maximum, consistent with the broadening models established in Chapter~\ref{chapter_spectroscopy}. The sampling employs a rejection algorithm optimized for computational efficiency while maintaining statistical accuracy.
 
-\noindent
-The sampling from this distribution employs a rejection sampling algorithm that ensures accurate representation of the broadening profile while maintaining computational efficiency. The algorithm operates by:
-
-\begin{enumerate}
-	\item Defining the sampling range $[E_{\text{min}}, E_{\text{max}}] = [E_0 - E_{\text{range}} \cdot \Delta, E_0 + E_{\text{range}} \cdot \Delta]$
-	\item Computing the maximum value $\sigma_{\text{max}}$ of $\sigma(E)$ in the range
-	\item Generating candidate values uniformly and accepting them based on the probability density
-	\item Repeating until the desired number of samples is obtained
-\end{enumerate}
-
-\section{Parallel Processing of Parameter Combinations}
+\section{Parallel Processing and Scalable Execution}
 \label{sec:parallel_processing}
 
 \noindent
-The computationally intensive nature of 2DES simulations, particularly when averaging over frequency samples and phase combinations, necessitates efficient parallel processing. The averaged response is calculated as:
+The framework supports both local execution for testing and HPC cluster deployment for large parameter studies. The local workflow (\texttt{calc\_datas.py}) generates all combinations of coherence times and inhomogeneous samples, while the HPC workflow (\texttt{hpc\_batch\_dispatch.py}) distributes individual parameter combinations across compute nodes.
+
+\noindent
+For each combination of parameters, the averaged response is calculated following the inhomogeneous averaging procedure established in the spectroscopy theory (Chapter~\ref{chapter_spectroscopy}):
 
 \begin{equation}
 	\label{eq:averaged_response}
-	\langle P^{(3)}(t_{\text{coh}}, T_{\text{wait}}, t_{\text{det}}) \rangle = \frac{1}{N_\omega N_\phi} \sum_{i=1}^{N_\omega} \sum_{j=1}^{N_\phi} P^{(3)}_{\omega_i, \phi_j}(t_{\text{coh}}, T_{\text{wait}}, t_{\text{det}})
+	\langle E_{k_s}(t_{\text{coh}}, t_{\text{det}}) \rangle = \frac{1}{N_{\text{inhom}}} \sum_{i=1}^{N_{\text{inhom}}} E_{k_s}^{(i)}(t_{\text{coh}}, t_{\text{det}})
 \end{equation}
 
 \noindent
-where $N_\omega$ represents the number of frequency samples and $N_\phi$ the number of phase combinations. The implementation utilizes Python's \texttt{ProcessPoolExecutor} to distribute calculations across available CPU cores, significantly reducing computation time for parameter sweeps.
+where $N_{\text{inhom}}$ represents the number of inhomogeneous samples as defined in the broadening treatment (Chapter~\ref{chapter_spectroscopy}). The implementation utilizes Python's \texttt{ProcessPoolExecutor} for local parallel execution and integrates with SLURM-based job scheduling systems for HPC deployment, enabling efficient scaling from desktop testing to production-scale parameter sweeps.
 
-\section{Fourier Transformation and Spectral Analysis}
-\label{sec:fourier_transformation}
+\section{Post-Processing and Spectral Analysis}
+\label{sec:post_processing}
 
-The conversion from time-domain to frequency-domain spectra utilizes two-dimensional Fourier transformation:
+\noindent
+The post-processing pipeline (\texttt{process\_datas.py}) handles the conversion from time-domain signals to 2D spectra. \textbf{Data aggregation} groups individual parameter combination files by inhomogeneous sample and stacks them along coherence time dimensions. \textbf{Zero-padding} extends the time-domain data to improve frequency resolution according to:
 
 \begin{equation}
-	\label{eq:2d_fourier_transform}
-	S(\omega_{\text{coh}}, \omega_{\text{coh}}) = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} E_{\vec{k}_{S}}^{(3)}(t_{\text{coh}}, T, t) e^{-i\omega_{\text{coh}} t_{\text{coh}}} e^{-i\omega_{\text{coh}} t_{\text{coh}}} \, dt_{\text{coh}} \, dt
+	\label{eq:zero_padding}
+	E_{\text{extended}}(t) = \begin{cases}
+		E(t) & \text{for } t \in [0, T_{\text{orig}}] \\
+		0 & \text{for } t \in (T_{\text{orig}}, T_{\text{extended}}]
+	\end{cases}
 \end{equation}
 
 \noindent
-In the discrete implementation, this becomes a Fast Fourier Transform (FFT) operation:
-
-\begin{equation}
-	\label{eq:discrete_2d_fft}
-	S[k,l] = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} P^{(3)}[m,n] \exp\left(-i\frac{2\pi km}{M}\right) \exp\left(-i\frac{2\pi ln}{N}\right)
-\end{equation}
+Subsequently, \textbf{Fourier transformation} converts the data to frequency domain using Eq. \eqref{eq:rephasing_transform}.
 
 \noindent
-The frequency axes are converted to wavenumber units ($10^4$ cm$^{-1}$) using:
+The frequency axes are expressed in wavenumber units ($10^4$ cm$^{-1}$) for direct comparison with experimental literature.
 
-\begin{equation}
-	\label{eq:frequency_to_wavenumber}
-	\nu = \frac{f}{c} \times 10^4 \text{ cm}^{-1}
-\end{equation}
+\section{Model System Implementation}
+\label{sec:model_systems}
 
 \noindent
-where $f$ is the frequency in cycles/fs and $c = 2.998 \times 10^{-5}$ cm/fs is the speed of light.
-
-\section{Data Processing and Visualization}
-\label{sec:data_visualization}
+The \texttt{AtomicSystem} class provides flexible construction of multi-atom quantum systems with configurable geometries, implementing the model systems described in Chapter~\ref{chapter_model_systems}. For the microtubule-inspired models central to this thesis, the implementation supports \textbf{cylindrical arrangements} where atoms are positioned on cylindrical surfaces with specified chain and ring numbers. \textbf{Excitation manifold truncation} restricts the system to single and double excitation subspaces with automatic basis construction, while \textbf{dynamic coupling} enables nearest-neighbor and long-range interactions based on geometric proximity. The framework also incorporates \textbf{inhomogeneous disorder} through site-specific frequency variations sampled from realistic distributions.
 
 \noindent
-The 2D spectra visualization system represents different aspects of the complex-valued data:
-
-\begin{itemize}
-	\item Real part: Absorptive component containing peak positions
-	\item Imaginary part: Dispersive component providing line shape information
-	\item Absolute value: Overall signal strength
-	\item Phase: Phase relationship between excitation and detection processes
-\end{itemize}
-
-\noindent
-For data containing both positive and negative values, a custom white-centered colormap enhances visualization of signal features. The normalization scheme:
-
-\begin{equation}
-	\label{eq:data_normalization}
-	\text{data}_{\text{normalized}} = \frac{\text{data}}{\max(|\text{data}|)}
-\end{equation}
-
-\noindent
-ensures consistent visualization across different parameter sets while preserving relative signal amplitudes.
-
-\section{Extending Time and Frequency Axes}
-\label{sec:extending_axes}
-
-\noindent
-To improve Fourier transform resolution and reduce artifacts from finite sampling, the implementation supports zero-padding of time-domain data:
-
-\begin{equation}
-	\label{eq:zero_padding_matrix}
-	\text{data}_{\text{extended}} = \begin{bmatrix}
-		0 & \cdots & 0 & \text{data} & 0 & \cdots & 0
-	\end{bmatrix}
-\end{equation}
-
-\noindent
-The corresponding time axes extend proportionally:
-
-\begin{equation}
-	\label{eq:extended_time_axis}
-	t_{\text{extended}} = \{t_0 - n_{\text{pre}} \Delta t, \ldots, t_0, \ldots, t_N, \ldots, t_N + n_{\text{post}} \Delta t\}
-\end{equation}
-
-\noindent
-where $n_{\text{pre}}$ and $n_{\text{post}}$ represent the number of zero-padded points before and after the original data.
-
-\section{Global Data Combination for Multiple Waiting Times}
-\label{sec:global_data_combination}
-
-\noindent
-For studies of temporal evolution in coherence phenomena, the simulation supports scanning over multiple waiting times. The local time and frequency data are mapped to global axes through:
-
-\begin{equation}
-	\label{eq:global_mapping_corrected}
-	\mathrm{global\_data}[\mathrm{idx}_{t_{\mathrm{coh}}}, \mathrm{idx}_{t}] += \mathrm{local\_data}[\mathrm{local\_idx}_{t_{\mathrm{coh}}}, \mathrm{local\_idx}_{t}]
-\end{equation}
-
-\noindent
-where $\text{idx}_{t_{\text{coh}}}$ and $\text{idx}_t$ represent indices in the global arrays corresponding to local values of $t_{\text{coh}}$ and $t_{\text{det}}$. The global data normalization:
-\begin{equation}
-	\label{eq:global_normalization}
-	\text{global\_data}_{\text{normalized}} = \frac{\text{global\_data}}{N_{T_{\text{wait}}}}
-\end{equation}
-
-\noindent
-produces the average spectrum over all waiting times, enabling analysis of relaxation and dephasing processes.
-
-\section{Connection to Theoretical Framework}
-\label{sec:connection_to_theory}
-
-\noindent
-The numerical implementation directly implements the theoretical concepts established in previous chapters:
-
-\begin{itemize}
-	\item Quantum system evolution follows the Redfield master equation for open quantum systems (Chapter~\ref{chapter_open_quantum_systems})
-	\item Polarization calculations implement the nonperturbative approach for 2DES theory
-	\item Spectral analysis methods extract signatures of quantum coherence in biological systems
-	\item Environmental coupling effects are incorporated through systematic parameter studies
-\end{itemize}
-
-\noindent
-This computational framework provides a robust platform for simulating 2DES spectra of complex molecular systems and extracting quantum dynamical parameters relevant to biological function.
-
-\section{Validation and Performance Considerations}
-\label{sec:validation_performance}
-
-\noindent
-The implementation includes validation procedures comparing simulation results against analytical solutions for simple systems. Performance optimization through vectorized operations and parallel processing enables parameter sweeps necessary for comprehensive system characterization.
-
-\noindent
-Special considerations for biological systems include:
-
-\begin{enumerate}
-	\item Larger inhomogeneous broadening due to complex environments
-	\item Faster dephasing from environmental coupling
-	\item Multiple chromophore contributions to the signal
-	\item Energy transfer processes on various timescales
-\end{enumerate}
-
-\noindent
-The simulation framework accommodates these aspects through customizable system parameters and flexible averaging procedures, providing a versatile tool for investigating quantum coherence phenomena in biological systems.
+The system construction automatically handles basis transformations between site and excitation manifold representations, enabling efficient evolution in the appropriate eigenbasis while maintaining physical interpretability of results.
