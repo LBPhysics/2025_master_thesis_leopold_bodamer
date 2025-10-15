@@ -8,37 +8,6 @@
 %	SECTION: Introduction
 %-----------------------------------
 \section{Introduction}
-\subsection{Density Matrix Formalism}
-
-The density matrix formalism provides a powerful framework to describe the dynamics of quantum systems, especially when dealing with mixed states or decoherence.
-The density matrix \(\rho\) is defined as:
-\begin{equation}
-	\rho = |\psi\rangle \langle \psi|,
-	\label{eq:DensityMatrix}
-\end{equation}
-for pure states, and as a statistical mixture for mixed states. \todoidea{add some more definitions like in the paper \cite{grolletal2025fundamentalsheterodynewave} p 16,17}
-In this formalism, the diagonal elements represent populations and the off-diagonal elements represent coherences between states.
-Coherences are phase relations between different quantum states, which are crucial for interference.
-For example for a two level system a clear phase relation and a pure quantum state would have off diagonal elements of $ \rho_{ij} = 1/2$.
-This state is often referred to as a coherent superposition of the two states.
-
-When coupling a system to an environment, the environment is responsible for decoherence.
-The state evolves over time to a purely statistical mixture of states.
-
-The time evolution of the density matrix is governed by the Liouville-von Neumann equation:
-\begin{equation}
-	\frac{\partial \rho}{\partial t} = -\frac{i}{\hbar} [H, \rho],
-	\label{eq:Liouville}
-\end{equation}
-where \(H\) is the system Hamiltonian.
-
-In the presence of decoherence or dissipation, the dynamics can be described using the Lindblad master equation:
-\begin{equation}
-	\frac{\partial \rho}{\partial t} = -\frac{i}{\hbar} [H, \rho] + \sum_k \mathcal{L}_k(\rho),
-	\label{eq:Lindblad}
-\end{equation}
-where \(\mathcal{L}_k(\rho)\) are Lindblad operators modeling the interaction with the environment.
-
 %----------------------------------------------------------------------------------------
 %	SECTION: Two-Level Atom Master Equation in the Rotating Frame with RWA
 %----------------------------------------------------------------------------------------

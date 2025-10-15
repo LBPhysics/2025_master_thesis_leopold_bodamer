@@ -69,7 +69,7 @@ This thesis is focussed on using a more general master equation—the Redfield e
 \section{The Redfield Equation: A Central Tool}
 \label{sec:Redfield_eq}
 
-Originally developed by A.G. Redfield in 1957 and 1965 for nuclear magnetic resonance relaxation phenomena~\cite{redfield1965theoryrelaxationprocesses}, the Redfield equation describes the time evolution of the reduced density matrix of a quantum system weakly coupled to a thermal environment.
+Originally developed by A.G. Redfield in 1957 and 1965 for nuclear magnetic resonance relaxation phenomena~\cite{redfield1965theoryrelaxationprocesses}, the Redfield equation describes the time evolution of the reduced density matrix (formally defined in section \ref{subsubsec:preliminaries_tools}) of a quantum system weakly coupled to a thermal environment.
 
 \noindent
 Unlike phenomenological approaches that introduce dissipation and dephasing \emph{ad hoc}, the Redfield equation relates them to environmental correlation functions or spectral densities ~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}.
@@ -79,7 +79,7 @@ The following requirements must be fulfilled by the final derived Redfield equat
 
 \begin{enumerate}
 	\item The equation should be linear in the system density matrix $\dot{\rho}_S(t) = F(\rho_S(t))$ (reduced equation of motion).
-	\item The equation should be Markovian, meaning that the evolution of the system density matrix at time $t$ only depends on the state of the system at time $t$ and not on its past history.
+	\item The equation should be Markovian, meaning that the evolution of the system density matrix  at time $t$ only depends on the state of the system at time $t$ and not on its past history.
 	\item The equation should be trace-preserving, meaning that $\mathrm{Tr}[\rho_S(t)] = \mathrm{Tr}[\rho_S(0)]$ for all times $t$.
 \end{enumerate}
 
@@ -103,8 +103,53 @@ This derivation follows the approach presented in \cite{manzano2020shortintroduc
 \subsubsection{Mathematical Preliminaries}
 \label{subsubsec:preliminaries_tools}
 
-First we need a few mathematical tools and definitions that will be used in the derivation.
 \noindent
+First we need a few mathematical tools and definitions that will be used in the derivation.
+
+
+\paragraph{Density matrix formalism.}
+
+\todoimp{please redo this text}
+The density matrix formalism provides a powerful framework to describe the dynamics of quantum systems, especially when dealing with mixed states and decoherence effects.
+The density matrix \(\rho\) is defined as \cite{campaiolietal2024quantummasterequations}:
+
+\begin{equation}
+	\rho = \sum_i p_i |\psi_i\rangle \langle \psi_i|, \quad p_i \geq 0, \quad \sum_i p_i = 1.
+	\label{eq:DensityMatrix}
+\end{equation}
+
+
+\noindent
+This represents a statistical mixture, the average of an ensemble with different realization of pure quantum states $\psi_i $ with classical probabilities $ p_i $. In other words one cannot tell with certainty the quantum state of the system. This will come in handy in the context of open quantum systems, where the system is entangled with an environment and one loses information of the system of interest to the total system.
+The conditions in Eq. \eqref{eq:DensityMatrix} ensure the following properties, that a physical density matrix must satisfy :
+\begin{align}
+	\rho^\dagger &= \rho, \tag{57a} \\
+	\langle \psi | \rho | \psi \rangle &\geq 0 \quad \forall |\psi\rangle, \tag{57b} \\
+	\mathrm{Tr}(\rho) &= 1. \tag{57c}
+\end{align}
+
+\noindent
+In this formalism, for a canonical basis $\{|i\rangle\}$, representing a set of quantum states, the diagonal elements $\rho_{ii} $ represent populations and the off-diagonal elements $\rho_{ij} $ represent coherences between states.
+Coherences are phase relations between different quantum states, which are crucial for interference.
+For example for a two level system a clear phase relation and a pure quantum state would have off diagonal elements of $ \rho_{ij} = 1/2$.
+This state is often referred to as a coherent superposition of the two states.
+
+When coupling a system to an environment, the environment is responsible for decoherence.
+The state evolves over time to a purely statistical mixture of states.
+
+The mean value (expectation values) of an operator $O$ can be calculated by additionally averaging over the classical probabilities $p_i$ to obtain
+
+\begin{align}
+\langle A \rangle &= \sum_i p_i \langle \psi_i | A | \psi_i \rangle \\
+&= \sum_n \sum_i p_i \langle \psi_i | A | \phi_n \rangle \langle \phi_n | \psi_i \rangle \\
+&= \sum_n \langle \phi_n | \sum_i |\psi_i\rangle p_i \langle \psi_i | A | \phi_n \rangle \\
+&= \mathrm{Tr}(\rho A).
+\end{align}
+
+\noindent
+Here, an arbitrary basis $\{|\phi_n\rangle\}$ and an according completeness relation $\sum_n |\phi_n\rangle \langle \phi_n| = \mathds{1}$ was used.
+
+
 \paragraph{Partial trace.}
 
 \noindent
@@ -116,10 +161,10 @@ and $\mathcal{B}_1$ denotes trace-class operators, namely those $X$ with finite 
 \]
 
 \noindent
-This ensures expectation values of local observables $A \otimes I_B$ are preserved. In an orthonormal basis $\{|b_i\rangle\}$ of $\mathcal{H_B}$, it acts as \cite{steebhardy2018problemssolutionsquantum}:
+This ensures expectation values of local observables $A \otimes \mathds{1}_B$ are preserved. In an orthonormal basis $\{|b_i\rangle\}$ of $\mathcal{H_B}$, it acts as \cite{steebhardy2018problemssolutionsquantum}:
 
 \begin{equation} \label{eq:ho_partial_trace_definition}
-	\mathrm{Tr}_B X = \sum_i (I_A \otimes \langle b_i|) \, X \, (I_A \otimes |b_i\rangle).
+	\mathrm{Tr}_B X = \sum_i (\mathds{1}_A \otimes \langle b_i|) \, X \, (\mathds{1}_A \otimes |b_i\rangle).
 \end{equation}
 
 \noindent
@@ -152,7 +197,7 @@ The evolution of the total system is governed by the Liouville–von Neumann equ
 \end{equation}
 
 \noindent
-where $\rho_T(t)$ is the density matrix of the total system, $H_T$ is the total Hamiltonian, and we use units where $\hbar = 1$. This is the correspondence of the Schrödinger equation Eq.\eqref{eq:SchrödingerEquation} for more general classically mixed states 
+where $\rho_T(t)$ is the density matrix of the total system, $H_T$ is the total Hamiltonian, and we use units where $\hbar = 1$. This is the correspondence of the Schrödinger equation Eq.\eqref{eq:SchrödingerEquation} for more general classically mixed states (see sectoion \ref{subsubsec:preliminaries_tools})
 
 \begin{equation}
 	\rho = \sum_i p_i |\psi_i\rangle \langle \psi_i|, \quad p_i \geq 0, \quad \sum_i p_i = 1.
@@ -479,14 +524,21 @@ In the interaction picture these acquire simple oscillatory phases:
 \end{equation}
 
 \noindent
+Note, that we have now assumed a time independent system Hamiltonian $H_S$. The derivation can in principle be extended to time-dependent $H_S(t)$. \todoimp{add a reference -> mention spectroscopy (time dependent field coupling)}
+
+\noindent
 Inserting Eq.~\eqref{eq:Interaction_Picture_Eigenoperators} into Eq.~\eqref{eq:Redfield_Markov_TimeLocal} produces sums over oscillatory factors $e^{-i(\omega - \omega') t}$ multiplying integrals of $C_{ii'}(\tau) e^{i \omega' \tau}$. The inner commutator in Eq.~\eqref{eq:Redfield_Markov_TimeLocal} becomes
+
 \begin{equation}
 [\hat{S}_i(t),\, \hat{S}_{i'}(t-\tau)\rho]
 = \sum_{\omega,\omega'} e^{-i(\omega - \omega')t} e^{+i \omega' \tau}
 \big[ S_i(\omega),\, S_{i'}(\omega') \rho \big],
 \tag{3}
 \end{equation}
+
+\noindent
 and the total Redfield equation reads
+
 \begin{equation}
 	\dot{\hat{\rho}}_S(t) = -\alpha^2 \sum_{i,i'} \sum_{\omega,\omega'} e^{-i(\omega - \omega')t}
 	\left( \int_0^{\infty} d\tau\, C_{ii'}(\tau)\, e^{+i \omega' \tau} \right)
@@ -510,7 +562,7 @@ By the Wiener–Khinchin theorem (in the classical limit) it is real and positiv
 The KMS condition Eq. \eqref{eq:kms_time_relation} can now be translated to frequency domain, where it imposes the detailed-balance symmetry
 
 \begin{equation}
-	\tilde{S}(-\omega) = e^{-\hbar\omega/(k_{\mathrm{B}} T)} \tilde{S}(\omega),
+	\tilde{S}(-\omega) = e^{-\omega \beta} \tilde{S}(\omega),
 	\label{eq:kms_spectral_relation}
 \end{equation}
 
@@ -547,20 +599,28 @@ which reduce Eq. \eqref{eq:Redfield_Frequency_Decomposed} to the compact form
 	}
 \end{equation}
 
+\noindent
 Going back to the Schrödinger picture, this yields
+
 \begin{equation}
-\dot{\rho}_S(t)=-\frac{i}{\hbar}[H_S+H_{\rm LS},\rho_S(t)]+\mathcal{D}_\mathrm{R}[\rho_S(t)],
+\dot{\rho}_S(t)=-i[H_S+H_{\rm LS},\rho_S(t)]+\mathcal{D}_\mathrm{R}[\rho_S(t)],
 \end{equation}
+
+\noindent
 with the Lamb-shift Hamiltonian
+
 \begin{equation}
-	H_{\rm LS}=\frac{1}{\hbar^{2}}\sum_{\omega}\sum_{i, i'}\lambda_{ii'}(\omega)\,
+	H_{\rm LS}=\sum_{\omega}\sum_{i, i'}\lambda_{ii'}(\omega)\,
 	S_i^\dagger(\omega)S_{i'}(\omega),
 	\label{eq:Lamb_Shift_Hamiltonian}
 \end{equation}
-which will directly be ignored in the following, and the Redfield dissipator
+
+\noindent
+which will be disregarded in the subsequent derivation, and the Redfield dissipator
+
 \begin{equation}
 	\mathcal{D}_\mathrm{R}[\rho]
-	=\frac{1}{2\hbar^{2}}\sum_{\omega,\omega'}\sum_{i, i'}
+	=\frac{1}{2}\sum_{\omega,\omega'}\sum_{i, i'}
 	e^{-i(\omega-\omega')t} \tilde{S}_{ii'}(\omega')\,
 	\Big(
 		S_{i'}(\omega')\rho S_i^\dagger(\omega)
@@ -571,16 +631,22 @@ which will directly be ignored in the following, and the Redfield dissipator
 
 
 \paragraph{Matrix elements and Redfield tensor.}
+
+\noindent
 In the eigenbasis of the Hamiltonian $\{|a\rangle\}$, taking $\langle a|\,\cdot\,|b\rangle$ of the master equation and grouping terms gives
+
 \begin{equation}
 \frac{d}{dt}\rho_{ab}(t)
 = -i\,\omega_{ab}\rho_{ab}(t) + \sum_{c,d} R_{abcd}\,\rho_{cd}(t),
 \label{eq:bloch_redfield_basis}
 \end{equation}
+
+\noindent
 where we defined the Bloch–Redfield tensor that is implemented also in QuTiP as
+
 \begin{align}
 R_{abcd}
-= -\frac{1}{2\hbar^{2}} \sum_{i, i'}\Big\{&
+= -\frac{1}{2} \sum_{i, i'}\Big\{&
 \delta_{bd}\sum_n S^{i}_{an}S^{i'}_{nc}\,\tilde{S}_{ii'}(\omega_{cn})
 - S^{i'}_{ac}S^{i}_{db}\,\tilde{S}_{ii'}(\omega_{ca})
 \notag\\
@@ -597,6 +663,7 @@ R_{abcd}
 The oscillatory prefactors $e^{-i(\omega - \omega') t}$ in Eq.~\eqref{eq:Redfield_Dissipator} average to zero on coarse-grained times $\Delta t$ satisfying $\tau_E \ll \Delta t \ll 1/|\omega - \omega'|$ whenever $\omega \neq \omega'$. 
 Keeping only terms with $\omega_{ab}=\omega_{cd}$ in Eq.~\eqref{eq:Rabcd_full} removes such fast-rotating couplings and ensures a block-diagonal structure in the Redfield tensor $R_{abcd}$.
 
+\noindent
 This yields the \emph{secular} Redfield (Lindblad form) equation:
 
 \begin{align}
@@ -623,7 +690,7 @@ If the baths are uncorrelated and $S_i=S_i^\dagger$:
 
 \begin{align}
 \tilde{S}_{ii'}(\omega) &= \delta_{ii'} S_i(\omega) \implies \notag \\
-R_{abcd} &= -\frac{1}{2\hbar^{2}} \sum_{i} \Big\{
+R_{abcd} &= -\frac{1}{2} \sum_{i} \Big\{
 \delta_{bd} \sum_n S^{i}_{an} S^{i}_{nc} S_{i}(\omega_{cn})
 - S^{i}_{ac} S^{i}_{db} S_{i}(\omega_{ca}) \notag \\
 &\quad + \delta_{ac} \sum_n S^{i}_{dn} S^{i}_{nb} S_{i}(\omega_{dn})
@@ -637,7 +704,7 @@ R_{abcd} &= -\frac{1}{2\hbar^{2}} \sum_{i} \Big\{
 \label{subsec:physical_emission_absorption}
 
 \noindent
-Emission and absorption are both automatically included because $S_{ii'}(\omega)$ contains positive- and negative-frequency components related by Eq.~\eqref{eq:kms_spectral_relation}. Positive frequencies ($\omega>0$) describe system energy loss (emission), while negative frequencies ($\omega<0$) describe system energy gain (absorption). Detailed balance follows immediately: the ratio of absorption to emission contributions at frequency $\omega>0$ is $e^{-\hbar \omega/(k_{\mathrm{B}}T)}$. For a single bosonic bath with scalar spectral density $J(\omega)$ (defined for $\omega>0$) one often writes the symmetrized spectrum
+Emission and absorption are both automatically included because $S_{ii'}(\omega)$ contains positive- and negative-frequency components related by Eq.~\eqref{eq:kms_spectral_relation}. Positive frequencies ($\omega>0$) describe system energy loss (emission), while negative frequencies ($\omega<0$) describe system energy gain (absorption). Detailed balance follows immediately: the ratio of absorption to emission contributions at frequency $\omega>0$ is $e^{- \omega \beta}$. For a single bosonic bath with scalar spectral density $J(\omega)$ (defined for $\omega>0$) one often writes the symmetrized spectrum
 
 \begin{equation}
 	S(\omega) = 2\pi J(|\omega|) \begin{cases} n_{\text{th}}(\omega)+1, & \omega>0, \\ n_{\text{th}}(|\omega|), & \omega<0, \end{cases}
@@ -645,7 +712,7 @@ Emission and absorption are both automatically included because $S_{ii'}(\omega)
 \end{equation}
 
 \noindent
-with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\hbar\omega/(k_{\mathrm{B}}T)}-1\big)^{-1}$, explicitly exhibiting stimulated plus spontaneous emission $(n_{\text{th}}+1)$ versus absorption $(n_{\text{th}})$~\cite{weiss2012quantumdissipativesystems}. This formulation makes clear how both processes and their thermal weighting emerge from a single function.
+with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\omega \beta}-1\big)^{-1}$, explicitly exhibiting stimulated plus spontaneous emission $(n_{\text{th}}+1)$ versus absorption $(n_{\text{th}})$~\cite{weiss2012quantumdissipativesystems}. This formulation makes clear how both processes and their thermal weighting emerge from a single function.
 
 
 %------------------------------------------------------------------------------
@@ -692,7 +759,7 @@ We now specialize the formal correlation functions introduced above to the parad
 A bosonic bath is modeled as a (large) collection of independent harmonic oscillators in thermal equilibrium:
 
 \begin{equation} \label{eq:ho_gibbs_state}
-	\rho = \frac{e^{-\beta H}}{\mathrm{Tr}[e^{-\beta H}]}, \qquad H=\sum_k \hbar \omega_k \Big(b_k^{\dagger} b_k + \tfrac{1}{2}\Big), \qquad E_k = \hbar \omega_k (n_k + \tfrac{1}{2}),
+	\rho = \frac{e^{-\beta H}}{\mathrm{Tr}[e^{-\beta H}]}, \qquad H=\sum_k \omega_k \Big(b_k^{\dagger} b_k + \tfrac{1}{2}\Big), \qquad E_k = \omega_k (n_k + \tfrac{1}{2}),
 \end{equation}
 
 \noindent
@@ -703,31 +770,31 @@ with $n_k = \langle b_k^{\dagger} b_k \rangle$ the occupation number.
 \label{subsec:single_mode}
 
 \noindent
-For a single mode ($H=\hbar \omega b^{\dagger} b$) the thermal state reads
+For a single mode ($H=\omega b^{\dagger} b$) the thermal state reads
 
 \begin{equation} \label{eq:ho_single_mode_density_matrix}
-	\rho = \frac{e^{-\beta \hbar \omega b^{\dagger} b}}{Z},
+	\rho = \frac{e^{-\beta \omega b^{\dagger} b}}{Z},
 \end{equation}
 
 \noindent
 with partition function
 
 \begin{align} \label{eq:ho_partition_function}
-	Z & \equiv \mathrm{Tr}[e^{-\beta H}] = \sum_{m=0}^{\infty} e^{-\beta \hbar \omega (m+1/2)} = \frac{e^{-\beta \hbar \omega/2}}{1 - e^{-\beta \hbar \omega}}.
+	Z & \equiv \mathrm{Tr}[e^{-\beta H}] = \sum_{m=0}^{\infty} e^{-\beta \omega (m+1/2)} = \frac{e^{-\beta \omega/2}}{1 - e^{-\beta \omega}}.
 \end{align}
 
 \noindent
 The Bose--Einstein average occupation number follows using Eq.~\eqref{eq:ho_derivation_geometric_sum}:
 
 \begin{align} \label{eq:ho_expectation_number_operator}
-	n & = \langle b^{\dagger} b \rangle_{\text{th}} = \frac{\sum_{m=0}^{\infty} m e^{-\beta \hbar \omega m}}{\sum_{m=0}^{\infty} e^{-\beta \hbar \omega m}} = \frac{e^{-\beta \hbar \omega}}{1-e^{-\beta \hbar \omega}} = \frac{1}{e^{\beta \hbar \omega}-1}.
+	n & = \langle b^{\dagger} b \rangle_{\text{th}} = \frac{\sum_{m=0}^{\infty} m e^{-\beta \omega m}}{\sum_{m=0}^{\infty} e^{-\beta \omega m}} = \frac{e^{-\beta \omega}}{1-e^{-\beta \omega}} = \frac{1}{e^{\beta \omega}-1}.
 \end{align}
 
 \noindent
 For many modes the total partition function factorizes:
 
 \begin{equation} \label{eq:ho_generalized_partition_function}
-	Z_{\text{bath}} = \prod_k \frac{e^{-\beta \hbar \omega_k /2}}{1 - e^{-\beta \hbar \omega_k}}.
+	Z_{\text{bath}} = \prod_k \frac{e^{-\beta \omega_k /2}}{1 - e^{-\beta \omega_k}}.
 \end{equation}
 
 
@@ -782,7 +849,7 @@ so Eq.~\eqref{eq:ho_correlator_result} becomes
 \end{equation}
 
 \noindent
-where $n(\omega)= (e^{\beta \hbar \omega}-1)^{-1}$.
+where $n(\omega)= (e^{\beta \omega}-1)^{-1}$.
 
 
 \subsection{Continuum Limit}
@@ -792,7 +859,7 @@ where $n(\omega)= (e^{\beta \hbar \omega}-1)^{-1}$.
 In the macroscopic limit the mode set becomes dense; introducing a density of states $\rho(\omega)$ and form factor $g(\omega)$ yields $J(\omega)=\rho(\omega) g(\omega)^2$. Using symmetry relations one can recast Eq.~\eqref{eq:ho_correlator_spectral_density} in the standard form
 
 \begin{equation} \label{eq:ho_correlator_final}
-	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \left[ \coth\Big(\frac{\beta \hbar \omega}{2}\Big) \cos(\omega \tau) - i \sin(\omega \tau) \right],
+	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \left[ \coth\Big(\frac{\beta \omega}{2}\Big) \cos(\omega \tau) - i \sin(\omega \tau) \right],
 \end{equation}
 
 \noindent

@@ -92,7 +92,9 @@ This quantity is commonly used in spectroscopy to avoid large powers of ten.
 Now to give a broad idea of where transitions that one would like to probe with spectroscopy lie, we can look at the typical energy scales of different types of transitions.
 
 \subsection{Classification of Spectroscopic Techniques}
+\
 
+\todoidea{can I also include some figure illustrating this?}
 \noindent
 Spectroscopy can be categorized by (i) the nature of the transition (rotational, vibrational, electronic, nuclear), (ii) the number of photons involved (linear vs.\ nonlinear), and (iii) the detection scheme (absorption, emission, or scattering). 
 
@@ -112,7 +114,7 @@ For example, rotational transitions lie in the microwave region. Here molecular 
 This energetic hierarchy underlies the classification of spectroscopic techniques: higher photon energies probe faster and more localized motions.
 While timescales of Micro-milliseconds relate to  Chemical reactions and protein folding, Vibrational relaxation and rotational dynamics happen at picoseconds. Important for this thesis, electronic transitions and vibrational coherences occur at femtoseconds. Recent advances in attosecond spectroscopy now even allow probing real time electron dynamics within atoms and molecules \cite{rupprechtetal2025tracinglonglivedatomic}.
 
-\subsection{Energy Dissipation After Absorption alternative}
+\subsection{Energy Dissipation After Absorption}
 
 \noindent
 After an interaction with a laser pulse, absorption of a photon, the excited molecule relax through two principal pathways:
@@ -145,7 +147,7 @@ where $V$ is the sample volume, $\vec{r}_i$ is the position of the $i$-th molecu
 \end{equation}
 
 \noindent
-\todoidea{why does it hold that $E_S \propto i P_S$?}
+\todoidea{why does it hold that $E_S \propto i P_S$? -> its an approximation in the slow-varying amplitude approximation\cite{mukamel1995principlesnonlinearoptical}, cite boyd chapter 6, page 295 because of complex polarization!}
 
 \noindent 
 The phase relationships between individual dipolar oscillations are crucial for understanding spectroscopic line shapes and signal intensities \todofix{why?} . 
@@ -193,6 +195,7 @@ Second-order nonlinear processes, governed by the $\chi^{(2)}$ term, occur only 
 
 \subsection{Third-Order Nonlinear Processes}
 \label{subsec:third_order}
+\todoidea{change the order of phase matching <-> third order nonlinear process}
 \todoidea{Add intuition for what the pulse phase kick does for delta pulses -> visual representation on bloch sphere like in \cite{grolletal2025fundamentalsheterodynewave} also the pulse area!! }
 \noindent
 \noindent
@@ -234,10 +237,18 @@ This means already the interacting field contains $?? = 44$ terms, each oscillat
 Third-order, nonlinear processes can occur in all materials, regardless of symmetry \cite{hamm2005principlesnonlinearoptical}. Key third-order nonlinear processes include Third Harmonic Generation (THG), where three photons combine to generate a photon of tripled frequency; Nonlinear Refraction, where the refractive index depends on light intensity, known as the Kerr effect; and Two-Photon Absorption (TPA), which involves the simultaneous absorption of two photons to excite a transition.
 
 \noindent
-The most important third-order process for this thesis is Four-Wave Mixing (FWM) \cite{boyd2008chapter6nonlinear}. Here, three incident and one generated photon interact in a way that satisfies energy conservation $\mathbf{k}_S = \mathbf{k}_1 + \mathbf{k}_2 + \mathbf{k}_3$ generating photon echo signals and allowing for 2D spectroscopy. This will be discussed in detail in the section \ref{sec:phase_matching}.
+The most important third-order process for this thesis is Four-Wave Mixing (FWM) \cite{boyd2008chapter6nonlinear}. Here, three incident and one generated photon interact in a way that satisfies energy conservation
+
+\begin{equation}
+	\mathbf{k}_S = \mathbf{k}_1 + \mathbf{k}_2 + \mathbf{k}_3,
+	\label{eq:four_wave_mixing}
+\end{equation}
 
 \noindent
-Now that we have a understanding of nonlinear optics, we can discuss how to calculate the nonlinear polarization in practice. The standard way is to use response functions, which will be discussed in the next section.
+generating multiple possible pathways, including photon echo signals and allowing for 2D spectroscopy. This will be discussed in detail in the section \ref{sec:phase_matching}.
+
+\noindent
+Now that we have seen of how difficult the nonlinear optics can get, we will have to find a way to simplify the allowed interactions. The standard way to calculate the nonlinear response is to use response function formalism, which will be discussed in the next section.
 
 \section{Light matter interaction - Calculation of the Polarization}
 \label{sec:response_functions}
@@ -263,17 +274,26 @@ Similar to the electric field in Eq. \eqref{eq:plane_wave} also the polarization
 
 
 \noindent
-Now to isolate the effect of a third order non-linear process, we only have to calculate the quantity Eq. \eqref{eq:polarization_expectation_value} for that specific order.
-To do that one could also treat the density matrix as an object to do Pertubation theory. This leads to the framework of Response functions. 
+Now to isolate the effect of a third order non-linear process, one can write Eq. \eqref{eq:polarization_expectation_value} in a perturbative series expansion
+
+\begin{equation}
+	\vec{P}(t) = \sum_n \vec{P}^{(n)}(t) = \sum_n \langle \mathbf{\hat{\mu}}(t) \rangle = \mathrm{Tr}[\mathbf{\hat{\mu}} \rho^{(n)}(t)],
+	\label{eq:polarization_expectation_value_perturbative}
+\end{equation}
+
 
 \noindent
-The following equatons are taken for the optical case of taking the dipole operator as the observable $A = \hat{\mu}$, with the dipole approximation Hamiltonian, but generally they hold for other observable as well, just producing different expectation values. \todoimp{<- find examples?}
+where only the quantity $\vec{P}^{(n)}(t)$ for that specific order has to be calculated.
+This leads to the framework of Response functions. 
+
+\noindent
+The following equations are taken for the optical case of taking the dipole operator as the observable $A = \hat{\mu}$, with the dipole approximation Hamiltonian, but generally they hold for other observable as well, just producing different expectation values. \todoref{<- find examples?}
 The $i$-th order polarization can be written as the convolution of $i$ electric fields \cite{hamm2005principlesnonlinearoptical}
 
 \begin{align}
 	P^{(i)}(t) &= \int_{0}^{\infty}\! dt_{i} \int_{0}^{\infty}\! dt_{i-1} \cdots \int_{0}^{\infty}\! dt_{1} \notag \\
 	&\quad E\bigl(t-t_{i}\bigr)\, E\bigl(t-t_{i}-t_{i-1}\bigr)\,\cdots\, E\bigl(t-t_{i}-\cdots - t_{1}\bigr) \notag \\
-	&\quad S(t_{i},t_{i-1},\ldots,t_{1}),
+	&\quad R(t_{i},t_{i-1},\ldots,t_{1}),
 	\label{eq:response_convolution}
 \end{align}
 
@@ -281,25 +301,47 @@ The $i$-th order polarization can be written as the convolution of $i$ electric 
 where the $i$-th response function is defined as
 
 \begin{equation}
-	S^{(i)}(t_{i},\ldots,t_{1})
+	R^{(i)}(t_{i},\ldots,t_{1})
 	\;=\;
 	\left(-\frac{i}{\hbar}\right)^{i}
 	\Big\langle
 	\hat{\mu}(t_{i}+\cdots + t_{1})\;[\hat{\mu}(t_{i-1}+\cdots + t_{1}),\ldots [\hat{\mu}(0),\rho(-\infty)]\ldots]
 	\Big\rangle
-	\label{eq:response_function_S}
+	\label{eq:response_function_R}
 \end{equation}
 
 \noindent
 and describes the system's response to $i$ interactions with the electric field.
-\todoidea{Mention, that the response function is only a function of the material under investigation \cite{mukamel for dummies}}  % TODO
-It was asumed that the interaction takes place at local times $t_i$, and the system is in a equilibrium state (the ground state) before the interaction, at time $t = - \infty$.
-It is crucial that the first $i-1$ pulses are inside nested comutators, that represent how these field-interaction drive the system out of equilibrium. The last operator then represents the emitted field and is measured by being traced over the environmental degrees of freedom.
+Here $\hat{\mu}(t)$ is the dipole operator in the interaction picture.
+Note, that the interactions at the different times $t - t_{i} - \ldots$ can occur in any order.
+Also note, that the response function only depends on the material under investigation \cite{hamm2005principlesnonlinearoptical}.
+It is assumed that the interaction takes place at local times $t_i$ (short pulse limit), and the system is in an equilibrium state (the ground state) before the interaction, at time $t = - \infty$.
+It is crucial that the first $i-1$ dipole operators are inside nested commutators, that represent how these field-interactions drive the system out of equilibrium. The last operator then represents the emitted field and is measured by being traced over the environmental degrees of freedom.
+Explicitly, the commutators in Eq-\eqref{eq:response_function_R} contains $2^i$ terms with multiple actions of $\hat{\mu}$ on the left / right on the density matrix.
+Thought one can ignore the complex conjugate contributions, reducing to $2^{i-1}$ terms.
+Each such term corresponds to a specific sequence of field interactions and can be represented with double-sided Feynman diagrams \cite{mukamel1995principlesnonlinearoptical}. In it the left and right sides of the diagram represent the evolution of the ket and bra states of the density matrix, respectively. Each interaction with the electric field is depicted as an arrow, with arrows pointing towards the density matrix indicating absorption (interaction from the left) and arrows pointing away indicating emission (interaction from the right). The time intervals between interactions are represented by horizontal lines, during which the system evolves freely according to its Hamiltonian.
+\todoidea{add a example figure for the simplest linear polarizataion and then later the pathways for the third order response function.}
+
 
 \noindent
-However this thesis will not go down the path of pertubative calculations, but will instead focus on a more microscopic approach.
-Here first the total signal will be calculated, where all pulses are active, well separated in time, and then the desired order will be extracted by filtering out the linear contributions, where only the $i$-th pulse is active.
+Eq. \eqref{eq:response_convolution} is the central equation in two dimensional spectroscopy \cite{segarra-martietal2018accuratesimulationtwodimensional}. Each experimentally observed signal direction (phase matched condition Eq. \eqref{eq:phase_matching}) isolates a subset of the possible Liouville-space pathways of the system.
+Accordingly, the total response in that direction can be written as a sum over all contributing pathways,
+\begin{equation}
+	R^{(i)}(t) = \sum_{\text{path}} R_{\text{path}}(t),
+	\label{eq:Liouville_pathways}
+\end{equation}
+where $R_{\text{path}}(t)$ represents the contribution of a single Liouville pathway corresponding to a specific sequence of field interactions and density-matrix evolutions.
 
+
+\noindent
+As mentioned in Sec \ref{subsec:third_order}, FWM is the method discussed in detail. It is a third-order process, so $i=3$ in Eq. \eqref{eq:response_convolution} and \eqref{eq:response_function_R}. The response function can be separated into different contributions, depending on the time ordering of the three field interactions. This leads to four main contributions, which can be represented with double-sided Feynman diagrams \cite{mukamel1995principlesnonlinearoptical}.
+
+
+The setup can be seen in Fig. \ref{fig:fwm_box_car_setup}. Here three pulses with wavevectors $\mathbf{k}_1, \mathbf{k}_2, \mathbf{k}_3$ interact with the sample and generate a signal in the direction $\mathbf{k}_S$. 
+
+\noindent
+This thesis will instead use a more microscopic non-perturbative (NP) approach.
+Here first the total signal will be calculated, where all pulses are active, and then the desired order will be extracted by filtering out the linear contributions, where only the $i$-th pulse is active.
 This way the third order signal can be calculated by 
 
 \begin{equation}
@@ -310,9 +352,11 @@ This way the third order signal can be calculated by
 \noindent
 where the Polarization from Eq. \eqref{eq:polarization_expectation_value} is used. \todofix{actually not true as only the analytical component is extracted, to include phase information.}
 
-\noindent
-As mentioned in Sec \ref{subsec:third_order}, FWM is the method discussed in detail. The setup can be seen in Fig. \ref{fig:fwm_box_car_setup}. Here three pulses with wavevectors $\mathbf{k}_1, \mathbf{k}_2, \mathbf{k}_3$ interact with the sample and generate a signal in the direction $\mathbf{k}_S$. 
 
+
+% TODO uncomment these figures
+\todofix{uncomment figures (for git -> also include svgs?)}
+\iffalse
 \begin{figure}[ht]
 	\centering
 	\includegraphics[width=0.8\textwidth]{../figures/FWM_scheme.pdf}
@@ -327,6 +371,7 @@ As mentioned in Sec \ref{subsec:third_order}, FWM is the method discussed in det
 	\todoidea{add ground state at beginning, }}
 	\label{fig:fwm_phase_cycling_setup}
 \end{figure}
+\fi
 
 \todoidea{Interaction picture, rotating-wave approximation (introduce but defer justification).}
 \todoidea{Also include how to simulate laser pulses:
@@ -369,7 +414,7 @@ Generally the signal that arrives at the detector is proportional to the intensi
 	\label{eq:heterodyne}
 \end{equation}
 
-\noindent Since $|E_{\text{LO}}| \gg |E_{\text{S}}|$, the cross-term dominates, and the signal can be extracted by phase-cycling. In contrast to homodyne detection, the heterodyned signal is not background-free but sits on an offset $\int E_{\text{LO}}(t)^2 \, dt$ which can be subtracted. Ideally, shaped pulses are used for the three input pulses and the local oscillator, yielding the response function directly: $\int E_{\text{LO}}(t) P^{(3)}(t) \, dt = S^{(3)}(t_3, t_2, t_1)$, without convolution complications, where $t_1$, $t_2$, $t_3$ are the directly controlled delays. This is exactly the analytically defined third-order response function in Eq. \eqref{eq:response_function_S}, making experimental data and simulations directly interpretable. This is the main strength of heterodyne detection \cite{mukamel1995principlesnonlinearoptical}. Also, it provides both amplitude and phase information of the signal. The signal scales linearly with the third-order response \todoref{find ref} \todoidea{why is this good?}
+\noindent Since $|E_{\text{LO}}| \gg |E_{\text{S}}|$, the cross-term dominates, and the signal can be extracted by phase-cycling. In contrast to homodyne detection, the heterodyned signal is not background-free but sits on an offset $\int E_{\text{LO}}(t)^2 \, dt$ which can be subtracted. Ideally, shaped pulses are used for the three input pulses and the local oscillator, yielding the response function directly: $\int E_{\text{LO}}(t) P^{(3)}(t) \, dt = S^{(3)}(t_3, t_2, t_1)$, without convolution complications, where $t_1$, $t_2$, $t_3$ are the directly controlled delays. This is exactly the analytically defined third-order response function in Eq. \eqref{eq:response_function_R}, making experimental data and simulations directly interpretable. This is the main strength of heterodyne detection \cite{mukamel1995principlesnonlinearoptical}. Also, it provides both amplitude and phase information of the signal. The signal scales linearly with the third-order response \todoref{find ref} \todoidea{why is this good?}
 
 \noindent In modern multidimensional spectroscopy, spectral interferometry—a form of heterodyne detection—is widely employed \cite{hybletal1998twodimensionalelectronicspectroscopy}. The signal field and a time-delayed reference pulse are spatially overlapped and spectrally resolved.
 
@@ -473,12 +518,14 @@ yielding the rephasing (R) and nonrephasing (NR) contributions, respectively.
 The (wavevector) phase-matched rephasing signal direction corresponds to selecting the Fourier index triple $(n_1,n_2,n_3)=(-1,+1,+1)$, while the nonrephasing direction corresponds to $(+1,-1,+1)$ \cite{mukamel1995principlesnonlinearoptical, cho2009twodimensionalopticalspectroscopy, greenetal2024vibrationalcoherenceshalfbroadband}.
 
 \noindent 
-The emitted field in a given phase-matching direction is proportional to the corresponding polarization:
+The emitted field in a given phase-matching direction is proportional to the corresponding polarization\cite{jonas2003twodimensionalfemtosecondspectroscopy}:
 
 \begin{equation}
 	E_{k_s}(t_{\text{coh}},T,t_{\text{det}}) \propto i P_{\vec{k}_S}(t_{\text{coh}},T,t_{\text{det}}).
 	\label{eq:field_polarization_relation}
 \end{equation}
+
+This holds in the slowly varying amplitude approximation \cite{mukamel1995principlesnonlinearoptical}.
 
 
 \paragraph{Time--Frequency Transforms.}
@@ -564,23 +611,27 @@ Recall that a complete 2D spectrum is built from repeated three-pulse sequences 
 
 %----------------------------------------------------------------------------------------
 \todoidea{
-
-2. Regroup / Change Order
-3. Improvements
-To make the chapter a stronger foundation, enhance clarity, relevance, and connections to your thesis. Focus on electronic spectroscopy, open quantum systems (e.g., dephasing, dissipation), and biological contexts (e.g., microtubules as complex open systems). Add transitions between sections for better flow.
+Focus on electronic spectroscopy (e.g., dephasing, dissipation), and biological contexts (e.g., microtubules as complex open systems). 
 
 Add Thesis-Specific Emphasis: Throughout, weave in connections to open quantum systems (e.g., in "Energy Dissipation," link to Lindblad operators or bath interactions). In "Two-Dimensional Electronic Spectroscopy," explicitly state how 2DES reveals couplings and dynamics in systems like microtubules. Add a forward-looking paragraph in the intro/outro noting how this chapter sets up your modeling work.
 
-Improve Mathematical Rigor and Clarity: Equations are good, but add brief explanations of their relevance (e.g., after Eq. 2.1, note how it applies to electronic transitions). For complex sections like phase cycling, use more figures or diagrams (you already have a TODO for one). Ensure notation consistency (e.g., use $\omega$ for angular frequency uniformly).
-
 Enhance Biological Relevance: In "Applications," expand on exciton dynamics in photosynthetic systems as analogs to microtubule coherence. Add a subsection or paragraph on "Towards Biological Systems" at the end, discussing how 2DES can probe quantum effects in cytoskeletal structures.
-
-Strengthen References and Citations: You have many TODOs for refs—prioritize adding them, especially for 2DES and open systems (e.g., cite Mukamel for nonlinear optics, and papers on biological 2DES). Ensure citations align with your thesis's scope.
 
 Improve Flow and Language: Add transitional sentences (e.g., "Building on these fundamentals, we now explore nonlinear optics..."). Use active voice and concise language. Fix minor issues like inconsistent capitalization (e.g., "Rephasing" vs. "rephasing").
 
-Add Figures and Examples: You have a TODO for a figure in phase cycling—add it. Include simple examples (e.g., a toy model of electronic transitions in a two-level system) to illustrate points.
+Add Figures and Examples
+}
 
-Overall Cohesion: End with a strong conclusion summarizing how these principles underpin your thesis's modeling of microtubules. This reinforces the chapter as a foundation.
+\todoidea{real - absorption and imaginary - refractive part of the 2d spectrum, first available after LO heterodyne detection \cite{jonas2003twodimensionalfemtosecondspectroscopy}
 
+In terms of coherence pathways, the T = 0 experiment is the optical analog
+of the simplest COSY 2D NMR Fourier transform correlation experiment (see
+figure 6.3.1 of Reference 2
+-> WHAT IS THIS??
+
+Because 2D FT spectra are additive, the narrow cross-width of the spectrum
+perpendicular to the diagonal suggested the 2D FT experiment resolved the “ho-
+mogeneous lineshape” for an instantaneous local solvent environment around each
+dye molecule (5). 
+[homogeneous - antidiagonal, inhomogeneous - diagonal broadening]
 }
