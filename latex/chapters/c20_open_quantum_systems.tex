@@ -3,13 +3,13 @@
 \label{chapter_open_quantum_systems} % Label for referencing this chapter
 
 %------------------------------------------------------------------------------
-%	SECTION 1: Introduction to Open Quantum Systems
+%	SECTION 1: Introduction to Open Quantum Systems / Conceptual background
 %------------------------------------------------------------------------------
 
-\section{Introduction to Open Quantum Systems}
-\label{sec:introduction_open_quantum_systems}
+\section{Conceptual background}
+\label{sec:conceptual_background}
 
-Any real-world quantum system is not perfectly isolated. Instead, it interacts with its surrounding environment. This also happens in the most shielded experiments, at least to some degree. Unlike theoretical closed quantum systems that evolve unitarily according to the well known Schrödinger equation 
+Any real-world quantum system is not perfectly isolated. Instead, it interacts with its surrounding environment. This also happens in the most shielded experiments, at least to some degree. Unlike theoretical closed quantum systems that evolve unitarily according to the well-known Schrödinger equation 
 
 \begin{equation}
 	i\hbar \frac{\partial}{\partial t} |\psi(t)\rangle = H(t) |\psi(t)\rangle ,
@@ -18,11 +18,15 @@ Any real-world quantum system is not perfectly isolated. Instead, it interacts w
 
 \noindent
 open quantum systems experience non-unitary evolution due to their coupling with an external environment or reservoir.
-Whenever the system is driven by external perturbations, this coupling makes the system relax back to the equilibrium defined by this environment ~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}.
-Open quantum systems theory emerges naturally from this realization, that perfect isolation of a quantum systems is practically impossible. For instance, atoms are subject to electromagnetic field fluctuations (vacuum fluctuations)~\cite{breuerpetruccione2009theoryopenquantum}, quantum dots in solid-state environments couple to phonon baths~\cite{weiss2012quantumdissipativesystems}, and molecular systems interact with surrounding solvent molecules~\cite{mukamel1995principlesnonlinearoptical}. Quantum computers are particularly sensitive to environmental noise, which can rapidly destroy quantum coherence~\cite{laddetal2010quantumcomputers}, while biological quantum systems such as photosynthetic complexes operate in inherently noisy cellular environments. \todoref{schlosshauer2007decoherencebook}. 
+Whenever the system is driven by external perturbations, this coupling makes the system relax back to the equilibrium defined by this environment~\cite{breuerpetruccione2009theoryopenquantum, weiss2012quantumdissipativesystems}.
+Open quantum systems theory emerges from this realization, that perfect isolation of a quantum system is practically impossible. For instance, atoms are subject to electromagnetic field fluctuations (vacuum fluctuations)~\cite{breuerpetruccione2009theoryopenquantum}, quantum dots in solid-state environments couple to phonon baths~\cite{weiss2012quantumdissipativesystems}, and molecular systems interact with surrounding solvent molecules~\cite{mukamel1995principlesnonlinearoptical}. Quantum computers are particularly sensitive to environmental noise, which can rapidly destroy quantum coherence~\cite{laddetal2010quantumcomputers}, while biological quantum systems such as photosynthetic complexes operate in inherently noisy cellular environments. \todoref{schlosshauer2007decoherencebook}. 
 These diverse scenarios all require a theoretical framework that accounts for the coexistence of quantum effects and environmental influences.
 
-\subsection{Central concepts}
+
+\subsection{Phenomena: Decoherence and Dissipation}
+\label{subsec:phenomena_decoherence_dissipation}
+
+\noindent
 The interaction with the environment leads to several fundamental phenomena that distinguish open systems from isolated, closed quantum systems.
 
 \noindent
@@ -38,8 +42,8 @@ Understanding and controlling these effects is crucial for the design of quantum
 In summary, open quantum systems theory provides the framework to describe how quantum systems lose their "quantumness" and transition toward classical behavior due to unavoidable interactions with their environment.
 
 
-\subsubsection{Overview of Main Approaches}
-\label{subsec:overview_main_approaches_oqs}
+\subsubsection{Overview of Theoretical Approaches}
+\label{subsec:overview_theoretical_approaches_oqs}
 
 \noindent
 A variety of theoretical frameworks have been developed to describe the dynamics of open quantum systems, each with its own range of validity and underlying assumptions. Some are presented here:
@@ -63,7 +67,7 @@ Stochastic Schrödinger equations and quantum trajectories unravel master equati
 
 \noindent
 The Lindblad master equation gives the most general form for completely positive, trace-preserving dynamics under the Born-Markov approximation and is widely used in quantum optics and quantum information~\cite{breuerpetruccione2009theoryopenquantum, lindblad1976generatorsquantumdynamical}.
-This thesis is focussed on using a more general master equation—the Redfield equation. It will be derived in the next section \ref{subsec:Derivation_redfield_eq}.
+This thesis is focused on using a more general master equation—the Redfield equation. It will be derived in the next section \ref{subsec:Derivation_redfield_eq}.
 
 
 \section{The Redfield Equation: A Central Tool}
@@ -120,12 +124,13 @@ The density matrix \(\rho\) is defined as \cite{campaiolietal2024quantummastereq
 
 
 \noindent
-This represents a statistical mixture, the average of an ensemble with different realization of pure quantum states $\psi_i $ with classical probabilities $ p_i $. In other words one cannot tell with certainty the quantum state of the system. This will come in handy in the context of open quantum systems, where the system is entangled with an environment and one loses information of the system of interest to the total system.
+This represents a statistical mixture, the average of an ensemble with different realization of pure quantum states $\psi_i $ with classical probabilities $ p_i $. In other words one cannot tell with certainty the quantum state of the system. This is particularly useful in the context of open quantum systems, where the system is entangled with an environment and one loses information of the system of interest to the total system.
 The conditions in Eq. \eqref{eq:DensityMatrix} ensure the following properties, that a physical density matrix must satisfy :
 \begin{align}
-	\rho^\dagger &= \rho, \tag{57a} \\
-	\langle \psi | \rho | \psi \rangle &\geq 0 \quad \forall |\psi\rangle, \tag{57b} \\
-	\mathrm{Tr}(\rho) &= 1. \tag{57c}
+	\label{eq:physical_dms}
+	\rho^\dagger &= \rho, \\
+	\langle \psi | \rho | \psi \rangle &\geq 0 \quad \forall |\psi\rangle, \\
+	\mathrm{Tr}(\rho) &= 1. 
 \end{align}
 
 \noindent
@@ -154,7 +159,7 @@ Here, an arbitrary basis $\{|\phi_n\rangle\}$ and an according completeness rela
 
 \noindent
 The partial trace is a way to simplify a quantum system's description by removing certain parts through averaging. It's like the reverse of combining spaces with a tensor product. This is handy when only one part of a combined system is of interest \cite{lambertetal2024qutip5quantum}.
-For a bipartite Hilbert space $\mathcal{H_A} \otimes \mathcal{H_B}$, the partial trace over $\mathcal{H_B}$ is the unique linear map $\mathrm{Tr}_B: \mathcal{B}_1(\mathcal{H_A} \otimes \mathcal{H_B}) \to \mathcal{B}_1(\mathcal{H_A})$ satisfying $\mathrm{Tr}[(\mathrm{Tr}_B X) A] = \mathrm{Tr}[X (A \otimes I_B)]$ for all $A \in \mathcal{B}(\mathcal{H_A})$, where  $\mathcal{B}(\mathcal{H})$ is the algebra of bounded operators on $\mathcal{H}$.
+For a bipartite Hilbert space $\mathcal{H_A} \otimes \mathcal{H_B}$, the partial trace over $\mathcal{H_B}$ is the unique linear map $\mathrm{Tr}_B: \mathcal{B}_1(\mathcal{H_A} \otimes \mathcal{H_B}) \to \mathcal{B}_1(\mathcal{H_A})$ satisfying $\mathrm{Tr}[(\mathrm{Tr}_B X) A] = \mathrm{Tr}[X (A \otimes \mathds{1}_B)]$ for all $A \in \mathcal{B}(\mathcal{H_A})$, where  $\mathcal{B}(\mathcal{H})$ is the algebra of bounded operators on $\mathcal{H}$.
 and $\mathcal{B}_1$ denotes trace-class operators, namely those $X$ with finite trace norm 
 \[ 
   \| X \|_1 = \operatorname{Tr} \sqrt{X^\dagger X} 
@@ -197,7 +202,7 @@ The evolution of the total system is governed by the Liouville–von Neumann equ
 \end{equation}
 
 \noindent
-where $\rho_T(t)$ is the density matrix of the total system, $H_T$ is the total Hamiltonian, and we use units where $\hbar = 1$. This is the correspondence of the Schrödinger equation Eq.\eqref{eq:SchrödingerEquation} for more general classically mixed states (see sectoion \ref{subsubsec:preliminaries_tools})
+where $\rho_T(t)$ is the density matrix of the total system, $H_T$ is the total Hamiltonian, and we use units where $\hbar = 1$. This convention will be used throughout this thesis. This is the correspondence of the Schrödinger equation Eq.\eqref{eq:SchrödingerEquation} for more general classically mixed states (see section \ref{subsubsec:preliminaries_tools})
 
 \begin{equation}
 	\rho = \sum_i p_i |\psi_i\rangle \langle \psi_i|, \quad p_i \geq 0, \quad \sum_i p_i = 1.
@@ -235,11 +240,11 @@ To describe the system dynamics, we move to the interaction picture where the op
 \end{equation}
 
 \noindent
-in the interaction picture. States now evolve only according to the interaction Hamiltonian $H_I$, and the Liouville-von Neumann equation becomes:
+in the interaction picture. The ($\hat{}$) symbol indicates that we are now working in the interaction picture. States now evolve only according to the interaction Hamiltonian $H_I$, and Eq.~\eqref{eq:Von_Neumann_Equation} becomes:
 
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha [\hat{H}_I(t), \hat{\rho}_T(t)],
-	\label{eq:LiouvilleVN}
+	\label{eq:LiouvilleVN_interaction_pic}
 \end{equation}
 
 \noindent
@@ -251,7 +256,7 @@ which can be formally integrated as:
 \end{equation}
 
 \noindent
-Inserting this back into Eq.~\eqref{eq:LiouvilleVN} yields:
+Inserting this back into Eq.~\eqref{eq:LiouvilleVN_interaction_pic} yields:
 
 \begin{equation}
 	\dot{\hat{\rho}}_T(t) = -i \alpha \left[ \hat{H}_I(t), \hat{\rho}_T(0) \right]
@@ -284,10 +289,11 @@ Equation~\eqref{eq:Second_Order_Expansion_truncated} still contains the full his
 which is now local in $\hat{\rho}_T(t)$ (but still retains an explicit upper integration limit $t$ so is not yet Markovian). This step will be further justified once we restrict attention to the \emph{reduced} dynamics and invoke separation of time scales.
 
 \noindent
-The exact equation of motion for $\rho(t)$ involves the full many-body dynamics of the environment, which is generally intractable. Thats why the next step is to trace out the environmental degrees of freedom.
+The exact equation of motion for $\rho(t)$ involves the full many-body dynamics of the environment, which is generally intractable. That's why the next step is to trace out the environmental degrees of freedom.
 
 
-\subsection{Reduced Dynamics and Born-Markov Approximations}
+\subsection{Reduced Dynamics and Born Approximation}
+\label{subsec:reduced_dynamics_born_approximation}
 
 \noindent
 Since we are interested in the dynamics of the system alone, we define the reduced density matrix using the partial trace operation defined in Eq.~\eqref{eq:ho_partial_trace_definition}:
@@ -387,7 +393,7 @@ we can rewrite Eq.~\eqref{eq:Partial_Trace_Derivation} in the form
 \end{align}
 
 \noindent
-We now have to tighten the assumption of Eq. \eqref{eq:Initial_Product_State} and force, that throughout the evolution the total state remains close to a factorized form $\hat{\rho}_T(t) \approx \hat{\rho}_S(t) \otimes \hat{\rho}_E(t)$. This can again be stated as the \textbf{Born approximation} of weak coupling.
+We now have to tighten the assumption of Eq. \eqref{eq:Initial_Product_State} and force that throughout the evolution the total state remains close to a factorized form $\hat{\rho}_T(t) \approx \hat{\rho}_S(t) \otimes \hat{\rho}_E(t)$. This can again be stated as the \textbf{Born approximation} of weak coupling.
 
 \noindent
 By collecting all system operators and all environment operators, and inserting the interaction Hamiltonian Eq.~\eqref{eq:Interaction_Hamiltonian} explicitly, tracking the operators at time $t - s$ with $i'$ and at time $t$ with $i$, we obtain:
@@ -404,7 +410,7 @@ By collecting all system operators and all environment operators, and inserting 
 \end{align}
 
 \noindent
-Since the trace only acts on the environment, the system operators can be taken out of the trace, and we define the two point correlation functions with Eq.~\eqref{eq:ho_expectation_value}:
+Since the trace only acts on the environment, the system operators can be taken out of the trace, and we define the two-point correlation functions with Eq.~\eqref{eq:ho_expectation_value}:
 
 \begin{equation}
 	C_{ii'}(t, s) \equiv \langle \hat{E}_{i}(t) \hat{E}_{i'}(t-s) \rangle = \mathrm{Tr}_E \big[\hat{E}_{i}(t) \hat{E}_{i'}(t-s) \hat{\rho}_E(t)\big],
@@ -412,7 +418,7 @@ Since the trace only acts on the environment, the system operators can be taken 
 \end{equation}
 
 \noindent
-The two point means that we "measure" the correlation operators $\hat{E}_{i}$ and $\hat{E}_{i}$ at two different times.
+The term 'two-point' means that we "measure" the correlation operators $\hat{E}_{i}$ and $\hat{E}_{i}$ at two different times.
 If the bath operators are Hermitian, i.e. $\hat{E}_i^\dagger = \hat{E}_i$,
 and since the bath density matrix is Hermitian $ \hat{\rho}_E(t) = \hat{\rho}_E^\dagger(t)$, we can use the cyclic property of the trace to show that
 
@@ -432,11 +438,16 @@ and thus finally obtain the desired form of the Redfield equation
 	\label{eq:Redfield_Equation_Non_Markovian}
 \end{align}
 
+\noindent
+This form shows explicitly that the system evolution depends only on bath correlation functions evaluated along the free bath dynamics.
 
-\vspace{1em}
+
+\subsection{Markov Approximation}
+\label{subsec:markov_approximation}
+
 \noindent
 However the Eq. \eqref{eq:Redfield_Equation_Non_Markovian} is still not Markovian, since it carries an explicit integration over time $t$.
-Now another approximation has to be made. Alongside the Born approximation, where correlations between system and environment are small, we also assume that any correlation of the environment decay on a timescale $\tau_E$ much shorter than a characteristic system evolution time $\tau_S$. The reduced density matrix $\rho_S(t)$ changes only on a much longer times $\tau_E \ll \tau_S$. Correlation functions $C_{ii'}(\tau)$ decay to negligible values for $\tau \gtrsim \tau_E$. Thus $ C(\tau) \approx 0$ for $\tau \gg 1$. Within the integral we may (i) replace the system operators $\hat{S}_i'(t-s)$ by its free interaction-picture evolution and (ii) extend the upper limit to infinity:
+Now another approximation has to be made. Alongside the Born approximation, where correlations between system and environment are small, we also assume that any correlation of the environment decay on a timescale $\tau_E$ much shorter than a characteristic system evolution time $\tau_S$. The reduced density matrix $\rho_S(t)$ changes only on a much longer times $\tau_E \ll \tau_S$. Correlation functions $C_{ii'}(\tau)$ decay to negligible values for $\tau \gtrsim \tau_E$. Thus $ C(\tau) \approx 0$ for $\tau \gg 1$. Within the integral we may (i) replace the system operators $\hat{S}_{i'}(t-s)$ by its free interaction-picture evolution and (ii) extend the upper limit to infinity:
 
 \begin{equation}
 	\int_0^t ds\, C_{ii'}(t-s) f(s) \; \longrightarrow \; \int_0^{\infty} d\tau\, C_{ii'}(\tau) f(t), \qquad (t \gg \tau_E),
@@ -481,8 +492,8 @@ For additionally having a stationary bath, $[H_E, \rho_E(0)]=0$, so in the inter
 \end{equation}
 
 
-\subsection{Spectral Density and Fourier Representation}
-\label{subsec:spectral_density_representation}
+\subsection{Fourier Representation and Secular approximation}
+\label{subsec:Fourier_and_secular}
 
 \noindent
 For a stationary, thermal bath, where its state is given by the Gibbs state (see Sec.~\ref{subsec:bosonic_environment_gibbs}), the Kubo--Martin--Schwinger (KMS) in time domain  correlation function and its complex conjugate being related by a shift into the complex time plane:
@@ -533,7 +544,7 @@ Inserting Eq.~\eqref{eq:Interaction_Picture_Eigenoperators} into Eq.~\eqref{eq:R
 [\hat{S}_i(t),\, \hat{S}_{i'}(t-\tau)\rho]
 = \sum_{\omega,\omega'} e^{-i(\omega - \omega')t} e^{+i \omega' \tau}
 \big[ S_i(\omega),\, S_{i'}(\omega') \rho \big],
-\tag{3}
+\label{eq:Inner_Commutator_Frequency_Decomposed}
 \end{equation}
 
 \noindent
@@ -704,7 +715,7 @@ R_{abcd} &= -\frac{1}{2} \sum_{i} \Big\{
 \label{subsec:physical_emission_absorption}
 
 \noindent
-Emission and absorption are both automatically included because $S_{ii'}(\omega)$ contains positive- and negative-frequency components related by Eq.~\eqref{eq:kms_spectral_relation}. Positive frequencies ($\omega>0$) describe system energy loss (emission), while negative frequencies ($\omega<0$) describe system energy gain (absorption). Detailed balance follows immediately: the ratio of absorption to emission contributions at frequency $\omega>0$ is $e^{- \omega \beta}$. For a single bosonic bath with scalar spectral density $J(\omega)$ (defined for $\omega>0$) one often writes the symmetrized spectrum
+Emission and absorption are both automatically included because $\tilde{S}_{ii'}(\omega)$ contains positive- and negative-frequency components related by Eq.~\eqref{eq:kms_spectral_relation}. Positive frequencies ($\omega>0$) describe system energy loss (emission), while negative frequencies ($\omega<0$) describe system energy gain (absorption). Detailed balance follows immediately: the ratio of absorption to emission contributions at frequency $\omega>0$ is $e^{- \omega \beta}$. For a single bosonic bath with scalar spectral density $J(\omega)$ (defined for $\omega>0$) one often writes the symmetrized spectrum
 
 \begin{equation}
 	S(\omega) = 2\pi J(|\omega|) \begin{cases} n_{\text{th}}(\omega)+1, & \omega>0, \\ n_{\text{th}}(|\omega|), & \omega<0, \end{cases}
@@ -712,7 +723,7 @@ Emission and absorption are both automatically included because $S_{ii'}(\omega)
 \end{equation}
 
 \noindent
-with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\omega \beta}-1\big)^{-1}$, explicitly exhibiting stimulated plus spontaneous emission $(n_{\text{th}}+1)$ versus absorption $(n_{\text{th}})$~\cite{weiss2012quantumdissipativesystems}. This formulation makes clear how both processes and their thermal weighting emerge from a single function.
+with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\omega \beta}-1\big)^{-1}$, explicitly exhibiting stimulated plus spontaneous emission $(n_{\text{th}}+1)$ versus absorption $(n_{\text{th}})$~\cite{weiss2012quantumdissipativesystems}. This formulation makes clear how both processes and their thermal weighting emerge from a single function. How the now defined spectral density function comes into play is explained for the concrete example of a bath of harmonic oscillators (this can be thought of as the electromagnetic field, solid state vibrations (phonons) or other bosonic modes) in the following section. \todoref{find sources}
 
 
 %------------------------------------------------------------------------------
@@ -722,7 +733,16 @@ with Bose--Einstein occupation $n_{\text{th}}(\omega) = \big(e^{\omega \beta}-1\
 \label{sec:harmonic_oscillator_baths}
 
 \noindent
-Also to do these explicit calculations, we will need the following mathematical result.
+In the previous chapter, we derived the Redfield equation and introduced the environmental correlation functions $C_{ij}(\tau)$ that characterize the system-bath interaction. These correlation functions are central to the Redfield formalism, as they encode all the relevant information about how the environment affects the quantum system dynamics.                                                                                                         
+To make the Redfield equation practically useful, we need to specify the form of these correlation functions for realistic environmental models. In this chapter, we focus on one of the most important and widely applicable environmental models: the harmonic oscillator bath. This model captures the essential physics of many real environments, from electromagnetic field fluctuations to phonon baths in solid-state systems.       
+
+
+\noindent
+The general task of this chapter is to calculate the bath correlation functions. This correlator measures how the operator \( E \) at two different times is correlated in the thermal bath state.
+For the harmonic oscillator bath model, these correlation functions can be calculated exactly. The results will show how the bath correlation functions connect to physically observable quantities such as spectral densities and how they determine the system's approach to thermal equilibrium.
+
+\noindent
+To also do these explicit calculations, we will need the following mathematical result.
 
 
 \paragraph{Geometric series.}
@@ -746,10 +766,8 @@ Differentiating Eq.~\eqref{eq:ho_geometric_series_sum} with respect to $r$ gives
 	\sum_{n=0}^{\infty} n r^n = \frac{r}{(1-r)^2}, \quad |r|<1.
 \end{equation}
 
-
-
 \noindent
-We now specialize the formal correlation functions introduced above to the paradigmatic and widely applicable case of a bosonic (harmonic oscillator) environment. Rather than opening a separate chapter, we integrate here the full derivation of thermal correlation functions, spectral density representations, and standard phenomenological models (Ohmic, sub-/super-Ohmic, Drude--Lorentz). This material corresponds to the (former) standalone chapter on bath correlation functions and harmonic oscillator environments.
+We now specialize the formal correlation functions introduced above to the paradigmatic and widely applicable case of a bosonic (harmonic oscillator) environment. The full scope of thermal correlation functions, spectral density representations, and standard phenomenological models (Ohmic, sub-/super-Ohmic, Drude--Lorentz) is explained.
 
 
 \subsection{Bosonic Environment and Gibbs State}
@@ -758,73 +776,121 @@ We now specialize the formal correlation functions introduced above to the parad
 \noindent
 A bosonic bath is modeled as a (large) collection of independent harmonic oscillators in thermal equilibrium:
 
+The thermal state of the bosonic bath is given by the Gibbs density matrix:
+
 \begin{equation} \label{eq:ho_gibbs_state}
-	\rho = \frac{e^{-\beta H}}{\mathrm{Tr}[e^{-\beta H}]}, \qquad H=\sum_k \omega_k \Big(b_k^{\dagger} b_k + \tfrac{1}{2}\Big), \qquad E_k = \omega_k (n_k + \tfrac{1}{2}),
+    \rho_{Gibbs} = \frac{e^{-\beta H}}{\mathrm{Tr}[e^{-\beta H}]},
 \end{equation}
 
 \noindent
-with $n_k = \langle b_k^{\dagger} b_k \rangle$ the occupation number.
+where $\beta = 1/(k_B T)$ again is the inverse temperature of the environment. The bath Hamiltonian consists of independent harmonic oscillators:
 
-
-\subsection{Single Mode Partition Function and Occupation}
-\label{subsec:single_mode}
+\begin{equation}
+    H = \sum_k \omega_k \Big(b_k^{\dagger} b_k + \tfrac{1}{2}\Big),
+	\label{eq:ho_bath_hamiltonian}
+\end{equation}
 
 \noindent
-For a single mode ($H=\omega b^{\dagger} b$) the thermal state reads
+and the average energy of mode $k$ is
+
+\begin{equation}
+    E_k = \omega_k (n_k + \tfrac{1}{2}),
+\end{equation}
+
+\noindent
+with $n_k = \langle b_k^{\dagger} b_k \rangle$ the Bose--Einstein occupation number.
+
+
+\noindent
+The zero-point contribution $E_{\text{vac}} = \tfrac{1}{2} \sum_k \omega_k$ adds only a mode-independent constant to the bath energy. Constant energy offsets commute with all observables, so they neither modify thermal populations nor enter the correlation functions that drive the system dynamics. We therefore drop this term (standard for normal ordering, where raising operators are placed to the left of lowering operators). In other words only energy \emph{differences} influence the evolution and we neglect this term from now on.
+
+
+
+\subsubsection{Single Mode Partition Function and Occupation}
+\label{subsubsec:single_mode}
+
+\noindent
+For a single mode $k$, $H=\omega_k b^{\dagger}_k b_k$, the thermal state reads
 
 \begin{equation} \label{eq:ho_single_mode_density_matrix}
-	\rho = \frac{e^{-\beta \omega b^{\dagger} b}}{Z},
+	\rho = \frac{e^{-\beta \omega_k b^{\dagger}_k b_k}}{Z},
 \end{equation}
 
 \noindent
 with partition function
 
 \begin{align} \label{eq:ho_partition_function}
-	Z & \equiv \mathrm{Tr}[e^{-\beta H}] = \sum_{m=0}^{\infty} e^{-\beta \omega (m+1/2)} = \frac{e^{-\beta \omega/2}}{1 - e^{-\beta \omega}}.
+        Z_k & \equiv \mathrm{Tr}\left[e^{-\beta H}\right] = \sum_{m=0}^{\infty} \langle m | e^{-\beta \hbar \omega_k (n_k + \frac{1}{2})} | m \rangle \\
+        & = \frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}.
 \end{align}
 
 \noindent
 The Bose--Einstein average occupation number follows using Eq.~\eqref{eq:ho_derivation_geometric_sum}:
 
 \begin{align} \label{eq:ho_expectation_number_operator}
-	n & = \langle b^{\dagger} b \rangle_{\text{th}} = \frac{\sum_{m=0}^{\infty} m e^{-\beta \omega m}}{\sum_{m=0}^{\infty} e^{-\beta \omega m}} = \frac{e^{-\beta \omega}}{1-e^{-\beta \omega}} = \frac{1}{e^{\beta \omega}-1}.
+        n_k & = \langle b_k^{\dagger} b_k \rangle_{\text{th}} = \mathrm{Tr} \left[ b_k^{\dagger} b_k \frac{e^{-\beta H}}{Z_k} \right]\\
+                                           & = \frac{\mathrm{Tr} \left[ b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k} \right]}{Z_k}\\
+                                           & = \frac{\sum_{m=0}^{\infty} \langle m|b_k^{\dagger} b_k e^{-\beta \hbar \omega_k b_k^{\dagger} b_k}|m \rangle}{\frac{e^{-\beta \hbar \omega_k / 2}}{1 - e^{-\beta \hbar \omega_k}}} \\%    &= \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}} \\
+            & = \frac{e^{-\beta \hbar \omega_k}}{1 - e^{-\beta \hbar \omega_k}}\\
+            & = \frac{1}{e^{\beta \hbar \omega_k} - 1}.
 \end{align}
-
+\vspace{1em}
 \noindent
-For many modes the total partition function factorizes:
+Since the bath is composed of many independent modes, this calculation can be done for every mode, and the total partition function factorizes to
 
 \begin{equation} \label{eq:ho_generalized_partition_function}
-	Z_{\text{bath}} = \prod_k \frac{e^{-\beta \omega_k /2}}{1 - e^{-\beta \omega_k}}.
+	Z_{\text{bath}} = \prod_k Z_k = \prod_k \frac{e^{-\beta \omega_k /2}}{1 - e^{-\beta \omega_k}}.
 \end{equation}
+
+\noindent
+Since now the thermal properties of the system alone are known, we can focus on the coupling it to a small system of interest. Therefore we explicitly calculate the bath correlation functions from Eq.~\eqref{eq:Environment_Correlation_Function} for the simple but arguably the most important case of a single coupling operator $E$. The derivation is followed and expanded a bit from \cite{thingnasteadystatetransportproperties}.
+
 
 
 \subsection{Microscopic Form of the Bath Correlator}
 \label{subsec:microscopic_bath_correlator}
 
 \noindent
-With linear system--bath coupling to oscillator displacements (Caldeira--Leggett model \cite{hagstrommorrison2011caldeiraleggettmodel}) we write
+With linear system--bath coupling to oscillator displacements (Caldeira--Leggett model \cite{hagstrommorrison2011caldeiraleggettmodel}) we write the single bath coupling operator as
 
 \begin{equation} \label{eq:ho_bath_operator}
-	B = \sum_{n=1}^{\infty} c_n x_n, \qquad x_n = \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^{\dagger}).
+	E = \sum_{n=1}^{\infty} c_n x_n, \qquad x_n = \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^{\dagger}).
 \end{equation}
 
 \noindent
-Time evolution gives
+In the interaction picture the bath operators evolve as $E(t) = e^{i H_E t} E e^{-i H_E t}$ with $H_E$ from Eq.~\eqref{eq:ho_bath_hamiltonian}, yielding
 
 \begin{align}
-	B(0)    & = \sum_{n} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^{\dagger}), \label{eq:ho_bath_operator_t0}                                                   \\
-	B(\tau) & = \sum_{n} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \Big(b_n e^{-i \omega_n \tau} + b_n^{\dagger} e^{i \omega_n \tau}\Big). \label{eq:ho_bath_operator_tau}
+	\hat{E}(0)    & = \sum_{n} c_n \sqrt{\frac{1}{2 m_n \omega_n}} (b_n + b_n^{\dagger}), 
+	\label{eq:ho_bath_operator_t0}                                                   \\
+	\hat{E}(\tau) & = \sum_{n} c_n \sqrt{\frac{1}{2 m_n \omega_n}} \Big(b_n e^{-i \omega_n \tau} + b_n^{\dagger} e^{i \omega_n \tau}\Big). \label{eq:ho_bath_operator_tau}
 \end{align}
 
 \noindent
-The thermal correlation function (single relevant bath operator case) is
+The thermal correlation function  for this single relevant bath operator is
 
 \begin{equation} \label{eq:ho_bath_correlator}
-	C(\tau) = \langle B(\tau) B(0) \rangle.
+	C(\tau) = \langle \hat{E}(\tau) \hat{E}(0) \rangle.
 \end{equation}
 
 \noindent
-Using $\langle b_n b_m^{\dagger} \rangle = \delta_{nm}(n_n+1)$ and $\langle b_n^{\dagger} b_m \rangle = \delta_{nm} n_n$ with $n_n$ given by Eq.~\eqref{eq:ho_expectation_number_operator}, we obtain
+Inserting Eqs.~\eqref{eq:ho_bath_operator_t0},\eqref{eq:ho_bath_operator_tau} yields a double sum over bath modes,
+
+\begin{align}
+	C(\tau) &= \sum_{n,m} \frac{c_n c_m}{\sqrt{4 m_n m_m \omega_n \omega_m}} \Big\langle \big(b_n e^{-i \omega_n \tau} + b_n^{\dagger} e^{i \omega_n \tau}\big) (b_m + b_m^{\dagger}) \Big\rangle, \\[0.3em]
+	&= \sum_{n,m} \frac{c_n c_m}{\sqrt{4 m_n m_m \omega_n \omega_m}} \Big( e^{-i \omega_n \tau} \langle b_n b_m^{\dagger} \rangle + e^{i \omega_n \tau} \langle b_n^{\dagger} b_m \rangle \Big),
+	\label{eq:ho_correlator_intermediate}
+\end{align}
+
+\noindent
+where mixed terms such as $\langle b_n b_m \rangle$ vanish for a thermal state of uncoupled oscillators.
+Doing similar calculations to Eqs.~\eqref{eq:ho_expectation_number_operator} gives
+\begin{equation}
+	\langle b_n b_m^{\dagger} \rangle = \delta_{nm}(n_n+1) \quad \text{and} \quad \langle b_n^{\dagger} b_m \rangle = \delta_{nm} n_n,
+\end{equation}
+
+\noindent
+with $n_n$ given by Eq.~\eqref{eq:ho_expectation_number_operator}. Using these results we obtain the discrete form of the bath correlation function
 
 \begin{equation} \label{eq:ho_correlator_result}
 	C(\tau) = \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \Big[(n_n+1) e^{-i \omega_n \tau} + n_n e^{i \omega_n \tau}\Big].
@@ -835,50 +901,107 @@ Using $\langle b_n b_m^{\dagger} \rangle = \delta_{nm}(n_n+1)$ and $\langle b_n^
 \label{subsec:ho_spectral_density}
 
 \noindent
-Introduce the (discrete) spectral density
+To connect this discrete expression with the continuum form, note that the correlator can be expanded by writing $e^{\pm i \omega_n \tau} = \cos(\omega_n \tau) \pm i \sin(\omega_n \tau)$. This yields
+
+\[
+	C(\tau) = \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \Big[ (n_n+1)(\cos - i \sin) + n_n(\cos + i \sin) \Big],
+\]
+
+\noindent
+where the trigonometric arguments $\omega_n \tau$ are implied. Collecting cosine and sine contributions gives
+
+\[
+	C(\tau) = \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \Big[(2 n_n + 1) \cos(\omega_n \tau) - i \sin(\omega_n \tau)\Big].
+\]
+
+\noindent
+Since $2 n_n + 1 = 2/(e^{\beta \omega_n}-1) + 1 = \coth(\beta \omega_n / 2)$ (recall $\coth(x/2) = (e^{x}+1)/(e^{x}-1)$), we can rewrite this as
+
+\begin{equation}
+	C(\tau) = \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \Big[ \coth\Big(\frac{\beta \omega_n}{2}\Big) \cos(\omega_n \tau) - i \sin(\omega_n \tau) \Big].
+\end{equation}
+
+\noindent
+Introducing the discrete spectral density
+
 
 \begin{equation} \label{eq:ho_bath_spectral_density}
 	J(\omega) = \pi \sum_{n} \frac{c_n^2}{2 m_n \omega_n} \delta(\omega - \omega_n),
 \end{equation}
 
 \noindent
-so Eq.~\eqref{eq:ho_correlator_result} becomes
+which summarizes how strong which frequencies of the environment couple to the system. Here it is assumed that the bath has discrete modes $\omega_n$ and each couples to the system with strength $\propto c_n$. One finds that for any smooth $f(\omega)$,
+
+\begin{equation}
+	\sum_{n} \frac{c_n^2}{2 m_n \omega_n} f(\omega_n) = \frac{1}{\pi} \int_{0}^{\infty} d\omega\, J(\omega) f(\omega).
+\end{equation}
+
+\noindent
+Applying this identity with $f(\omega) = \coth(\beta \omega / 2) \cos(\omega \tau) - i \sin(\omega \tau)$ yields a representation of the bath correlator in a continuum limit
 
 \begin{equation} \label{eq:ho_correlator_spectral_density}
-	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \Big[(n(\omega)+1)e^{-i \omega \tau} + n(\omega) e^{i \omega \tau}\Big],
+	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \Big[ \coth\Big(\frac{\beta \omega}{2}\Big) \cos(\omega \tau) - i \sin(\omega \tau) \Big].
 \end{equation}
 
-\noindent
-where $n(\omega)= (e^{\beta \omega}-1)^{-1}$.
-
-
-\subsection{Continuum Limit}
-\label{subsec:continuum_limit}
 
 \noindent
-In the macroscopic limit the mode set becomes dense; introducing a density of states $\rho(\omega)$ and form factor $g(\omega)$ yields $J(\omega)=\rho(\omega) g(\omega)^2$. Using symmetry relations one can recast Eq.~\eqref{eq:ho_correlator_spectral_density} in the standard form
+The physical interpretation of this is the following.
+In the macroscopic limit the mode set becomes dense, introducing a density of states $\rho(\omega)$ and form factor $g(\omega)$ yields $J(\omega)=\rho(\omega) g(\omega)^2$. Put differently, now one only has to specify a parametrization of the continuous spectral density function. In Eq.~\eqref{eq:ho_correlator_spectral_density} purely dissipative (imaginary) and noise (real, symmetrized) parts are separated.
+\todoref{<- find a fitting source}
+
+\vspace{1em}
+\noindent
+We have found now different representations of the bath correlation function $C(\tau)$, which is the key quantity determining the system dynamics in the Redfield equation. The spectral density $J(\omega)$ encodes how strongly each bath mode at frequency $\omega$ couples to the system, while the temperature-dependent $\coth(\beta \omega / 2)$ factor weights these contributions according to thermal occupation. The spectral density can directly be related to the noise power spectrum defined in Eq.~\eqref{eq:Noise_Power_Spectrum} as
 
 \begin{equation} \label{eq:ho_correlator_final}
-	C(\tau) = \int_{0}^{\infty} d\omega \, \frac{J(\omega)}{\pi} \left[ \coth\Big(\frac{\beta \omega}{2}\Big) \cos(\omega \tau) - i \sin(\omega \tau) \right],
+	\tilde{S}(\omega) = \int_{-\infty}^{\infty} d\tau \, C(\tau) e^{+i \omega \tau} = 2\pi J(|\omega|) \begin{cases} n_{\text{th}}(\omega)+1, & \omega>0, \\ n_{\text{th}}(|\omega|), & \omega<0, \end{cases}
 \end{equation}
 
 \noindent
-which separates purely dissipative (imaginary) and noise (real, symmetrized) parts.
+So either the Correlator, or the noise power spectrum, or the spectral density, together with the Temperature $\beta$ (hidden inside $n_{\text{th}}$), can be used to fully characterize the environmental coupling to the system. The spectral density is often the most convenient choice since it is a real-valued function of a single variable $\omega$ and can be directly related to microscopic models or phenomenological forms.
 
+\noindent
+Then to characterize different environments, one only has to choose one parametrization of the spectral density $J(\omega)$ which directly defines the correlators. Now we will introduce some of the most common choices for $J(\omega)$.
+
+\section{Common choices of Spectral Densities}
+\label{sec:common_choices_spectral_densities}
 
 \subsection{Ohmic and Related Spectral Densities}
 \label{subsec:ohmic_spectral_density}
 
 \noindent
-A widely used phenomenological family is
+Source: Ulrich Weiss chapter 7.3:
+We have seen, that the Redfield equation is influenced by classical phenomenological models of dissipation. For an Ohmic spectral density, the damping is assumed to be frequency-independent, and the spectral density is given by:
 
-\begin{equation} \label{eq:ho_ohmic_spectral_density}
-	J(\omega) = \gamma \, \frac{\omega^{s}}{\omega_c^{s-1}} e^{-\omega/\omega_c},
+\begin{equation} \label{eq:ohmic_spectral_density}
+        J(\omega) \propto \gamma \omega,
 \end{equation}
 
 \noindent
-with dimensionless coupling $\gamma$, cutoff frequency $\omega_c$ and exponent $s$ distinguishing Ohmic ($s=1$), sub-Ohmic ($s<1$), and super-Ohmic ($s>1$) cases~\cite{weiss2012quantumdissipativesystems, lambertetal2024qutip5quantum}. The low-frequency linear scaling $J(\omega) \propto \omega$ (Ohmic) underpins frequency-independent damping in many coarse-grained models; the high-frequency cutoff enforces convergence of integrals such as Eq.~\eqref{eq:ho_correlator_final}.
+where \( \gamma \) is the damping constant. This corresponds to a classical Friction-like dissipation. To ensure physical behavior, a cutoff is introduced:
 
+\begin{equation} \label{eq:cutoff_spectral_density}
+        J(\omega) = \eta \frac{\omega^s}{\omega_c^{s-1}} e^{-\omega / \omega_c},
+\end{equation}
+
+\noindent
+which enforces convergence of integrals such as Eq.~\eqref{eq:ho_correlator_final}. Here \( \eta \) is a dimensionless coupling constant, \( \omega_c \) is the cutoff frequency, and \( s \) determines the type of spectral density (Ohmic for \( s = 1 \), sub-Ohmic for \( s < 1 \), and super-Ohmic for \( s > 1 \)) \cite{weiss2012quantumdissipativesystems, lambertetal2024qutip5quantum}.
+
+\noindent
+Another widely used model with linear low-frequency behavior is the Drude--Lorentz spectral density, which introduces a Lorentzian cutoff:
+
+\begin{equation}
+	\label{eq:dl_spectral_density}
+	J(\omega) = 2 \lambda \frac{\omega \omega_c}{\omega^2 + \omega_c^2},
+\end{equation}
+
+\noindent
+where $\lambda$ is the reorganization energy, and $\omega_c$ is again the cutoff frequency. This model represents an "overdamped Brownian oscillator” and is particularly relevant for systems coupled to a structured environment, such as molecular systems in a solvent or solid-state systems with phonon interactions .%\cite{}
+\todoref{fact check}
+\noindent
+Here is a visual comparison between the ohmic and Drude--Lorentz spectral densities, along with their corresponding correlation functions and power spectra. The Drude--Lorentz model has a longer non-zero tail for large frequencies compared to the Ohmic case.
+
+\todofix{uncomment these figures}
 \iffalse
 	\begin{figure}[t]
 		\centering
@@ -894,3 +1017,9 @@ with dimensionless coupling $\gamma$, cutoff frequency $\omega_c$ and exponent $
 		\label{fig:bath_temperature_comparison}
 	\end{figure}
 \fi
+
+\noindent
+As we can see both choices translate to one single exponentially decaying memory kernel.
+
+\todoidea{maybe also show for underdamped Brownian oscillator }
+\todoidea{mention that for more complicated systems, one could fit a sum of such spectral densities to experimental data -> qutip HEOM solvers use such generated bath objects}
