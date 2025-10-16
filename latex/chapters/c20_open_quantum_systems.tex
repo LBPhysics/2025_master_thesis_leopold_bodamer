@@ -486,7 +486,7 @@ The bath correlation functions (defined by Eq.~\eqref{eq:Environment_Correlation
 \todoidea{Already included? The function typically decays on the bath correlation time $\tau_E$, a prerequisite for the Markov approximation when $\tau_E$ is much shorter than the relevant system evolution time scales.}
 
 \noindent
-For additionally having a stationary bath, $[H_E, \rho_E(0)]=0$, so in the interaction picture $\hat{\rho}_E(t)=\hat{\rho}_E(0)=\rho_E(0)$ the correlators depend only on the time difference $\tau= t - s$ since one operator, e.g. $\hat{E}_{i}$ can always be written as $\hat{E}_{i}(0) = e^{-i H_E t} \hat{E}_i(t) e^{+i H_E t}$. So here we have the useful condition:
+For additionally having a stationary bath, $[H_E, \rho_E(0)]=0$, so in the interaction picture $\hat{\rho}_E(t)=\hat{\rho}_E(0)=\rho_E(0)$ the correlators depend only on the time difference $\tau= t - s$ since one operator, e.g. $\hat{E}_{i}$ can always be written as $\hat{E}_{i}(0) = e^{-i H_E t} \hat{E}_i(t) e^{+i H_E t}$. So here we have the symmetrie condition:
 \begin{equation}
 	C^{*}_{ii'}(-\tau) = C_{ii'}(\tau).
 \end{equation}
@@ -810,10 +810,10 @@ The zero-point contribution $E_{\text{vac}} = \tfrac{1}{2} \sum_k \omega_k$ adds
 \label{subsubsec:single_mode}
 
 \noindent
-For a single mode $k$, $H=\omega_k b^{\dagger}_k b_k$, the thermal state reads
+For a single mode $k$, the thermal state reads
 
 \begin{equation} \label{eq:ho_single_mode_density_matrix}
-	\rho = \frac{e^{-\beta \omega_k b^{\dagger}_k b_k}}{Z},
+	\rho = \frac{e^{-\beta \omega_k b^{\dagger}_k b_k}}{Z_k},
 \end{equation}
 
 \noindent
@@ -1021,5 +1021,5 @@ Here is a visual comparison between the ohmic and Drude--Lorentz spectral densit
 \noindent
 As we can see both choices translate to one single exponentially decaying memory kernel.
 
-\todoidea{maybe also show for underdamped Brownian oscillator }
+\todoidea{maybe also show for underdamped Brownian oscillator, maybe Rubin bath (oscillators are nearest neighbor-coupled) }
 \todoidea{mention that for more complicated systems, one could fit a sum of such spectral densities to experimental data -> qutip HEOM solvers use such generated bath objects}
