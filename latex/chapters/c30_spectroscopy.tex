@@ -150,8 +150,22 @@ where $V$ is the sample volume, $\vec{r}_i$ is the position of the $i$-th molecu
 \end{equation}
 
 \noindent
+A formal solution of the wave equation shows that the emitted polarization at position $\vec{r}$ and time $t$ is given by
+
+\begin{equation} \label{eq:solution_wave_equation}
+	\vec{P}_S(\vec{r}, t) = \vec{P}(t) \exp(i \vec{k}_S \cdot \vec{r} - i \omega_S t) + \text{c.c.}
+\end{equation}
+
+\noindent
+where $\vec{k}_S$ and $\omega_S$ are the wavevector and frequency of the emitted signal, respectively. The connection to incident fields is essential for photon-echo and other nonlinear spectroscopies discussed later. 
+
+\noindent 
 In the slowly varying amplitude approximation, the emitted signal field $\vec{E}_S$ is directly proportional to the macroscopic polarization \cite{mukamel1995principlesnonlinearoptical}. This approximation holds when the magnitude of the polarization varies slowly compared to the optical cycle of the incident field. A short derivation can be found in \cite{boyd2008chapter6nonlinear}.
 \todoidea{a bit more explanation (mathematical), page 295 complex polarization is mentioned!}
+
+\begin{equation} \label{eq:signal_field_propto_P}
+	\vec{E}_S(\vec{r}, t) \approx i \vec{P}_S(\vec{r}, t)
+\end{equation}
 
 \noindent 
 \todoidea{add the following paragraph to a different section, but which?}
